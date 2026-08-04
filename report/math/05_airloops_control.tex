@@ -1,0 +1,768 @@
+%=====================================================================
+%  05_airloops_control.tex --- The scavenging air loop, the air-to-air
+%  cooler, and the coupled control/solution procedure.
+%
+%  Code of record: geothermal_cooling/dbhe_master.ipynb (v10.6)
+%    notebook cell 28 -> regen_air_pass        (scavenging pass + mixing node)
+%    notebook cell 30 -> process_inlet_state   (wheel process inlet)
+%    notebook cell 32 -> hatchery_loads, air_air_cooler
+%    notebook cell 36 -> run_facility          (coupled driver, d_rA control)
+%    notebook cell  6 -> configuration constants, Sections A--U
+%  Baseline numbers: verification/reference/v10.6_baseline.json
+%=====================================================================
+
+\section{The scavenging air loop}
+\label{sec:air:scav}
+
+The wheel of Section~\ref{sec:dw:main} only moves moisture; something must
+carry that moisture out of the building. That is the job of the scavenging
+air stream: it is heated by the geothermal coil, passed through the wheel's
+regeneration sector where it strips the sorbent, and then thrown away. The
+word \emph{loop} survives from an earlier topology and is now slightly
+generous, as Section~\ref{sec:air:fixedpoint} explains, but the stream is
+still the one place where the whole plant's latent duty leaves the site.
+
+\subsection{Stations and the code names that carry them}
+\label{sec:air:stations}
+
+One pass of the stream is the function \texttt{regen\_air\_pass}. Four states
+matter, and the notebook names them as follows.
+
+\begin{center}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Station & Symbol & Notebook name & Set by \\
+\midrule
+Scavenging inlet   & $(T_{\mathrm{ri}},w_{\mathrm{ri}})$ & \texttt{T\_ri, w\_ri} & the mixing node, downstream of the fan \\
+Coil outlet        & $(T_{\mathrm{ro}},w_{\mathrm{ri}})$ & \texttt{T\_ro}        & the geothermal coil (sensible: $w$ unchanged) \\
+Wheel exhaust      & $(T_{\mathrm{rd}},w_{\mathrm{rd}})$ & \texttt{T\_rd, w\_rd} & the wheel regeneration balance; \textbf{vented} \\
+Mixed state        & $(T_{\mathrm{rm}},w_{\mathrm{rm}})$ & \texttt{T\_rm, w\_rm} & building exhaust $+$ outdoor air \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Two further states enter from outside the stream: the outdoor air
+$(T_{\mathrm{oa}},w_{\mathrm{oa}})$, and the building exhaust, which is the
+room state $(T_{\mathrm{pc}},w_{\mathrm{pc}})$ because the building is held at
+comfort and does not float.
+
+\subsection{The pass, station by station}
+\label{sec:air:pass}
+
+\emph{Coil.} The scavenging air enters the geothermal coil at
+$(T_{\mathrm{ri}},w_{\mathrm{ri}})$ and leaves at $T_{\mathrm{ro}}$, computed
+by the $\varepsilon$--NTU relation of Eq.~\eqref{eq:hyd:coilout} with the
+conductance $\UA_{\mathrm{coil}}$ of Eq.~\eqref{eq:hyd:UAcoil}. The coil is a
+liquid-to-air exchanger with a dry surface, so it is purely sensible:
+\begin{equation}
+T_{\mathrm{ro}} = T_{\mathrm{ri}} + \frac{Q_{\mathrm{coil}}}{\mdr\,c_{p,a}},
+\qquad
+w_{\mathrm{ro}} = w_{\mathrm{ri}} .
+\label{eq:air:coilpass}
+\end{equation}
+The code never forms $w_{\mathrm{ro}}$ at all; it passes \texttt{w\_ri}
+straight into the wheel, which \emph{is} Eq.~\eqref{eq:air:coilpass} written
+as an identity rather than an assignment.
+
+\emph{Wheel.} The regeneration sector is entered at
+$(T_{\mathrm{ro}},w_{\mathrm{ri}})$ against the process stream
+$(T_{\mathrm{pi}},w_{\mathrm{pi}})$; the outlets follow from
+Eqs.~\eqref{eq:dw:etadef}, \eqref{eq:dw:wrd} and~\eqref{eq:dw:hrd}. The wheel
+delivers two things at once: the dried process air
+$(T_{\mathrm{pd}},w_{\mathrm{pd}})$, which the building will use, and the wet
+exhaust $(T_{\mathrm{rd}},w_{\mathrm{rd}})$, which the plant must lose.
+
+\emph{Exhaust, mixing node, fan.} The wheel exhaust is vented in its entirety:
+in v10.6 the pair $(T_{\mathrm{rd}},w_{\mathrm{rd}})$ is a \emph{reported
+diagnostic and nothing else}, read by no downstream equation. That is the
+single most important structural fact about this section, and
+Section~\ref{sec:air:v105} explains why it was made so. A fresh scavenging
+inlet is then assembled from two reservoirs --- building exhaust and outdoor
+air --- and pushed through the fan.
+
+\subsection{The mixing node}
+\label{sec:air:mix}
+
+Let $d_{r\mathrm{A}}$ be the fraction of the scavenging mass flow drawn from
+the \emph{building exhaust}, and $d_{r\mathrm{B}}=1-d_{r\mathrm{A}}$ the
+fraction drawn from \emph{outdoor air}. Applying the fractional mixing rule
+of Eq.~\eqref{eq:psy:mix_frac} to the two conserved quantities --- water and
+enthalpy --- and then recovering the temperature with
+Eq.~\eqref{eq:psy:T_from_hw}:
+\begin{align}
+w_{\mathrm{rm}} &= d_{r\mathrm{A}}\,w_{\mathrm{pc}}
+                 + d_{r\mathrm{B}}\,w_{\mathrm{oa}},
+\label{eq:air:mix_w}\\[2pt]
+h_{\mathrm{rm}} &= d_{r\mathrm{A}}\,h(T_{\mathrm{pc}},w_{\mathrm{pc}})
+                 + d_{r\mathrm{B}}\,h(T_{\mathrm{oa}},w_{\mathrm{oa}}),
+\label{eq:air:mix_h}\\[2pt]
+T_{\mathrm{rm}} &= \frac{h_{\mathrm{rm}} - 2501.0\,w_{\mathrm{rm}}}
+                        {1.006 + 1.86\,w_{\mathrm{rm}}} .
+\label{eq:air:mix_T}
+\end{align}
+The fan is treated as isenthalpic, with the temperature-rise hook retained at
+zero so that fan heat can be added later without renaming a state:
+\begin{equation}
+T_{\mathrm{ri}} = T_{\mathrm{rm}} + \Delta T_{\mathrm{fan}},
+\qquad
+w_{\mathrm{ri}} = w_{\mathrm{rm}},
+\qquad
+\Delta T_{\mathrm{fan}} = 0 .
+\label{eq:air:fan}
+\end{equation}
+
+\paragraph{Both balances must use the same damper position.}
+Equations~\eqref{eq:air:mix_w} and~\eqref{eq:air:mix_h} share one pair of
+weights, and the code asserts it:
+\verb|assert abs((d_rA_use + d_rB_use) - 1.0) < 1e-12|. The assertion looks
+pedantic; it is not. A mixing junction produces a state that lies \emph{on the
+straight line} joining its two inlet states on the psychrometric chart, and it
+lies there precisely because water and enthalpy are apportioned with the same
+two numbers. Use one damper position in the moisture balance and a different
+one in the energy balance and the result is off the mixing line: a state that
+no mixing process can produce, because mass and energy have been created in
+different amounts.
+
+An earlier version did exactly that, with weights that summed to $1.07$. The
+error is not academic. Reconstructing it at the design point with weights
+$(0.30,\,0.77)$ instead of $(0.30,\,0.70)$: the mixed humidity rises from
+\SI{20.91}{\gram\per\kilogram} to \SI{22.41}{\gram\per\kilogram} and the mixed
+enthalpy from \num{86.5} to \SI{92.6}{\kilo\joule\per\kilogram}, which lands
+the scavenging inlet about \SI{2}{\kelvin} too hot and
+\SI{1.5}{\gram\per\kilogram} too wet --- seven per cent of an air stream
+conjured out of nothing, feeding a wheel whose whole output is a difference of
+humidities. Errors of this kind do not announce themselves: the fixed point
+still converges, the controller still reports success, and the plant appears
+slightly better than it is.
+
+\subsection{The physical cap on the exhaust fraction}
+\label{sec:air:cap}
+
+The building cannot exhaust more than it admits. Its fresh-air intake is the
+forced ventilation $\mdv$ set by the eggs' oxygen requirement
+(\SI{0.030}{\metre\cubed\per\hour} per egg, Section~S of the configuration),
+and everything else in the process stream is recirculated and never leaves the
+room. The exhaust available to the scavenging stream is therefore $\mdv$, and
+the largest exhaust fraction physically obtainable is
+\begin{equation}
+\boxed{\;
+d_{r\mathrm{A}}^{\mathrm{cap}} = \min\!\left(1,\ \frac{\mdv}{\mdr}\right)
+\;}
+\label{eq:air:cap}
+\end{equation}
+with $d_{r\mathrm{A}}^{\mathrm{use}} = \min(d_{r\mathrm{A}},
+d_{r\mathrm{A}}^{\mathrm{cap}})$ and the balance made up with outdoor air. The
+code applies the cap inside \texttt{regen\_air\_pass} and warns once per run
+when the requested position exceeds it.
+
+At the shipped configuration $\mdv=\SI{10.0}{\kilogram\per\second}$ and
+$\mdr=0.70\,\mdp=\SI{23.52}{\kilogram\per\second}$, so
+$d_{r\mathrm{A}}^{\mathrm{cap}}=\num{0.425}$. The nominal damper range
+$[0.05,1]$ is thus a fiction above $0.425$: the scavenging stream is more than
+twice the building's exhaust, and no damper setting can make the wheel breathe
+more room air than the room produces. This has a direct consequence for the
+controller (Section~\ref{sec:air:latent}) and it is worth stating as a design
+observation in its own right: \emph{the authority of this actuator is set by
+the ratio of two flows that were sized for entirely unrelated reasons} ---
+egg respiration on one side, the wheel's regeneration ratio on the other.
+
+\subsection{What changed in v10.5, and why it had to}
+\label{sec:air:v105}
+
+Until v10.4 the node of Section~\ref{sec:air:mix} mixed the \emph{wheel's own
+exhaust} $(T_{\mathrm{rd}},w_{\mathrm{rd}})$ with outdoor makeup: a genuinely
+recirculating loop, in which a fraction $d_{r\mathrm{A}}$ was vented and the
+rest returned to the coil. That arrangement has a closed-form steady state
+worth deriving, because it shows exactly how it fails.
+
+Write the moisture the scavenging stream picks up in one pass, from
+Eq.~\eqref{eq:dw:wrd},
+\begin{equation}
+\Delta w_{\mathrm{dw}} \equiv \frac{\mdp}{\mdr}\,
+\left(w_{\mathrm{pi}}-w_{\mathrm{pd}}\right),
+\qquad\text{so}\qquad
+w_{\mathrm{rd}} = w_{\mathrm{ri}} + \Delta w_{\mathrm{dw}} .
+\label{eq:air:dwdw}
+\end{equation}
+In the old topology the mixed humidity was
+$w_{\mathrm{rm}} = d_{r\mathrm{B}}\,w_{\mathrm{rd}} + d_{r\mathrm{A}}\,
+w_{\mathrm{oa}}$, and at steady state $w_{\mathrm{ri}}=w_{\mathrm{rm}}$, so
+\begin{align*}
+w_{\mathrm{ri}}
+ &= d_{r\mathrm{B}}\left(w_{\mathrm{ri}}+\Delta w_{\mathrm{dw}}\right)
+   + d_{r\mathrm{A}}\,w_{\mathrm{oa}}\\
+w_{\mathrm{ri}}\left(1-d_{r\mathrm{B}}\right)
+ &= d_{r\mathrm{B}}\,\Delta w_{\mathrm{dw}} + d_{r\mathrm{A}}\,w_{\mathrm{oa}},
+\end{align*}
+and since $1-d_{r\mathrm{B}}=d_{r\mathrm{A}}$,
+\begin{equation}
+\boxed{\;
+w_{\mathrm{ri}} = w_{\mathrm{oa}}
++ \frac{d_{r\mathrm{B}}}{d_{r\mathrm{A}}}\,\Delta w_{\mathrm{dw}}
+\;}
+\label{eq:air:buildup}
+\end{equation}
+
+The moisture the wheel had just removed was being handed back to it, amplified
+by the recirculation-to-vent ratio. Put the design numbers in. With
+$\Delta w_{\mathrm{dw}} = (33.6/23.52)\times\SI{2.34}{\gram\per\kilogram}$ (the
+year-1 value; it relaxes to \SI{1.85}{\gram\per\kilogram} by year 20)
+$
+= \SI{3.34}{\gram\per\kilogram}$ and the damper at its floor
+$d_{r\mathrm{A}}=0.05$, Eq.~\eqref{eq:air:buildup} gives
+$w_{\mathrm{ri}}=\SI{85}{\gram\per\kilogram}$ --- against a saturation humidity
+of \SI{83}{\gram\per\kilogram} at the coil outlet temperature of
+\SI{49.4}{\celsius}. The regeneration air arrived at the wheel supersaturated.
+
+That is the failure, and it is a failure of the \emph{right} variable. A
+desiccant wheel is not driven by humidity ratio but by the difference in
+relative humidity between its two faces: the $F_2$ potential of
+Eq.~\eqref{eq:dw:F2} is a relative-humidity-like coordinate, and the wheel
+dries the process air only while the regeneration side sits at lower $\RH$
+than the process side. The old loop drove that difference to zero and beyond.
+The comparison at the design point is stark:
+
+\begin{center}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Regeneration inlet at $T_{\mathrm{ro}}=\SI{49.4}{\celsius}$
+ & $w_{\mathrm{ri}}$ [\si{\gram\per\kilogram}] & $\RH$ & Wheel \\
+\midrule
+v10.6, exhaust $+$ outdoor mixing ($d_{r\mathrm{A}}=0.05$) & 21.3 & \SI{28}{\percent} & dries \\
+Pre-v10.5, own-exhaust recirculation ($d_{r\mathrm{A}}=0.05$) & 84.9 & \SI{102}{\percent} & reverses \\
+Pre-v10.5, own-exhaust recirculation ($d_{r\mathrm{A}}=0.30$) & 29.2 & \SI{38}{\percent} & dries weakly \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The process face sits at $\RH\approx\SI{56}{\percent}$, so the current
+topology opens a gap of some \num{28} percentage points, whereas the old one
+closed it entirely at the very damper positions the controller wanted to use.
+The wheel's regime diagnostic (Section~\ref{sec:dw:regime}) was written
+precisely to catch the resulting reversal.
+
+Since v10.5 the node draws from two reservoirs that the wheel does not
+contaminate: room exhaust, which at comfort is drier in relative terms than
+outdoor air, and outdoor air itself. The wheel's own product is vented and
+never returns. The cost of the change is honest and should be stated: the plant
+now heats air it has never heated before on every pass, so the coil duty is
+higher than a recirculating loop would demand, and the exhaust enthalpy is
+thrown away entirely. What is bought is a wheel that is not fighting itself.
+
+\subsection{Does this stream still need a fixed point?}
+\label{sec:air:fixedpoint}
+
+The question is worth asking explicitly, because the code still solves
+$(T_{\mathrm{ri}},w_{\mathrm{ri}})$ as unknowns. Trace the dependency in the
+old topology:
+$T_{\mathrm{ri}}\to T_{\mathrm{ro}}$ (coil)
+$\to (T_{\mathrm{rd}},w_{\mathrm{rd}})$ (wheel)
+$\to (T_{\mathrm{rm}},w_{\mathrm{rm}})$ (mix)
+$\to (T_{\mathrm{ri}},w_{\mathrm{ri}})$ (fan). The chain closed on itself, the
+inlet appeared on both sides, and a genuine two-variable fixed point had to be
+solved.
+
+Now trace it in v10.6. Equations~\eqref{eq:air:mix_w}--\eqref{eq:air:fan}
+depend on $(T_{\mathrm{pc}},w_{\mathrm{pc}})$, on
+$(T_{\mathrm{oa}},w_{\mathrm{oa}})$ and on $d_{r\mathrm{A}}$ --- all
+prescribed --- and on \emph{nothing produced by the wheel or the coil}.
+\textbf{Venting the exhaust severed the feedback}, in exactly the way the
+building's comfort reset severs it on the process side. For a fixed
+$d_{r\mathrm{A}}$ the scavenging inlet is a constant.
+
+The baseline run confirms it: over twenty annual samples in
+\texttt{v10.6\_baseline.json}, $T_{\mathrm{ri}}=\SI{31.299239}{\celsius}$ and
+$w_{\mathrm{ri}}=\SI{21.289}{\gram\per\kilogram}$ to six figures at every
+sample, while $T_{\mathrm{ret}}$, $T_{\mathrm{ro}}$, $T_{\mathrm{pd}}$ and
+$\UA_{\mathrm{cool}}$ all drift with the depleting formation.
+
+What survives is the \emph{water} fixed point of
+Section~\ref{sec:hyd:circuit}: $T_{\mathrm{wi}}$ still closes on itself through
+the well, the accumulator and the coil, and the scavenging inlet enters that
+loop as the coil's air-side boundary condition. The driver carries
+$(T_{\mathrm{ri}},w_{\mathrm{ri}})$ in the same iteration vector as
+$T_{\mathrm{wi}}$, under-relaxed by one half,
+\begin{equation}
+x \leftarrow \tfrac12 x + \tfrac12 x^{\mathrm{new}},
+\qquad
+x \in \{T_{\mathrm{wi}},\,T_{\mathrm{ri}},\,w_{\mathrm{ri}}\},
+\label{eq:air:relax}
+\end{equation}
+so their errors merely halve each sweep towards a target that never moves.
+Keeping them in the vector costs almost nothing and preserves the machinery
+for the day the topology changes again --- exhaust-air heat recovery on the
+scavenging stream, for instance, would restore the coupling immediately.
+
+\subsection{Verification: the mass balance}
+\label{sec:air:massbal}
+
+The node conserves dry air identically and by construction. The exhaust branch
+carries $d_{r\mathrm{A}}^{\mathrm{use}}\mdr$, the outdoor branch
+$d_{r\mathrm{B}}^{\mathrm{use}}\mdr$, and
+\begin{equation}
+d_{r\mathrm{A}}^{\mathrm{use}} + d_{r\mathrm{B}}^{\mathrm{use}} = 1
+\quad\Longrightarrow\quad
+\left(d_{r\mathrm{A}}^{\mathrm{use}}+d_{r\mathrm{B}}^{\mathrm{use}}\right)\mdr
+= \mdr ,
+\label{eq:air:massbal}
+\end{equation}
+which the code checks with the assertion quoted in
+Section~\ref{sec:air:mix}. Two further balances close outside the node: the
+wheel exhaust leaves at $\mdr$, matching what the node admits, and the
+building exhaust drawn by the scavenging stream,
+$d_{r\mathrm{A}}^{\mathrm{use}}\mdr \le \mdv$, is bounded by
+Eq.~\eqref{eq:air:cap}. The assertion is a run-time check, not a printed
+report; it fires as an exception rather than as a diagnostic line.
+
+%=====================================================================
+\section{The air-to-air cooler}
+\label{sec:air:cooler}
+
+\subsection{Role and configuration}
+\label{sec:air:coolerrole}
+
+The wheel returns the process air dry but hot: adsorption is exothermic, and
+the latent load it removed reappears as sensible heat
+(Eq.~\eqref{eq:dw:latent2sensible}). At the design point the wheel delivers
+\SI{42.6}{\celsius} into a room held at \SI{37}{\celsius}. Something must take
+that penalty back out before the air is supplied.
+
+That something is \texttt{air\_air\_cooler}: an air-to-air, dry-surface,
+$\varepsilon$--NTU exchanger. The hot side is the process stream
+$(T_{\mathrm{pd}},w_{\mathrm{pd}})$ at $\mdp$; the cold side is a scavenging
+stream drawn from outdoors at $T_{\mathrm{oa}}$ with flow
+$\md_{\mathrm{cool}} = 1.5\,\mdp = \SI{50.4}{\kilogram\per\second}$
+(\texttt{cool\_pro\_ratio}, Section~T of the configuration).
+
+Two things follow, and they set everything else in this section. First, it is a
+\emph{recuperator}: it moves heat from one air stream to another and consumes
+no refrigeration, no water and no geothermal energy --- only fan power. It
+cannot manufacture cold; it can only pass heat down a gradient it is given.
+Second, being dry, it is sensible only:
+\begin{equation}
+\boxed{\;w_{\mathrm{ps}} = w_{\mathrm{pd}}\;}
+\label{eq:air:cooler_w}
+\end{equation}
+where $(T_{\mathrm{ps}},w_{\mathrm{ps}})$ denotes the supply state delivered to
+the building. (The notebook overloads the name \texttt{T\_pi}, using it both
+for the wheel's process inlet and for the cooler outlet; the report keeps them
+apart, and \texttt{T\_pi\_req}, \texttt{w\_pi\_req} in the driver are
+$T_{\mathrm{ps}}^{\mathrm{req}}$, $w_{\mathrm{ps}}^{\mathrm{req}}$ here.)
+
+Equation~\eqref{eq:air:cooler_w} is the hinge of the whole control system: the
+last device before the building can change temperature and cannot change
+humidity. Section~\ref{sec:air:principle} draws the consequence.
+
+\subsection{Rating equations}
+\label{sec:air:coolerrate}
+
+With the moist-air specific heat of Eq.~\eqref{eq:psy:cp_moist} on the hot side
+and dry-air $c_{p,a}$ on the cold side,
+\begin{equation}
+C_h = \mdp\left(1.006 + 1.86\,w_{\mathrm{pd}}\right)\times\num{1000},
+\qquad
+C_c = \md_{\mathrm{cool}}\,c_{p,a},
+\qquad
+C_r = \frac{C_{\min}}{C_{\max}} ,
+\label{eq:air:caprates}
+\end{equation}
+and with $\varepsilon$ from the unmixed-crossflow relation
+Eq.~\eqref{eq:hyd:epscross}, the duty and outlet are
+\begin{equation}
+Q_{\mathrm{cool}} = \varepsilon\,C_{\min}
+\left(T_{\mathrm{pd}}-T_{\mathrm{oa}}\right),
+\qquad
+T_{\mathrm{ps}} = T_{\mathrm{pd}} - \frac{Q_{\mathrm{cool}}}{C_h} .
+\label{eq:air:cooler_rate}
+\end{equation}
+At the design point $C_h=\SI{34.9}{\kilo\watt\per\kelvin}$ and
+$C_c=\SI{50.7}{\kilo\watt\per\kelvin}$, so $C_{\min}=C_h$ and $C_r=0.689$: the
+\emph{process} stream is the limiting one, which is why oversizing the ambient
+fan buys progressively less.
+
+The code also carries a trivial branch. If $T_{\mathrm{pd}}\le T_{\mathrm{oa}}$
+it returns $T_{\mathrm{ps}}=T_{\mathrm{pd}}$ with $\UA=0$ and no saturation
+flag: there is no gradient, so there is nothing to do and nothing to report.
+
+\subsection{Target mode: back-solving the conductance}
+\label{sec:air:target}
+
+The cooler is not rated forward. The building balance, expressed through the
+load interface as $T_{\mathrm{ps}}^{\mathrm{req}} = T_{\mathrm{pc}} -
+\qs/(\mdp\,c_{p})$, states the supply temperature the space requires, and the
+model asks what conductance delivers it. Inverting
+Eq.~\eqref{eq:air:cooler_rate} for the effectiveness,
+\begin{equation}
+\boxed{\;
+\varepsilon^{\mathrm{req}} =
+\frac{C_h\left(T_{\mathrm{pd}}-T_{\mathrm{ps}}^{\mathrm{req}}\right)}
+     {C_{\min}\left(T_{\mathrm{pd}}-T_{\mathrm{oa}}\right)}
+\;}
+\label{eq:air:eps_req}
+\end{equation}
+The crossflow relation cannot be inverted analytically for the NTU, so the code
+bisects. Because $\varepsilon(\mathrm{NTU})$ increases monotonically, bisection
+on $\mathrm{NTU}\in[0,\ \UA_{\max}/C_{\min}]$ is unconditionally convergent;
+the code takes a fixed \num{60} halvings --- far more than needed, and cheap,
+since each evaluation is one exponential --- and returns
+\begin{equation}
+\UA^{\mathrm{req}} = \mathrm{NTU}^{\mathrm{req}}\,C_{\min} .
+\label{eq:air:UAreq}
+\end{equation}
+At the end of the first baseline year this gives
+$\varepsilon^{\mathrm{req}}=\num{0.732}$, $\mathrm{NTU}=\num{2.42}$ and
+$\UA_{\mathrm{cool}}=\SI{84.4}{\kilo\watt\per\kelvin}$, comfortably inside the
+ceiling $\UA_{\max}=\SI{150}{\kilo\watt\per\kelvin}$.
+
+Inverting the device this way is a modelling decision with a price. It reports
+the conductance a real coil would need rather than the behaviour of a coil that
+exists, so the model never tells you what happens at part load with a
+\emph{fixed} exchanger --- the conductance simply follows the load. For sizing,
+which is what this study is for, that is the more useful answer; for operation
+it is not, and a fixed-$\UA$ rating mode should eventually sit beside it.
+
+\subsection{The ambient floor}
+\label{sec:air:floor}
+
+A recuperator cannot cool its hot stream below the temperature of the stream it
+rejects to. Heat flows down the gradient, and at $\varepsilon=1$ the outlet
+reaches the cold inlet and stops:
+\begin{equation}
+\boxed{\;T_{\mathrm{ps}} \ge T_{\mathrm{oa}}\ \text{always}\;}
+\label{eq:air:floor}
+\end{equation}
+The code enforces this by a sentinel rather than by a test: if
+$T_{\mathrm{ps}}^{\mathrm{req}}\le T_{\mathrm{oa}}$ it sets
+$\varepsilon^{\mathrm{req}}=2$, a value no exchanger can reach, which routes
+execution to the saturated branch. Saturation therefore has two causes, and the
+flag \texttt{sat\_cool} does not distinguish them:
+\begin{enumerate}[nosep]
+\item $T_{\mathrm{ps}}^{\mathrm{req}}\le T_{\mathrm{oa}}$ --- the target is
+below ambient and \emph{no} dry recuperator can reach it, at any size;
+\item $\varepsilon^{\mathrm{req}}>\varepsilon_{\max}$ --- the target is above
+ambient but needs a coil larger than the ceiling.
+\end{enumerate}
+On either branch the block returns the best it can actually do at the ceiling,
+\begin{equation}
+T_{\mathrm{ps}} = T_{\mathrm{pd}}
+- \frac{\varepsilon_{\max}\,C_{\min}\left(T_{\mathrm{pd}}-T_{\mathrm{oa}}\right)}
+       {C_h},
+\qquad \UA = \UA_{\max},
+\label{eq:air:coolsat}
+\end{equation}
+rather than pretending the setpoint was met.
+
+\paragraph{The design criterion.} Because the supply flow is chosen from the
+design sensible load at a design depression $\Delta T_{\mathrm{supply}}$, the
+required supply is $T_{\mathrm{ps}}^{\mathrm{req}} = T_{\mathrm{pc}} -
+\Delta T_{\mathrm{supply}}$ by construction, and Eq.~\eqref{eq:air:floor}
+reduces to a statement about two temperature differences:
+\begin{equation}
+\boxed{\;
+\text{a dry ambient recuperator suffices}
+\iff
+\Delta T_{\mathrm{supply}} < T_{\mathrm{pc}} - T_{\mathrm{oa}}
+\;}
+\label{eq:air:coolercrit}
+\end{equation}
+At the shipped configuration $T_{\mathrm{pc}}-T_{\mathrm{oa}} =
+37-31 = \SI{6}{\kelvin}$ and $\Delta T_{\mathrm{supply}}=\SI{3}{\kelvin}$, so
+the criterion is met with a factor of two in hand and no below-ambient stage is
+needed. The margin is a gift of the hatchery setpoint: a room held at
+\SI{37}{\celsius} is warmer than the Gulf design day, which is what makes an
+air-to-air recuperator viable at all. It is also fragile --- raise the ambient
+design temperature to \SI{35}{\celsius}, or double the supply depression to
+shrink the fan, and the criterion fails, at which point a below-ambient stage
+(a dew-point evaporative cooler, or a chiller) becomes mandatory rather than
+optional.
+
+\paragraph{What the baseline actually shows.} \texttt{sat\_cool} does fire in
+the opening days of a run, for a different reason: while the formation is
+undepleted the coil delivers its hottest regeneration air, the wheel returns
+$T_{\mathrm{pd}}\approx\SI{51}{\celsius}$, and cooling that to
+\SI{34.1}{\celsius} against \SI{31}{\celsius} air needs more than
+\SI{150}{\kilo\watt\per\kelvin}. In a one-year run the flag is raised for about
+the first \num{10} steps (\num{2.5} days) and clears thereafter, with
+$\UA_{\mathrm{cool}}$ falling from the ceiling to
+\SI{98}{\kilo\watt\per\kelvin} within the first month. The binding constraint
+in early life is the conductance ceiling, not the ambient floor --- and the
+early-life excess of wheel duty is the same surplus that saturates the humidity
+controller (Section~\ref{sec:air:latent}).
+
+\subsection{Is there a condensation check? No}
+\label{sec:air:condense}
+
+There is none. Equation~\eqref{eq:air:cooler_w} is applied unconditionally:
+\texttt{air\_air\_cooler} computes only temperatures, and the driver assigns
+\verb|w_pi = ap['w_pd']| with no dew-point test anywhere in the function, in
+the driver, or in the dashboard. A search of the notebook for a dew-point
+variable returns nothing. If the block were ever driven below the stream's dew
+point it would report a dry outlet at an impossible state, silently.
+
+Whether that matters is a separate question, and here the answer is
+reassuring. The supply carries $w_{\mathrm{pd}}=\SI{17.97}{\gram\per\kilogram}$
+at the end of the first baseline year, a dew point of \SI{23.2}{\celsius},
+while the outlet sits at \SI{34.1}{\celsius}: a margin of nearly
+\SI{11}{\kelvin}. More strongly, Eq.~\eqref{eq:air:floor} guarantees
+$T_{\mathrm{ps}}\ge T_{\mathrm{oa}}=\SI{31}{\celsius}$, so \emph{within this
+topology} the cooler cannot reach the dew point of air the wheel has just
+dried. The omission is safe by construction, not by luck.
+
+It stops being safe the moment the cold side stops being ambient air. Add the
+below-ambient stage that Eq.~\eqref{eq:air:coolercrit} would demand at a hotter
+design day, or feed the cooler with chilled water from the absorption machine,
+and the floor drops below the dew point; the block would then need a wet-coil
+treatment (bypass factor or fin-efficiency), and $w_{\mathrm{ps}}<
+w_{\mathrm{pd}}$ would become a second, uncontrolled dehumidification path.
+This should be written before any below-ambient stage is added, not after.
+
+%=====================================================================
+\section{Control and the coupled solution}
+\label{sec:air:control}
+
+\subsection{The principle: control where there is an actuator}
+\label{sec:air:principle}
+
+The building imposes a two-component setpoint, $(T_{\mathrm{pc}},
+w_{\mathrm{pc}})$, and the plant must satisfy two balances. Which of them can
+be \emph{controlled} and which can only be \emph{checked} is not a modelling
+preference; it is decided by where the hardware sits.
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Balance & Actuator downstream of the wheel? & Treatment \\
+\midrule
+Sensible & \textbf{Yes} --- the cooler & Control: back-solve $\UA_{\mathrm{cool}}$ \\
+Latent   & \textbf{No} --- $w_{\mathrm{ps}}=w_{\mathrm{pd}}$, fixed at the wheel & Control from \emph{upstream}: $d_{r\mathrm{A}}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Between the wheel outlet and the room there is exactly one device, and by
+Eq.~\eqref{eq:air:cooler_w} it moves temperature only. Temperature is therefore
+controlled locally, at the last possible moment; humidity has no local knob at
+all and must be reached backwards, through the scavenging stream, the wheel and
+in the last resort the well. The hierarchy is also an economic ordering ---
+fan power first, a damper second, the geothermal resource last --- and that
+ordering is the operational expression of what the project is trying to
+conserve.
+
+\subsection{The sensible channel}
+\label{sec:air:sensible}
+
+Nothing is left to do here beyond Section~\ref{sec:air:target}: the load
+interface returns $T_{\mathrm{ps}}^{\mathrm{req}}$, the cooler is inverted for
+$\UA^{\mathrm{req}}$, the floor test is applied and \texttt{sat\_cool} is set
+if the target is unreachable. One scalar inversion, one bisection, no outer
+iteration --- and, importantly, it happens \emph{after} the coupled solve,
+because the cooler influences nothing upstream of itself.
+
+\subsection{The latent channel}
+\label{sec:air:latent}
+
+The humidity setpoint is closed on the scavenging vent fraction. The model
+solves
+\begin{equation}
+\text{find } d_{r\mathrm{A}} \in [d_{r\mathrm{A},\min},\,1]
+\quad\text{such that}\quad
+w_{\mathrm{pd}}\!\left(d_{r\mathrm{A}}\right)
+= w_{\mathrm{ps}}^{\mathrm{req}} ,
+\label{eq:air:rA_solve}
+\end{equation}
+with $d_{r\mathrm{A},\min}=\num{0.05}$ and a residual tolerance
+$\num{1e-4}\,\si{\kilogram\per\kilogram}$ (\texttt{w\_ctrl\_tol}).
+
+\paragraph{The mechanism.} Opening $d_{r\mathrm{A}}$ replaces outdoor air with
+building exhaust in the scavenging stream. At the design point the room, held
+at $\SI{37}{\celsius}$ and \SI{50}{\percent}, is drier than the outdoors both
+absolutely (\num{19.9} against \SI{21.4}{\gram\per\kilogram}) and in relative
+terms once heated, so more exhaust means drier regeneration air, a wider $F_2$
+gap, and a drier process outlet: $\partial w_{\mathrm{pd}}/\partial
+d_{r\mathrm{A}}<0$. Note carefully that this sign is a property of the
+\emph{design weather}, not a theorem. On a cool dry morning the outdoor air is
+the drier reservoir and the sign reverses. The code assumes the design sign in
+its first probe step and would take one wasted iteration to recover if it were
+wrong.
+
+\paragraph{The scheme as coded.} It is a bounded secant, not the bisection its
+predecessor used:
+\begin{enumerate}[nosep]
+\item Solve the coupled inner problem at the warm-started
+      $d_{r\mathrm{A}}$; set $e_1 = w_{\mathrm{pd}}-w_{\mathrm{ps}}^{\mathrm{req}}$
+      and seed $(r_0,e_0)=(d_{r\mathrm{A}},e_1)$.
+\item Take the first probe as $r_1 = \mathrm{clip}\!\left(d_{r\mathrm{A}}
+      \pm \num{0.1},\ d_{r\mathrm{A},\min},\ 1\right)$, the sign being
+      $+$ if the air is too wet and $-$ if it is too dry.
+\item Repeat at most $\num{12}$ times (\texttt{d\_rA\_ctrl\_max\_it}),
+      stopping as soon as $|e_1| < \texttt{w\_ctrl\_tol}$: solve the inner
+      problem at $r_1$, form $e_{\mathrm{new}}$, and take the secant step
+      \begin{equation}
+      r_{\mathrm{next}} = r_1 - e_{\mathrm{new}}\,
+      \frac{r_1-r_0}{e_{\mathrm{new}}-e_0},
+      \label{eq:air:secant}
+      \end{equation}
+      guarded by $|e_{\mathrm{new}}-e_0|>\num{1e-12}$ (below which the step is
+      abandoned and $r_{\mathrm{next}}=r_1$), then shift
+      $(r_0,e_0)\leftarrow(r_1,e_{\mathrm{new}})$ and
+      $r_1\leftarrow\mathrm{clip}(r_{\mathrm{next}})$.
+\item Adopt $d_{r\mathrm{A}}=r_0$ --- the last position actually
+      \emph{evaluated}, never the untested extrapolation $r_1$ --- and re-solve
+      the inner problem there so that every reported state is mutually
+      consistent.
+\end{enumerate}
+Warm-starting from the previous time step matters: the loads move slowly, so
+the previous solution is usually already inside tolerance.
+
+\paragraph{Saturation at both ends.} Two flags mark the boundaries of the
+actuator's authority:
+\begin{align}
+\texttt{sat\_hum} &:\quad d_{r\mathrm{A}} \ge 1-\num{1e-6}
+   \ \ \text{and}\ \ w_{\mathrm{pd}} > w_{\mathrm{ps}}^{\mathrm{req}}
+   + \texttt{w\_ctrl\_tol},
+\label{eq:air:sathum}\\
+\texttt{sat\_dry} &:\quad d_{r\mathrm{A}} \le d_{r\mathrm{A},\min}+\num{1e-6}
+   \ \ \text{and}\ \ w_{\mathrm{pd}} < w_{\mathrm{ps}}^{\mathrm{req}}
+   - \texttt{w\_ctrl\_tol}.
+\label{eq:air:satdry}
+\end{align}
+The first is the classical failure: the damper is wide open, the air is still
+too humid, the setpoint is unreachable at the current regeneration temperature,
+and the only remaining escalation is to spend geothermal energy. The second was
+added in v10.6 and is the failure that actually occurs: the damper is pinned at
+its floor, the wheel is \emph{over}-drying, and the controller has no authority
+left to stop it. Before v10.6 only \texttt{sat\_hum} existed, so v10.5 ran the
+whole twenty years over-dry while the dashboard reported the humidity target
+met. A one-sided flag on a two-sided actuator is not a diagnostic; it is a
+blind spot.
+
+Equation~\eqref{eq:air:sathum} carries a further weakness worth recording. The
+controller's variable is bounded by $1$, but its \emph{effect} is bounded by
+$d_{r\mathrm{A}}^{\mathrm{cap}}=\num{0.425}$ (Eq.~\eqref{eq:air:cap}). Between
+\num{0.425} and \num{1} the residual is flat: the secant denominator collapses
+below its guard, the update freezes, and the iterate only reaches exactly $1$
+by accident. The wet-end flag can therefore be missed. The honest statement is
+that the damper's authority ends at $\mdv/\mdr$, and the bound in
+Eq.~\eqref{eq:air:rA_solve} should be $d_{r\mathrm{A}}^{\mathrm{cap}}$ rather
+than $1$.
+
+\subsection{What is coupled to what}
+\label{sec:air:coupling}
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Sub-problem & Structure & Where it is solved \\
+\midrule
+Water loop            & closed on $T_{\mathrm{wi}}$      & inner fixed point \\
+Scavenging inlet      & feed-through since v10.5 (Sec.~\ref{sec:air:fixedpoint}) & carried in the same vector \\
+Process inlet         & feed-through (comfort reset)     & once, before the time loop \\
+Latent control        & scalar root find on $d_{r\mathrm{A}}$ & outer loop \\
+Sensible control      & scalar inversion for $\UA_{\mathrm{cool}}$ & after convergence \\
+Formation, accumulator& stateful, marched                & once per step, at the end \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The water loop and the scavenging stream share the coil, so they are solved
+\emph{simultaneously} in one iteration over
+$(T_{\mathrm{wi}},T_{\mathrm{ri}},w_{\mathrm{ri}})$, never as nested loops ---
+a full air solve inside every water iteration would multiply the cost for no
+gain. Convergence is measured on
+\begin{equation}
+\max\left(\left|\Delta T_{\mathrm{wi}}\right|,\
+          \left|\Delta T_{\mathrm{ri}}\right|,\
+          \num{1e3}\left|\Delta w_{\mathrm{ri}}\right|\right)
+< \texttt{fp\_tol} = \num{1e-4},
+\label{eq:air:resid}
+\end{equation}
+with at most $\texttt{fp\_max}=\num{40}$ sweeps. The factor \num{1000} puts a
+humidity ratio in \si{\kilogram\per\kilogram} on the same numerical scale as a
+temperature in kelvin; without it the humidity residual would be met
+automatically and would contribute nothing to the test.
+
+\paragraph{Why the time loop lives in the driver.} Every block exposes
+\texttt{init} / \texttt{set\_flow} / \texttt{eval} / \texttt{advance} and none
+of them owns a clock. A feed-forward chain could be run block by block over the
+whole horizon, but feedback and memory forbid it: the water loop's reinjection
+temperature is an output of the same iteration that consumes it, and the
+formation and the accumulator carry state that depends on every earlier step.
+Both must be marched together, by something that sees all of them --- the
+driver. The discipline that follows is strict and is respected in the code:
+\texttt{dbhe\_advance} and \texttt{acc\_advance} are called \emph{once} per
+step, with the converged state, after the controller has finished. Advancing
+inside the iteration would commit history that the iteration was still free to
+revise.
+
+\subsection{Observed convergence}
+\label{sec:air:converge}
+
+Instrumenting the baseline case, one well evaluation per inner sweep:
+
+\begin{center}
+\begin{tabular}{@{}lr@{}}
+\toprule
+Quantity & Value \\
+\midrule
+Well evaluations, first step (cold start)      & \num{67} \\
+Well evaluations, subsequent steps             & \num{24}--\num{25} \\
+Inner solves per step (probe $+$ outer $+$ final) & \num{14} \\
+Inner sweeps per solve, warm-started           & \num{1}--\num{2} \\
+Recorded \texttt{fp\_it} (final consistent solve) & \num{1} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The inner fixed point is well behaved: warm-started from the previous step, the
+residual of Eq.~\eqref{eq:air:resid} is usually already met on the first sweep,
+which is why the recorded \texttt{fp\_it} is $1$ throughout the baseline. That
+number should be read for what it is --- the cost of the \emph{final} solve,
+not the cost of the step.
+
+The outer loop is the opposite story, and it is the diagnostic that matters. At
+the shipped configuration the controller is pinned at $d_{r\mathrm{A},\min}$
+with a residual of several \si{\gram\per\kilogram}, so the stopping test
+$|e_1|<\texttt{w\_ctrl\_tol}$ is never met, the clipped secant returns the same
+floor value every time, and the loop runs its full \num{12} iterations at every
+one of the \num{29220} time steps. Roughly \num{12} of the \num{24} well
+evaluations per step are spent proving, over and over, that a saturated
+actuator is still saturated. A cheap fix exists --- break out when two
+successive clipped iterates coincide --- and it would halve the run time
+without changing a single result.
+
+\subsection{Open item: the humidity actuator is the wrong one}
+\label{sec:air:openitem}
+
+\begin{center}
+\fbox{\parbox{0.93\textwidth}{
+\textbf{Planned for the next version: move humidity control from
+$d_{r\mathrm{A}}$ to the coil-flow fraction.}\\[4pt]
+The baseline run pins $d_{r\mathrm{A}}$ at its floor of \num{0.05} at every
+step and raises \texttt{sat\_dry} throughout: the wheel removes
+\SI{2.34}{\gram\per\kilogram} in year~1 and still
+\SI{1.85}{\gram\per\kilogram} in year~20, while the building asks for
+\SI{0.27}{\gram\per\kilogram}, and in the opening days it removes nearly
+\SI{5}{\gram\per\kilogram}. The controller is saturated at its dry end from
+the first step to the last, which means the plant is not being controlled at
+all --- it is being run flat out and reported after the fact.\\[4pt]
+The diagnosis is that $d_{r\mathrm{A}}$ is too weak an actuator for this duty.
+It changes the \emph{quality} of the regeneration air, and by
+Eq.~\eqref{eq:air:cap} it cannot change it by much, whereas the surplus to be
+removed is a large fraction of the wheel's whole output. Meanwhile a large
+share of the geothermal duty --- the coil heat that produces
+$T_{\mathrm{ro}}$ --- is spent removing moisture the building does not want,
+and the sensible penalty of that unwanted drying then has to be taken back out
+by the cooler, at the cost of a bigger $\UA_{\mathrm{cool}}$.\\[4pt]
+The next version therefore moves the latent control to the \emph{coil-flow
+fraction}: throttling the geothermal water sent to the coil lowers
+$T_{\mathrm{ro}}$ directly and therefore lowers the wheel's drying authority
+continuously, from full duty down to none. It is a strong, monotone actuator
+that acts on the resource itself, so under-drying and over-drying both become
+reachable, and the geothermal energy not spent is geothermal energy saved ---
+which, unlike a damper position, shows up as slower formation depletion. When
+that change is made, $d_{r\mathrm{A}}$ should be retained as a secondary trim
+and Eq.~\eqref{eq:air:rA_solve} rebounded on
+$d_{r\mathrm{A}}^{\mathrm{cap}}$.}}
+\end{center}

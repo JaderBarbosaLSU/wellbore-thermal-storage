@@ -1,0 +1,536 @@
+%=====================================================================
+%  04_wheel.tex --- The desiccant wheel
+%  Code of record: geothermal_cooling/dbhe_master.ipynb (v10.6), cell 12
+%  (notebook cell index 26) for the model, cell 2 (index 6) for eta_F1/eta_F2.
+%=====================================================================
+\section{The desiccant wheel}
+\label{sec:dw:main}
+
+The wheel is the component that makes this plant a \emph{dehumidification}
+plant rather than a heating plant, and it is where the geothermal heat is
+finally spent. A rotary desiccant wheel is a porous matrix coated with a
+sorbent --- silica gel here --- rotating slowly between two counter-flowing
+air streams. In the \emph{process} sector it adsorbs moisture from the air
+destined for the building; in the \emph{regeneration} sector, bathed in the
+hot air leaving the coil, it desorbs that moisture and is readied for the
+next revolution. Everything the well does upstream exists to keep that
+regeneration air hot enough.
+
+\subsection{Notation}
+\label{sec:dw:notation}
+
+Four air states matter. The third column gives the name carried in the
+notebook, so that report and code can be read side by side.
+
+\begin{center}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Station & Symbol & Notebook name & Origin \\
+\midrule
+Process inlet      & $(T_{\mathrm{pi}},w_{\mathrm{pi}})$ & \texttt{T\_p, w\_p}     & room return + fresh makeup \\
+Process outlet     & $(T_{\mathrm{pd}},w_{\mathrm{pd}})$ & \texttt{T\_po, w\_po}   & dried air, feeds the cooler \\
+Regeneration inlet & $(T_{\mathrm{ro}},w_{\mathrm{ri}})$ & \texttt{T\_reg, w\_reg} & coil outlet ($w$ unchanged: the coil is sensible) \\
+Regeneration outlet& $(T_{\mathrm{rd}},w_{\mathrm{rd}})$ & \texttt{T\_rd, w\_rd}   & wheel exhaust, vented \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Dry-air mass flows are \mdp\ (process) and \mdr\ (regeneration), and in the
+code $\mdr = 0.70\,\mdp$ through the configuration parameter
+\texttt{reg\_pro\_ratio}. Humidity ratios $w$ are in
+\si{\kilogram\per\kilogram} of dry air, and moist-air enthalpy is taken from
+the same psychrometric block used everywhere else in the model,
+\begin{equation}
+h(T,w) = 1.006\,T + w\,(2501.0 + 1.86\,T)
+\qquad [\si{\kilo\joule\per\kilogram}],\quad T\ \text{in \degC},
+\label{eq:dw:enthalpy}
+\end{equation}
+with the inverse $T(h,w) = (h - 2501.0\,w)/(1.006 + 1.86\,w)$.
+
+\subsection{Why a rotating matrix is hard}
+\label{sec:dw:hard}
+
+Inside the matrix two conservation laws hold at once and are strongly
+coupled. Writing $z$ for distance along the flow, $\tau$ for time in the
+rotation, $w$ and $h$ for the air humidity ratio and enthalpy, and $W$ and
+$H$ for the \emph{sorbent} water loading and enthalpy,
+\begin{align}
+\text{moisture:}&\qquad
+\frac{\partial w}{\partial z}+\frac{\partial W}{\partial \tau}=0,
+\label{eq:dw:moisture_pde}\\
+\text{energy:}&\qquad
+\frac{\partial h}{\partial z}+\frac{\partial H}{\partial \tau}=0 .
+\label{eq:dw:energy_pde}
+\end{align}
+The coupling runs through the sorption equilibrium. The loading $W=W(T,w)$
+follows the isotherm, so it depends on \emph{both} air properties, and the
+sorbent enthalpy $H=H(T,W)$ carries the heat of adsorption released when
+water binds to the gel. The physical loop is short and vicious: adsorbing
+water releases heat, the heat raises the local temperature, the higher
+temperature shifts the equilibrium, and the shifted equilibrium changes how
+much more water can be adsorbed. Temperature and humidity cannot be solved
+one at a time.
+
+Equations~\eqref{eq:dw:moisture_pde}--\eqref{eq:dw:energy_pde} form a coupled
+non-linear hyperbolic system. Solving them directly means a spatially and
+temporally resolved simulation of the matrix, repeated inside every step of a
+twenty-year march that already carries a fixed-point loop around the well ---
+unaffordable, and in any case dependent on matrix data (channel geometry,
+sorbent mass, isotherm) that we do not have for a specific commercial wheel.
+
+\subsection{The Banks/Close non-linear analogy}
+\label{sec:dw:analogy}
+
+The route out is the non-linear analogy method of Close and Banks, developed
+for combined heat-and-mass regenerators and reduced to a usable form for
+silica gel by Jurinak (1982). The idea is a change of variables. One seeks
+two \emph{characteristic potentials} $F_1(T,w)$ and $F_2(T,w)$ such that the
+coupled system becomes two \emph{independent} wave equations, each potential
+being conserved along its own characteristic and travelling at its own speed
+$\gamma_i$:
+\begin{equation}
+\frac{\partial F_i}{\partial z}
++\frac{1}{\gamma_i}\frac{\partial F_i}{\partial \tau}=0,
+\qquad i=1,2 .
+\label{eq:dw:waves}
+\end{equation}
+
+What this buys is decoupling. In $(F_1,F_2)$ coordinates the entangled
+heat-and-mass problem becomes two separate single-variable transfer problems,
+each characterised by one effectiveness exactly as a sensible heat exchanger
+is characterised by one $\varepsilon$. The cost is that the potentials are not
+universal: they are tied to the sorbent's isotherm, so the fits below are
+silica-gel fits and nothing else.
+
+\subsection{The two potentials, exactly as coded}
+\label{sec:dw:potentials}
+
+The notebook codes Jurinak's silica-gel potentials as
+\begin{equation}
+\boxed{\;
+F_1(T,w) = -\,\frac{2865.0}{T^{1.490}} + 4.344\,w^{0.8624}
+\;}
+\label{eq:dw:F1}
+\end{equation}
+\begin{equation}
+\boxed{\;
+F_2(T,w) = \frac{T^{1.490}}{6360.0} - 1.127\,w^{0.07969}
+\;}
+\label{eq:dw:F2}
+\end{equation}
+which are, character for character, the two lines
+\begin{center}
+\texttt{def F1(T\_K, w): return -2865.0*T\_K**(-1.490) + 4.344*w**0.8624}\\
+\texttt{def F2(T\_K, w): return\ \ T\_K**(1.490)/6360.0 - 1.127*w**0.07969}
+\end{center}
+of cell 12 of the model of record.
+
+\paragraph{Units warning --- read this before using the formulas.}
+Equations~\eqref{eq:dw:F1}--\eqref{eq:dw:F2} are \emph{dimensional} fits, not
+dimensionless groups. $T$ \textbf{must} be in kelvin and $w$ \textbf{must} be
+in \si{\kilogram\per\kilogram} of dry air, never \si{\gram\per\kilogram}.
+Feeding \degC\ or \si{\gram\per\kilogram} produces numbers, no warning, and a
+silently wrong wheel; with $w$ in \si{\gram\per\kilogram} the first term of
+$F_2$ is unchanged while the second grows by a factor $1000^{0.07969}\approx
+1.73$, which is enough to invert the direction of the answer. The notebook
+respects this by converting at the single entry point of the wheel routine,
+\texttt{Tp\_K, Tr\_K = T\_p+273.15, T\_reg+273.15}, and by carrying $w$ in
+\si{\kilogram\per\kilogram} everywhere in the psychrometric block. Every
+temperature that crosses the wheel boundary in either direction is in \degC;
+kelvin exists only inside.
+
+\subsection{What the potentials mean physically}
+\label{sec:dw:meaning}
+
+The two potentials have an interpretation that is also a way to test them.
+
+Lines of constant $F_1$ are very nearly lines of constant \emph{enthalpy}.
+$F_1$ is the fast potential, associated with the combined heat-and-mass wave
+that sweeps quickly through the matrix; it is very nearly the
+adiabatic-saturation invariant of the air, which is why holding $F_1$ fixed is
+almost the same as holding $h$ fixed.
+
+Lines of constant $F_2$ are very nearly lines of constant \emph{relative
+humidity}. $F_2$ is the slow potential, associated with the sorption wave, and
+it is the moisture-capacity coordinate: since $\partial F_2/\partial w<0$,
+drying the air \emph{raises} $F_2$, and dragging the process state toward the
+hot, low-\RH\ regeneration state is precisely dragging it up in $F_2$.
+
+\paragraph{The self-check, and how the sign in $F_2$ was settled.}
+Published transcriptions of Eq.~\eqref{eq:dw:F2} disagree on the sign of the
+second term, so the notebook resolves it numerically and re-runs the check on
+every execution. It evaluates $F_1$ along a constant-enthalpy line
+($h = \SI{85}{\kilo\joule\per\kilogram}$) and $F_2$ along a constant relative
+humidity line ($\RH = 0.40$):
+
+\begin{center}
+\begin{tabular}{@{}cccc@{}}
+\toprule
+$T$ [\degC] & $F_1$ at $h=\SI{85}{\kilo\joule\per\kilogram}$
+            & $F_2$ at $\RH=0.40$ (coded, minus)
+            & $F_2$ at $\RH=0.40$ (plus) \\
+\midrule
+25 & $-0.41814$ & $-0.00135$ & $+1.53061$ \\
+45 & $-0.41621$ & $+0.00376$ & $+1.68083$ \\
+55 & $-0.41908$ & $+0.00770$ & $+1.75639$ \\
+\midrule
+spread & $0.00287$ & $0.00905$ & $0.22578$ \\
+\bottomrule
+\end{tabular}
+\label{tab:dw:selfcheck}
+\end{center}
+
+$F_1$ moves by $0.69\%$ of its own magnitude across a \SI{30}{\kelvin} span,
+so the iso-enthalpy reading holds well. For $F_2$ the test is comparative
+rather than absolute: the coded minus sign gives an iso-\RH\ line
+\emph{twenty-five times flatter} than the plus sign would
+($0.00905$ against $0.22578$), which settles the transcription without appeal
+to any of the conflicting sources. This check is not decoration --- it is the
+only defence the model has against a sign error that would otherwise be
+invisible in the plant results.
+
+\subsection{The effectiveness method}
+\label{sec:dw:effectiveness}
+
+Because the transformed problem~\eqref{eq:dw:waves} is decoupled, each
+potential behaves like a single-stream transfer problem and can be assigned an
+effectiveness. Define, exactly as $\varepsilon$ is defined for a sensible
+exchanger --- actual change over the maximum change available ---
+\begin{equation}
+\eta_{Fi} \equiv
+\frac{F_i^{\mathrm{pd}}-F_i^{\mathrm{pi}}}
+     {F_i^{\mathrm{ri}}-F_i^{\mathrm{pi}}},
+\qquad i=1,2,
+\label{eq:dw:etadef}
+\end{equation}
+where $F_i^{\mathrm{ri}} \equiv F_i(T_{\mathrm{ro}},w_{\mathrm{ri}})$ is the
+potential of the \emph{regeneration inlet}: the maximum change available to
+the process stream is the full excursion from its own inlet to the state on
+the other side of the matrix. Rearranged, this is the working form
+coded in the notebook: the process state is dragged from its own inlet
+towards the regeneration inlet, in $(F_1,F_2)$ space, by the prescribed
+fractions,
+\begin{equation}
+\boxed{\;
+F_i^{\mathrm{pd}} = F_i(T_{\mathrm{pi}},w_{\mathrm{pi}})
++\eta_{Fi}\Big[F_i(T_{\mathrm{ro}},w_{\mathrm{ri}})
+-F_i(T_{\mathrm{pi}},w_{\mathrm{pi}})\Big],
+\qquad i=1,2 .
+\;}
+\label{eq:dw:drag}
+\end{equation}
+The geometric picture is worth holding on to: the outlet sits a prescribed
+fraction of the way along the segment joining the two inlets --- but that
+segment is straight in $(F_1,F_2)$ coordinates, not on the psychrometric
+chart, and it is the mapping back that makes the process path curve.
+
+\paragraph{The values, and why they are asymmetric.}
+The configuration cell prescribes
+\begin{equation}
+\eta_{F1}=0.10,\qquad \eta_{F2}=0.70 .
+\label{eq:dw:etavals}
+\end{equation}
+The asymmetry is the design intent of a dehumidification wheel. A large
+$\eta_{F2}$ means the wheel transfers most of the available sorption (that
+is, relative-humidity) potential --- that is its job. A small $\eta_{F1}$
+means it transfers little of the enthalpy potential, because transferring
+enthalpy from the regeneration side would simply carry the regeneration heat
+into the process stream, which the downstream cooler would then have to
+remove again. A good wheel has $\eta_{F2}$ high and $\eta_{F1}$ low.
+
+\paragraph{Standing flag.} These two numbers are literature-typical
+placeholders for silica gel, and the configuration cell says so in a comment
+(\texttt{<- FIT to wheel data}). They are constants only at fixed rotation
+speed and balanced flow. Every quantitative statement in this report that
+depends on the wheel inherits their uncertainty, and they must be fitted to
+the catalogue or test data of a chosen wheel before any of it is claimed as a
+prediction.
+
+\subsection{Recovering the state: the 2-D Newton inversion}
+\label{sec:dw:newton}
+
+Equation~\eqref{eq:dw:drag} delivers the outlet \emph{potentials}, but the
+rest of the plant needs the outlet \emph{state}
+$(T_{\mathrm{pd}},w_{\mathrm{pd}})$. Since
+Eqs.~\eqref{eq:dw:F1}--\eqref{eq:dw:F2} are non-linear in both arguments and
+not analytically invertible, the code solves the $2\times2$ system
+\begin{equation}
+\mathbf{r}(T,w)=
+\begin{pmatrix}
+F_1(T,w)-F_1^{\mathrm{pd}}\\[2pt]
+F_2(T,w)-F_2^{\mathrm{pd}}
+\end{pmatrix}=\mathbf{0}
+\label{eq:dw:residual}
+\end{equation}
+by Newton's method, with the Jacobian obtained by differentiating the fits
+directly:
+\begin{equation}
+\mathbf{J}=
+\begin{pmatrix}
+\dfrac{\partial F_1}{\partial T} & \dfrac{\partial F_1}{\partial w}\\[10pt]
+\dfrac{\partial F_2}{\partial T} & \dfrac{\partial F_2}{\partial w}
+\end{pmatrix}
+=
+\begin{pmatrix}
++2865.0\times 1.490\;T^{-2.490} & 4.344\times 0.8624\;w^{-0.1376}\\[6pt]
+\dfrac{1.490\,T^{0.490}}{6360.0} & -\,1.127\times 0.07969\;w^{-0.92031}
+\end{pmatrix}.
+\label{eq:dw:jacobian}
+\end{equation}
+Writing $\mathbf{J}=\begin{psmallmatrix}a&b\\c&d\end{psmallmatrix}$ with
+$\det = ad-bc$, the update $\Delta\mathbf{x}=-\mathbf{J}^{-1}\mathbf{r}$ uses
+the closed-form $2\times2$ inverse
+$\mathbf{J}^{-1}=\tfrac{1}{\det}\begin{psmallmatrix}d&-b\\-c&a\end{psmallmatrix}$,
+so that
+\begin{equation}
+\Delta T = -\,\frac{d\,r_1 - b\,r_2}{\det},
+\qquad
+\Delta w = -\,\frac{-c\,r_1 + a\,r_2}{\det},
+\label{eq:dw:update}
+\end{equation}
+which is line for line what \texttt{\_invert\_F1F2} evaluates. The Jacobian
+signs are the ones already discussed: $\partial F_1/\partial T>0$ and
+$\partial F_2/\partial w<0$.
+
+The iteration starts from the process inlet itself,
+$(T,w)=(T_{\mathrm{pi}},w_{\mathrm{pi}})$ in kelvin, which is always a good
+guess because the outlet is only a partial drag away from it. After each
+update $w$ is floored, $w \leftarrow \max(w,10^{-7})$, to protect the
+fractional powers $w^{-0.1376}$ and $w^{-0.92031}$ from a zero or negative
+argument. The routine converts back on exit and returns $T$ in \degC.
+Convergence is quadratic; the shipped self-check converges in five iterations.
+
+\paragraph{What happens if it does not converge --- and this matters.}
+The loop runs a fixed \texttt{for \_ in range(60)}. Its exit test,
+$|r_1|<10^{-9}$ and $|r_2|<10^{-9}$, is applied to the residual computed
+\emph{before} the current update, so on success the routine performs one
+harmless extra step. On failure there is no branch at all: after sixty
+iterations the routine simply \texttt{return}s the last iterate, with no
+convergence flag, no exception, and no warning. A non-converged inversion is
+therefore indistinguishable, downstream, from a converged one. The only mode
+that raises rather than lies is a singular Jacobian, $\det=0$, which produces
+a \texttt{ZeroDivisionError} on native floats. Adding a convergence flag that
+propagates into the facility diagnostics is a small change and should be made
+before the wheel is exercised far outside the conditions tested here.
+
+\subsection{The regeneration outlet: conservation, not correlation}
+\label{sec:dw:regen}
+
+The effectiveness method gives only the process outlet. The regeneration
+outlet comes from overall balances on the wheel --- which is exactly why the
+process side must be closed before the regeneration side can be, and that
+ordering propagates outward into the structure of the whole air-loop
+solution.
+
+Treat the wheel as \textbf{adiabatic} and at \textbf{cyclic steady state}: the
+sorbent stores nothing net over a full revolution, and nothing is lost to the
+surroundings. Then whatever moisture and enthalpy leave one stream must enter
+the other. With
+$\Delta w_{\mathrm{p}} \equiv w_{\mathrm{pi}} - w_{\mathrm{pd}}$ the moisture
+removed from the process air (the quantity \texttt{dW\_process} returned by
+the routine),
+\begin{equation}
+\mdp\,\Delta w_{\mathrm{p}} = \mdr\,(w_{\mathrm{rd}}-w_{\mathrm{ri}})
+\quad\Longrightarrow\quad
+\boxed{\;w_{\mathrm{rd}} = w_{\mathrm{ri}}
++ \frac{\mdp}{\mdr}\,\Delta w_{\mathrm{p}}\;}
+\label{eq:dw:wrd}
+\end{equation}
+\begin{equation}
+\mdp\,\big(h_{\mathrm{pi}}-h_{\mathrm{pd}}\big)
+= \mdr\,\big(h_{\mathrm{rd}}-h_{\mathrm{ro}}\big)
+\quad\Longrightarrow\quad
+\boxed{\;h_{\mathrm{rd}} = h_{\mathrm{ro}}
++ \frac{\mdp}{\mdr}\,\big(h_{\mathrm{pi}}-h_{\mathrm{pd}}\big)\;}
+\label{eq:dw:hrd}
+\end{equation}
+and finally $T_{\mathrm{rd}} = T(h_{\mathrm{rd}},w_{\mathrm{rd}})$ from the
+inverse of Eq.~\eqref{eq:dw:enthalpy}.
+
+\paragraph{Reading the signs.} When the wheel dries,
+$\Delta w_{\mathrm{p}}>0$, so Eq.~\eqref{eq:dw:wrd} gives
+$w_{\mathrm{rd}}>w_{\mathrm{ri}}$: the regeneration air picks the moisture up,
+which is what desorption means. At the same time $\eta_{F1}$ is small but
+positive, so the process air gains a little enthalpy,
+$h_{\mathrm{pd}}>h_{\mathrm{pi}}$, and Eq.~\eqref{eq:dw:hrd} then gives
+$h_{\mathrm{rd}}<h_{\mathrm{ro}}$: the regeneration air \emph{cools} as it
+desorbs. Both directions are correct, and neither was imposed --- they fall
+out of the balances once the process side is known.
+
+\paragraph{Where conservation alone is not enough.} Equations
+\eqref{eq:dw:wrd}--\eqref{eq:dw:hrd} carry no bound. They will return a
+regeneration outlet at any temperature the arithmetic demands, including
+states below the process inlet wet-bulb, if the flow ratio is pushed. At
+$\mdr/\mdp=0.30$ with the self-check inlets, the balance returns
+$T_{\mathrm{rd}}=\SI{-3.2}{\degreeCelsius}$ --- arithmetically consistent and
+physically impossible. Nothing in the wheel routine flags this, because
+nothing in the wheel routine knows about transfer limits. It is a reason to
+keep $\mdr/\mdp$ near its configured value of $0.70$ unless the outlet state
+is inspected.
+
+\subsection{Why the flow ratio is a lever on one side only}
+\label{sec:dw:lever}
+
+The ratio $\mdp/\mdr$ appears in Eqs.~\eqref{eq:dw:wrd}--\eqref{eq:dw:hrd}
+and nowhere else. On the \emph{regeneration} side it is a real lever: a small
+regeneration flow concentrates the transferred moisture and enthalpy into a
+small stream, giving a large rise in $w_{\mathrm{rd}}$ and a large drop in
+$T_{\mathrm{rd}}$, while a large flow dilutes both. Combined with the coil's
+temperature-versus-throughput trade-off, $\mdr/\mdp$ is one of the more
+consequential design choices in the plant.
+
+On the \emph{process} side it is not a lever at all. Equations
+\eqref{eq:dw:drag}--\eqref{eq:dw:update} contain no mass flow of any kind.
+The process outlet $(T_{\mathrm{pd}},w_{\mathrm{pd}})$ depends only on the two
+inlet states and on $\eta_{F1},\eta_{F2}$. Doubling both air flows, or
+halving the regeneration flow alone, leaves the process outlet bit-for-bit
+identical; only the regeneration outlet moves. Numerically, with the
+self-check inlets, $\mdr/\mdp \in \{0.30,\,0.70,\,2.00\}$ all return
+$T_{\mathrm{pd}}=\SI{57.86}{\degreeCelsius}$ and
+$w_{\mathrm{pd}}=\SI{12.33}{\gram\per\kilogram}$, while $T_{\mathrm{rd}}$
+moves from $-3.2$ to $43.4$ to \SI{67.0}{\degreeCelsius}. Any conclusion
+drawn from the model about process-side flow effects is an artefact of
+something else in the plant, not of the wheel.
+
+\subsection{The central consequence: latent becomes sensible}
+\label{sec:dw:latent}
+
+Because $\eta_{F1}\ll 1$, the process path is nearly iso-enthalpic --- $F_1$
+barely moves, and constant $F_1$ is very nearly constant $h$. Along a
+constant-enthalpy line, Eq.~\eqref{eq:dw:enthalpy} forces a reduction in $w$
+to be paid for in $T$:
+\begin{equation}
+h=\text{const}=1.006\,T+w\,(2501+1.86\,T)
+\quad\Longrightarrow\quad
+\frac{\mathrm{d}T}{\mathrm{d}w}
+\approx -\,\frac{2501}{1.006+1.86\,w} < 0 .
+\label{eq:dw:latent2sensible}
+\end{equation}
+Numerically, removing \SI{1}{\gram\per\kilogram} at constant enthalpy heats
+the air by about $2501/1.04 \approx \SI{2.4}{\kelvin}$.
+
+This is not a defect of the wheel; it is thermodynamics. The latent heat
+released when vapour is adsorbed does not vanish --- it reappears as sensible
+heat in the very same air stream, plus whatever extra enthalpy the small
+$\eta_{F1}$ drag imports from the hot regeneration side. \textbf{A desiccant
+wheel is a latent-to-sensible converter.} It follows that the air-to-air
+cooler downstream of the wheel is not an optional refinement or a
+polish stage: without it the wheel delivers air that is drier than the room
+but far hotter, and the building cannot be held at comfort. The wheel creates
+the sensible load that the cooler --- and, in the modes that use it, the
+chiller --- exists to reject.
+
+\subsection{The regime diagnostic: when the wheel runs backwards}
+\label{sec:dw:regime}
+
+A desiccant wheel dries the process stream only while the regeneration air is
+drier \emph{in relative-humidity terms} than the process air. Below that
+crossover the drag in Eq.~\eqref{eq:dw:drag} points the wrong way, the wheel
+humidifies the process air, and $\Delta w_{\mathrm{p}}$ simply goes negative.
+Nothing breaks: the fixed-point loop still converges, the humidity controller
+still reports its target met, and the reversal is invisible in the plant
+results.
+
+The notebook therefore instruments it. A module-level dictionary
+\texttt{DW\_REGIME} counts every wheel evaluation and every reversed one,
+records the worst (most negative) $\Delta w_{\mathrm{p}}$, and raises a single
+\texttt{UserWarning} on the first reversal quoting both inlet states, both
+relative humidities, and the \RH\ gap that must stay positive; at the end of a
+run \texttt{dw\_regime\_report()} prints the reversed fraction and the worst
+excursion. This is a reporting device, not a correction: the model still
+returns the reversed state and the plant still runs on it. It exists so that a
+reversal is never silent.
+
+\subsection{Worked example: the shipped self-check}
+\label{sec:dw:example}
+
+The last lines of cell 12 exercise the wheel at a Gulf-Coast-like process
+inlet, \SI{32}{\degreeCelsius} at $\RH=0.68$, against a regeneration inlet at
+\SI{80}{\degreeCelsius} carrying the same absolute humidity, at the
+configured flow ratio $\mdr/\mdp=0.70$.
+
+\begin{center}
+\begin{tabular}{@{}lccccl@{}}
+\toprule
+Stream & $T$ [\degC] & $w$ [\si{\gram\per\kilogram}]
+       & $h$ [\si{\kilo\joule\per\kilogram}] & \RH\ [\%] & \\
+\midrule
+Process inlet  (pi) & 32.0 & 20.48 & \phantom{0}84.6 & 68.0 & room return + makeup \\
+Process outlet (pd) & 57.9 & 12.33 & \phantom{0}90.4 & 10.9 & \textbf{dried \SI{8.15}{\gram\per\kilogram}, heated \SI{25.9}{\kelvin}} \\
+Regen inlet    (ro) & 80.0 & 20.48 & 134.7 & \phantom{0}6.7 & coil outlet \\
+Regen outlet   (rd) & 43.4 & 32.11 & 126.5 & --- & \textbf{cooler and wetter} \\
+\bottomrule
+\end{tabular}
+\label{tab:dw:example}
+\end{center}
+
+Check the moisture balance, Eq.~\eqref{eq:dw:wrd}:
+\begin{equation*}
+w_{\mathrm{rd}} = 20.48 + \frac{1}{0.70}\,(20.48-12.33)
+= 20.48 + 1.4286\times 8.15 = \SI{32.11}{\gram\per\kilogram}.\quad\checkmark
+\end{equation*}
+
+Two readings. The process enthalpy rise is only
+$90.4-84.6=\SI{5.7}{\kilo\joule\per\kilogram}$ out of an available
+$134.7-84.6=\SI{50.1}{\kilo\joule\per\kilogram}$ --- the $\eta_{F1}=0.10$ drag
+doing exactly what it was set to do. And the temperature rise of
+\SI{25.9}{\kelvin} exceeds the pure iso-enthalpic estimate $2.4\times
+8.15\approx\SI{19.6}{\kelvin}$ by just that imported enthalpy. The
+regeneration stream mirrors it, leaving \SI{36.6}{\kelvin} colder and
+\SI{11.6}{\gram\per\kilogram} wetter than it entered.
+
+\subsection{Limitations: the formulation carries no size}
+\label{sec:dw:limitations}
+
+This subsection is the one to read before quoting any wheel result.
+
+\paragraph{There is no wheel in the model.} Equations
+\eqref{eq:dw:drag}--\eqref{eq:dw:update} contain no diameter, no depth, no
+desiccant mass, no channel geometry, no transfer area, no rotation speed and
+no NTU. The entire hardware description of the wheel is the pair of numbers
+$(\eta_{F1},\eta_{F2}) = (0.10,\,0.70)$. Everything the model knows about the
+component is compressed into those two constants, and they were prescribed,
+not derived. Three consequences follow, and none is subtle.
+
+\emph{The process outlet is independent of both mass flows.} Shown
+numerically in Section~\ref{sec:dw:lever}: the flows enter only the
+regeneration balances. In a real wheel the process outlet depends strongly on
+face velocity, because face velocity sets residence time and therefore the
+number of transfer units. The model cannot see this.
+
+\emph{The wheel cannot be resized.} There is no parameter to change that
+makes the wheel bigger or smaller. Scaling the plant --- changing
+\texttt{N\_eggs}, and with it \mdp\ --- rescales every duty in the facility
+but leaves the wheel's performance per kilogram of air exactly where it was.
+A wheel sized for the design flow and a wheel half that size are the same
+object inside this model.
+
+\emph{Part-load and rotation-speed behaviour are outside the model's
+vocabulary.} Wheel rotation speed is the primary control of a real desiccant
+wheel: too slow and the matrix saturates before it returns to regeneration,
+too fast and it carries hot regeneration air into the process stream as
+parasitic heat, and the optimum shifts with load. None of this exists here.
+Turning down the plant changes the inlet states, and the wheel responds to
+those, but it responds with the same two effectiveness values it uses at full
+load. Any statement in this report about wheel sizing, rotation speed,
+face-velocity selection or part-load degradation is outside what the model can
+represent, and should be read as an assumption or as a placeholder, never as
+a result.
+
+\paragraph{The remedy, and why it is deferred.} The analogy method itself
+supplies the missing link. Once the problem is decoupled into the two waves of
+Eq.~\eqref{eq:dw:waves}, each wave admits a regenerator-style effectiveness
+correlation of the form $\eta_{Fi} = \eta_{Fi}(\mathrm{NTU}_i,
+C_{r,i}^{*})$, where the number of transfer units follows from the transfer
+coefficient and the transfer area, $\mathrm{NTU}_i \sim \UA_i/(\md\,c_p)_i$,
+and the matrix capacity ratio follows from the desiccant mass and the
+rotation speed. Supplying wheel geometry, sorbent mass and rotation speed
+would then \emph{produce} $\eta_{F1}$ and $\eta_{F2}$ instead of taking them
+as input, and every limitation listed above would lift at once: face-velocity
+dependence, resizing and part-load behaviour would all follow.
+
+That extension is deferred. It needs geometric and sorbent data for a specific
+commercial wheel, which we do not have, and fitting it to a catalogue is a
+separate exercise from the plant-level architecture this report documents.
+Until it is done, $\eta_{F1}$ and $\eta_{F2}$ remain what the configuration
+cell calls them: numbers to be fitted to wheel data.

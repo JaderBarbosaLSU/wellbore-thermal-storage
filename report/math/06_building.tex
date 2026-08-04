@@ -1,0 +1,665 @@
+%=====================================================================
+\section{The demand side}\label{sec:dem:top}
+\label{sec:dem:interface}
+
+Everything upstream of this section --- the well, the water circuit, the coil, the
+wheel, the cooler --- exists to deliver one air stream to one space. This section
+defines the only thing the plant is allowed to know about that space.
+
+The model's demand side is deliberately \emph{generic}. The building is not a
+hatchery, a data hall or an office as far as the plant is concerned: it is a pair
+of numbers per time step, a sensible load and a moisture load, plus one closure
+that says how much air is available to carry them. A hatchery is one way of
+producing that pair; Section~\ref{sec:dem:hatch} works it out in full, but it is
+an \emph{instance}, not the definition. If a second application ever replaces it,
+nothing in Sections~1--5 of this report changes.
+
+\subsection{Two balances, three unknowns, one closure}
+\label{sec:dem:balances}
+
+\paragraph{Hypotheses, stated before the algebra.} The space is treated as a
+single steady, well-mixed control volume at constant pressure $\patm$, served by one
+supply stream of dry-air mass flow $\md_{\mathrm{sup}}$ and returning at the room
+condition. ``Well mixed'' means the extract state \emph{is} the room state
+$(T_{\mathrm{pc}},w_{\mathrm{pc}})$: no stratification, no local gradients, no
+distribution effectiveness. ``Steady'' means the room's thermal and moisture
+capacitance is ignored, so the balance has no time derivative and each time step
+is independent of the last.
+
+\paragraph{Dry-air conservation.} With no infiltration \emph{through the supply
+path}, the dry-air flow leaving equals the flow entering, so a single
+$\md_{\mathrm{sup}}$ appears in both balances below. This is why humidity ratio
+(per kilogram of \emph{dry} air) is the right moisture variable: it makes the
+water balance linear in a conserved flow.
+
+\paragraph{Water balance.} Let $\mdw$ be the net rate at which water vapour is
+released into the space by everything that is not the supply air --- occupants,
+process, infiltration, evaporating product. Steady state requires that the supply
+air carry it away:
+\begin{equation}
+\md_{\mathrm{sup}}\,w_{\mathrm{pi}}+\mdw=\md_{\mathrm{sup}}\,w_{\mathrm{pc}}
+\qquad\Longleftrightarrow\qquad
+\boxed{\;\mdw=\md_{\mathrm{sup}}\left(w_{\mathrm{pc}}-w_{\mathrm{pi}}\right)\;}
+\label{eq:dem:water}
+\end{equation}
+
+\paragraph{Energy balance.} Likewise, with $\qs$ the net sensible gain of the
+space and $c_p$ the moist-air specific heat per kilogram of dry air,
+\begin{equation}
+\md_{\mathrm{sup}}\,c_p\,T_{\mathrm{pi}}+\qs=\md_{\mathrm{sup}}\,c_p\,T_{\mathrm{pc}}
+\qquad\Longleftrightarrow\qquad
+\boxed{\;\qs=\md_{\mathrm{sup}}\,c_p\left(T_{\mathrm{pc}}-T_{\mathrm{pi}}\right)\;}
+\label{eq:dem:sens}
+\end{equation}
+The code evaluates $c_p$ at the \emph{room} humidity by default,
+$c_p=(1.006+1.86\,w_{\mathrm{pc}})\times10^{3}\;\si{\joule\per\kilogram\per\kelvin}$,
+and lets the caller override it. Evaluating at the room rather than the supply
+state is a choice of linearisation point; at the design case of
+Section~\ref{sec:dem:worked} the two differ by less than a part in $10^{3}$.
+
+\paragraph{Sign convention --- fix it once and never revisit it.}
+Both loads are \emph{positive when the plant must remove something}:
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Quantity & Positive means & Consequence for the supply state \\
+\midrule
+$\qs>0$   & cooling required        & $T_{\mathrm{pi}}<T_{\mathrm{pc}}$: supply colder than the room \\
+$\mdw>0$  & dehumidification required & $w_{\mathrm{pi}}<w_{\mathrm{pc}}$: supply drier than the room \\
+\bottomrule
+\end{tabular}
+\end{center}
+Negative values are perfectly legal and mean heating and humidification: the
+same two equations then return a supply state \emph{above} the room in
+temperature or humidity. Nothing in the interface branches on the sign, which is
+what makes the plant capable of running in all four quadrants without a mode
+switch.
+
+\paragraph{The counting problem.} Equations~\eqref{eq:dem:water} and
+\eqref{eq:dem:sens} are two equations in \emph{three} unknowns:
+$\md_{\mathrm{sup}}$, $T_{\mathrm{pi}}$ and $w_{\mathrm{pi}}$. The loads are
+data; the supply is not determined. Exactly one further statement --- a
+\emph{closure} --- is required, no more and no less. The code enforces this
+literally: supplying both closures, or neither, raises an error rather than
+silently preferring one.
+
+\begin{center}
+\fbox{\parbox{0.92\textwidth}{
+\textbf{The two admissible closures.}\\[2pt]
+\emph{Constant volume.} Prescribe the flow $\md_{\mathrm{sup}}$. The supply
+temperature and humidity then follow from
+Eqs.~\eqref{eq:dem:water}--\eqref{eq:dem:sens} and float with the load. This is
+the fixed-fan machine: the air handler moves a fixed mass and the conditioning
+does all the work.\\[3pt]
+\emph{Variable volume.} Prescribe the supply depression
+$\Delta T_{\mathrm{sup}}=T_{\mathrm{pc}}-T_{\mathrm{pi}}$. The flow then follows
+the sensible load,
+$\md_{\mathrm{sup}}=\max\!\left(|\qs|/(c_p|\Delta T_{\mathrm{sup}}|),\,
+\md_{\min}\right)$, and the supply temperature is held. This is the VAV machine:
+the coil holds a discharge setpoint and the fan tracks the load.
+}}
+\end{center}
+
+Two details of the variable-volume branch are worth reading off the code. First,
+the absolute values: the depression is treated as a \emph{magnitude}, so a
+heating load ($\qs<0$) returns a positive flow and, through
+Eq.~\eqref{eq:dem:sens}, a supply \emph{above} room temperature. Second, the
+floor $\md_{\min}$: a minimum flow (typically a mandatory fresh-air rate) can be
+imposed, and when it binds the interface returns a \verb|vent_limited| flag
+rather than quietly delivering less air than the application requires.
+
+\paragraph{The room condition line.} Divide Eq.~\eqref{eq:dem:water} by
+Eq.~\eqref{eq:dem:sens}. The flow --- the one thing the closure supplies ---
+cancels identically:
+\begin{equation}
+\frac{w_{\mathrm{pc}}-w_{\mathrm{pi}}}{T_{\mathrm{pc}}-T_{\mathrm{pi}}}
+=\frac{c_p\,\mdw}{\qs}\;\equiv\;S .
+\label{eq:dem:rcl}
+\end{equation}
+This is the classical \emph{room condition line}: on a psychrometric chart, the
+locus of admissible supply states is a straight line through the room point
+$(T_{\mathrm{pc}},w_{\mathrm{pc}})$ whose slope $S$ is set by the load
+\emph{ratio} alone.
+
+\begin{center}
+\fbox{\parbox{0.92\textwidth}{
+\textbf{What is fixed by what.} The load ratio fixes the \emph{direction} in
+which the supply state must lie from the room point. The closure fixes \emph{how
+far along that line} it sits --- a large flow puts the supply near the room, a
+small flow pushes it far away. Direction is physics; distance is a design
+choice. Every disagreement about ``the required supply air'' is one of these two
+and it is worth naming which.}}
+\end{center}
+
+\paragraph{Why the sensible heat ratio cannot classify the load.} It is
+tempting to compress the load pair into the single number reported by the
+interface,
+\begin{equation}
+\mathrm{SHR}=\frac{\qs}{\qs+\ql},\qquad \ql=\mdw\,\hfg ,
+\label{eq:dem:shr}
+\end{equation}
+and to read the operating quadrant off it. \textbf{This does not work, and the
+failure is not subtle.} The ratio is invariant under a simultaneous sign flip of
+both loads: $\qs=+100$, $\ql=+25$ and $\qs=-100$, $\ql=-25$ both give
+$\mathrm{SHR}=0.8$. Two \emph{negative} loads --- a space that needs heating and
+humidification, the deep-winter quadrant --- return a perfectly respectable
+positive SHR indistinguishable from summer cooling. A ratio destroys exactly the
+information (the signs) that selects the quadrant. The interface therefore
+classifies on the signs of $\qs$ and $\mdw$ \emph{separately} and reports
+SHR as a diagnostic only.
+
+\paragraph{What the steady, well-mixed hypothesis costs.} Three things. There is
+no thermal mass, so a load spike is passed instantly to the plant instead of
+being buffered by the structure --- the model cannot exploit pre-cooling or
+night flush, and it over-states peak duty on a short excursion. There is no
+stratification, so a tall space that could be conditioned only in the occupied
+layer is charged for its whole volume. And there is no room control dynamics:
+the space is \emph{assumed} to be held at
+$(T_{\mathrm{pc}},\RH_{\mathrm{pc}})$, so the model answers ``what must be
+supplied'' and never ``what would the room drift to if the plant fell short''.
+The saturation flags elsewhere in the model exist precisely because that second
+question has been assumed away here.
+
+\subsection{Why the latent load is a moisture rate and not a power}
+\label{sec:dem:hfg}
+
+The interface carries the latent load as $\mdw$ in \si{\kilogram\per\second}, not
+as a power in \si{\kilo\watt}. This looks like a units preference. It is not; it
+removes a silent error.
+
+\paragraph{The double conversion.} A load generator that measures evaporation ---
+which is what physically happens --- knows a \emph{rate}. To report kilowatts it
+must multiply by some latent heat, $\ql=\mdw\hfg^{(1)}$. The interface, needing a
+rate for Eq.~\eqref{eq:dem:water}, must then divide by some latent heat,
+$\mdw^{\ast}=\ql/\hfg^{(2)}$. The physical quantity therefore passes through
+$\hfg$ \emph{twice}, and only if the two values agree exactly does the round trip
+return what was sent:
+\begin{equation}
+\mdw^{\ast}=\mdw\,\frac{\hfg^{(1)}}{\hfg^{(2)}} .
+\label{eq:dem:hfground}
+\end{equation}
+
+\paragraph{The error is not hypothetical.} Reasonable values of $\hfg$ near room
+temperature span roughly \SIrange{2430}{2500}{\kilo\joule\per\kilogram} depending
+on whether one quotes it at \SI{25}{\celsius}, at \SI{0}{\celsius}, or as the
+enthalpy datum embedded in the moist-air enthalpy correlation. The present
+notebook itself carries two: the load reference
+$\hfg=\SI{2.5}{\mega\joule\per\kilogram}$ used by the interface and every load
+generator, and the datum \SI{2501}{\kilo\joule\per\kilogram} inside the moist-air
+enthalpy function (and inside the legacy \verb|building_loads| helper). They
+differ by \SI{1}{\kilo\joule\per\kilogram} here, harmlessly --- but nothing in a
+kilowatt-valued interface would have detected it had they differed by fifty.
+
+\paragraph{Size of the damage.} Propagating Eq.~\eqref{eq:dem:hfground} through
+Eq.~\eqref{eq:dem:water}, the induced error falls entirely on the required supply
+\emph{depression}:
+\begin{equation}
+\frac{\delta\!\left(w_{\mathrm{pc}}-w_{\mathrm{pi}}\right)}
+     {w_{\mathrm{pc}}-w_{\mathrm{pi}}}
+=\frac{\delta \hfg}{\hfg}
+\;\;\approx\;\;\frac{50}{2500}=2\,\% .
+\label{eq:dem:hfgerr}
+\end{equation}
+Two per cent of a humidity difference is far below the resolution of any humidity
+sensor and far below the scatter of the wheel model that must deliver it. It will
+never be caught by inspection of a result, and it will never be caught by a unit
+check either, because kilowatts are kilowatts. \textbf{An error that is both
+systematic and invisible is worse than a large one.} The cure is structural, not
+numerical: convert once, at the boundary, and keep the conserved quantity ---
+mass --- in the interior.
+
+\paragraph{How the code implements it.} A single module-level constant
+\verb|LOAD_HFG| is the only conversion the demand side may use. The generic
+generator \verb|prescribed_loads| exists precisely to serve callers who genuinely
+have kilowatts: it accepts $\ql$ in \si{\kilo\watt} together with an
+\emph{optional explicit} $\hfg$, converts there and then, and hands a rate
+onwards. The kilowatt figure the interface reports back, $\ql=\mdw\,$\verb|LOAD_HFG|,
+is a derived display quantity and is never used to compute anything.
+
+\subsection{The guards}
+\label{sec:dem:guards}
+
+The two balances are linear and always return \emph{a} solution. The question is
+whether that solution is a state that air can be in. Two failures used to pass
+silently and are now trapped.
+
+\paragraph{Guard 1: negative required supply humidity.} Equation~\eqref{eq:dem:water}
+gives $w_{\mathrm{pi}}=w_{\mathrm{pc}}-\mdw/\md_{\mathrm{sup}}$, which goes
+negative when
+\begin{equation}
+\md_{\mathrm{sup}}<\frac{\mdw}{w_{\mathrm{pc}}} .
+\label{eq:dem:guard1}
+\end{equation}
+Physically: \emph{even bone-dry supply air, at that flow, cannot carry the
+moisture away}. The space would have to be served air with negative water
+content. Equation~\eqref{eq:dem:guard1} is therefore an absolute lower bound on
+the supply flow imposed by the latent load alone, independent of any equipment,
+and it is worth evaluating before sizing anything: no desiccant, however good,
+buys a way around it.
+
+\paragraph{Guard 2: supersaturated required supply state.} Even a positive
+$w_{\mathrm{pi}}$ can be unreachable. The supply temperature is fixed
+independently by Eq.~\eqref{eq:dem:sens}, so the pair
+$(T_{\mathrm{pi}},w_{\mathrm{pi}})$ may fall \emph{below the saturation line}.
+The interface inverts the humidity ratio to a vapour pressure and tests it
+against the saturation pressure at the required supply temperature:
+\begin{equation}
+\RH_{\mathrm{pi}}
+=\frac{1}{\psat(T_{\mathrm{pi}})}\cdot
+\frac{w_{\mathrm{pi}}\,\patm}{0.622+w_{\mathrm{pi}}}\;>\;1
+\quad\Longrightarrow\quad\text{no component can deliver it.}
+\label{eq:dem:guard2}
+\end{equation}
+This is not an equipment shortfall, it is an inconsistency between the load pair
+and the closure: the requested state does not exist. The usual cause is a small
+supply flow with a large sensible load and a modest latent load --- the supply is
+driven very cold while still being asked to stay humid. The remedies are to raise
+the flow (moving the supply state back toward the room along the line of
+Eq.~\eqref{eq:dem:rcl}) or to accept reheat, which means deliberately leaving the
+room condition line.
+
+\paragraph{Reading the two guards together.} Geometrically they fence the room
+condition line at both ends. The admissible supply state must lie on the line of
+Eq.~\eqref{eq:dem:rcl}, above $w=0$ and below the saturation curve
+$w=w_{\mathrm{sat}}(T)$. The closure slides the state along that line; the guards
+say when it has slid off the end of the physically available segment.
+
+\paragraph{A deliberate asymmetry in severity.} Malformed \emph{inputs} raise
+exceptions and stop the run: both closures given or neither, a zero depression, a
+non-positive flow. Physically impossible \emph{outputs} raise warnings and let
+the run continue. That is a considered choice: a design sweep that crashes on its
+first infeasible corner tells you nothing about the shape of the feasible region,
+whereas one that flags and continues maps it. The cost is that the flags must
+actually be read --- a warning nobody looks at is worse than an exception.
+
+%=====================================================================
+\section{A worked demand case: the poultry hatchery}
+\label{sec:dem:hatch}
+
+The hatchery is now one implementation of the generator contract of
+Section~\ref{sec:dem:interface}: a function of ambient state returning the pair
+$(\qs,\mdw)$. It is retained because it is the project's motivating application
+and because it exercises the interface hard --- an internal heat source, an
+internal moisture source, a room \emph{warmer} than the Gulf ambient, and a
+mandatory ventilation rate that the occupants (embryos) set and the designer
+cannot negotiate.
+
+\subsection{Internal terms}
+\label{sec:dem:internal}
+
+\paragraph{Embryonic metabolic heat.} Developing embryos respire and the heat
+release rises steeply toward hatch. Written per egg,
+\begin{equation}
+Q_{\mathrm{eggs}}=N_{\mathrm{eggs}}\,q_{\mathrm{egg}},
+\qquad q_{\mathrm{egg}}=\SI{0.13}{\watt}\ \text{per egg},
+\label{eq:dem:Qeggs}
+\end{equation}
+a \emph{sensible source}: it flows into the space. Note how this inverts the
+usual comfort-cooling intuition, in which the envelope is the load and the
+interior is passive.
+
+\paragraph{Egg moisture loss.} A setter deliberately drives controlled moisture
+loss from the eggs --- of order \SI{12}{\percent} of egg weight over incubation,
+and essential to hatchability. That water evaporates into the room air:
+\begin{equation}
+\dot m_{\mathrm{evap}}=N_{\mathrm{eggs}}\,r_{\mathrm{evap}},
+\qquad r_{\mathrm{evap}}=\SI{4.6e-9}{\kilogram\per\second}\ \text{per egg}
+\;(\approx\SI{0.40}{\gram}\ \text{per egg per day}).
+\label{eq:dem:mevap}
+\end{equation}
+The application therefore \emph{wants} the eggs to lose water, which is why the
+room humidity cannot be allowed to drift up: too humid means insufficient weight
+loss and a poor hatch. The humidity setpoint here is a product specification, not
+a comfort preference.
+
+\subsection{Envelope terms in conductance form}
+\label{sec:dem:envelope}
+
+\paragraph{Sensible: two genuine conductances.} Both external sensible paths are
+linear in a temperature difference, so both can be written as a conductance times
+a driving potential:
+\begin{equation}
+Q_{\mathrm{sens,ext}}
+=\underbrace{H_{\mathrm{tr}}}_{\text{material}}\left(T_{\mathrm{sol}}-T_{\mathrm{pc}}\right)
++\underbrace{\dot m_{\mathrm{inf}}\,c_{p,\mathrm{a}}}_{\text{air mass}}
+\left(T_{\mathrm{oa}}-T_{\mathrm{pc}}\right),
+\qquad H_{\mathrm{tr}}=\sum_i U_iA_i .
+\label{eq:dem:Qsensext}
+\end{equation}
+$H_{\mathrm{tr}}$ [\si{\watt\per\kelvin}] is a property of materials and
+geometry; $\dot m_{\mathrm{inf}}c_{p,\mathrm{a}}$ [\si{\watt\per\kelvin}] is a
+property of the airtightness. The infiltration here is \emph{uncontrolled
+leakage} and is distinct from the deliberate ventilation, which is handled in the
+process loop (Section~\ref{sec:dem:assembled}).
+
+\paragraph{Sol-air temperature.} For the opaque envelope the driving outdoor
+temperature is not the air temperature: absorbed solar radiation raises the
+surface above it. The standard device folds this into an equivalent outdoor
+temperature,
+\begin{equation}
+T_{\mathrm{sol}}=T_{\mathrm{oa}}
++\frac{\alpha_s I_{\mathrm{sol}}}{h_o}-\frac{\varepsilon\,\Delta R}{h_o}
+\;\;\longrightarrow\;\;
+T_{\mathrm{sol}}=T_{\mathrm{oa}}+\Delta T_{\mathrm{solar}},
+\qquad \Delta T_{\mathrm{solar}}=\SI{4}{\kelvin},
+\label{eq:dem:solair}
+\end{equation}
+with $\alpha_s$ the solar absorptance, $I_{\mathrm{sol}}$ the incident
+irradiance, $h_o$ the outside film coefficient and the last term the long-wave
+sky correction. The model currently uses the constant offset on the right; under
+hourly weather forcing it becomes the full expression on the left. For a
+single-storey hatchery, whose roof is most of its envelope, this term is not
+cosmetic.
+
+\subsection{The latent asymmetry, which is the physically central point}
+\label{sec:dem:asymmetry}
+
+The external latent load has \emph{one} term and no counterpart to
+$H_{\mathrm{tr}}$:
+\begin{equation}
+\dot m_{w,\mathrm{ext}}=\dot m_{\mathrm{inf}}\left(w_{\mathrm{oa}}-w_{\mathrm{pc}}\right).
+\label{eq:dem:mwext}
+\end{equation}
+
+\begin{center}
+\fbox{\parbox{0.92\textwidth}{
+\textbf{The asymmetry, stated plainly.} A wall conducts heat but not vapour.
+There is no material vapour conductance analogous to a $U$-value: vapour
+diffusion through permeable construction exists but is second order and is
+neglected here. Hence the \emph{sensible} external load has two knobs ---
+insulation ($H_{\mathrm{tr}}$) and tightness ($\dot m_{\mathrm{inf}}$) --- while
+the \emph{latent} external load has only the second.\\[3pt]
+\textbf{In a humid climate, insulation does nothing for humidity.} Airflow
+control is the entire latent game. When a reference speaks of a ``latent
+conductance'' it means the air-mass term $\dot m\,\hfg$, never a material
+property.}}
+\end{center}
+
+The sign of $w_{\mathrm{oa}}-w_{\mathrm{pc}}$ therefore decides whether the
+outside air is a latent load or a latent resource. For the setter setpoint
+$(\SI{37}{\celsius},\ \RH=0.50)$ the room humidity ratio is
+$w_{\mathrm{pc}}=\SI{19.86}{\gram\per\kilogram}$, whose vapour pressure
+corresponds to a dew point of \SI{24.9}{\celsius}: outdoor air is a
+dehumidification load exactly when its dew point exceeds that. At the design
+ambient (\SI{31}{\celsius}, $\RH=0.75$) it does ---
+$w_{\mathrm{oa}}=\SI{21.36}{\gram\per\kilogram}$ --- but only by
+\SI{1.5}{\gram\per\kilogram}. Gulf summer dew points straddle the criterion,
+which is why the computed latent demand is small and sign-changeable rather than
+overwhelming.
+
+\subsection{The assembled demand, and where the ventilation went}
+\label{sec:dem:assembled}
+
+Collecting Eqs.~\eqref{eq:dem:Qeggs}--\eqref{eq:dem:mwext} gives the hatchery
+generator exactly as coded:
+\begin{align}
+\qs&=N_{\mathrm{eggs}}q_{\mathrm{egg}}
++H_{\mathrm{tr}}\left(T_{\mathrm{sol}}-T_{\mathrm{pc}}\right)
++\dot m_{\mathrm{inf}}c_{p,\mathrm{a}}\left(T_{\mathrm{oa}}-T_{\mathrm{pc}}\right),
+\label{eq:dem:qs_hatch}\\
+\mdw&=N_{\mathrm{eggs}}r_{\mathrm{evap}}
++\dot m_{\mathrm{inf}}\left(w_{\mathrm{oa}}-w_{\mathrm{pc}}\right).
+\label{eq:dem:mw_hatch}
+\end{align}
+(The code computes the latent term as a power using \verb|LOAD_HFG| and the
+generator immediately divides it back out, so Eq.~\eqref{eq:dem:mw_hatch} is what
+the interface actually receives --- an instance of the round trip discussed in
+Section~\ref{sec:dem:hfg}, here exact because both conversions use the same
+constant.)
+
+\paragraph{The accounting point that must be right.} The mandatory fresh-air
+ventilation does \emph{not} appear in
+Eqs.~\eqref{eq:dem:qs_hatch}--\eqref{eq:dem:mw_hatch}, and this is not an
+omission. In this architecture the fresh air enters the \emph{process loop} at
+damper $d_{p\mathrm{A}}$ and is conditioned by the wheel and the cooler
+\emph{before} it reaches the space. Its load is borne by the equipment and enters
+the plant through the process-inlet mixing state, not through the space balance.
+Counting it here as well would be double counting. Equations
+\eqref{eq:dem:qs_hatch}--\eqref{eq:dem:mw_hatch} are the loads on the \emph{space
+alone}: eggs, envelope, infiltration.
+
+\paragraph{Where it does appear.} Combining the process-inlet mixing with the
+required supply humidity, the moisture the wheel must actually remove is
+\begin{equation}
+\dot m_{\mathrm{H_2O}}^{\mathrm{wheel}}
+=\mdp\left(w_{\mathrm{pi}}^{\mathrm{mix}}-w_{\mathrm{pi}}^{\mathrm{req}}\right)
+=\underbrace{\mdv\left(w_{\mathrm{oa}}-w_{\mathrm{pc}}\right)}_{\text{forced ventilation}}
++\underbrace{\dot m_{\mathrm{evap}}
++\dot m_{\mathrm{inf}}\left(w_{\mathrm{oa}}-w_{\mathrm{pc}}\right)}_{\text{space sources}},
+\label{eq:dem:trueduty}
+\end{equation}
+using the identity $\mdp\,d_{p\mathrm{A}}=\mdv$ guaranteed by the sizing of
+Section~\ref{sec:dem:causality}. At the design point the three terms are
+\SI{15.0}{\gram\per\second}, \SI{4.6}{\gram\per\second} and
+\SI{4.4}{\gram\per\second}: a total wheel duty of
+\SI{24.0}{\gram\per\second} against a \emph{space} latent load of only
+\SI{9.0}{\gram\per\second}. \textbf{Nearly two thirds of the dehumidification
+duty is imported by the ventilation air the eggs require.} The plant is sized by
+a flow that cannot be reduced multiplied by a humidity gap set by the weather.
+
+\subsection{Sizing: everything follows from \texorpdfstring{$N_{\mathrm{eggs}}$}{N\_eggs}}
+\label{sec:dem:sizing}
+
+Prescribing loads, flows and geometry independently allows them to describe
+different-sized buildings at the same time --- an inconsistency that occurred
+during development. The cure is a single declared capacity from which everything
+descends.
+
+\paragraph{Internal loads, linear in capacity.}
+Equations~\eqref{eq:dem:Qeggs} and \eqref{eq:dem:mevap}.
+
+\paragraph{Geometry, from packing density and a fixed ceiling height.}
+\begin{equation}
+A_{\mathrm{floor}}=\frac{N_{\mathrm{eggs}}}{n_{\mathrm{egg/m^2}}},\qquad
+V_{\mathrm{room}}=A_{\mathrm{floor}}H_{\mathrm{room}},\qquad
+A_{\mathrm{walls}}=4\sqrt{A_{\mathrm{floor}}}\,H_{\mathrm{room}},
+\label{eq:dem:geom}
+\end{equation}
+the last assuming a square footprint, so the perimeter is
+$4\sqrt{A_{\mathrm{floor}}}$.
+
+\paragraph{Envelope, infiltration and forced ventilation.}
+\begin{equation}
+H_{\mathrm{tr}}=U_{\mathrm{env}}\left(2A_{\mathrm{floor}}+A_{\mathrm{walls}}\right),
+\qquad
+\dot m_{\mathrm{inf}}=\frac{\rho_{\mathrm{da}}V_{\mathrm{room}}\,\mathrm{ACH}_{\mathrm{inf}}}{3600},
+\qquad
+\mdv=\frac{\rho_{\mathrm{da}}N_{\mathrm{eggs}}v_{\mathrm{egg}}}{3600},
+\label{eq:dem:Htr}
+\end{equation}
+the factor $2$ counting roof and floor.
+
+\paragraph{Scaling laws.} How does the plant scale with capacity? Not as the
+naive ``surface $\propto$ volume$^{2/3}$'', because \textbf{the ceiling height is
+fixed}: the building spreads sideways rather than growing isotropically. From
+Eqs.~\eqref{eq:dem:geom}--\eqref{eq:dem:Htr}, everything is linear in
+$N_{\mathrm{eggs}}$ except the walls, which go as $\sqrt{N_{\mathrm{eggs}}}$:
+\begin{equation}
+H_{\mathrm{tr}}
+=\underbrace{\frac{2U_{\mathrm{env}}}{n_{\mathrm{egg/m^2}}}N_{\mathrm{eggs}}}
+_{\text{roof}+\text{floor},\ \propto N_{\mathrm{eggs}}}
++\underbrace{4U_{\mathrm{env}}H_{\mathrm{room}}
+\sqrt{\frac{N_{\mathrm{eggs}}}{n_{\mathrm{egg/m^2}}}}}
+_{\text{walls},\ \propto\sqrt{N_{\mathrm{eggs}}}}\;.
+\label{eq:dem:scaling}
+\end{equation}
+Numerically, from $\num{150000}$ to $10^{6}$ eggs (a factor
+$6.67$), $H_{\mathrm{tr}}$ rises from \SI{942}{\watt\per\kelvin} to
+\SI{5495}{\watt\per\kelvin}, a factor $5.84$: an effective exponent of
+$N_{\mathrm{eggs}}^{0.93}$, nearly but not exactly linear.
+
+\begin{center}
+\fbox{\parbox{0.92\textwidth}{
+\textbf{Consequence: the load \emph{balance} is scale-invariant.} Since
+essentially every term scales with $N_{\mathrm{eggs}}$, so do $\qs$, $\mdw$ and
+therefore $\mdp$ --- and the \emph{ratios} (sensible-to-latent, and
+$d_{p\mathrm{A}}=\mdv/\mdp$) do not move. Making the hatchery bigger does not
+change whether it is latent- or sensible-dominated; that is set by the setpoint
+and the climate. What does \emph{not} scale is the \textbf{well}: one borehole
+delivers what it delivers, so raising $N_{\mathrm{eggs}}$ drives the plant into
+the coil's large-flow limit. The binding constraint is the well-to-demand ratio,
+not the building.}}
+\end{center}
+
+\subsection{Airflow causality --- which way the arrow points}
+\label{sec:dem:causality}
+
+\paragraph{The wrong way round.} An earlier version prescribed the fresh-air
+damper and derived the supply flow from it, $\mdp=\mdv/d_{p\mathrm{A}}$. That
+makes the fan flow a $1/d_{p\mathrm{A}}$ hyperbola: at $d_{p\mathrm{A}}=0.1$ it
+returns \SI{100}{\kilogram\per\second} of supply air. This is an artifact of
+inverted causality, not a physical result. A damper position is not a sizing
+input.
+
+\paragraph{The right way round.} The physical logic runs in four steps.
+\begin{enumerate}[nosep]
+\item The \textbf{ventilation is forced by the application}: embryos consume
+oxygen and produce carbon dioxide, so $\mdv$ (Eq.~\eqref{eq:dem:Htr}) is the one
+flow in the plant that is not a design choice.
+\item The \textbf{supply flow follows the design sensible load} carried at a
+prescribed depression --- the variable-volume closure of
+Section~\ref{sec:dem:balances}, applied once at design time:
+\begin{equation}
+\mdp^{\mathrm{load}}=\frac{\qs^{\mathrm{design}}}
+{c_{p,\mathrm{a}}\,\Delta T_{\mathrm{sup}}^{\mathrm{design}}},
+\qquad \Delta T_{\mathrm{sup}}^{\mathrm{design}}=\SI{3}{\kelvin}.
+\label{eq:dem:mdotload}
+\end{equation}
+\item The \textbf{ventilation is a floor}, and the damper is \emph{derived}:
+\begin{equation}
+\boxed{\;\mdp=\max\!\left(\mdp^{\mathrm{load}},\,\mdv\right),\qquad
+d_{p\mathrm{A}}=\min\!\left(\frac{\mdv}{\mdp},\,1\right).\;}
+\label{eq:dem:causality}
+\end{equation}
+The damper opens exactly far enough to admit the required fresh air and no
+further.
+\item If $\mdp^{\mathrm{load}}\le\mdv$ the ventilation dominates:
+$d_{p\mathrm{A}}\to1$, recirculation vanishes and the plant runs
+\SI{100}{\percent} once-through. The model raises a \verb|vent_dominated| flag;
+this is the same condition the interface reports as \verb|vent_limited|.
+\end{enumerate}
+
+\paragraph{On the depression.} $\Delta T_{\mathrm{sup}}$ is the standard HVAC
+sizing handle: small depression means a large fan and gentle, uniform conditions;
+large depression means a small fan and a cold jet. \textbf{For a setter it must
+be small} --- eggs cannot be chilled unevenly --- so hatcheries run high
+recirculation at small temperature difference. The remaining hardware then
+follows the streams it serves:
+$\mdr=0.70\,\mdp$, $\md_{\mathrm{cool}}=1.5\,\mdp$ and
+$\UA_{\mathrm{coil}}=\SI{3000}{\watt\per\kelvin}$ per \si{\kilogram\per\second}
+of $\mdr$. Freezing those as constants while scaling the plant would be the same
+class of error as the hyperbola above.
+
+\subsection{The chain evaluated at the baseline}
+\label{sec:dem:worked}
+
+Table~\ref{tab:dem:chain} runs the whole descent at the notebook's baseline:
+$N_{\mathrm{eggs}}=10^{6}$, room $(\SI{37}{\celsius},\ \RH=0.50)$, ambient
+$(\SI{31}{\celsius},\ \RH=0.75)$.
+
+\begin{table}[htbp]
+\centering
+\caption{The sizing chain and the interface solve at the baseline configuration.
+Every input is read from the configuration cell; every output is the value the
+notebook prints.}
+\label{tab:dem:chain}
+\begin{tabular}{@{}llr@{}}
+\toprule
+Step & Expression & Value \\
+\midrule
+\multicolumn{3}{@{}l}{\emph{Geometry and sizing}}\\
+Egg sensible heat & $10^{6}\times\SI{0.13}{\watt}$ & \SI{130.0}{\kilo\watt}\\
+Egg moisture      & $10^{6}\times\SI{4.6e-9}{\kilogram\per\second}$ & \SI{4.60}{\gram\per\second}\\
+Floor area        & $10^{6}/200$ & \SI{5000}{\metre\squared}\\
+Room volume       & $5000\times3.5$ & \SI{17500}{\metre\cubed}\\
+Wall area         & $4\sqrt{5000}\times3.5$ & \SI{989.9}{\metre\squared}\\
+Transmission      & $0.5\,(2\times5000+989.9)$ & \SI{5495}{\watt\per\kelvin}\\
+Infiltration      & $1.2\times17500\times0.5/3600$ & \SI{2.917}{\kilogram\per\second}\\
+Forced ventilation& $1.2\times(10^{6}\times0.030)/3600$ & \SI{10.00}{\kilogram\per\second}\\
+\midrule
+\multicolumn{3}{@{}l}{\emph{Design sensible load}, Eq.~\eqref{eq:dem:qs_hatch}, $T_{\mathrm{sol}}=\SI{35}{\celsius}$}\\
+\quad eggs         &                                & $+\SI{130.0}{\kilo\watt}$\\
+\quad envelope     & $5495\times(35-37)$            & $-\SI{11.0}{\kilo\watt}$\\
+\quad infiltration & $2.917\times1006\times(31-37)$ & $-\SI{17.6}{\kilo\watt}$\\
+\quad \textbf{total} &                              & $\mathbf{+\SI{101.4}{\kilo\watt}}$\\
+\midrule
+\multicolumn{3}{@{}l}{\emph{Design latent load}, Eq.~\eqref{eq:dem:mw_hatch}, $w_{\mathrm{oa}}-w_{\mathrm{pc}}=+\SI{1.50}{\gram\per\kilogram}$}\\
+\quad eggs         &                                & $+\SI{4.60}{\gram\per\second}$\\
+\quad infiltration & $2.917\times1.50\times10^{-3}$ & $+\SI{4.38}{\gram\per\second}$\\
+\quad \textbf{total} &                              & $\mathbf{+\SI{8.98}{\gram\per\second}}$ ($=\SI{22.5}{\kilo\watt}$)\\
+\midrule
+\multicolumn{3}{@{}l}{\emph{Airflow}, Eqs.~\eqref{eq:dem:mdotload}--\eqref{eq:dem:causality}}\\
+Load-driven flow  & $101405/(1006\times3.0)$ & \SI{33.60}{\kilogram\per\second}\\
+$\mdp$            & $\max(33.60,\,10.00)$    & \SI{33.60}{\kilogram\per\second} (load wins)\\
+$d_{p\mathrm{A}}$ & $10.00/33.60$            & $0.298$ (derived)\\
+$\mdr$, $\md_{\mathrm{cool}}$ & $0.70\,\mdp$, $1.5\,\mdp$ & $23.52$, \SI{50.40}{\kilogram\per\second}\\
+$\UA_{\mathrm{coil}}$ & $3000\times23.52$    & \SI{70.6}{\kilo\watt\per\kelvin}\\
+\midrule
+\multicolumn{3}{@{}l}{\emph{Interface solve}, constant-volume closure $\md_{\mathrm{sup}}=\mdp$, $c_p=\SI{1042.9}{\joule\per\kilogram\per\kelvin}$}\\
+$T_{\mathrm{pi}}$ & $37-101405/(33.60\times1042.9)$ & \SI{34.11}{\celsius}\\
+$w_{\mathrm{pi}}$ & $19.86-8.98/33.60$              & \SI{19.59}{\gram\per\kilogram}\\
+$\Delta T_{\mathrm{sup}}$, $\Delta w_{\mathrm{sup}}$ & & \SI{2.89}{\kelvin}, \SI{0.267}{\gram\per\kilogram}\\
+$\RH_{\mathrm{pi}}$, SHR & & $0.58$, $0.82$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Three things to read off the table.} First, \textbf{the eggs are more
+than the whole load}: at \SI{31}{\celsius} ambient the room at \SI{37}{\celsius}
+is warmer than outside, so the envelope and the infiltration are both
+\emph{negative} --- they help --- and the \SI{130}{\kilo\watt} of metabolic heat
+is $128\,\%$ of the \SI{101.4}{\kilo\watt} net. The building is an internally
+driven load in a mild-by-comparison climate, and $q_{\mathrm{egg}}$ is by a wide
+margin the highest-leverage placeholder in the model.
+
+Second, \textbf{the achieved depression is not the design depression}:
+\SI{2.89}{\kelvin} against \SI{3.0}{\kelvin}. The flow is sized with the dry-air
+$c_{p,\mathrm{a}}=\SI{1006}{\joule\per\kilogram\per\kelvin}$ while the interface
+solves with the moist-air value $\SI{1042.9}{\joule\per\kilogram\per\kelvin}$ at
+$w_{\mathrm{pc}}$. The $3.7\,\%$ discrepancy is harmless but real, and it is
+exactly the kind of double-definition the moisture-rate argument of
+Section~\ref{sec:dem:hfg} was written to avoid.
+
+Third, \textbf{the required conditioning is tiny in humidity terms}:
+\SI{0.267}{\gram\per\kilogram} of depression. The room condition line is very
+steep and the plant's difficulty lies almost entirely in the ventilation air it
+must dry on the way in (Eq.~\eqref{eq:dem:trueduty}), not in the space itself.
+
+\subsection{The interface contract: what a second demand case must supply}
+\label{sec:dem:contract}
+
+The point of the preceding section is that none of it was privileged. To attach
+any other application to this plant, the following --- and only the
+following --- must be provided.
+
+\begin{enumerate}[nosep]
+\item \textbf{A load generator.} A function of the ambient state (and of
+whatever internal state the application has) returning the pair
+$(\qs,\mdw)$: sensible load in \si{\watt}, moisture load in
+\si{\kilogram\per\second}, both positive when the plant must remove. If the
+application only knows kilowatts, it must convert once, explicitly, at its own
+boundary.
+\item \textbf{A room setpoint} $(T_{\mathrm{pc}},w_{\mathrm{pc}})$, with
+$w_{\mathrm{pc}}$ obtained from the setpoint relative humidity through the
+psychrometric relations, because both balances are written about the room state.
+\item \textbf{Exactly one closure}: a supply flow (constant volume) or a supply
+depression (variable volume), optionally with a minimum flow $\md_{\min}$
+representing a mandatory ventilation rate. Not both, not neither.
+\item \textbf{No double counting.} Any stream the plant conditions upstream of
+the space --- ventilation air admitted at $d_{p\mathrm{A}}$ being the case in
+point --- must be excluded from the generator. The generator returns loads on the
+\emph{space}, not on the plant.
+\item \textbf{Attention to the flags.} \verb|vent_limited|, and the two guards of
+Section~\ref{sec:dem:guards}, are warnings by design; a caller that ignores them
+will receive a supply state that no equipment can produce and will not be told
+twice.
+\end{enumerate}
+
+\paragraph{One honest caveat.} The interface is generic at \emph{run} time, but
+the plant's \emph{sizing} constants --- $\mdp$, $\mdr$, $\md_{\mathrm{cool}}$,
+$\UA_{\mathrm{coil}}$ --- still descend from the hatchery chain of
+Section~\ref{sec:dem:sizing}. A second application inherits the interface for
+free; to inherit the hardware it must also declare its own design sensible load
+and design depression and re-run Eqs.~\eqref{eq:dem:mdotload}--\eqref{eq:dem:causality}.
+Generalising the demand side was the first half of that job; generalising the
+sizing chain is the second, and it is not yet done.

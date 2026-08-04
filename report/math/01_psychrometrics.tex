@@ -1,0 +1,308 @@
+%=====================================================================
+\section{Psychrometric foundations}\label{sec:psy:top}
+\label{sec:psy:foundations}
+
+Everything the plant does to air --- heating it in the regeneration coil, drying it in the desiccant
+wheel, cooling it before it enters the hatchery --- is bookkeeping on two numbers per stream. This
+section derives those numbers and the relations that move them around, exactly as implemented in the
+notebook (\texttt{dbhe\_master.ipynb}, v10.6, psychrometric block of the desiccant-wheel cell). The
+equations are elementary and unforgiving: the whole latent story of this plant lives in the third
+decimal place of a humidity ratio.
+
+\subsection{Why the humidity ratio, and why ``per kilogram of dry air''}
+\label{sec:psy:why-w}
+
+Moist air is a mixture of dry air and water vapour. As a stream travels around either loop, water is
+added (desorption in the wheel, egg metabolism, infiltration) and removed (adsorption in the wheel),
+so the \emph{total} moist-air mass flow is not conserved across a component. The dry-air mass flow
+is: nothing here creates or destroys dry air. That single fact fixes the convention. Define the
+humidity ratio
+\begin{equation}
+w \;\equiv\; \frac{m_{\mathrm{v}}}{m_{\mathrm{a}}}
+\;=\; \frac{\text{mass of water vapour}}{\text{mass of dry air}}
+\qquad [\si{\kilogram\per\kilogram}] , \label{eq:psy:wdef}
+\end{equation}
+and carry every extensive property \emph{per kilogram of dry air}. A water balance on any component
+is then literally ``$\md w$ in equals $\md w$ out'', with the same constant $\md$ on both sides: the
+bookkeeping is linear and cannot drift. Had we used relative humidity, or moist-air mass, every
+balance would carry a denominator that changes as the process runs, and small errors would compound
+around the loop. This is why the notebook passes $(T,w)$ pairs --- never $(T,\RH)$ --- between
+components; relative humidity is computed only where a human or a warning message has to read it.
+
+\subsection{Humidity ratio from partial pressures}
+\label{sec:psy:partial}
+
+Treat dry air and vapour as ideal gases sharing a volume $V$ at temperature $T$, with partial
+pressures summing to the total by Dalton's law, $\patm = p_{\mathrm{a}} + p_{\mathrm{v}}$. Then,
+using $R_i = R_u/M_i$,
+\begin{equation}
+w \;=\; \frac{m_{\mathrm{v}}}{m_{\mathrm{a}}}
+\;=\; \frac{p_{\mathrm{v}} V/(R_{\mathrm{v}} T)}{p_{\mathrm{a}} V/(R_{\mathrm{a}} T)}
+\;=\; \frac{p_{\mathrm{v}}}{p_{\mathrm{a}}}\,\frac{M_{\mathrm{v}}}{M_{\mathrm{a}}} .
+\label{eq:psy:w_ideal}
+\end{equation}
+With $M_{\mathrm{v}} = \SI{18.015}{\gram\per\mole}$ and $M_{\mathrm{a}} =
+\SI{28.966}{\gram\per\mole}$ the molar-mass ratio is $0.6219$, which is the constant hard-coded (as
+$0.622$) in every psychrometric routine of the notebook:
+\begin{equation}
+\boxed{\;w \;=\; 0.622\,\frac{p_{\mathrm{v}}}{\patm - p_{\mathrm{v}}}\;} \label{eq:psy:w_from_pv}
+\end{equation}
+
+Two things to notice. First, $w$ depends on the \emph{total} pressure --- which is why $\patm =
+\SI{101325}{\pascal}$ is a declared configuration constant and every psychrometric call is routed
+through that one symbol: at another altitude the same $T$ and $\RH$ give a different $w$. Second,
+the relation is non-linear in $p_{\mathrm{v}}$, because the denominator shrinks as the air gets
+wetter; at the humidities this plant works in (\SIrange{20}{22}{\gram\per\kilogram}) that curvature
+is a few percent, not negligible.
+
+\subsection{Saturation pressure and relative humidity}
+\label{sec:psy:psat}
+
+Relative humidity is the ratio of the actual vapour partial pressure to the saturation pressure at
+the \emph{same} temperature,
+\begin{equation}
+\RH \;\equiv\; \frac{p_{\mathrm{v}}}{\psat(T)} , \qquad\text{equivalently}\qquad
+p_{\mathrm{v}} \;=\; \RH \cdot \psat(T) . \label{eq:psy:RHdef}
+\end{equation}
+
+The code does not call a steam table for $\psat$. It uses a single-line Magnus-type correlation,
+with $T$ in \si{\celsius} and $\psat$ in \si{\pascal}:
+\begin{equation}
+\boxed{\;\psat(T) \;=\; 610.94\, \exp\!\left(\frac{17.625\,T}{T + 243.04}\right)\;}
+\label{eq:psy:psat}
+\end{equation}
+These are the Alduchov--Eskridge coefficients for saturation over liquid water, accurate to better
+than \SI{0.4}{\percent} over \SIrange{-40}{50}{\celsius}. That covers the process loop comfortably,
+but the regeneration air runs at \SIrange{60}{100}{\celsius}, outside the fitted range, and
+\eqref{eq:psy:psat} is still evaluated there by the wheel's relative-humidity diagnostic. The cost
+is confined to that diagnostic: $\psat$ never enters a mass or energy balance, it only converts $w$
+to $\RH$ for display and regime checking.
+
+Substituting \eqref{eq:psy:RHdef} and \eqref{eq:psy:psat} into \eqref{eq:psy:w_from_pv} gives the
+routine \texttt{w\_from\_RH}$(T,\RH)$ used throughout:
+\begin{equation}
+w(T,\RH) \;=\; 0.622\,\frac{\RH\,\psat(T)}{\patm - \RH\,\psat(T)} . \label{eq:psy:w_from_RH}
+\end{equation}
+The implementation clips $\RH$ to $[0,1]$ first, so a caller cannot request a supersaturated state
+through this door --- the state simply saturates. That is a guard, not physics: it hides an
+inconsistent request rather than reporting it.
+
+Inverting \eqref{eq:psy:w_from_pv} for $p_{\mathrm{v}}$ and dividing by $\psat$ gives the reverse
+map:
+\begin{equation}
+\boxed{\;\RH(T,w) \;=\; \frac{1}{\psat(T)}\,\frac{w\,\patm}{0.622 + w}\;} \label{eq:psy:RH_from_w}
+\end{equation}
+There is no single named \texttt{RH\_from\_w} helper in v10.6; this same expression is written out
+three times (in the wheel regime diagnostic, in the results dashboard, and inline in the load
+interface), algebraically identical in all three.
+
+\paragraph{The consequence that drives this project.}
+$\psat$ grows nearly exponentially with $T$, so a fixed relative humidity at a high temperature is a
+very large absolute moisture content. The hatchery setpoint of \SI{37}{\celsius} at
+\SI{50}{\percent}~RH is not a dry condition: from \eqref{eq:psy:psat}, $\psat(37) =
+\SI{6271}{\pascal}$, so $p_{\mathrm{v}} = \SI{3136}{\pascal}$ and $w =
+\SI{19.86}{\gram\per\kilogram}$. Whether the plant must dehumidify or humidify is settled entirely
+by the sign of $w_{\mathrm{oa}} - w_{\mathrm{pc}}$ --- a comparison of humidity ratios, never of
+relative humidities.
+
+\subsection{Moist-air enthalpy as coded}
+\label{sec:psy:enthalpy}
+
+Take dry air at \SI{0}{\celsius} and saturated liquid water at \SI{0}{\celsius} as reference states.
+The enthalpy per kilogram of dry air is the dry-air sensible term plus the vapour term (latent heat
+at the reference, plus the vapour's own sensible heat):
+\begin{equation}
+h(T,w) \;=\; \underbrace{c_{p,\mathrm{a}}\,T}_{\text{dry air}}
+\;+\; w\,\underbrace{\bigl(h_{\mathrm{fg},0} + c_{p,\mathrm{v}}\,T\bigr)}_{\text{vapour}} ,
+\label{eq:psy:h_general}
+\end{equation}
+and the notebook fixes the three constants at $c_{p,\mathrm{a}} =
+\SI{1.006}{\kilo\joule\per\kilogram\per\kelvin}$, $h_{\mathrm{fg},0} =
+\SI{2501}{\kilo\joule\per\kilogram}$, $c_{p,\mathrm{v}} =
+\SI{1.86}{\kilo\joule\per\kilogram\per\kelvin}$:
+\begin{equation}
+\boxed{\;h(T,w) \;=\; 1.006\,T + w\,\bigl(2501 + 1.86\,T\bigr)
+\qquad [\si{\kilo\joule\per\kilogram}\ \text{dry air}]\;} \label{eq:psy:h_coded}
+\end{equation}
+Both specific heats are constants --- no temperature or pressure dependence. Over
+\SIrange{0}{100}{\celsius} the true $c_{p,\mathrm{a}}$ moves by well under \SI{1}{\percent}, so the
+cost is small, and as the next subsection shows it is what makes mixing exactly linear. Because
+mixing delivers $(h,w)$ rather than $(T,w)$ we need the inverse, and solving \eqref{eq:psy:h_coded}
+for $T$ is a one-line algebraic step precisely because the constants are constant:
+\begin{equation}
+h = 1.006\,T + 2501\,w + 1.86\,w\,T \quad\Longrightarrow\quad
+\boxed{\;T(h,w) \;=\; \frac{h - 2501\,w}{1.006 + 1.86\,w}\;} \label{eq:psy:T_from_hw}
+\end{equation}
+This is \texttt{T\_from\_hw}. Note what the denominator is: the moist-air specific heat per kilogram
+of dry air,
+\begin{equation}
+c_{p,\mathrm{m}}(w) \;=\; 1.006 + 1.86\,w \qquad [\si{\kilo\joule\per\kilogram\per\kelvin}] .
+\label{eq:psy:cp_moist}
+\end{equation}
+Equation~\eqref{eq:psy:cp_moist} reappears in that exact form in the air-to-air cooler (at the
+stream's own $w$), in the building load calculation (at the mean $\tfrac12(w_{\mathrm{pd}} +
+w_{\mathrm{pc}})$), and in the generic load interface (at the room humidity). The regeneration coil
+is the exception: it uses the constant dry-air value \SI{1006}{\joule\per\kilogram\per\kelvin} on
+the air side and drops the $1.86\,w$ term entirely. At the regeneration inlet humidity, about
+\SI{20}{\gram\per\kilogram}, that understates the air-side capacity rate --- and hence the coil duty
+--- by roughly \SI{3.7}{\percent}. It is a bounded inconsistency, not a justified simplification.
+
+A second note: \eqref{eq:psy:h_coded} and the building latent load use $h_{\mathrm{fg},0} =
+\SI{2501}{\kilo\joule\per\kilogram}$, while the load generators and the load interface convert
+moisture rate to latent power with a separate configuration constant $\hfg =
+\SI{2.5}{\mega\joule\per\kilogram}$. They differ by \SI{0.04}{\percent} and no result depends on it,
+but a reader comparing $\ql$ against an enthalpy difference will find a residual that is arithmetic,
+not physics.
+
+\subsection{The adiabatic mixing rule}
+\label{sec:psy:mixing}
+
+Every junction in both air loops is this one derivation, so it is worth doing carefully once. Two
+streams with dry-air mass flows $\md_1$ and $\md_2$, at states $(T_1,w_1)$ and $(T_2,w_2)$, mix
+adiabatically at constant pressure into one stream $\md_3$ at $(T_3,w_3)$. Three balances close it.
+\emph{Dry air}, which nothing creates or destroys:
+\begin{equation}
+\md_3 \;=\; \md_1 + \md_2 . \label{eq:psy:mix_air}
+\end{equation}
+\emph{Water}, since stream $i$ carries $\md_i w_i$ of vapour:
+\begin{equation}
+\md_1 w_1 + \md_2 w_2 = \md_3 w_3 \quad\Longrightarrow\quad
+w_3 = \frac{\md_1 w_1 + \md_2 w_2}{\md_1 + \md_2} . \label{eq:psy:mix_w}
+\end{equation}
+\emph{Energy}: with no work and no heat crossing the boundary, enthalpy is conserved:
+\begin{equation}
+\md_1 h_1 + \md_2 h_2 = \md_3 h_3 \quad\Longrightarrow\quad
+h_3 = \frac{\md_1 h_1 + \md_2 h_2}{\md_1 + \md_2} . \label{eq:psy:mix_h}
+\end{equation}
+The mixed temperature then follows from \eqref{eq:psy:T_from_hw}, $T_3 = T(h_3,w_3)$. Mixing is done
+in $(w,h)$ and converted back to $T$ at the end, never the other way round.
+
+\paragraph{Why the temperature is not mass-averaged.}
+It is tempting to write $T_3 = (\md_1 T_1 + \md_2 T_2)/\md_3$. In general this is wrong, and the
+reason is instructive. Substituting \eqref{eq:psy:h_general} into \eqref{eq:psy:mix_h},
+\begin{equation*}
+c_{p,\mathrm{a}} T_3 + h_{\mathrm{fg},0} w_3 + c_{p,\mathrm{v}} w_3 T_3
+\;=\; \frac{\md_1\bigl(c_{p,\mathrm{a}} T_1 + h_{\mathrm{fg},0} w_1
++ c_{p,\mathrm{v}} w_1 T_1\bigr) + \md_2(\cdots)}{\md_3} ,
+\end{equation*}
+the terms linear in $T$ and in $w$ separate cleanly and by themselves would give a mass-averaged
+$T_3$. The cross term does not separate, because $\overline{wT} \neq \bar{w}\,\bar{T}$. Physically,
+the moist-air specific heat depends on humidity, so a wetter stream carries more energy per kelvin
+and the mixed temperature is weighted by $\md_i c_{p,\mathrm{m},i}$, not by $\md_i$. Under the
+code's constant-$c_p$ form, however, that weighting can be written out in closed form; using
+\eqref{eq:psy:cp_moist} and $w_3$ from \eqref{eq:psy:mix_w},
+\begin{equation}
+T_3 \;=\; \frac{\md_1 c_{p,\mathrm{m}}(w_1)\,T_1 + \md_2 c_{p,\mathrm{m}}(w_2)\,T_2}
+{(\md_1 + \md_2)\,c_{p,\mathrm{m}}(w_3)} . \label{eq:psy:mix_T_exact}
+\end{equation}
+So the honest statement is not that temperature is never averaged, but this: \emph{under the
+constant-$c_p$ enthalpy of \eqref{eq:psy:h_coded} the mixed temperature is exactly the $\md_i
+c_{p,\mathrm{m},i}$-weighted average of the inlet temperatures}, degenerating to the plain mass
+average only when $w_1 = w_2$. Mixing is linear in $(w,h)$ and non-linear in $(w,T)$. Had either
+specific heat been temperature-dependent, even \eqref{eq:psy:mix_T_exact} would not close in one
+step and the junction would need iteration; the constant-$c_p$ assumption buys an exact,
+non-iterative mixing node. The error from naive mass-averaging scales as $1.86\,(w_1-w_2)$ against
+$1.006$, and at the scavenging mixer, where exhaust near \SI{19.9}{\gram\per\kilogram} meets outdoor
+air near \SI{21.4}{\gram\per\kilogram}, it is hundredths of a kelvin --- a property of this
+operating point, not a licence. On a dry day it grows quickly.
+
+\paragraph{Fractional form as it appears in the code.}
+At both mixing nodes the streams are fractions of one loop flow summing to unity. Writing
+$d_{\mathrm{A}}$ for the fresh-air fraction and $d_{\mathrm{B}} = 1 - d_{\mathrm{A}}$ for the
+recirculated one, \eqref{eq:psy:mix_w} and \eqref{eq:psy:mix_h} collapse to convex combinations with
+$\md_3 = \md$:
+\begin{equation}
+w_3 = d_{\mathrm{B}} w_1 + d_{\mathrm{A}} w_2 , \qquad
+h_3 = d_{\mathrm{B}} h_1 + d_{\mathrm{A}} h_2 , \qquad T_3 = T(h_3, w_3) . \label{eq:psy:mix_frac}
+\end{equation}
+This is literally the body of \texttt{process\_inlet\_state} (recirculated room return mixed with
+outdoor makeup, weights $d_{\mathrm{pB}}$ and $d_{\mathrm{pA}}$) and of the scavenging node inside
+\texttt{regen\_air\_pass} (building exhaust at the room state mixed with outdoor air, weights
+$d_{\mathrm{rA}}$ and $d_{\mathrm{rB}}$). Both then add a fan temperature rise, set to
+\SI{0}{\kelvin} in the shipped configuration, so both fans are currently isenthalpic and
+\eqref{eq:psy:mix_frac} is the entire node.
+
+\subsection{Sensible processes: what a coil does on the chart}
+\label{sec:psy:sensible}
+
+A coil that heats or cools air without condensation transfers energy but no mass:
+\begin{equation}
+w_{\mathrm{out}} \;=\; w_{\mathrm{in}} \qquad \text{(sensible process)} , \label{eq:psy:sensible}
+\end{equation}
+and the state moves \emph{horizontally} on a chart with $T$ on the abscissa and $w$ on the ordinate.
+Two components are sensible by construction here: the regeneration coil, whose $\varepsilon$--NTU
+routine returns only an air outlet temperature, and the air-to-air cooler, which does the same.
+
+Heating at constant $w$ collapses the relative humidity: in \eqref{eq:psy:RH_from_w} the numerator
+is fixed while $\psat(T)$ climbs steeply. This is the entire purpose of the regeneration coil --- it
+does not dry the air, it makes the air \emph{thirsty}, and that collapsed relative humidity is what
+pulls water out of the sorbent. The wheel model says so explicitly: its diagnostic warns that the
+wheel dries the process stream only while the process-side relative humidity exceeds the
+regeneration-side value, and reverses to \emph{humidifying} once that gap closes.
+
+Cooling at constant $w$ does the opposite: $\RH$ rises, and \eqref{eq:psy:sensible} holds only while
+the outlet stays above the stream's dew point. \emph{The cooler routine does not test this.} It
+back-solves a conductance to hit a requested outlet temperature and returns $w_{\mathrm{out}} =
+w_{\mathrm{in}}$ regardless, capping at a maximum $\UA$ if the target is unreachable. The only
+supersaturation check anywhere is in the load interface, which evaluates \eqref{eq:psy:RH_from_w} on
+the \emph{required} supply state and warns if it exceeds unity. That is a check on demand, one step
+downstream, and it will not fire when the cooler is merely asked for an outlet close to saturation.
+Any run with a low supply temperature should be audited by evaluating \eqref{eq:psy:RH_from_w} at
+the cooler outlet.
+
+\subsection{Wet-bulb temperature}
+\label{sec:psy:wetbulb}
+
+The notebook contains \emph{no} wet-bulb routine, and no dew-point routine either. This is worth
+stating plainly, because a reader from a conventional HVAC background will look for one. Nothing in
+the solution path needs it: cooling here is dry-coil sensible, dehumidification is by sorption
+rather than condensation, and the state is carried as $(T,w)$ throughout.
+
+Where a wet-bulb variable would appear classically, the wheel model uses Jurinak's characteristic
+potentials instead. $F_1$ is very nearly constant along a line of constant enthalpy --- the
+notebook's own self-check shows this by evaluating it at three temperatures along $h =
+\SI{85}{\kilo\joule\per\kilogram}$ --- and constant enthalpy is, to good approximation, constant
+thermodynamic wet bulb; $F_2$ plays the same role for relative humidity. The wheel therefore works
+in an enthalpy-like and an $\RH$-like coordinate, carrying what a wet-bulb/dry-bulb pair would
+carry, in the variables its effectiveness is actually fitted in. Should a wet-bulb temperature ever
+be wanted for reporting, it is the root of the adiabatic-saturation equation solved with the same
+$\psat$; that routine would have to be written, and no result here depends on one.
+
+\subsection{Worked example: the shipped design point}
+\label{sec:psy:example}
+
+Table~\ref{tab:psy:design} evaluates the two anchor states of the model with the configuration
+constants as shipped: $\patm = \SI{101325}{\pascal}$, ambient \SI{31}{\celsius} at
+\SI{75}{\percent}~RH (Gulf design day), comfort \SI{37}{\celsius} at \SI{50}{\percent}~RH (hatchery
+setter).
+
+\begin{table}[htbp]
+\centering
+\caption{Anchor states from the shipped configuration, evaluated with
+Eqs.~\eqref{eq:psy:psat}, \eqref{eq:psy:w_from_RH} and \eqref{eq:psy:h_coded}.}
+\label{tab:psy:design}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+State & $T$ [\si{\celsius}] & $\RH$ [--]
+& $w$ [\si{\gram\per\kilogram}] & $h$ [\si{\kilo\joule\per\kilogram}] \\
+\midrule
+Outdoor air (design day)  & 31.0 & 0.75 & 21.36 & 85.8 \\
+Comfort (hatchery setter) & 37.0 & 0.50 & 19.86 & 88.3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Check the outdoor value by hand: $\psat(31) = 610.94\,\exp(17.625 \times 31/274.04) =
+\SI{4486}{\pascal}$; $p_{\mathrm{v}} = 0.75 \times 4486 = \SI{3365}{\pascal}$; $w = 0.622 \times
+3365/(101325 - 3365) = \SI{0.02136}{\kilogram\per\kilogram}$; $h = 1.006(31) + 0.02136\,(2501 + 1.86
+\times 31) = 31.2 + 54.7 = \SI{85.8}{\kilo\joule\per\kilogram}$.
+
+Now read the table the way the model does. The outdoor air is \SI{6}{\kelvin} \emph{cooler} than the
+room and its relative humidity is 25 percentage points higher, yet it carries only
+\SI{1.5}{\gram\per\kilogram} more water: ventilation imposes a real but modest dehumidification duty
+while contributing sensible \emph{cooling}, an unusual combination that shapes the whole control
+problem, since the dominant sensible load comes from the eggs and the envelope. Note also that the
+two enthalpies differ by only \SI{2.5}{\kilo\joule\per\kilogram} across that \SI{6}{\kelvin} gap ---
+almost all of the sensible difference is repaid by the latent one. Reading enthalpy alone would
+suggest these are nearly the same air. They are not, and that is exactly why $w$ is carried
+separately.

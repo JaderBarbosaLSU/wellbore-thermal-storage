@@ -13,6 +13,9 @@ set -euo pipefail
 cd "$(dirname "$0")"
 mkdir -p figures
 
+# fail loudly if a configuration constant quoted in Part II prose has moved
+python3 check_config.py
+
 for f in master water_circuit topologies qmap; do
     python3 "figures_src/$f.py" >/dev/null
 done

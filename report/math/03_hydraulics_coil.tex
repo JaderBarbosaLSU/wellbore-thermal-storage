@@ -1,0 +1,470 @@
+%=====================================================================
+\section{The surface water circuit}
+\label{sec:hyd:circuit}
+
+The water circuit sits between the wellhead and the regeneration coil: a pump that fixes the
+loop mass flow $\md$, a set of splits and mixing junctions that decide \emph{how much} water
+sees the well, the store and the coil, and a lumped accumulator that moves heat in time rather
+than only in space. The modelling hypothesis is deliberately blunt --- incompressible water,
+one constant $c_{p,w}$ evaluated at a representative loop temperature, adiabatic instantaneous
+junctions, pipe runs with neither capacitance nor heat loss. The cost is stated at the end of
+this section; the benefit is that every junction collapses from an enthalpy balance to a
+flow-weighted average of temperatures, which is what makes the coupled fixed point of
+Section~\ref{sec:hyd:coil} cheap enough to run $\num{29220}$ time steps.
+
+\subsection{Topology}
+\label{sec:hyd:topology}
+
+Starting at the pump discharge, at $T_{\mathrm{wi}}$: at the \textbf{E/F bifurcation} a
+fraction $w_{v\mathrm{E}}$ of the loop flow goes \emph{down the well} and the remainder
+$w_{v\mathrm{F}}=1-w_{v\mathrm{E}}$ \emph{bypasses} it at $T_{\mathrm{wi}}$. Branch E is
+produced at $T_{\mathrm{ret}}$ and re-mixes with branch F to give $T_{\mathrm{wr}}$. At the
+next fork, $w_{v\mathrm{A}}$ enters the \textbf{accumulator} and leaves at $T_{\mathrm{wa}}$
+while $w_{v\mathrm{B}}=1-w_{v\mathrm{A}}$ heads straight for the coil; the accumulator outlet
+is then split again, $w_{v\mathrm{C}}$ of it returning to the coil inlet and
+$w_{v\mathrm{D}}=1-w_{v\mathrm{C}}$ bypassing the coil. The coil inlet blend is
+$T_{\mathrm{wm}}$ and its water outlet $T_{\mathrm{wh}}$; mixing that with branch D gives the
+loop return $T_{\mathrm{wo}}$, and the pump closes the loop back to $T_{\mathrm{wi}}$.
+
+Table~\ref{tab:hyd:valves} collects the split fractions. In the baseline $w_{v\mathrm{E}}=1$,
+so the F bypass is closed and the well carries the full loop flow; the branch exists because a
+well-flow schedule is the natural optimisation variable, not because the baseline uses it.
+
+\begin{table}[htbp]
+\centering
+\caption{Valve split fractions of the water circuit (Section~K of the
+configuration cell). The complements $w_{v\mathrm{B}},w_{v\mathrm{D}},
+w_{v\mathrm{F}}$ are not free parameters: each is $1$ minus its partner.}
+\label{tab:hyd:valves}
+\begin{tabular}{llS[table-format=1.2]l}
+\toprule
+Symbol & Meaning & {Baseline} & Complement \\
+\midrule
+$w_{v\mathrm{A}}$ & loop flow into the accumulator & 0.30 & $w_{v\mathrm{B}}=0.70$ \\
+$w_{v\mathrm{C}}$ & accumulator outlet returned to the coil & 0.50 & $w_{v\mathrm{D}}=0.50$ \\
+$w_{v\mathrm{E}}$ & loop flow sent down the well & 1.00 & $w_{v\mathrm{F}}=0$ \\
+$w_{v\mathrm{E,min}}$ & floor imposed on the well flow & 0.05 & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{The E/F bifurcation, and why branch F is not just a mixing node}
+\label{sec:hyd:EF}
+
+Write an enthalpy balance on the junction where the produced stream $w_{v\mathrm{E}}\md$ at
+$T_{\mathrm{ret}}$ meets the bypass $w_{v\mathrm{F}}\md$ at $T_{\mathrm{wi}}$. With $c_{p,w}$
+constant across the junction the specific heats cancel and only the flow weights survive:
+\begin{equation}
+\boxed{\;T_{\mathrm{wr}}=w_{v\mathrm{E}}\,T_{\mathrm{ret}}
++\left(1-w_{v\mathrm{E}}\right)T_{\mathrm{wi}}\;}
+\label{eq:hyd:Twr}
+\end{equation}
+Setting $w_{v\mathrm{E}}=1$ returns $T_{\mathrm{wr}}=T_{\mathrm{ret}}$, so the bifurcation is
+backward compatible with the plain single-well loop.
+
+Equation~\eqref{eq:hyd:Twr} looks like a trivial dilution, and if the well were a fixed
+temperature source it would be. It is not. The DBHE model is \emph{parametrised by the flow
+through it}: the well is re-evaluated at $w_{v\mathrm{E}}\md$, which sets the annulus and
+tubing velocities, hence the Reynolds numbers, hence the Gnielinski film coefficients, hence
+the transfer units $\mathrm{NTU}_{at}$, $\mathrm{NTU}_{bw}$ and the effective wall conductance
+$G_{\mathrm{eff}}$ that drives the formation. Closing branch F therefore does two opposing
+things at once: it sends more water down the hole, \emph{increasing} the extracted duty, and it
+shortens the residence time while changing the internal conductances, \emph{decreasing}
+$T_{\mathrm{ret}}$. Branch F is a temperature-versus-duty knob on the subsurface, not a mixing
+valve.
+
+This is why the well model is split in two. The expensive, flow-independent objects --- the
+GITT eigenmodes, the tail resistance, the persistent wall-temperature state --- are built once
+at initialisation; only the cheap flow-dependent terms are refreshed each step, which makes a
+time-varying $w_{v\mathrm{E}}$ affordable.
+
+\paragraph{A consistency caveat.} The code refreshes the well terms at
+$\max(w_{v\mathrm{E}},w_{v\mathrm{E,min}})$ with $w_{v\mathrm{E,min}}=\num{0.05}$ --- a
+scheduled shutdown leaves a trickle circulating rather than a stagnant column --- while the
+junction Eq.~\eqref{eq:hyd:Twr} uses the raw $w_{v\mathrm{E}}$. For any $w_{v\mathrm{E}}\ge
+w_{v\mathrm{E,min}}$, including the baseline, the two coincide; below the floor they do not,
+and a future scheduling study must either clamp the schedule or apply the floor in both places.
+
+\subsection{Mixing junctions and the mass-conservation check}
+\label{sec:hyd:mixing}
+
+Two streams reach the coil inlet: the direct branch B, carrying $w_{v\mathrm{B}}\md$ at
+$T_{\mathrm{wr}}$, and the recycled branch C, carrying $w_{v\mathrm{C}}w_{v\mathrm{A}}\md$ at
+the accumulator outlet $T_{\mathrm{wa}}$. The fraction of the loop flow that actually passes
+through the coil is therefore
+\begin{equation}
+\phi_{\mathrm{coil}}
+=w_{v\mathrm{B}}+w_{v\mathrm{C}}\,w_{v\mathrm{A}}
+=\left(1-w_{v\mathrm{A}}\right)+w_{v\mathrm{C}}\,w_{v\mathrm{A}} ,
+\label{eq:hyd:fraccoil}
+\end{equation}
+and the same enthalpy-balance argument that gave Eq.~\eqref{eq:hyd:Twr} gives the coil inlet
+and the loop return:
+\begin{align}
+T_{\mathrm{wm}}&=\frac{w_{v\mathrm{B}}\,T_{\mathrm{wr}}
++w_{v\mathrm{C}}w_{v\mathrm{A}}\,T_{\mathrm{wa}}}{\phi_{\mathrm{coil}}},
+\label{eq:hyd:Twm}\\[2pt]
+T_{\mathrm{wo}}&=\phi_{\mathrm{coil}}\,T_{\mathrm{wh}}
++w_{v\mathrm{D}}w_{v\mathrm{A}}\,T_{\mathrm{wa}} .
+\label{eq:hyd:Two}
+\end{align}
+Equation~\eqref{eq:hyd:Twm} is normalised by $\phi_{\mathrm{coil}}$ because it is an average
+over the coil stream only; Eq.~\eqref{eq:hyd:Two} is not, because it is an average over the
+whole loop. That last statement holds only if the weights close, so check it rather than assert
+it. Substituting $w_{v\mathrm{B}}=1-w_{v\mathrm{A}}$ and $w_{v\mathrm{D}}=1-w_{v\mathrm{C}}$,
+\begin{equation}
+\phi_{\mathrm{coil}}+w_{v\mathrm{D}}w_{v\mathrm{A}}
+=\left(1-w_{v\mathrm{A}}\right)+w_{v\mathrm{C}}w_{v\mathrm{A}}
++\left(1-w_{v\mathrm{C}}\right)w_{v\mathrm{A}}
+=1 .
+\label{eq:hyd:massclose}
+\end{equation}
+Equation~\eqref{eq:hyd:Two} is thus a proper convex combination for \emph{any} valve setting,
+and the circuit conserves mass identically. This is not decoration: because the loop is closed
+and iterated to a fixed point, a weight set that did not close would inject a spurious enthalpy
+source that the iteration would happily converge to, and the error would look like a physical
+result.
+
+\paragraph{The coil throttle is currently a constant.} It is tempting to read
+$\phi_{\mathrm{coil}}$ as the plant's heat-delivery actuator, and eventually it will be. In the
+code of record it is not: $\phi_{\mathrm{coil}}$ is evaluated \emph{once}, before the time
+loop, from the fixed constants of Table~\ref{tab:hyd:valves}, so with
+$w_{v\mathrm{A}}=\num{0.30}$ and $w_{v\mathrm{C}}=\num{0.50}$,
+\begin{equation}
+\phi_{\mathrm{coil}}=0.70+0.50\times0.30=\num{0.85},
+\qquad
+w_{v\mathrm{D}}w_{v\mathrm{A}}=\num{0.15},
+\label{eq:hyd:fracnum}
+\end{equation}
+for the whole \num{20}-year run. The humidity actuator in the present model is the regeneration
+vent damper, not the water throttle. Making $\phi_{\mathrm{coil}}$ a controlled variable ---
+throttling water away from the coil when the wheel needs less regeneration and banking the
+surplus in the accumulator --- is the intended next step, and
+Eqs.~\eqref{eq:hyd:fraccoil}--\eqref{eq:hyd:massclose} already admit a time-varying
+$w_{v\mathrm{A}},w_{v\mathrm{C}}$ without breaking the mass balance.
+
+\subsection{The thermal accumulator}
+\label{sec:hyd:acc}
+
+The store --- a packed sand or concrete box, or a water tank --- is one lumped capacitance: a
+single temperature $T_{\mathrm{acc}}$, no internal gradients, no stratification. Its heat
+capacity is
+\begin{equation}
+C_{\mathrm{acc}}=\rho_{\mathrm{acc}}\,c_{p,\mathrm{acc}}\,V_{\mathrm{acc}}
+=\num{1600}\times\num{830}\times\num{2000}
+\approx\SI{2.66e9}{\joule\per\kelvin}.
+\label{eq:hyd:Cacc}
+\end{equation}
+Water passing through it at $w_{v\mathrm{A}}\md$ does not reach $T_{\mathrm{acc}}$; the
+approach is set by one heat-exchange effectiveness $\varepsilon_{\mathrm{acc}}$, defined as
+always by actual over maximum possible temperature change, so the exit temperature is
+\begin{equation}
+T_{\mathrm{wa}}=T_{\mathrm{wr}}-\varepsilon_{\mathrm{acc}}
+\left(T_{\mathrm{wr}}-T_{\mathrm{acc}}\right),
+\qquad \varepsilon_{\mathrm{acc}}=\num{0.70}.
+\label{eq:hyd:Twa}
+\end{equation}
+As $\varepsilon_{\mathrm{acc}}\to1$ the water leaves at the store temperature; as
+$\varepsilon_{\mathrm{acc}}\to0$ the store is invisible. With no through-flow the code returns
+$T_{\mathrm{wa}}=T_{\mathrm{acc}}$, keeping Eq.~\eqref{eq:hyd:Twm} finite in the degenerate
+case.
+
+An energy balance on the store --- what the water gives up minus what leaks to the surroundings
+--- is the governing ODE:
+\begin{equation}
+\boxed{\;
+C_{\mathrm{acc}}\frac{\mathrm{d}T_{\mathrm{acc}}}{\mathrm{d}t}
+=\underbrace{\varepsilon_{\mathrm{acc}}\,w_{v\mathrm{A}}\md\,c_{p,w}
+\left(T_{\mathrm{wr}}-T_{\mathrm{acc}}\right)}_{\dot Q_{\mathrm{charge}}}
+-\underbrace{(\UA)_{\mathrm{acc}}\left(T_{\mathrm{acc}}-T_{\mathrm{amb}}\right)}
+_{\dot Q_{\mathrm{loss}}}\;}
+\label{eq:hyd:accode}
+\end{equation}
+The charge term is exactly the enthalpy drop of the through-flow implied by
+Eq.~\eqref{eq:hyd:Twa}, since
+\begin{equation*}
+w_{v\mathrm{A}}\md\,c_{p,w}\left(T_{\mathrm{wr}}-T_{\mathrm{wa}}\right)
+=\varepsilon_{\mathrm{acc}}\,w_{v\mathrm{A}}\md\,c_{p,w}
+\left(T_{\mathrm{wr}}-T_{\mathrm{acc}}\right).
+\end{equation*}
+The store and the water agree on how much heat changed hands, so the model is energy consistent
+at this junction --- not automatic when an effectiveness and a capacitance are written by
+different hands.
+
+The code integrates Eq.~\eqref{eq:hyd:accode} with a forward Euler step, committed once per
+time step after the fixed point has converged:
+\begin{equation}
+T_{\mathrm{acc}}^{\,k+1}=T_{\mathrm{acc}}^{\,k}
++\frac{\Delta t}{C_{\mathrm{acc}}}
+\Big[\varepsilon_{\mathrm{acc}}\,w_{v\mathrm{A}}\md\,c_{p,w}
+\big(T_{\mathrm{wr}}^{\,k}-T_{\mathrm{acc}}^{\,k}\big)
+-(\UA)_{\mathrm{acc}}\big(T_{\mathrm{acc}}^{\,k}-T_{\mathrm{amb}}\big)\Big],
+\label{eq:hyd:accupdate}
+\end{equation}
+with $\Delta t=\SI{21600}{\second}$ (a quarter day). Explicit Euler on a linear relaxation is
+stable only for $\Delta t\le C_{\mathrm{acc}}/
+(\varepsilon_{\mathrm{acc}}w_{v\mathrm{A}}\md\,c_{p,w}+(\UA)_{\mathrm{acc}})$, which a store of
+\SI{2.66e9}{\joule\per\kelvin} driven by a few kilograms per second satisfies by three orders
+of magnitude. First-order accuracy is adequate because the store's own time constants are
+months while the forcing is resolved four times a day.
+
+The sign of $\dot Q_{\mathrm{charge}}$ takes care of itself: when
+$T_{\mathrm{wr}}>T_{\mathrm{acc}}$ the store charges, and when the formation has been drawn
+down over several years and $T_{\mathrm{wr}}$ falls below the store, the same term goes
+negative and the store discharges into the loop. That reversal is the entire purpose of the
+component, and it needs no switch.
+
+\paragraph{The loss term is not a detail.} It is easy to treat $(\UA)_{\mathrm{acc}}$ as a
+rounding error, because for a single overnight cycle it is one. With
+$(\UA)_{\mathrm{acc}}=\SI{150}{\watt\per\kelvin}$ the store's loss time constant is
+\begin{equation}
+\tau_{\mathrm{loss}}=\frac{C_{\mathrm{acc}}}{(\UA)_{\mathrm{acc}}}
+=\frac{\SI{2.66e9}{\joule\per\kelvin}}{\SI{150}{\watt\per\kelvin}}
+\approx\SI{1.77e7}{\second}\approx\SI{205}{\day},
+\label{eq:hyd:tauloss}
+\end{equation}
+so over one night an excess above ambient decays by about \SI{0.5}{\percent} --- negligible, as
+expected. But the store is not proposed as an overnight buffer; it is proposed as the thing
+that carries heat from a fresh year into a depleted one. On that horizon the same number reads
+very differently: an unforced excess retains only $\exp(-365/205)\approx\SI{17}{\percent}$ of
+itself after a year and loses about \SI{14}{\percent} in a single month. Whether "charge now,
+recover later" is engineering or wishful thinking is decided entirely by $(\UA)_{\mathrm{acc}}$
+integrated over the storage duration, and Eq.~\eqref{eq:hyd:tauloss} deserves a sensitivity
+study before any claim about seasonal storage is made. Note also that the sink temperature is
+bound to the outdoor air, $T_{\mathrm{amb}}=T_{\mathrm{oa}}$, so under weather-file forcing the
+loss will track the season automatically --- largest in summer, which is precisely when the
+store is being charged.
+
+\subsection{Frictional pressure drop and pump power}
+\label{sec:hyd:pump}
+
+The coaxial well is two passages in series: down the annulus, up the tubing. Each contributes a
+Darcy--Weisbach loss over the full depth $L$, and the model sums them:
+\begin{equation}
+\Delta p=\sum_{i\in\{a,t\}}f_i\,\frac{L}{D_{h,i}}\,
+\frac{\rho\,v_i^{2}}{2},
+\qquad
+\mathrm{Re}_i=\frac{\rho\,|v_i|\,D_{h,i}}{\mu} .
+\label{eq:hyd:dp}
+\end{equation}
+The friction factor is a two-branch correlation:
+\begin{equation}
+f_i=
+\begin{cases}
+\dfrac{64}{\mathrm{Re}_i}, & \mathrm{Re}_i<2300 \quad\text{(fully developed laminar)},\\[10pt]
+\left(0.790\ln \mathrm{Re}_i-1.64\right)^{-2}, & \mathrm{Re}_i\ge2300
+\quad\text{(smooth-pipe Petukhov fit)} .
+\end{cases}
+\label{eq:hyd:friction}
+\end{equation}
+The laminar branch is exact for a circular pipe; the turbulent branch is Petukhov's explicit
+fit, chosen so that hydraulics and heat transfer stay consistent --- it is the same $f$ the
+Gnielinski correlation uses for the film coefficients, so a single friction factor serves both.
+
+\paragraph{What the switch costs.} The two branches do not meet. At $\mathrm{Re}=2300$ the
+laminar expression gives $f=\num{0.0278}$ and the Petukhov fit gives $f=\num{0.0499}$ --- a
+factor of \num{1.8} jump, with no blending applied --- and Petukhov's fit, correlated for
+$\mathrm{Re}\gtrsim\num{e4}$, is being extrapolated down to \num{2300}. In the design regime
+both passages are comfortably turbulent and neither issue bites; but a low-flow schedule,
+exactly what a time-varying $w_{v\mathrm{E}}$ produces, will walk the annulus through the
+discontinuity and $\Delta p$ will show a step that is numerical, not physical.
+
+Hydraulic power divided by the wire-to-water efficiency gives the pump consumption, and the
+dissipated power is returned to the water as a temperature rise on the loop return:
+\begin{equation}
+P_{\mathrm{pump}}=\frac{\Delta p\,\dot V}{\eta_{\mathrm{pump}}},
+\qquad \eta_{\mathrm{pump}}=\num{0.65},
+\qquad
+T_{\mathrm{wi}}=T_{\mathrm{wo}}+\frac{P_{\mathrm{pump}}}{\md\,c_{p,w}} .
+\label{eq:hyd:pump}
+\end{equation}
+Equation~\eqref{eq:hyd:pump} closes the loop, and with it the water circuit.
+
+\paragraph{Scope note.} Three simplifications live in
+Eqs.~\eqref{eq:hyd:dp}--\eqref{eq:hyd:pump} and should be named rather than buried. First,
+friction is evaluated on the \emph{well} stream only: surface piping, fittings, and the
+throttling loss required to push $w_{v\mathrm{E}}\md$ through a deep, high-resistance well
+while a near-zero-resistance bypass sits in parallel, are not counted. Second, $\dot V$ in
+Eq.~\eqref{eq:hyd:pump} is the \emph{well} volumetric flow while the temperature rise is spread
+over the \emph{loop} flow $\md$; these coincide only at $w_{v\mathrm{E}}=1$, the baseline, so
+any partial-flow study inherits an attribution error. Third, the pump's thermal effect is small
+next to the coil duty; the term is retained so that the loop energy balance closes exactly, not
+because it matters numerically.
+
+%=====================================================================
+\section{The regeneration coil}
+\label{sec:hyd:coil}
+
+The coil is the plant's water-to-air interface: geothermal water inside the tubes, regeneration
+air across the fins, no phase change on either side. Because the air is heated and nothing
+condenses, the process is purely sensible and the humidity ratio passes through unchanged,
+$w_{\mathrm{ro}}=w_{\mathrm{ri}}$. Everything the coil does is captured by one duty and two
+outlet temperatures.
+
+\subsection{Why effectiveness--NTU and not LMTD}
+\label{sec:hyd:whyntu}
+
+Both methods describe the same exchanger; the choice is decided by what is known and by how
+often the calculation must run. This is a \emph{rating} problem: the inlet temperatures, the
+capacity rates and $\UA$ are
+known, and the outlets are wanted. The LMTD method builds the duty from a log-mean temperature
+difference computed from the \emph{outlets} --- the very quantities being sought --- so it must
+be iterated, and each iteration takes a logarithm of a difference that passes through zero when
+the streams pinch. The $\varepsilon$--$\mathrm{NTU}$ method inverts that dependency:
+effectiveness is a closed-form function of $\mathrm{NTU}$ and the capacity ratio alone, both
+known before the solve, so the coil is evaluated once and exactly.
+
+That matters here more than usual, because the coil does not sit on its own. It is evaluated
+inside the coupled fixed point on $(T_{\mathrm{wi}},T_{\mathrm{ri}},w_{\mathrm{ri}})$, which
+runs up to \num{40} iterations; that fixed point is itself re-run inside the humidity
+back-solve, which allows up to \num{12} outer iterations plus two anchoring solves; and the
+whole thing repeats for \num{29220} time steps. A coil needing its own inner iteration would
+put a third loop inside the second and a non-smooth convergence criterion inside a relaxed
+fixed point --- a reliable way to stall the outer solve.
+
+\subsection{Capacity rates and the effectiveness relation}
+\label{sec:hyd:coileqs}
+
+The hot side is the coil water stream, the cold side the regeneration air:
+\begin{equation}
+C_h=\phi_{\mathrm{coil}}\,\md\,c_{p,w},
+\qquad
+C_c=\mdr\,c_{p,a},
+\qquad c_{p,a}=\SI{1006}{\joule\per\kilogram\per\kelvin}.
+\label{eq:hyd:caprates}
+\end{equation}
+From these follow the three quantities the method needs:
+\begin{equation}
+C_{\min}=\min\left(C_h,C_c\right),\quad
+C_{\max}=\max\left(C_h,C_c\right),\quad
+C_r=\frac{C_{\min}}{C_{\max}},\quad
+\mathrm{NTU}=\frac{\UA_{\mathrm{coil}}}{C_{\min}} .
+\label{eq:hyd:ntudef}
+\end{equation}
+$C_{\min}$ is the stream that runs out of capacity first, and it alone sets the thermodynamic
+ceiling on the duty: no exchanger, however large, can transfer more than
+$C_{\min}(T_{\mathrm{wm}}-T_{\mathrm{ri}})$, since doing so would drive that stream past the
+other's inlet temperature. $C_r$ measures how badly the streams are matched; $\mathrm{NTU}$
+measures how much exchanger has been bought relative to the stream that limits it.
+
+The coil is a finned-tube crossflow unit with \emph{both fluids unmixed} --- water confined to
+tubes, air to fin passages, so neither stream can even out its own transverse temperature
+profile. This is the arrangement the code selects by default and the one used throughout the
+facility model. Its standard closed-form approximation is
+\begin{equation}
+\boxed{\;\varepsilon=1-\exp\!\left\{\frac{\mathrm{NTU}^{0.22}}{C_r}
+\left[\exp\!\left(-C_r\,\mathrm{NTU}^{0.78}\right)-1\right]\right\}\;}
+\label{eq:hyd:epscross}
+\end{equation}
+This is a correlation, not an exact solution --- the exact unmixed--unmixed crossflow result is
+an infinite series --- accurate to about \SI{1}{\percent} over the usual design range. A
+counterflow branch also exists in the code for comparison, but it is not the default and the
+facility driver never selects it; quoting counterflow effectiveness here would overstate the
+coil, since counterflow is the best possible arrangement and unmixed crossflow is not.
+
+\subsection{Duty and outlets}
+\label{sec:hyd:duty}
+
+Effectiveness is actual duty over the thermodynamic maximum, so the duty and both outlets
+follow immediately from an energy balance on each stream:
+\begin{equation}
+Q_{\mathrm{coil}}=\varepsilon\,C_{\min}
+\left(T_{\mathrm{wm}}-T_{\mathrm{ri}}\right),
+\qquad
+T_{\mathrm{ro}}=T_{\mathrm{ri}}+\frac{Q_{\mathrm{coil}}}{C_c},
+\qquad
+T_{\mathrm{wh}}=T_{\mathrm{wm}}-\frac{Q_{\mathrm{coil}}}{C_h} .
+\label{eq:hyd:coilout}
+\end{equation}
+$T_{\mathrm{ro}}$ is the regeneration temperature delivered to the desiccant wheel;
+$T_{\mathrm{wh}}$ returns to the mixing node of Eq.~\eqref{eq:hyd:Two}. Since $\varepsilon<1$
+strictly, $T_{\mathrm{ro}}<T_{\mathrm{wm}}$ always: the coil approaches the water inlet
+temperature but never reaches it, and no amount of $\UA$ changes that once $C_c$ is not the
+limiting stream.
+
+Equation~\eqref{eq:hyd:coilout} carries no sign guard. If the regeneration air ever arrives
+hotter than the coil water, $Q_{\mathrm{coil}}$ goes negative and the coil cools the air ---
+physically correct for a sensible exchanger, and deliberately left in, but it makes a negative
+$Q_{\mathrm{coil}}$ a diagnostic worth reading rather than an error.
+
+\paragraph{One approximation worth naming.} The cold-side capacity rate uses the dry-air
+specific heat $c_{p,a}=\SI{1006}{\joule\per\kilogram\per\kelvin}$ rather than the moist-air
+value $c_{p,a}+1860\,w$. At a humidity ratio of \SI{20}{\gram\per\kilogram} this understates
+$C_c$ by about \SI{3.7}{\percent}, which propagates into $\mathrm{NTU}$, $\varepsilon$ and
+$T_{\mathrm{ro}}$. The load side of the model does carry the moist-air correction, so the
+inconsistency is confined to the coil and is small; it is recorded here so that it is not
+rediscovered as a bug.
+
+\subsection{The temperature--throughput trade-off}
+\label{sec:hyd:tradeoff}
+
+This is the coil's controlling design tension and it constrains the whole plant, so it is worth
+deriving rather than asserting. Take the air side first, at a fixed water stream. If the air
+flow is small, $C_c\ll C_h$, then
+$C_{\min}=C_c$ and $\mathrm{NTU}=\UA/C_c$ is large: the air leaves close to the water inlet,
+$T_{\mathrm{ro}}\to T_{\mathrm{wm}}$, but the duty $Q=\varepsilon
+C_c(T_{\mathrm{wm}}-T_{\mathrm{ri}})$ is small because $C_c$ is. \emph{Hot air, little heat.}
+If the air flow is large, $C_c\gg C_h$, then $C_{\min}=C_h$, the duty saturates at $\varepsilon
+C_h(T_{\mathrm{wm}}-T_{\mathrm{ri}})$ --- the water is now the bottleneck --- and the
+temperature rise $Q/C_c$ tends to zero. \emph{Much air, cool air.} The wheel needs a minimum
+$T_{\mathrm{ro}}$ to regenerate at all; the plant needs enough $Q$ to cover the latent load.
+The two requirements pull in opposite directions and the air-side design sits on that frontier.
+
+The water side needs a more careful statement than it is usually given. Taken in isolation, at
+\emph{fixed} $T_{\mathrm{wm}}$, raising the water flow raises $C_h$ and raises both $Q$ and
+$T_{\mathrm{ro}}$; there is no trade-off internal to the coil, only diminishing returns as the
+duty saturates at the air-limited value $\varepsilon C_c(T_{\mathrm{wm}}-T_{\mathrm{ri}})$. The
+trade-off appears only once the coil is closed on the well. $T_{\mathrm{wm}}$ is not
+independent: through Eqs.~\eqref{eq:hyd:Twr} and \eqref{eq:hyd:Twm} it is inherited from
+$T_{\mathrm{ret}}$, and the DBHE delivers less temperature the harder it is pumped. Raising the
+loop flow therefore raises the well's duty and lowers $T_{\mathrm{ret}}$, and the coil passes
+that on faithfully: \emph{more water raises the duty and lowers the temperature the wheel
+sees}. The mechanism is the well, not the exchanger.
+
+The same mechanism explains why one well starves a large plant. Scaling the hatchery scales
+$\mdr$ and hence $C_c$, but the water stream is set by a single borehole. Once $C_h<C_c$ the
+coil is water-limited, the duty is pinned at $\varepsilon
+C_h(T_{\mathrm{wm}}-T_{\mathrm{ri}})$, and the delivered temperature rise $Q/C_c$ collapses
+towards zero as $C_c$ grows. No amount of coil substitutes for a second well.
+
+\subsection{Sizing rule for the conductance}
+\label{sec:hyd:sizing}
+
+Fixing $\UA_{\mathrm{coil}}$ as an absolute constant would silently mis-size the coil whenever
+the plant is scaled --- a ten-million-egg hatchery served by an exchanger sized for one
+million. The model therefore ties the conductance to the stream it serves:
+\begin{equation}
+\UA_{\mathrm{coil}}=(ua)_{\mathrm{coil}}\,\mdr ,
+\qquad
+(ua)_{\mathrm{coil}}=\SI{3000}{\watt\per\kelvin}\ \text{per}\
+\si{\kilogram\per\second},
+\label{eq:hyd:UAcoil}
+\end{equation}
+with $\mdr$ itself derived from the process air flow. The choice of \num{3000} is not
+arbitrary: it fixes the number of transfer units against the air stream at
+\begin{equation}
+\mathrm{NTU}\big|_{C_{\min}=C_c}
+=\frac{(ua)_{\mathrm{coil}}\,\mdr}{\mdr\,c_{p,a}}
+=\frac{\num{3000}}{\num{1006}}\approx\num{2.98},
+\label{eq:hyd:NTUair}
+\end{equation}
+independent of plant size --- a conventional finned-coil design point, giving
+$\varepsilon\approx\num{0.95}$ in the small-$C_r$ limit. The scaling is therefore
+self-consistent: enlarge the plant and the coil grows with it, keeping the air-side design
+point fixed. What does \emph{not} stay fixed is $C_r$, which is exactly the starvation
+mechanism of Section~\ref{sec:hyd:tradeoff}.
+
+\paragraph{What Eq.~\eqref{eq:hyd:UAcoil} hides.} The conductance is physically three
+resistances in series,
+\begin{equation}
+\frac{1}{\UA_{\mathrm{coil}}}
+=\frac{1}{h_w A_w}+R_{\mathrm{wall}}+\frac{1}{\eta_o h_a A_a},
+\label{eq:hyd:UAdecomp}
+\end{equation}
+with $h_w$ from a Gnielinski or Dittus--Boelter correlation on the tube side, $h_a$ from a
+finned-surface Colburn-$j$ correlation on the air side, and $\eta_o$ the overall fin
+efficiency. Because $A_a\gg A_w$ the air-side term dominates --- another way of saying that the
+physical size and cost of the coil live on the air side. Equation~\eqref{eq:hyd:UAdecomp} is
+what one would use to design and price an actual coil; Eq.~\eqref{eq:hyd:UAcoil} is what the
+system-level model needs, and the two should be reconciled before any hardware quotation is
+taken seriously.

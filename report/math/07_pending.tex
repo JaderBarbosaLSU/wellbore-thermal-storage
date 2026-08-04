@@ -1,0 +1,588 @@
+%=====================================================================
+\section{Specification of the components not yet implemented}\label{sec:spec:top}
+\label{sec:spec:pending}
+
+\begin{quote}
+\textbf{Read this before any equation below.} \emph{Nothing in this section is implemented in the
+current model version.} The four components specified here --- adiabatic humidifier, indirect
+evaporative cooler, single-effect LiBr--water absorption chiller, wet cooling tower --- exist in the
+master architecture and in the mode table, but no line of code evaluates them. Everywhere else in
+this report the equations were read off the notebook and the numbers harvested from it, so the text
+cannot disagree with the model. Here the direction is reversed: this is the \emph{design document},
+written so that implementing it is transcription rather than invention. Consequently every numerical
+value quoted below is a \emph{typical literature value}, offered to make the equations concrete and
+to give the implementer a sanity range. It is not a code constant, it has been harvested from
+nothing, and it must be checked against a real machine or a real correlation before it sizes
+hardware. Each value is flagged where it appears.
+\end{quote}
+
+Three of the four are cheap: one algebraic block each. The fourth --- the chiller, which cannot be
+implemented without the tower and the chilled-water loop --- is the expensive one, and it is also the
+one that decides whether the well can serve the cooling corner at all.
+Section~\ref{sec:spec:order} closes with the implementation order and with the one architectural
+defect this exercise has exposed. Throughout, air states are carried as $(T,w)$ pairs and enthalpies
+use the notebook's own correlation, $h = 1.006\,T + w(2501 + 1.86\,T)$ in
+\si{\kilo\joule\per\kilogram} of dry air, so the new blocks compose with the existing ones without a
+units seam. Each block returns a dictionary of outlet states and duty, matching the pattern of
+\texttt{regen\_coil} and \texttt{desiccant\_wheel}.
+
+\paragraph{A prerequisite that is not a component.}
+Section~\ref{sec:psy:wetbulb} recorded that the notebook contains \emph{no} wet-bulb routine and no
+dew-point routine, because nothing in the present solution path needs one. That ceases to be true
+the moment evaporative equipment enters. The implementation must therefore first add two scalar
+solvers,
+\begin{equation}
+h\!\left(T_{\mathrm{wb}},\, w_{s}(T_{\mathrm{wb}})\right) - h(T,w)
+ = \left(w_{s}(T_{\mathrm{wb}}) - w\right) c_{p,\mathrm{w}}\,T_{\mathrm{wb}} ,
+\qquad
+\psat(T_{\mathrm{dp}}) = \frac{w\,\patm}{0.622 + w} ,
+\label{eq:spec:wbdp}
+\end{equation}
+with $w_{s}(T) = 0.622\,\psat(T)/(\patm-\psat(T))$ and
+$c_{p,\mathrm{w}}=\SI{4.186}{\kilo\joule\per\kilogram\per\kelvin}$. The left is the
+adiabatic-saturation (thermodynamic wet-bulb) definition; the right inverts the Magnus correlation
+\eqref{eq:psy:psat} in closed form. Both are monotone and safe for bisection. The makeup term on the
+right of the first shifts $T_{\mathrm{wb}}$ by at most \SIrange{0.1}{0.2}{\kelvin} at the humidities
+of interest, which is why ``constant wet bulb'' and ``constant enthalpy'' are used interchangeably
+below.
+
+%---------------------------------------------------------------------
+\subsection{Adiabatic humidifier (unlocks M4)}
+\label{sec:spec:hum}
+
+\emph{Status: specification only. Not implemented in the current model version.}
+
+\subsubsection{Hypothesis and equations}
+Air passes over a wetted surface --- rigid cellulose media, or an atomising spray --- fed with
+recirculated water that has equilibrated at the air's own wet bulb. No heat crosses the casing and no
+work is done, so the energy to evaporate the water can come from one place only: the sensible heat of
+the air itself. The process is adiabatic saturation, and on the chart it walks the air \emph{up the
+constant wet-bulb line} toward saturation.
+
+With inlet $(T_{\mathrm{hi}}, w_{\mathrm{hi}})$ and its wet bulb $T_{\mathrm{hi}}^{\mathrm{wb}}$ from
+\eqref{eq:spec:wbdp}, the device is characterised by one number, the \emph{saturation
+effectiveness} --- the fraction of the available wet-bulb depression the media actually delivers:
+\begin{equation}
+\boxed{\;
+\varepsilon_{\mathrm{sat}} \equiv
+\frac{T_{\mathrm{hi}} - T_{\mathrm{ho}}}{T_{\mathrm{hi}} - T_{\mathrm{hi}}^{\mathrm{wb}}}
+\;}
+\qquad\Longrightarrow\qquad
+T_{\mathrm{ho}} = T_{\mathrm{hi}} - \varepsilon_{\mathrm{sat}}
+ \left(T_{\mathrm{hi}} - T_{\mathrm{hi}}^{\mathrm{wb}}\right) .
+\label{eq:spec:epssat}
+\end{equation}
+The outlet humidity ratio is \emph{not} a second free parameter: it is fixed by the adiabatic
+constraint $h_{\mathrm{ho}} = h_{\mathrm{hi}}$, inverted with the notebook's enthalpy correlation,
+\begin{equation}
+w_{\mathrm{ho}} = \frac{h_{\mathrm{hi}} - 1.006\,T_{\mathrm{ho}}}{2501 + 1.86\,T_{\mathrm{ho}}} ,
+\qquad
+h_{\mathrm{hi}} = 1.006\,T_{\mathrm{hi}} + w_{\mathrm{hi}}(2501 + 1.86\,T_{\mathrm{hi}}) .
+\label{eq:spec:humw}
+\end{equation}
+The water consumed is the moisture actually added,
+\begin{equation}
+\md_{\mathrm{w,hum}} = \mdp\left(w_{\mathrm{ho}} - w_{\mathrm{hi}}\right) ,
+\label{eq:spec:humwater}
+\end{equation}
+plus a sump bleed of \SIrange{10}{25}{\percent} of \eqref{eq:spec:humwater} for recirculating media
+(a \emph{typical literature figure}, not a code constant), and zero for a once-through atomiser. The
+block returns $\{T_{\mathrm{ho}}, w_{\mathrm{ho}}, \md_{\mathrm{w,hum}},
+\varepsilon_{\mathrm{sat}}\}$ and, being adiabatic, no duty. Assert
+$w_{\mathrm{ho}} \le w_{s}(T_{\mathrm{ho}})$ on exit: with $\varepsilon_{\mathrm{sat}}<1$ it cannot
+fail, and if it ever does the enthalpy inversion was called with an inconsistent state.
+
+\paragraph{Typical values.} Rigid cellulose \SIrange{200}{300}{\milli\metre} deep at
+\SI{2.5}{\metre\per\second} face velocity gives $\varepsilon_{\mathrm{sat}} = \numrange{0.85}{0.95}$;
+atomising and ultrasonic units run \numrange{0.70}{0.90}. Use $0.90$ as a placeholder.
+\emph{Literature ranges quoted for concreteness; not harvested from the model, because the model does
+not contain this component.}
+
+\subsubsection{What it means physically, and why M4 needs no well heat}
+Equation~\eqref{eq:spec:humw} says the enthalpy the air gains as vapour it loses as temperature. As a
+duty balance across the device,
+\begin{equation}
+\qs^{\mathrm{del}} = \mdp\,c_{p,\mathrm{a}}\left(T_{\mathrm{hi}}-T_{\mathrm{ho}}\right),
+\qquad
+\ql^{\mathrm{del}} = -\,\mdp\,\hfg\left(w_{\mathrm{ho}}-w_{\mathrm{hi}}\right),
+\qquad
+\qs^{\mathrm{del}} + \ql^{\mathrm{del}} \approx 0 .
+\label{eq:spec:humduty}
+\end{equation}
+This is the whole point of mode M4. \emph{Adiabatic saturation is direct evaporative cooling}: the
+humidifier is not a component that humidifies while something else cools, it is one device
+discharging both requirements of the cooling-plus-humidification quadrant simultaneously, and it does
+so by moving heat \emph{within} the air stream rather than importing any. No geothermal water is
+drawn, no wheel turns, no chiller runs. That is why the mode table records ``water required: none''
+for M4 --- the one mode in the architecture that is free of the reservoir entirely, and therefore the
+one mode that survives unchanged for the whole plant life.
+
+\paragraph{The constraint that comes with the gift.} Equation~\eqref{eq:spec:humduty} is also a
+restriction. Because the process is pinned to a constant-enthalpy line, the ratio of sensible to
+latent delivery is not a design variable: it is whatever the psychrometrics of that line happen to
+be. The device has \emph{one} degree of freedom --- $\varepsilon_{\mathrm{sat}}$, or a bypass damper
+--- and one degree of freedom can satisfy $\qs$ or $\ql$, not both. Modulation slides the outlet
+along the same ray from the inlet state; it does not rotate that ray. M4 therefore serves the
+sub-region of its quadrant whose load ratio lies near that ray, and loads far off it fall through to
+M5, where a chilled-water coil supplies the missing sensible capacity and the humidifier trims the
+latent. That handoff is where the ordering defect of Section~\ref{sec:spec:order} lives.
+
+%---------------------------------------------------------------------
+\subsection{Indirect evaporative cooler and the M-cycle (unlocks M2)}
+\label{sec:spec:iec}
+
+\emph{Status: specification only. Not implemented in the current model version.}
+
+\subsubsection{Hypothesis}
+Two streams are separated by an impermeable plate. The \emph{primary} (product) stream flows on the
+dry side and is cooled sensibly; the \emph{secondary} (working) stream flows on the wet side,
+evaporates water into itself, and is vented. Because the plate is impermeable the product gains no
+moisture,
+\begin{equation}
+w_{\mathrm{1o}} = w_{\mathrm{1i}} ,
+\label{eq:spec:iecw}
+\end{equation}
+which is the property that makes this, and not a direct evaporative cooler, the correct partner for
+the desiccant wheel. The wet side is taken as saturated at exit.
+
+\subsubsection{Effectiveness, in two flavours}
+In a \emph{conventional} IEC the working air enters the wet channel at the inlet state, so its wet
+bulb is the inlet wet bulb and that is the coldest sink available:
+\begin{equation}
+\boxed{\;
+\varepsilon_{\mathrm{wb}} \equiv
+\frac{T_{\mathrm{1i}}-T_{\mathrm{1o}}}{T_{\mathrm{1i}}-T_{\mathrm{1i}}^{\mathrm{wb}}}\;}
+\qquad
+T_{\mathrm{1o}} = T_{\mathrm{1i}} - \varepsilon_{\mathrm{wb}}
+ \left(T_{\mathrm{1i}}-T_{\mathrm{1i}}^{\mathrm{wb}}\right) .
+\label{eq:spec:iecwb}
+\end{equation}
+In the \emph{M-cycle} (Maisotsenko) regenerative arrangement the working air is first pre-cooled
+sensibly along a dry channel and only then turned through perforations into the adjacent wet channel.
+Each successive element of working air therefore enters the wet side already colder, with a depressed
+wet bulb, and the asymptotic sink is not the inlet wet bulb but the inlet \emph{dew point}. The
+effectiveness must then be referred to the dew-point depression:
+\begin{equation}
+\boxed{\;
+\varepsilon_{\mathrm{dp}} \equiv
+\frac{T_{\mathrm{1i}}-T_{\mathrm{1o}}}{T_{\mathrm{1i}}-T_{\mathrm{1i}}^{\mathrm{dp}}}\;}
+\qquad
+T_{\mathrm{1o}} = T_{\mathrm{1i}} - \varepsilon_{\mathrm{dp}}
+ \left(T_{\mathrm{1i}}-T_{\mathrm{1i}}^{\mathrm{dp}}\right) .
+\label{eq:spec:iecdp}
+\end{equation}
+The two are not interchangeable, and confusing them is the classic error in this literature: since
+$T^{\mathrm{dp}} < T^{\mathrm{wb}} < T$, a machine with $\varepsilon_{\mathrm{dp}}=0.6$ can exhibit an
+\emph{apparent} $\varepsilon_{\mathrm{wb}}$ above unity. That violates nothing; it says only that the
+wet bulb was never the correct reference. The block should accept both and record which was used.
+
+\subsubsection{Outlets, duty and water}
+Let $\md_{\mathrm{in}}$ be the air delivered, split by the \emph{working-air fraction} $\phi$:
+\begin{equation}
+\md_{\mathrm{sec}} = \phi\,\md_{\mathrm{in}} ,
+\qquad
+\md_{\mathrm{pri}} = (1-\phi)\,\md_{\mathrm{in}} .
+\label{eq:spec:iecphi}
+\end{equation}
+The primary outlet is \eqref{eq:spec:iecw} with \eqref{eq:spec:iecwb} or \eqref{eq:spec:iecdp}, and
+the duty removed from the product stream is
+\begin{equation}
+Q_{\mathrm{IEC}} = \md_{\mathrm{pri}}\,c_{p,\mathrm{ma}}\left(T_{\mathrm{1i}}-T_{\mathrm{1o}}\right),
+\qquad c_{p,\mathrm{ma}} = 1.006 + 1.86\,w_{\mathrm{1i}} .
+\label{eq:spec:iecQ}
+\end{equation}
+(The existing coil block uses the dry-air value \texttt{CP\_A} in the same place; at
+$w\approx\SI{10}{\gram\per\kilogram}$ the difference is under \SI{2}{\percent}. Whichever is chosen,
+choose it once and use it in both.) The secondary stream carries that heat away and leaves saturated;
+its state follows from an energy balance closed against the saturation line --- one monotone
+root-find in $T_{\mathrm{2o}}$:
+\begin{equation}
+\md_{\mathrm{sec}}\left[h\!\left(T_{\mathrm{2o}},w_{s}(T_{\mathrm{2o}})\right)-h_{\mathrm{2i}}\right]
+= Q_{\mathrm{IEC}} + \md_{\mathrm{w,IEC}}\,c_{p,\mathrm{w}}\,T_{\mathrm{sump}} ,
+\qquad
+w_{\mathrm{2o}} = w_{s}(T_{\mathrm{2o}}) ,
+\label{eq:spec:iecsec}
+\end{equation}
+with water consumption
+\begin{equation}
+\md_{\mathrm{w,IEC}} = \md_{\mathrm{sec}}\left(w_{\mathrm{2o}}-w_{\mathrm{2i}}\right) .
+\label{eq:spec:iecwater}
+\end{equation}
+Dropping the makeup-enthalpy term costs a few tenths of a kelvin in $T_{\mathrm{2o}}$ and makes
+\eqref{eq:spec:iecsec} explicit; retaining it costs one iteration and is cleaner. The block returns
+both outlet states, the duty $Q_{\mathrm{IEC}}$, the water rate $\md_{\mathrm{w,IEC}}$ and --- this
+is the one easy to forget --- the \emph{reduced} product flow $\md_{\mathrm{pri}}$, which the
+downstream mass balance must honour.
+
+\paragraph{Typical values.} Conventional IEC $\varepsilon_{\mathrm{wb}}=\numrange{0.55}{0.75}$;
+M-cycle $\varepsilon_{\mathrm{dp}}=\numrange{0.55}{0.75}$, i.e.\ an apparent wet-bulb effectiveness of
+roughly \numrange{1.0}{1.2}; working-air fraction $\phi=\numrange{0.30}{0.40}$. \emph{Literature
+ranges, not code constants.}
+
+\subsubsection{Why the M-cycle is the indicated partner for the wheel}
+The wheel leaves the process air \emph{hot and dry} --- the central consequence recorded in
+Section~\ref{sec:dw:latent}: latent load has been converted into sensible load. Three things follow,
+and together they select the M-cycle.
+\begin{enumerate}[nosep]
+\item \textbf{The moisture margin must be protected.} After the wheel $w$ already sits below the
+supply target, and regeneration heat was spent to put it there. A direct evaporative cooler hands
+that margin straight back as vapour; the IEC cools at constant $w$ by construction,
+Eq.~\eqref{eq:spec:iecw}, and spends none of it.
+\item \textbf{Dry air has a deep dew point.} The depression $T_{\mathrm{1i}}-T_{\mathrm{1i}}^{
+\mathrm{dp}}$ that \eqref{eq:spec:iecdp} multiplies grows rapidly as $w$ falls. The wheel does not
+merely leave a load for the M-cycle to remove; it \emph{enlarges the M-cycle's driving potential} in
+the act of creating that load. The two are complementary, not merely sequential.
+\item \textbf{Sub-wet-bulb is what makes the target reachable.} A conventional IEC bottoms out at
+$T^{\mathrm{wb}}$, which for post-wheel air may still sit above the supply setpoint. The M-cycle's
+floor is $T^{\mathrm{dp}}$, several kelvin lower, and that margin is what turns M2 from marginal into
+comfortable.
+\end{enumerate}
+
+\paragraph{The cost of $\phi$.} The working-air fraction is the design lever and it cuts both ways.
+Raising $\phi$ adds wet-channel surface and enthalpy sink per unit of product, so both effectivenesses
+rise and $T_{\mathrm{1o}}$ falls --- but the product flow $(1-\phi)\md_{\mathrm{in}}$ falls with it,
+and the delivered capacity $Q_{\mathrm{IEC}}\propto(1-\phi)\,\varepsilon(\phi)$ is a rising factor
+times a falling one. It has an interior maximum, typically near $\phi\approx\numrange{0.3}{0.4}$,
+so the design question is not ``how cold can the product get'' but ``at what $\phi$ does the
+product \emph{duty} peak''. This is the coil's temperature-versus-throughput tension
+(Section~\ref{sec:hyd:coil}) in a different currency.
+
+%---------------------------------------------------------------------
+\subsection{Single-effect LiBr--water absorption chiller (unlocks M3 and M5)}
+\label{sec:spec:abs}
+
+\emph{Status: specification only. Not implemented in the current model version, and it cannot be
+implemented alone --- the chilled-water loop and the tower of Section~\ref{sec:spec:tower} belong to
+the same step.}
+
+\subsubsection{Hypothesis: a characteristic equation, not a cycle model}
+A full cycle model carries solution concentrations, a solution heat exchanger and crystallisation
+margins, and needs property data for aqueous lithium bromide. None of that is warranted here, because
+the plant-level question is only how much cooling the machine delivers from a given hot-water
+temperature at a given rejection temperature. The \emph{characteristic equation} method answers
+exactly that with three external temperatures and two regression constants.
+
+Its basis is the D\"uhring diagram: for a given pair, the boiling temperature of the solution is very
+nearly linear in the refrigerant saturation temperature at the same pressure. Following that line
+through generator, condenser, absorber and evaporator collapses the cycle into a single driving
+potential, the \emph{characteristic temperature difference}
+\begin{equation}
+\boxed{\;\Delta\Delta T = T_{\mathrm{gen}} - A\,T_{\mathrm{ac}} + (A-1)\,T_{\mathrm{evap}}\;}
+\label{eq:spec:ddt}
+\end{equation}
+with $T_{\mathrm{gen}}$ the generator driving temperature, $T_{\mathrm{ac}}$ the common
+condenser/absorber (rejection) temperature, $T_{\mathrm{evap}}$ the evaporator temperature and $A$ the
+D\"uhring slope, $A\approx1.15$ for single-effect LiBr--water --- a \emph{typical literature value},
+not a code constant. Because $A>1$, a kelvin lost at the rejection side costs more than a kelvin
+gained at the generator side; Section~\ref{sec:spec:tower} turns that into an architectural argument.
+The evaporator duty is linear in the potential:
+\begin{equation}
+\boxed{\;Q_{\mathrm{evap}} = a\,\Delta\Delta T + b\;}\qquad (a>0,\;b<0) .
+\label{eq:spec:qevap}
+\end{equation}
+The constants $a$ and $b$ belong to one machine, obtained by regressing manufacturer part-load data,
+and they absorb every internal approach the model does not resolve. Their signs carry meaning: $a$ is
+the machine's gain, and the negative intercept $b$ encodes the internal losses that must be overcome
+before any refrigerant is boiled, so \eqref{eq:spec:qevap} already contains its own shut-off,
+\begin{equation}
+\Delta\Delta T_{\min} = -\,b/a ,
+\qquad Q_{\mathrm{evap}}\equiv 0 \ \text{ for } \Delta\Delta T \le \Delta\Delta T_{\min} .
+\label{eq:spec:ddtmin}
+\end{equation}
+For a nominal \SI{100}{\kilo\watt} single-effect machine, $a\approx\SI{3.5}{\kilo\watt\per\kelvin}$
+and $b\approx\SI{-30}{\kilo\watt}$ reproduce the nameplate at $\Delta\Delta T\approx\SI{37}{\kelvin}$.
+\emph{Illustrative literature-scale figures for the reader's arithmetic --- not code constants and not
+a product selection.}
+
+\subsubsection{Generator side and the water-temperature drop}
+Define the thermal COP and take the generator duty from it:
+\begin{equation}
+\mathrm{COP} = \frac{Q_{\mathrm{evap}}}{Q_{\mathrm{gen}}} ,
+\qquad
+Q_{\mathrm{gen}} = \frac{Q_{\mathrm{evap}}}{\mathrm{COP}} .
+\label{eq:spec:qgen}
+\end{equation}
+Single-effect machines run $\mathrm{COP}=\numrange{0.65}{0.75}$; $0.70$ is the usual placeholder and
+the value behind the resource tables of the topology report. \emph{Literature value.} The geothermal
+stream feeding the generator then drops by
+\begin{equation}
+\Delta T_{\mathrm{gen,w}} = \frac{Q_{\mathrm{gen}}}{\md_{\mathrm{gen}}\,c_{p,\mathrm{w}}} ,
+\qquad
+T_{\mathrm{w,gen,out}} = T_{\mathrm{w,gen,in}} - \Delta T_{\mathrm{gen,w}} ,
+\label{eq:spec:dtgen}
+\end{equation}
+and $T_{\mathrm{w,gen,out}}$ returns to the hydraulic mixing node exactly as the coil's
+$T_{\mathrm{wh}}$ does. Design drops are \SIrange{8}{10}{\kelvin} with a maximum near
+\SI{18}{\kelvin} --- \emph{literature values}, and the ones behind the flow-squeeze table of the
+topology report.
+
+One consistency point not to be skipped: $T_{\mathrm{gen}}$ in \eqref{eq:spec:ddt} is an
+\emph{external} temperature, because $a$ and $b$ were regressed against external temperatures. Use
+the mean of the generator water inlet and outlet,
+\begin{equation}
+T_{\mathrm{gen}} = \tfrac{1}{2}\left(T_{\mathrm{w,gen,in}} + T_{\mathrm{w,gen,out}}\right) ,
+\label{eq:spec:tgenmean}
+\end{equation}
+and do \emph{not} add a separate internal approach --- that approach already lives in $b$. Since
+\eqref{eq:spec:tgenmean} depends on $Q_{\mathrm{gen}}$, which depends on $Q_{\mathrm{evap}}$, which
+depends on \eqref{eq:spec:ddt}, the generator side is itself a small fixed point converging in two or
+three passes.
+
+\subsubsection{Heat rejected}
+Steady-state balance on the machine, solution-pump work neglected (well under \SI{1}{\percent} of
+$Q_{\mathrm{gen}}$):
+\begin{equation}
+Q_{\mathrm{rej}} = Q_{\mathrm{gen}} + Q_{\mathrm{evap}}
+ = Q_{\mathrm{evap}}\left(1+\frac{1}{\mathrm{COP}}\right)
+ \approx 2.4\,Q_{\mathrm{evap}} \ \text{ at } \mathrm{COP}=0.70 .
+\label{eq:spec:qrej}
+\end{equation}
+This is the number that sizes the tower, and it is worth pausing on: an absorption machine rejects
+roughly \emph{two and a half times} its useful cooling, against about $1.25$ for a
+vapour-compression chiller. The tower is correspondingly large, and so is its water consumption. That
+is the price of being driven by heat the well supplies for nothing.
+
+\subsubsection{The two limits, and why this component binds the architecture}
+Equation~\eqref{eq:spec:qevap} is smooth and will return a duty at any temperature handed to it. The
+physical machine will not. Two bounds must be imposed \emph{outside} the characteristic equation,
+because neither is contained in it:
+\begin{description}[leftmargin=1.6em,nosep]
+\item[Lower bound, $T_{\mathrm{gen}}\gtrsim\SI{78}{\celsius}$.] Below this the generator cannot raise
+the solution above its boiling point at condenser pressure and no refrigerant vapour is produced. The
+machine does not degrade gracefully; it stops. Implement as a hard gate returning
+$Q_{\mathrm{evap}}=0$ with an explicit warning, in the spirit of the wheel's regime diagnostic
+(Section~\ref{sec:dw:regime}) --- a silent zero is worse than none.
+\item[Upper bound, $T_{\mathrm{gen}}\lesssim\SI{110}{\celsius}$.] Above this the concentration
+required at the generator exit approaches the crystallisation line, and the corrosion rate of carbon
+steel in hot concentrated LiBr rises steeply. The penalty is not lost performance but a blocked
+machine and a maintenance event. Implement as a clamp with a warning, never as an extrapolation.
+\end{description}
+Both thresholds are \emph{typical literature values} for hot-water-fired single-effect machines;
+different manufacturers quote \SIrange{75}{80}{\celsius} and \SIrange{110}{120}{\celsius}. They are
+not code constants, and the implementation should carry them as named configuration parameters so a
+real data sheet can replace them in one place.
+
+\paragraph{The architectural consequence, stated plainly.} Of every component in the master
+architecture, \emph{this one alone requires the high-temperature tier}. The desiccant wheel
+regenerates at roughly \SI{66}{\celsius}; the winter heating duty needs only the supply-air
+temperature; the humidifier and the IEC need no geothermal water at all. Only the absorption
+generator asks for \SI{78}{\celsius} or better, and only modes M3 and M5 contain it. As the reservoir
+depletes and the return temperature drifts down, the plant therefore does not lose capability
+uniformly: it crosses the \SI{78}{\celsius} gate first, and at that moment M3 and M5 switch off while
+every other mode continues untouched. \emph{The serviceable region of the load plane shrinks from the
+cooling corner first.} That is the strongest system-level result the architecture yields, and it is
+entirely a consequence of the lower bound above --- which is why the bound must be a declared
+parameter and not a magic number buried in a branch.
+
+%---------------------------------------------------------------------
+\subsection{Wet cooling tower (serves the chiller)}
+\label{sec:spec:tower}
+
+\emph{Status: specification only. Not implemented in the current model version.}
+
+\subsubsection{Hypothesis: Merkel, and why the potential is enthalpy}
+Water falls through fill against an upward air stream and part of it evaporates. Heat and mass
+transfer occur together, so a temperature difference is not the correct driving potential --- a tower
+can cool water \emph{below} the ambient dry bulb, which no temperature-driven exchanger can do.
+Merkel's simplification resolves this: assume the interface air is saturated at the local bulk water
+temperature and that the Lewis number is unity, and the coupled problem collapses to one transfer
+equation driven by an \emph{enthalpy} difference. The tower then admits the same
+$\varepsilon$--$\mathrm{NTU}$ treatment as the regeneration coil, with enthalpy in place of
+temperature.
+
+\subsubsection{Equations}
+Define the saturated-air enthalpy function, built from the notebook's own $\psat$ and enthalpy
+correlations,
+\begin{equation}
+h_{s}(T) \equiv h\!\left(T,w_{s}(T)\right)
+= 1.006\,T + \frac{0.622\,\psat(T)}{\patm-\psat(T)}\left(2501+1.86\,T\right) ,
+\label{eq:spec:hsat}
+\end{equation}
+and its secant slope over the operating range, which plays the role of a specific heat on the water
+side:
+\begin{equation}
+C_{s} = \frac{h_{s}(T_{\mathrm{t,i}}) - h_{s}(T_{\mathrm{t,o}})}
+             {T_{\mathrm{t,i}} - T_{\mathrm{t,o}}} .
+\label{eq:spec:Cs}
+\end{equation}
+The water stream's \emph{equivalent} capacity rate --- its capacity expressed in enthalpy units so it
+can be compared with the air's --- is $\md_{\mathrm{t}}c_{p,\mathrm{w}}/C_{s}$, while the air's is
+simply $\md_{\mathrm{a,t}}$, the potential already being an enthalpy. Hence
+\begin{equation}
+C_{r} = \frac{\md_{\mathrm{a,t}}\,C_{s}}{\md_{\mathrm{t}}\,c_{p,\mathrm{w}}} ,
+\qquad
+\mathrm{NTU}_{\mathrm{t}} = \frac{\UA_{\mathrm{t}}}{\md_{\mathrm{a,t}}} ,
+\label{eq:spec:towerNTU}
+\end{equation}
+with $\UA_{\mathrm{t}}$ a mass-transfer conductance carrying the units of a mass flow. The air-side
+effectiveness uses the counterflow relation already coded for the coil,
+\begin{equation}
+\varepsilon_{\mathrm{t}} =
+\frac{1-\exp\!\left[-\mathrm{NTU}_{\mathrm{t}}(1-C_{r})\right]}
+     {1-C_{r}\exp\!\left[-\mathrm{NTU}_{\mathrm{t}}(1-C_{r})\right]} ,
+\qquad
+\varepsilon_{\mathrm{t}} = \frac{\mathrm{NTU}_{\mathrm{t}}}{1+\mathrm{NTU}_{\mathrm{t}}}
+\ \text{ if } C_{r}=1 ,
+\label{eq:spec:towereps}
+\end{equation}
+and the duty is the effectiveness times the maximum enthalpy potential --- the gap between saturation
+at the hot water inlet and the actual inlet air:
+\begin{equation}
+Q_{\mathrm{t}} = \varepsilon_{\mathrm{t}}\,\md_{\mathrm{a,t}}
+\left[h_{s}(T_{\mathrm{t,i}}) - h_{\mathrm{a,i}}\right] .
+\label{eq:spec:towerQ}
+\end{equation}
+Since $h_{\mathrm{a,i}} = h_{s}(T_{\mathrm{a,i}}^{\mathrm{wb}})$ to within the makeup term, the
+potential in \eqref{eq:spec:towerQ} is measured from the \emph{ambient wet bulb} --- the analytical
+statement of the fact that a tower chases the wet bulb and not the dry bulb. Outlet temperature,
+range and approach follow:
+\begin{equation}
+T_{\mathrm{t,o}} = T_{\mathrm{t,i}} - \frac{Q_{\mathrm{t}}}{\md_{\mathrm{t}}c_{p,\mathrm{w}}} ,
+\qquad
+\mathrm{range} = T_{\mathrm{t,i}} - T_{\mathrm{t,o}} ,
+\qquad
+\mathrm{approach} = T_{\mathrm{t,o}} - T_{\mathrm{a,i}}^{\mathrm{wb}} > 0 .
+\label{eq:spec:towerT}
+\end{equation}
+Equations \eqref{eq:spec:Cs}--\eqref{eq:spec:towerT} are implicit in $T_{\mathrm{t,o}}$ through
+$C_{s}$, so the block iterates internally; two or three passes from
+$T_{\mathrm{t,o}}=T_{\mathrm{a,i}}^{\mathrm{wb}}+\SI{4}{\kelvin}$ suffice.
+
+Water leaves the tower three ways --- evaporation, from the air-side moisture pickup with the outlet
+air taken as saturated at its own enthalpy (the usual Merkel closure); blowdown, which removes
+dissolved solids; and drift, which is mechanical carryover:
+\begin{equation}
+\md_{\mathrm{evap}} = \md_{\mathrm{a,t}}\left(w_{\mathrm{a,o}}-w_{\mathrm{a,i}}\right) ,
+\qquad
+\md_{\mathrm{blow}} = \frac{\md_{\mathrm{evap}}}{N_{c}-1} ,
+\qquad
+\md_{\mathrm{makeup}} = \md_{\mathrm{evap}} + \md_{\mathrm{blow}} + \md_{\mathrm{drift}} .
+\label{eq:spec:towerwater}
+\end{equation}
+A useful implementation check: $\md_{\mathrm{evap}}$ should come out near \SI{1}{\percent} of the
+circulating flow for every \SI{6}{\kelvin} of range, which follows from $c_{p,\mathrm{w}}/\hfg$ and
+the fact that roughly three-quarters of a wet tower's duty is latent.
+
+\paragraph{Typical values.} Design approach \SIrange{3}{5}{\kelvin}; design range
+\SIrange{5}{8}{\kelvin}; $\mathrm{NTU}_{\mathrm{t}}=\numrange{1.5}{2.5}$; cycles of concentration
+$N_{c}=\numrange{3}{5}$; drift \SIrange{0.005}{0.02}{\percent} of circulating flow. \emph{All
+literature ranges for mechanical-draught counterflow towers; none is a code constant.}
+
+\subsubsection{Why the tower cannot be solved after the chiller}
+Here is the statement this subsection exists to make. The tower's approach sets $T_{\mathrm{t,o}}$;
+the chiller rejects into that water, so its condenser/absorber temperature is
+\begin{equation}
+T_{\mathrm{ac}} = T_{\mathrm{t,o}} + \delta_{\mathrm{ac}} ,
+\label{eq:spec:Tac}
+\end{equation}
+with $\delta_{\mathrm{ac}}$ the rejection-side approach inside the machine
+(\SIrange{3}{6}{\kelvin}, \emph{literature}). But $T_{\mathrm{ac}}$ is exactly the term the D\"uhring
+slope multiplies in \eqref{eq:spec:ddt}, so
+\begin{equation}
+\frac{\partial Q_{\mathrm{evap}}}{\partial T_{\mathrm{t,o}}} = -\,a\,A \approx
+\SI{-4}{\kilo\watt\per\kelvin}
+\qquad\text{against}\qquad
+\frac{\partial Q_{\mathrm{evap}}}{\partial T_{\mathrm{gen}}} = a \approx
+\SI{3.5}{\kilo\watt\per\kelvin}
+\label{eq:spec:sens}
+\end{equation}
+at the illustrative constants above. \emph{A kelvin surrendered at the cooling tower costs more
+evaporator duty than a kelvin gained at the well returns.} And the loop closes: $Q_{\mathrm{evap}}$
+sets $Q_{\mathrm{rej}}$ by \eqref{eq:spec:qrej}, which sets the tower duty, which sets
+$T_{\mathrm{t,o}}$, which sets $T_{\mathrm{ac}}$, which sets $Q_{\mathrm{evap}}$. Solving the tower
+after the chiller --- fixing $T_{\mathrm{ac}}$ at a nominal number and sizing the tower to whatever
+falls out --- is not a mild approximation. It discards the dominant feedback and reports capacity the
+plant does not have, on exactly the humid design days when the wet bulb is high and the error is
+largest.
+
+The two must therefore be closed simultaneously. The cheapest correct implementation is a
+one-dimensional residual in $T_{\mathrm{t,o}}$,
+\begin{equation}
+R(T_{\mathrm{t,o}}) = T_{\mathrm{t,o}}
+ - \left[T_{\mathrm{t,i}} - \frac{Q_{\mathrm{t}}}{\md_{\mathrm{t}}c_{p,\mathrm{w}}}\right] = 0 ,
+\qquad
+T_{\mathrm{t,i}} = T_{\mathrm{t,o}} + \frac{Q_{\mathrm{rej}}(T_{\mathrm{t,o}})}
+{\md_{\mathrm{t}}c_{p,\mathrm{w}}} ,
+\label{eq:spec:coupled}
+\end{equation}
+driven by bisection on the physically bounded interval
+$T_{\mathrm{a,i}}^{\mathrm{wb}} < T_{\mathrm{t,o}} < T_{\mathrm{t,i}}$. It is monotone, it cannot
+leave the interval, and it costs perhaps a dozen evaluations of two algebraic blocks --- negligible
+beside the DBHE march.
+
+%---------------------------------------------------------------------
+\subsection{Implementation order, and one unresolved defect}
+\label{sec:spec:order}
+
+\emph{Status: none of the following is implemented.}
+
+Table~\ref{tab:spec:order} gives the sequence, ordered by unlocked capability per unit of effort. It
+is not arbitrary: item~0 is a prerequisite for 1, 2 and 4, and items 3--5 cannot be separated,
+because Section~\ref{sec:spec:tower} showed that chiller and tower share a fixed point.
+
+\begin{table}[htbp]
+\centering
+\caption{Implementation order for the pending components. ``Unlocks'' refers to the modes of the
+master architecture. Nothing in this table is implemented.}
+\label{tab:spec:order}
+\begin{tabular}{@{}clll@{}}
+\toprule
+\# & Item & Unlocks & Note \\
+\midrule
+0 & Wet-bulb and dew-point solvers & --- & Eq.~\eqref{eq:spec:wbdp}; not a component \\
+1 & Adiabatic humidifier & M4 (and M8) & One block; needs no geothermal water \\
+2 & Indirect evaporative cooler & M2 & One block plus a saturated-outlet solve \\
+3 & Chilled-water loop & --- & Hydraulic; prerequisite for 4 \\
+4 & Absorption chiller & M3, M5 & Must be solved with 5 \\
+5 & Wet cooling tower & M3, M5 & Must be solved with 4 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Item~1 is the highest-value single change in the backlog: a dozen lines, no new loop, and it opens
+the one operating mode that is independent of the reservoir and therefore immune to depletion. Items
+4 and 5 are the largest change, and they open the two modes that are the \emph{first} to be lost to
+depletion. That asymmetry is worth keeping in view when the work is scheduled.
+
+\subsubsection{The unresolved defect: process ordering in M5}
+Mode M5 activates the absorption chiller with a dry chilled-water coil \emph{and} the humidifier, to
+serve deep cooling-plus-humidification loads that M4 cannot reach. In the architecture as drawn, the
+humidifier sits on prong~E, \emph{upstream} of the chilled-water coil in fork~2. The air is therefore
+humidified before it is cooled. This is the wrong order, for three reasons:
+\begin{enumerate}[nosep]
+\item \textbf{It may saturate.} Adiabatic saturation drives the air toward $\RH=1$ along a
+constant-enthalpy line. Presenting a nearly saturated stream to a cold coil face guarantees
+condensation on the fins.
+\item \textbf{It undoes itself.} Whatever condenses on the coil is moisture the humidifier has just
+evaporated. The plant pays evaporative duty to add water and chiller duty to take the same water back
+out --- latent work performed twice for a net result of zero.
+\item \textbf{It wastes the free cooling.} The humidifier's own sensible cooling,
+Eq.~\eqref{eq:spec:humduty}, is delivered upstream of the coil, where the coil simply sees a colder
+inlet and throttles back. Downstream of the coil the same cooling would \emph{add} to delivered
+capacity instead of substituting for it.
+\end{enumerate}
+
+\emph{Cool first, then humidify} is the correct sequence: the coil brings the air down at nearly
+constant $w$, and the humidifier then walks it up the constant-wet-bulb line to the supply state,
+its own evaporative cooling counting toward the sensible duty rather than against it.
+\textbf{The architecture does not currently provide that path} --- prong~E has no branch that
+reaches the humidifier after fork~2.
+
+Three remedies exist, and the choice is a genuine open question rather than an oversight to be
+quietly patched:
+\begin{itemize}[nosep]
+\item \emph{Reposition.} Add a duct branch placing the humidifier downstream of the chilled-water
+coil. Physically correct, and the only option that captures the humidifier's cooling as useful duty.
+Costs a new prong and one more damper in a valve network that is already the most intricate part of
+the plant.
+\item \emph{Duplicate.} Install humidification capacity in both positions and select by mode. Correct
+in every mode, but it buys generality with hardware idle most of the year.
+\item \emph{Detune.} Keep the present order and cap $\varepsilon_{\mathrm{sat}}$ so the coil face
+never sees $\RH>\RH_{\max}$. A pure control workaround: it removes the condensation risk but keeps
+defects 2 and 3, and it forfeits latent capacity precisely in the loads that forced M5 in the first
+place.
+\end{itemize}
+Whichever is adopted, the humidifier block of Section~\ref{sec:spec:hum} is unchanged --- only its
+position in the stream sequence moves. That is the advantage of specifying components as pure
+functions of their inlet states, and it is why this defect is a topology question and not a modelling
+one.

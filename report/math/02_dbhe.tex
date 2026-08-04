@@ -1,0 +1,631 @@
+%=====================================================================
+\section{The DBHE subsurface model}
+\label{sec:dbhe}
+
+The Deep Borehole Heat Exchanger is a closed coaxial loop built inside a
+repurposed well. Water is injected at the surface down the \emph{annulus}
+(between the production casing and a central tubing string), is warmed by the
+surrounding rock as it descends, turns at the bottom, and returns up the
+\emph{tubing bore}. Nothing is produced from the formation; only heat crosses
+the borehole wall.
+
+Two sub-models are coupled. The \emph{formation} model is transient and lives on
+a time scale of months to decades: the rock around the well cools progressively
+as heat is withdrawn. The \emph{fluid} model is quasi-steady and lives on a time
+scale of minutes: the water traverses the well and leaves long before the rock
+notices. The whole subsurface exposes exactly two numbers to the rest of the
+plant --- the produced temperature $T_{\mathrm{ret}}$ and the wall heat flux
+that drives the formation forward one step.
+
+%---------------------------------------------------------------------
+\subsection{Formation: radial conduction and its two hypotheses}
+\label{sec:dbhe:formation}
+
+Around each axial cell the rock is treated as a homogeneous, radially symmetric
+conducting medium with no source:
+\begin{equation}
+\frac{1}{r}\frac{\partial}{\partial r}\!\left(r\,\frac{\partial\theta}{\partial r}\right)
+=\frac{1}{\alpha_e}\frac{\partial\theta}{\partial t}, \qquad
+r\in[r_{ce},\,R_{\mathrm{far}}],
+\label{eq:dbhe:radial}
+\end{equation}
+where $\theta(r,z,t)=T-T_\infty(z)$ is the temperature \emph{excess} over the
+undisturbed geothermal profile
+\begin{equation}
+T_\infty(z)=T_{\mathrm{surf}}+G_g z ,
+\label{eq:dbhe:Tinf}
+\end{equation}
+with $T_{\mathrm{surf}}=\SI{20}{\celsius}$ and $G_g=\SI{0.031}{\kelvin\per\metre}$
+in the baseline configuration --- so the undisturbed bottom-hole temperature at
+the demonstration depth $L=\SI{4500}{\metre}$ is \SI{159.5}{\celsius}. Working
+in $\theta$ rather than $T$ is not cosmetic: it makes the initial condition
+identically zero and the far-field condition homogeneous, which is what allows
+the transform of Section~\ref{sec:dbhe:gitt} to be linear and history-free.
+
+The inner boundary at the borehole wall $r=r_{ce}=\SI{0.10795}{\metre}$ (the
+\SI{8.5}{inch} hole radius) carries a prescribed heat flux; the outer boundary
+carries a prescribed temperature. Two hypotheses are buried here and both
+deserve to be stated with their failure modes.
+
+\paragraph{Hypothesis 1: axial conduction in the rock is negligible.}
+Equation~\eqref{eq:dbhe:radial} has no $\partial^2\theta/\partial z^2$ term, so
+the $N_Z$ axial cells are thermally independent of one another: each one solves
+its own one-dimensional radial problem and they communicate only through the
+fluid. The justification is a ratio of driving gradients. With $N_Z=50$ cells
+over \SI{4500}{\metre} the cell height is \SI{90}{\metre}, and the undisturbed
+temperature difference between neighbouring cells is only
+$G_g\times\SI{90}{\metre}=\SI{2.79}{\kelvin}$. The radial problem, by contrast,
+is driven by tens of kelvin developed over a diffusion length
+$\delta\sim\sqrt{\alpha_e t}$ of a few metres. The axial conductive flux
+$k_e\,\Delta T_z/\Delta z$ is therefore smaller than the radial flux
+$k_e\,\Delta T_r/\delta$ by two to three orders of magnitude.
+
+\emph{Where it fails.} The argument assumes \emph{smooth} axial variation. It
+breaks wherever the axial field develops a genuine kink --- at the very top,
+where cold injected water meets warm near-surface rock over a short interval,
+and at the bottom turn --- and it breaks if the well is refined to cells of order
+the radial diffusion length (metres), at which point the neglected term is no
+longer small relative to the retained one. At $N_Z=50$ this is comfortable; the
+hypothesis should be re-examined before pushing $N_Z$ past a few hundred.
+
+\paragraph{Hypothesis 2: the domain is truncated at a finite radius
+$R_{\mathrm{far}}$, held at the undisturbed temperature.}
+The rock is unbounded; the model is not. The code truncates at
+\begin{equation}
+R_{\mathrm{far}}=\max\!\left(\SI{200}{\metre},\;
+3.5\sqrt{4\alpha_e\,t_{\mathrm{total}}}\right),
+\label{eq:dbhe:Rfar}
+\end{equation}
+i.e.\ at several diffusion lengths of the \emph{whole} simulated horizon. For
+the baseline $\alpha_e=\SI{1.05e-6}{\metre\squared\per\second}$ and
+$t_{\mathrm{total}}=\SI{20}{yr}$ the diffusion length is
+$\sqrt{4\alpha_e t_{\mathrm{total}}}=\SI{51.5}{\metre}$ and
+$3.5\times\SI{51.5}{\metre}=\SI{180}{\metre}$, so it is the
+\SI{200}{\metre} \emph{floor} that is active and $R_{\mathrm{far}}=\SI{200}{\metre}$.
+
+The outer condition imposed there is $\theta(R_{\mathrm{far}},t)=0$: a Dirichlet
+condition pinning the far field to the undisturbed geothermal temperature. This
+is worth emphasising because it is easy to write ``adiabatic outer boundary''
+by reflex, and the two choices are not interchangeable. Under a zero-flux outer
+boundary a continuously extracting well has \emph{no} steady state --- the
+enclosed rock simply cools without bound --- whereas under the Dirichlet
+condition the wall-to-far-field problem possesses the finite steady resistance
+\begin{equation}
+R_{ss}=\frac{\ln\!\left(R_{\mathrm{far}}/r_{ce}\right)}{2\pi k_e},
+\label{eq:dbhe:Rss}
+\end{equation}
+which the tail correction of Section~\ref{sec:dbhe:tail} depends on entirely.
+The code's characteristic equation (below) imposes the Dirichlet form, and
+Eq.~\eqref{eq:dbhe:Rss} is used consistently with it. With
+$k_e=\SI{2.2}{\watt\per\metre\per\kelvin}$,
+$R_{ss}=\SI{0.544}{\kelvin\metre\per\watt}$.
+
+\emph{What it costs.} The truncation turns a slowly-diverging unbounded problem
+into a bounded one that eventually reaches steady state. Provided the
+disturbance never actually reaches $R_{\mathrm{far}}$, the two are
+indistinguishable, and Eq.~\eqref{eq:dbhe:Rfar} is precisely the condition
+guaranteeing that. Extend the horizon or raise the flux without re-deriving
+$R_{\mathrm{far}}$ and the model starts drawing heat from an artificial infinite
+reservoir at the boundary, \emph{over}-predicting sustainable output. The
+safeguard is that $R_{\mathrm{far}}$ is computed from $t_{\mathrm{total}}$.
+
+%---------------------------------------------------------------------
+\subsection{The generalized integral transform}
+\label{sec:dbhe:gitt}
+
+\subsubsection{Eigenvalue problem}
+Separating Eq.~\eqref{eq:dbhe:radial} gives the Sturm--Liouville problem
+\begin{equation}
+\frac{1}{r}\frac{\mathrm{d}}{\mathrm{d}r}\!\left(r\frac{\mathrm{d}\psi}{\mathrm{d}r}\right)
++\beta^{2}\psi=0, \qquad \left.\frac{\mathrm{d}\psi}{\mathrm{d}r}\right|_{r_{ce}}=0, \qquad
+\psi(R_{\mathrm{far}})=0 ,
+\label{eq:dbhe:SL}
+\end{equation}
+whose solutions are combinations of the zeroth-order Bessel functions $J_0,Y_0$.
+The code builds the eigenfunction so that the inner Neumann condition is
+satisfied identically:
+\begin{equation}
+\psi_n(r)=Y_1(\beta_n r_{ce})\,J_0(\beta_n r)-J_1(\beta_n r_{ce})\,Y_0(\beta_n r),
+\label{eq:dbhe:psi}
+\end{equation}
+since $\mathrm{d}J_0(\beta r)/\mathrm{d}r=-\beta J_1(\beta r)$ makes
+$\psi_n'(r_{ce})\propto Y_1 J_1-J_1 Y_1=0$ automatically. The eigenvalues are
+then the roots of the remaining (outer) condition,
+\begin{equation}
+\psi(\beta,R_{\mathrm{far}}) =Y_1(\beta r_{ce})\,J_0(\beta R_{\mathrm{far}}) -J_1(\beta
+r_{ce})\,Y_0(\beta R_{\mathrm{far}})=0 .
+\label{eq:dbhe:chareq}
+\end{equation}
+The roots are found by brute force --- a scan of $\num{800000}$ points over
+$\beta\in(0,200]\,\si{\per\metre}$ for sign changes, each bracket refined by
+Brent's method to a tolerance of $10^{-14}$ --- and the first $N=60$ are kept.
+Brute force is the right choice: the roots are computed once and reused for all
+$\num{29220}$ time steps, so robustness matters far more than speed. At the
+baseline geometry the retained band runs from
+$\beta_1=\SI{0.0120}{\per\metre}$ to $\beta_{60}=\SI{0.939}{\per\metre}$ --- from
+a mode whose time constant $1/(\alpha_e\beta_1^2)$ is of order two centuries
+down to one of order \SI{300}{\hour}.
+
+\subsubsection{Transform pair and the norm}
+The $\psi_n$ are orthogonal under the weight $r$ inherited from the cylindrical
+Laplacian. Defining the norm
+\begin{equation}
+\mathcal{N}_n=\int_{r_{ce}}^{R_{\mathrm{far}}} r\,\psi_n^2(r)\,\mathrm{d}r ,
+\label{eq:dbhe:norm}
+\end{equation}
+the transform pair is
+\begin{equation}
+\bar\theta_n(t)=\int_{r_{ce}}^{R_{\mathrm{far}}} r\,\psi_n(r)\,\theta(r,t)\,\mathrm{d}r
+\qquad\text{(transform)}, \qquad
+\theta(r,t)=\sum_{n=1}^{N}\frac{\psi_n(r)}{\mathcal{N}_n}\,\bar\theta_n(t)
+\qquad\text{(inverse)} .
+\label{eq:dbhe:pair}
+\end{equation}
+Only the wall value is ever needed downstream, so the code stores the
+\emph{inversion weights} $\Omega_n=\psi_n(r_{ce})/\mathcal{N}_n$ once and
+reconstructs the wall temperature as a single dot product.
+
+The norms are evaluated by the trapezoidal rule on a radial grid that adapts to
+the mode being integrated: at least $6000$ points, and at least $20$ points per
+half-wavelength $\pi/\beta_n$. Resolving each oscillation is the whole issue ---
+the integrand $r\psi_n^2$ oscillates $n$ times across the domain and is weighted
+towards large $r$.
+
+\paragraph{The non-positive-norm guard.}
+Mathematically $\mathcal{N}_n>0$ always: it is the integral of a non-negative
+quantity. The code nevertheless checks it and warns, naming the offending mode
+indices, whenever $\mathcal{N}_n\le0$. The paranoia is not about the mathematics
+but about the quadrature: a non-positive norm can only mean the radial grid has
+aliased $\psi_n$ and returned a meaningless number. Because $\mathcal{N}_n$ sits
+in the \emph{denominator} of every inversion weight, such a failure does not
+produce a mildly wrong answer but a diverging one, so the warning names the two
+correct remedies --- raise the grid resolution, or reduce the number of modes to
+the band the grid can support. Silence here would let a discretisation failure
+masquerade as a physical result.
+
+\subsubsection{The transformed equations}
+Multiply Eq.~\eqref{eq:dbhe:radial} by $r\psi_n$, integrate over
+$[r_{ce},R_{\mathrm{far}}]$, and integrate the radial operator by parts twice.
+Orthogonality annihilates every cross term and leaves
+\begin{equation}
+\frac{\mathrm{d}\bar\theta_n}{\mathrm{d}t} =-\alpha_e\beta_n^{2}\,\bar\theta_n
++\alpha_e\Big[r\big(\psi_n\theta'-\psi_n'\theta\big)\Big]_{r_{ce}}^{R_{\mathrm{far}}} .
+\label{eq:dbhe:proj}
+\end{equation}
+The boundary term is where the physics enters, and both of our boundary
+conditions were chosen so that it collapses. At $R_{\mathrm{far}}$ both
+$\psi_n$ and $\theta$ vanish, so the upper limit contributes nothing. At
+$r_{ce}$, $\psi_n'(r_{ce})=0$ kills the second piece, and Fourier's law
+$-k_e\theta'(r_{ce})=q''=q'/(2\pi r_{ce})$ converts the first, leaving
+\begin{equation}
+\boxed{\; \frac{\mathrm{d}\bar\theta_n}{\mathrm{d}t}+\alpha_e\beta_n^{2}\,\bar\theta_n
+=\alpha_e\beta_n^{2}\,F_n\,q' , \qquad F_n=\frac{\psi_n(r_{ce})}{2\pi k_e\,\beta_n^{2}} \; }
+\label{eq:dbhe:modeODE}
+\end{equation}
+where $q'$ is the heat rate per unit borehole length delivered \emph{into} the
+rock at the wall (so $q'<0$ during extraction) and $F_n$ is the code's
+precomputed forcing coefficient. Writing the right-hand side as
+$\alpha_e\beta_n^2 F_n q'$ rather than as a bare $F_n q'$ is deliberate: it makes
+$F_n$ the \emph{steady gain} of the mode, $\bar\theta_n^\infty=F_n q'$, which is
+what the tail correction of Section~\ref{sec:dbhe:tail} needs.
+
+This decoupling is the entire point of the transform. A partial differential
+equation in $(r,t)$ has become $N$ scalar ordinary differential equations that
+do not talk to each other.
+
+%---------------------------------------------------------------------
+\subsection{Exact time march of the transformed modes}
+\label{sec:dbhe:march}
+
+Over one step $\Delta t$ the flux is held piecewise constant at its value
+$q'^{\,k}$ from the fluid solve. Equation~\eqref{eq:dbhe:modeODE} is then a
+linear first-order ODE with constant coefficients and integrates \emph{exactly}:
+\begin{equation}
+\boxed{\; \bar\theta_n^{\,k+1}=\bar\theta_n^{\,k}\,d_n +F_n\left(1-d_n\right)q'^{\,k},
+\qquad d_n=\exp\!\left(-\alpha_e\beta_n^{2}\Delta t\right) \; }
+\label{eq:dbhe:Urec}
+\end{equation}
+with $\Delta t=\SI{0.25}{\day}=\SI{6}{\hour}$ in the baseline. There is no
+time-step stability limit and no truncation error in time: whatever error exists
+comes from holding $q'$ constant across the step, not from the integrator. The
+decay factors $d_n$ are computed once at initialisation.
+
+Two properties are worth naming. First, the cost per step is $O(N)$ per axial
+cell and \emph{no history is stored}: the state is the $N$ numbers
+$\bar\theta_n$, the same size after twenty years as after one step. This is the
+genuine advantage of the transform over a convolution formulation (g-function or
+infinite cylindrical source), whose history buffer grows with simulated time. It
+is \emph{not} that the transform avoids iteration --- the coupled
+fluid--formation problem is solved by fixed point either way. Second,
+$d_n\to1$ for slow modes and $d_n\to0$ for fast ones, so
+Eq.~\eqref{eq:dbhe:Urec} degrades gracefully: fast modes relax immediately to
+their quasi-steady value $F_n q'$, slow modes accumulate.
+
+%---------------------------------------------------------------------
+\subsection{The analytical tail correction}
+\label{sec:dbhe:tail}
+
+\subsubsection{Why a truncated series is not merely ``a bit less accurate''}
+The high-order eigenfunctions are the ones with short radial wavelength, and
+short radial wavelength is what resolves the steep temperature gradient hugging
+the borehole wall at early time. Truncating at $N=60$ therefore does not blur
+the solution uniformly; it removes the near-wellbore structure specifically. The
+symptom is systematic: the retained modes reproduce too \emph{little} resistance
+between wall and far field, so the model under-predicts how far the wall
+temperature must drop to drive a given flux, and gets the first weeks to months
+badly wrong.
+
+\subsubsection{Deriving the deficit}
+The deficit can be computed exactly, because both the true and the truncated
+steady limits are known in closed form.
+
+The true steady resistance is Eq.~\eqref{eq:dbhe:Rss}, the classical logarithmic
+result for flux at $r_{ce}$ and fixed temperature at $R_{\mathrm{far}}$. What do
+the $N$ retained modes give in the same limit? Setting
+$\mathrm{d}\bar\theta_n/\mathrm{d}t=0$ in Eq.~\eqref{eq:dbhe:modeODE} gives
+$\bar\theta_n^{\infty}=F_n q'$; inverting at the wall with
+Eq.~\eqref{eq:dbhe:pair} and dividing by $q'$ gives the partial resistance
+\begin{equation}
+R_{\mathrm{partial}} =\frac{1}{q'}\sum_{n=1}^{N}\frac{\psi_n(r_{ce})}{\mathcal{N}_n}F_n q'
+=\frac{1}{2\pi k_e}\sum_{n=1}^{N} \frac{\psi_n^{2}(r_{ce})}{\beta_n^{2}\,\mathcal{N}_n} .
+\label{eq:dbhe:Rpartial}
+\end{equation}
+The identity being exploited is that the \emph{complete} series reproduces the
+logarithm exactly,
+\begin{equation}
+\sum_{n=1}^{\infty}\frac{\psi_n^{2}(r_{ce})}{\beta_n^{2}\,\mathcal{N}_n}
+=\ln\!\left(R_{\mathrm{far}}/r_{ce}\right),
+\label{eq:dbhe:sumid}
+\end{equation}
+so the truncation error is not estimated --- it is the closed-form remainder
+\begin{equation}
+\boxed{\; R_{\mathrm{tail}}=R_{ss}-R_{\mathrm{partial}}
+=\frac{\ln(R_{\mathrm{far}}/r_{ce})}{2\pi k_e} -\frac{1}{2\pi
+k_e}\sum_{n=1}^{N}\frac{\psi_n^{2}(r_{ce})}{\beta_n^{2}\mathcal{N}_n}\;}
+\label{eq:dbhe:Rtail}
+\end{equation}
+This quantity is not a rounding error. Because the series converges only as
+$1/n^{2}$ under constant-flux forcing, evaluating
+Eqs.~\eqref{eq:dbhe:Rss} and~\eqref{eq:dbhe:Rpartial} at the baseline
+configuration ($N=60$, $R_{\mathrm{far}}=\SI{200}{\metre}$,
+$r_{ce}=\SI{0.10795}{\metre}$) leaves $R_{\mathrm{tail}}$ at roughly a third of
+$R_{ss}$. A model that ignored it would be wrong about the borehole-wall
+temperature by a first-order amount, not a refinement.
+
+\subsubsection{Carrying the deficit as one extra state}
+The missing resistance is given its own lumped mode, advanced with exactly the
+same exponential recursion but with the decay rate of the first \emph{omitted}
+eigenvalue. The code estimates that eigenvalue by the asymptotic spacing of the
+Bessel roots, $\beta_{N+1}\approx\beta_N+\pi/R_{\mathrm{far}}$:
+\begin{equation}
+\bar\theta_{\mathrm{tail}}^{\,k+1} =\bar\theta_{\mathrm{tail}}^{\,k}\,d_{\mathrm{tail}}
++R_{\mathrm{tail}}\left(1-d_{\mathrm{tail}}\right)q'^{\,k}, \qquad
+d_{\mathrm{tail}}=\exp\!\left[-\alpha_e\left(\beta_N+\pi/R_{\mathrm{far}}\right)^{2}\Delta
+t\right].
+\label{eq:dbhe:Utail}
+\end{equation}
+Note that $R_{\mathrm{tail}}$ plays the role of $F_n$ here: it \emph{is} the
+steady gain of the lumped remainder, which is why Eq.~\eqref{eq:dbhe:modeODE}
+was normalised as it was. Assigning the whole remainder a single time constant
+is an approximation --- the omitted modes span a range of rates --- but it is the
+conservative one, since the slowest omitted mode governs when the lumped state
+has finished responding.
+
+The borehole-wall temperature is then reconstructed cell by cell as
+\begin{equation}
+T_{bw}(z)=T_\infty(z)+\sum_{n=1}^{N}\bar\theta_n\,\Omega_n +\bar\theta_{\mathrm{tail}},
+\qquad \Omega_n=\frac{\psi_n(r_{ce})}{\mathcal{N}_n} .
+\label{eq:dbhe:Tbw}
+\end{equation}
+
+\subsubsection{The optional second-set correction}
+The notebook also contains a finer variant of the same idea: instead of lumping
+the remainder into one state, compute a second block of eigenvalues (modes
+$N+1$ through $N_B$, with $N_B=1200$) explicitly, and represent their
+contribution by the quasi-steady resistance
+\begin{equation}
+C_B=\frac{1}{2\pi k_e}\sum_{n=N+1}^{N_B}
+\frac{\psi_n^{2}(r_{ce})}{\beta_n^{2}\,\mathcal{N}_n} .
+\label{eq:dbhe:CB}
+\end{equation}
+This is \textbf{disabled in the baseline} (\texttt{USE\_QS\_CORRECTION = False},
+$C_B=0$), so the results reported here use the single-state analytical tail of
+Eq.~\eqref{eq:dbhe:Utail}. The machinery is retained because it provides the
+natural convergence check on the tail approximation: as $N_B$ grows, $C_B$ must
+approach $R_{\mathrm{tail}}$.
+
+%---------------------------------------------------------------------
+\subsection{Fluid: the coaxial boundary-value problem}
+\label{sec:dbhe:fluid}
+
+\subsubsection{Quasi-steady hypothesis}
+The fluid is treated as steady \emph{within} each time step. The separation of
+scales is wide: the water transits the borehole in minutes to hours, the time
+step is \SI{6}{\hour}, and the formation responds over months to decades. The
+cost is that transients \emph{inside} the well --- the thermal front travelling
+down the annulus after a step change in injection temperature, and the inertia
+of the water column and steel --- are not represented. The model must therefore
+not be asked about the first few hours after a start-up or a flow change; it is
+a tool for seasonal and multi-year behaviour, and honest only at that scale.
+
+\subsubsection{The two coupled energy balances}
+Two counter-current streams exchange heat with each other through the tubing
+wall --- the parasitic ``short circuit'' by which the hot returning water reheats,
+or is cooled by, the descending water --- and the annulus additionally exchanges
+with the borehole wall. Steady balances on differential elements, nondimensionalised
+with $\zeta=z/L$ and
+\begin{equation}
+\theta_j=\frac{T_j-T_{\mathrm{in}}}{\Delta T_{sc}}, \qquad \Delta
+T_{sc}(t)=\max\!\left(\max_z T_{bw}(z)-T_{\mathrm{in}},\;\SI{1}{\kelvin}\right),
+\label{eq:dbhe:scale}
+\end{equation}
+give
+\begin{align}
+\frac{\mathrm{d}\theta_a}{\mathrm{d}\zeta}
+&=\mathrm{NTU}_{bw}\left(\theta_{bw}-\theta_a\right)
+-\mathrm{NTU}_{at}\left(\theta_a-\theta_t\right),
+\label{eq:dbhe:bvpa}\\[2pt]
+\frac{\mathrm{d}\theta_t}{\mathrm{d}\zeta}
+&=-\,\mathrm{NTU}_{at}\left(\theta_a-\theta_t\right).
+\label{eq:dbhe:bvpt}
+\end{align}
+The minus sign on the tubing equation is the counter-flow: $\zeta$ increases
+downward for both equations, but the tubing stream travels upward, so the
+derivative along its own direction of travel is $-\mathrm{d}/\mathrm{d}\zeta$.
+
+The scale $\Delta T_{sc}$ is \emph{recomputed every step} from the current wall
+field, not fixed once. The \SI{1}{\kelvin} floor prevents division by zero when
+the well has been driven to thermal equilibrium with the injection temperature.
+
+\subsubsection{The NTU groupings}
+Both groups are conductance per unit length times length divided by stream
+capacity rate, evaluated at the \emph{well} flow $\dot m_{\mathrm{well}}$ (not
+the loop flow --- see Section~\ref{sec:dbhe:reynolds}):
+\begin{equation}
+\mathrm{NTU}_{at}=\frac{G_{a,t}^{\mathrm{eff}}\,L}{\dot m_{\mathrm{well}}c_{p,w}}, \qquad
+\mathrm{NTU}_{bw}=\frac{G_{a,ce}^{\mathrm{eff}}\,L}{\dot m_{\mathrm{well}}c_{p,w}} .
+\label{eq:dbhe:NTUdef}
+\end{equation}
+Each conductance is a series chain of resistances per unit length, built on
+log-mean (thermodynamic centroid) radii
+$\bar r=(r_o-r_i)/\ln(r_o/r_i)$ so that each solid wall can be split into an
+inner and an outer half without introducing an error:
+\begin{align}
+\frac{1}{G_{a,t}^{\mathrm{eff}}} &=\underbrace{\frac{1}{2\pi
+r_{t,o}h_a}+\frac{\ln(r_{t,o}/\bar r_t)}{2\pi k_t}}_{\text{annulus film + outer half of
+tubing}} +\underbrace{\frac{\ln(\bar r_t/r_{t,i})}{2\pi k_t}+\frac{1}{2\pi
+r_{t,i}h_{tb}}}_{\text{inner half of tubing + bore film}},
+\label{eq:dbhe:Gat}\\[4pt]
+\frac{1}{G_{a,ce}^{\mathrm{eff}}} &=\underbrace{\frac{1}{2\pi r_{ca,i}h_a}+\frac{\ln(\bar
+r_{ca}/r_{ca,i})}{2\pi k_{ca}}}_{\text{annulus film + inner half of casing}}
++\underbrace{\frac{\ln(r_{ca,o}/\bar r_{ca})}{2\pi k_{ca}}+\frac{\ln(\bar
+r_{ce}/r_{ca,o})}{2\pi k_{ce}}}_{\text{outer half of casing + inner half of cement}}
++\underbrace{\frac{\ln(r_{ce}/\bar r_{ce})}{2\pi k_{ce}}}_{\text{outer half of cement}} .
+\label{eq:dbhe:Gace}
+\end{align}
+The steel conductivities ($k_{ca}=k_{t,\mathrm{bare}}=\SI{45}{\watt\per\metre\per\kelvin}$)
+make the wall terms negligible in Eq.~\eqref{eq:dbhe:Gat} for a \emph{bare}
+tubing, which is exactly the problem: the short circuit is then strong. Vacuum
+insulated tubing, $k_t=\SI{0.02}{\watt\per\metre\per\kelvin}$, raises the tubing
+resistance by more than three orders of magnitude and is what suppresses it. The
+model carries both cases explicitly and labels the state ``Bare'' or
+``Insulated'' from the value of $k_t$.
+
+Water properties ($\rho$, $c_p$, $\mu$, $k_f$, $\mathrm{Pr}$) come from
+IAPWS-IF97 at the operating pressure $P_{\mathrm{op}}=\SI{50}{bar}$, evaluated
+once per well state at a representative mean temperature. A constant-property
+shortcut was explicitly rejected in the code: a fixed \SI{70}{\celsius} estimate
+misstates $\mu$ and $\mathrm{Pr}$ by about $-38\%$ at \SI{43}{\celsius} and
+$+90\%$ at \SI{130}{\celsius}, and both feed the film coefficients directly.
+
+%---------------------------------------------------------------------
+\subsection{Transfer-matrix solution of the two-point BVP}
+\label{sec:dbhe:transfer}
+
+Equations~\eqref{eq:dbhe:bvpa}--\eqref{eq:dbhe:bvpt} are linear with
+coefficients that are constant within each depth cell (the wall temperature
+$\theta_{bw}$ is piecewise constant, one value per cell). Writing
+$\boldsymbol{\theta}=(\theta_a,\theta_t)^{\mathsf T}$,
+\begin{equation}
+\frac{\mathrm{d}\boldsymbol{\theta}}{\mathrm{d}\zeta}
+=\mathbf{A}\boldsymbol{\theta}+\mathbf{b}_k, \qquad \mathbf{A}=\begin{pmatrix}
+-\left(\mathrm{NTU}_{at}+\mathrm{NTU}_{bw}\right) & +\mathrm{NTU}_{at}\\[2pt]
+-\mathrm{NTU}_{at} & +\mathrm{NTU}_{at} \end{pmatrix}, \qquad
+\mathbf{b}_k=\begin{pmatrix}\mathrm{NTU}_{bw}\,\theta_{bw,k}\\[2pt]
+0\end{pmatrix},
+\label{eq:dbhe:Amatrix}
+\end{equation}
+and the exact propagator across one cell of thickness $\Delta\zeta=1/N_Z$ is
+\begin{equation}
+\boldsymbol{\theta}_{k+1}=\boldsymbol{\Phi}\,\boldsymbol{\theta}_{k}
++\boldsymbol{\Psi}\,\mathbf{b}_k, \qquad \boldsymbol{\Phi}=e^{\mathbf{A}\Delta\zeta}, \qquad
+\boldsymbol{\Psi}=\int_0^{\Delta\zeta}\!e^{\mathbf{A}s}\,\mathrm{d}s
+=\mathbf{A}^{-1}\left(\boldsymbol{\Phi}-\mathbf{I}\right).
+\label{eq:dbhe:PhiPsi}
+\end{equation}
+Both $\boldsymbol{\Phi}$ and $\boldsymbol{\Psi}$ are built once per flow state
+and reused down the whole well. Because $\det\mathbf{A}=-\mathrm{NTU}_{at}\,
+\mathrm{NTU}_{bw}$, the closed form for $\boldsymbol{\Psi}$ requires both
+groups strictly positive; a perfectly insulating tubing ($k_t\to0$, so
+$\mathrm{NTU}_{at}\to0$) would make $\mathbf{A}$ singular. The vacuum-insulated
+case is small but finite, so this is a limit to be aware of rather than a
+present defect.
+
+\paragraph{Closing the boundary conditions.}
+The problem is a two-point BVP: the annulus condition is known at the surface
+($\theta_a(0)=0$, injection at $T_{\mathrm{in}}$) but the tubing condition is
+known only at the bottom (the two streams join, $\theta_a(1)=\theta_t(1)$). The
+code exploits linearity instead of shooting iteratively. It marches two
+independent solutions from the surface,
+\begin{equation}
+\mathbf{y}^{P}_0=\begin{pmatrix}0\\
+0\end{pmatrix} \;\text{(particular, with the }\mathbf{b}_k\text{ forcing)}, \qquad
+\mathbf{y}^{H}_0=\begin{pmatrix}0\\
+1\end{pmatrix} \;\text{(homogeneous, unforced)},
+\label{eq:dbhe:seeds}
+\end{equation}
+both of which already satisfy $\theta_a(0)=0$, and forms
+$\boldsymbol{\theta}=s\,\mathbf{y}^{H}+\mathbf{y}^{P}$. The single unknown $s$
+is the surface tubing temperature, and the bottom joining condition fixes it in
+one division:
+\begin{equation}
+s=\frac{y^{P}_{t}(1)-y^{P}_{a}(1)}{y^{H}_{a}(1)-y^{H}_{t}(1)} .
+\label{eq:dbhe:shoot}
+\end{equation}
+No iteration, no stability limit, no step-size restriction --- the axial
+discretisation error comes only from treating $\theta_{bw}$ as piecewise
+constant, since the ODE itself is integrated exactly within each cell. The
+produced temperature is read off directly:
+\begin{equation}
+T_{\mathrm{ret}}=T_{\mathrm{in}}+\theta_t(0)\,\Delta T_{sc}.
+\label{eq:dbhe:Tret}
+\end{equation}
+
+%---------------------------------------------------------------------
+\subsection{Closing the loop: flux back to the formation}
+\label{sec:dbhe:coupling}
+
+The fluid solve returns the annulus temperature at each cell centre, obtained by
+averaging the two cell-face values,
+$T_{a,cc,k}=T_{\mathrm{in}}+\tfrac12(\theta_{a,k}+\theta_{a,k+1})\Delta T_{sc}$.
+That temperature sets the wall flux that drives Eq.~\eqref{eq:dbhe:Urec}:
+\begin{equation}
+\boxed{\; q'_k=G_{\mathrm{eff}}\left(T_{a,cc,k}-T_{bw,k}\right), \qquad
+G_{\mathrm{eff}}=\frac{\mathrm{NTU}_{bw}\,\dot m_{\mathrm{well}}\,c_{p,w}}{L}
+\;=\;G_{a,ce}^{\mathrm{eff}} \; }
+\label{eq:dbhe:qeff}
+\end{equation}
+per unit borehole length. The last equality is a consistency identity, not a new
+model: substituting Eq.~\eqref{eq:dbhe:NTUdef} recovers the conductance chain
+of Eq.~\eqref{eq:dbhe:Gace} exactly. The same conductance therefore appears on
+both sides of the coupling, which is what guarantees the energy the fluid gains
+is the energy the rock loses. During extraction $T_{a,cc}<T_{bw}$, so $q'<0$,
+and Eq.~\eqref{eq:dbhe:Urec} drives $\bar\theta_n$ negative and $T_{bw}$ below
+$T_\infty$: the formation depletes.
+
+The order within a step is \emph{evaluate, then advance}: the fluid is solved
+against the wall field left by the previous step, and only after the surface
+loop has converged is the formation marched with the resulting flux. Relative to
+the formation's own time constants a \SI{6}{\hour} lag is negligible --- far
+smaller than what the quasi-steady fluid hypothesis already concedes.
+
+\paragraph{Retirement of the operating fraction $f_{\mathrm{op}}$.}
+Earlier versions derated the forcing by a duty fraction,
+$q'=f_{\mathrm{op}}\,G_{\mathrm{eff}}(T_{a,cc}-T_{bw})$, to represent a load
+running only part of the day. That factor has been \textbf{removed} from
+Eq.~\eqref{eq:dbhe:qeff}. In the coupled model the subsurface runs
+\emph{continuously} and the duty cycle is expressed where it physically lives:
+in the surface valve schedule, principally the well-flow fraction
+$w_{v\mathrm{E}}$, and in the thermal accumulator. Derating the flux conflated
+two distinct questions --- how hard the well is run, and how much load is served
+--- which made the predicted formation depletion genuinely ambiguous. The
+consequence must be stated plainly: the formation now sees the full, un-derated
+flux, so for a given well flow the drawdown is faster than under the derated
+formulation, and any earlier write-up carrying $f_{\mathrm{op}}$ inside the
+transform forcing requires amendment. The symbol survives in the configuration
+at $f_{\mathrm{op}}=1.00$ only so that legacy references do not break; it
+multiplies nothing.
+
+%---------------------------------------------------------------------
+\subsection{Film coefficients, the Reynolds clamp, and the validity flag}
+\label{sec:dbhe:reynolds}
+
+Both film coefficients $h_a$ and $h_{tb}$ in
+Eqs.~\eqref{eq:dbhe:Gat}--\eqref{eq:dbhe:Gace} come from the Gnielinski
+correlation with the Petukhov friction factor,
+\begin{equation}
+f_D=\left(0.790\ln\mathrm{Re}-1.64\right)^{-2}, \qquad
+\mathrm{Nu}=\frac{(f_D/8)\left(\mathrm{Re}-1000\right)\mathrm{Pr}}
+{1+12.7\sqrt{f_D/8}\left(\mathrm{Pr}^{2/3}-1\right)}, \qquad h=\frac{\mathrm{Nu}\,k_f}{D_h},
+\label{eq:dbhe:gnielinski}
+\end{equation}
+evaluated on the hydraulic diameters $D_{h,a}=2(r_{ca,i}-r_{t,o})$ for the
+annulus and $D_{h,tb}=2r_{t,i}$ for the tubing bore. The two velocities are tied
+by mass conservation, $v_{tb}=v_a A_a/A_{tb}$.
+
+Equation~\eqref{eq:dbhe:gnielinski} is valid for $\mathrm{Re}\gtrsim3000$; below
+that it is not merely inaccurate but pathological, since the factor
+$(\mathrm{Re}-1000)$ drives $\mathrm{Nu}$ to zero at $\mathrm{Re}=1000$ and
+negative below it. The well flow is $w_{v\mathrm{E}}\dot m$, and
+$w_{v\mathrm{E}}$ is a control that the surface plant may throttle, so low
+Reynolds numbers are reachable in normal operation. The code handles this in two
+separate places, and the distinction matters.
+
+\begin{enumerate}[leftmargin=*]
+\item \emph{Numerically}, the correlation is \textbf{clamped}: the Reynolds
+number fed to Eq.~\eqref{eq:dbhe:gnielinski} is $\max(\mathrm{Re},3100)$. Below
+the clamp the film coefficient simply freezes at its value at
+$\mathrm{Re}=3100$. This keeps $h$ finite and positive so the conductance chain
+never produces a negative or singular $\mathrm{NTU}$, and it deliberately does
+\emph{not} switch to a laminar correlation mid-march.
+\item \emph{Diagnostically}, the true unclamped Reynolds numbers of both streams
+are recomputed every time the flow is set, and a one-shot message is printed
+naming $w_{v\mathrm{E}}$ and both values whenever either falls below $3000$. The
+flag fires once per well state, so a long throttled run reports the condition
+without flooding the log.
+\end{enumerate}
+
+Two facts make the clamp acceptable rather than fatal. First, the regime where
+the correlation is weakest is the regime where the answer barely depends on it:
+at low $w_{v\mathrm{E}}$ the capacity rate $\dot m_{\mathrm{well}}c_{p,w}$ is
+small, $\mathrm{NTU}_{bw}$ is correspondingly large, the annulus water nearly
+equilibrates with the wall regardless of $h_a$, and $T_{\mathrm{ret}}$ becomes
+insensitive to it. Second, the control carries a floor
+$w_{v\mathrm{E}}\ge w_{v\mathrm{E},\min}=0.05$, keeping a trickle circulating
+rather than shutting down; a true shutdown would require a different physical
+model (conduction into a stagnant column), and switching models mid-march would
+introduce a discontinuity the tail correction of
+Section~\ref{sec:dbhe:tail} has not been validated against. One continuous model
+with an honest warning is the more defensible choice --- but the warning must be
+read, because a run spending most of its time below $\mathrm{Re}=3000$ is
+reporting film coefficients the correlation does not support.
+
+%---------------------------------------------------------------------
+\subsection{Summary of the subsurface parameters}
+\label{sec:dbhe:params}
+
+\begin{table}[htbp]
+\centering
+\caption{Baseline subsurface configuration, as declared in the model.}
+\label{tab:dbhe:params}
+\begin{tabular}{@{}llr@{}}
+\toprule
+Symbol & Quantity & Value \\
+\midrule
+\multicolumn{3}{@{}l}{\emph{Geometry (legacy S.\ Louisiana well: 2-7/8\,in tubing, 7\,in casing, 8.5\,in hole)}}\\
+$r_{t,i}$      & tubing inner radius            & \SI{0.03099}{\metre}\\
+$r_{t,o}$      & tubing outer radius            & \SI{0.03652}{\metre}\\
+$r_{ca,i}$     & casing inner radius            & \SI{0.07975}{\metre}\\
+$r_{ca,o}$     & casing outer radius            & \SI{0.08890}{\metre}\\
+$r_{ce}$       & cement outer radius (hole)     & \SI{0.10795}{\metre}\\
+\addlinespace
+\multicolumn{3}{@{}l}{\emph{Materials and formation}}\\
+$k_{ca}$       & casing steel conductivity      & \SI{45.0}{\watt\per\metre\per\kelvin}\\
+$k_{ce}$       & cement conductivity            & \SI{0.95}{\watt\per\metre\per\kelvin}\\
+$k_t$          & tubing: bare steel / VIT       & \num{45.0} / \SI{0.02}{\watt\per\metre\per\kelvin}\\
+$k_e$          & formation conductivity         & \SI{2.2}{\watt\per\metre\per\kelvin}\\
+$\alpha_e$     & formation diffusivity          & \SI{1.05e-6}{\metre\squared\per\second}\\
+$T_{\mathrm{surf}}$ & mean surface temperature  & \SI{20.0}{\celsius}\\
+$G_g$          & geothermal gradient            & \SI{0.031}{\kelvin\per\metre}\\
+\addlinespace
+\multicolumn{3}{@{}l}{\emph{Operation and numerics}}\\
+$T_{\mathrm{in}}$ & injection temperature       & \SI{25.0}{\celsius}\\
+$P_{\mathrm{op}}$ & wellbore operating pressure & \SI{50}{bar}\\
+$L$            & depth (demonstration case)     & \SI{4500}{\metre}\\
+$N_Z$          & axial cells in the fluid BVP   & 50\\
+$N$            & retained eigenvalues (Set A)   & 60\\
+$\Delta t$     & time step                      & \SI{0.25}{\day} = \SI{6}{\hour}\\
+$R_{\mathrm{far}}$ & transform truncation radius & \SI{200}{\metre}\\
+$w_{v\mathrm{E},\min}$ & floor on well-flow fraction & 0.05\\
+$T_{\mathrm{cement}}^{\max}$ & cement reliability limit & \SI{165.0}{\celsius}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two derived quantities close the section, because both are load-bearing and
+neither is a free parameter. The truncation radius follows from the horizon by
+Eq.~\eqref{eq:dbhe:Rfar} and lands on its own floor at \SI{200}{\metre}; the
+number of time steps follows from the horizon and $\Delta t$ and is
+$\num{29220}$ for the twenty-year baseline. Every other number in
+Table~\ref{tab:dbhe:params} is a declared input, and the two outputs the rest of
+the plant consumes are Eq.~\eqref{eq:dbhe:Tret} and Eq.~\eqref{eq:dbhe:qeff}.

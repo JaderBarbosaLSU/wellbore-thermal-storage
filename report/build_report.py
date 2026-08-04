@@ -174,19 +174,26 @@ TEMPLATE = r"""
 \usepackage[hidelinks]{hyperref}
 \usepackage{xcolor}
 \usepackage{enumitem}
+\usepackage{amsfonts}
+\usepackage{textcomp}
+
+% siunitx v2 spellings used by some model sections
+\providecommand{\celsius}{\degreeCelsius}
+\ProvideDocumentCommand\squared{}{\tothe{2}}
+\ProvideDocumentCommand\cubed{}{\tothe{3}}
 
 \sisetup{per-mode=symbol}
 
 % ---------- macros, matching the companion model report ----------
-\newcommand{\md}{\dot m}
+\newcommand{\md}{\ensuremath{\dot m}}
 \newcommand{\mdp}{\ensuremath{\dot m_{\mathrm{pro}}}}
 \newcommand{\mdr}{\ensuremath{\dot m_{\mathrm{reg}}}}
 \newcommand{\mdv}{\ensuremath{\dot m_{\mathrm{vent}}}}
 \newcommand{\mdw}{\ensuremath{\dot m_{w}}}
 \newcommand{\UA}{\ensuremath{U\!A}}
 \newcommand{\hfg}{\ensuremath{h_{\mathrm{fg}}}}
-\newcommand{\patm}{p_{\mathrm{atm}}}
-\newcommand{\psat}{p_{\mathrm{sat}}}
+\newcommand{\patm}{\ensuremath{p_{\mathrm{atm}}}}
+\newcommand{\psat}{\ensuremath{p_{\mathrm{sat}}}}
 \newcommand{\RH}{\ensuremath{\mathrm{RH}}}
 \newcommand{\degC}{\ensuremath{^{\circ}\mathrm{C}}}
 \newcommand{\qs}{\ensuremath{q_{s}}}
@@ -218,14 +225,22 @@ than by rebuilding the plant. Section~\ref{sec:modes} enumerates the resulting
 modes; Section~\ref{sec:status} records which components are implemented in the
 code and which are pending.
 
-Every numerical value in this report is extracted at build time from the model
-itself --- the notebook, the frozen regression fixtures, and the parametric
-sweep archives. The document therefore cannot disagree with the code it
-describes. It is regenerated whenever the model version changes.
+Part~II gives the mathematical model of every component, written against the
+source rather than from memory, together with a specification for the four
+components the architecture contains but the code does not yet.
+
+The report is generated, not transcribed. Part~I's tables and the version
+history are extracted at build time from the notebook, the frozen regression
+fixtures and the parametric sweep archives; the configuration constants quoted
+in Part~II's prose are frozen in a fixture of their own and the build fails if
+any of them moves. The document is regenerated whenever the model version
+changes.
 \end{abstract}
 
 \tableofcontents
 \newpage
+
+\part{The plant: architecture, modes, and the resource that limits them}
 
 % ==========================================================================
 \section{Scope, and how this document stays current}
@@ -260,11 +275,27 @@ repository. The build step reads:
   \item the parametric sweep archives, for the resource-feasibility tables.
 \end{itemize}
 
-No number below is typed by hand. When the model advances to the next version,
-the report is rebuilt and republished, and the version history in
-Section~\ref{sec:history} gains a row automatically. A statement in this
-document that contradicts the code is therefore a defect in the build script,
-not a stale paragraph.
+When the model advances to the next version the report is rebuilt and
+republished, and the version history in Section~\ref{sec:history} gains a row
+by itself.
+
+\paragraph{Where the guarantee is weaker, and what protects it there.}
+No number in Part~I is typed by hand; a Part~I statement that contradicts the
+code is a defect in the build script, not a stale paragraph. Part~II cannot
+work that way. Its model sections quote constants inside prose and inside
+derivations --- \emph{the damper floor is} \num{0.05}, \emph{the coil is sized
+at} \SI{3000}{\watt\per\kelvin} \emph{per} \si{\kilogram\per\second} --- and
+templating prose at that density would make it unreadable. Those numbers are
+typed, so they can rot.
+
+The guard is a configuration fixture. \verb|report/check_config.py| snapshots
+every scalar assignment in the configuration cell, and every subsequent build
+compares the live notebook against that snapshot. If a constant moves, the
+build stops and names the symbol, so the affected prose is re-read and the
+fixture re-frozen deliberately rather than by accident. This is the same
+discipline the model itself uses --- freeze a reference, never overwrite it
+silently --- applied to the document. It does not prove the prose is right; it
+guarantees that a change in the code cannot pass unnoticed.
 
 % ==========================================================================
 \section{Nomenclature convention}
@@ -651,6 +682,21 @@ speed or part-load behaviour is outside what the formulation can represent.
 Deriving the effectivenesses from an NTU using the analogy method would remove
 these restrictions at essentially no computational cost, and is deferred.
 
+\part{The models: what each component actually computes}
+
+Part~I described \emph{which} components exist and \emph{when} each is active.
+Part~II gives the equations. Each section states the governing hypothesis,
+derives the result, and then says plainly what the assumption buys and what it
+costs --- the ordering matters, because in almost every case the interesting
+engineering is in the cost. Sections~\ref{sec:psy:top} through
+\ref{sec:dem:top} describe code that runs today and were written against the
+source, not from memory; Section~\ref{sec:spec:top} is a specification for the
+four components the architecture contains but the code does not yet.
+
+@@MATH@@
+
+\part{Verification, and what changed when}
+
 % ==========================================================================
 \section{Verification protocol}
 % ==========================================================================
@@ -684,6 +730,68 @@ shape --- a guard that degraded quietly instead of complaining:
 None raised an error. Each produced plausible output. The protocol now
 requires that any guard whose failure would otherwise be invisible must
 announce itself.
+
+\subsection{What writing Part~II turned up}
+
+Part~II was written against the source rather than from memory, and the act of
+having to state each model precisely surfaced nine discrepancies that reading
+the code casually had not. Three of them are the same failure mode again --- a
+quiet degradation --- which is the strongest evidence yet that the pattern is
+structural rather than coincidental. None is fixed at v10.6; all are recorded
+here so that the report does not describe a plant more careful than the code.
+
+\begin{longtable}{@{}p{0.30\textwidth}cp{0.50\textwidth}@{}}
+\toprule
+\textbf{Finding} & \textbf{Kind} & \textbf{Consequence} \\
+\midrule
+\endhead
+Wheel Newton inversion has a 60-iteration cap and no failure branch &
+quiet & On non-convergence it returns the last iterate with no flag, no
+exception and no warning. The caller cannot tell a converged state from a
+failed one. \\
+Regeneration-outlet balances carry no physical bound &
+quiet & At a scavenging-to-process flow ratio of \num{0.30} with the shipped
+self-check inlets they return $T_{rd} = \SI{-3.2}{\degreeCelsius}$:
+arithmetically consistent, physically impossible, unflagged. \\
+Humidity controller brackets $d_{rA}$ on $[\,\cdot,1]$ though availability caps
+it at \num{0.425} & quiet & Above the cap the residual is flat, the secant
+denominator collapses into its \num{1e-12} guard, and the wet-end saturation
+flag can be missed. Re-bracketing on the cap fixes it. \\
+\midrule
+Coil uses dry-air $c_p = \SI{1006}{\joule\per\kilogram\per\kelvin}$ &
+bias & The $1.86\,w$ term is used by the cooler and the load routines but
+dropped here, understating the air-side capacity rate by about \SI{3.7}{\percent}
+at $w = \SI{20}{\gram\per\kilogram}$. The same mismatch makes the achieved
+supply depression \SI{2.89}{\kelvin} against a design \SI{3.0}{\kelvin}. \\
+Pump work is charged on the well stream but spread over the loop stream &
+bias & Identical only when no flow bypasses the well. Under any bypass
+schedule the temperature rise attributed to pumping is wrong. \\
+Two values of $\hfg$ coexist &
+bias & \SI{2501}{\kilo\joule\per\kilogram} in the enthalpy routines,
+\SI{2500}{\kilo\joule\per\kilogram} in the load interface. The disagreement is
+\SI{1}{\kilo\joule\per\kilogram} and harmless --- but it is precisely the
+ambiguity the interface was built to prevent. \\
+\midrule
+Well-flow floor applied in one place and not the other &
+latent & \verb|dbhe_set_flow| floors the well fraction at \num{0.05}; the
+mixing junction uses the raw fraction. Harmless at the baseline, wrong under
+any schedule that goes below the floor. \\
+Cooler performs no dew-point check &
+latent & The outlet humidity is returned unchanged unconditionally. Safe only
+because the ambient floor currently sits above the supply dew point; not safe
+by construction. \\
+Configuration comment for $d_{rA}$ is stale &
+doc & It still describes the pre-v10.5 meaning --- the opposite of what the
+scavenging kernel now does. A comment that contradicts its own code is worse
+than no comment. \\
+\bottomrule
+\end{longtable}
+
+The first three belong in the next maintenance version alongside the humidity
+actuator change. The middle three are small but should be fixed together,
+because each is an instance of one rule not being applied uniformly: use the
+moist-air specific heat everywhere, attribute pump work to the stream that
+receives it, define $\hfg$ once.
 
 % ==========================================================================
 \section{Version history}\label{sec:history}
@@ -730,6 +838,28 @@ duty directly and returns that heat to the loop.
 """
 
 
+MATH_DIR = os.path.join(HERE, 'math')
+
+
+def math_part():
+    """Concatenate the Part II fragments in filename order.
+
+    Kept as separate files so each component model can be revised on its own,
+    but assembled here so the SAME @@KEY@@ substitution runs over them --
+    a number quoted in a model section stays as live as one in a table.
+    """
+    if not os.path.isdir(MATH_DIR):
+        return '% (no math/ fragments found)\n'
+    out = []
+    for fn in sorted(os.listdir(MATH_DIR)):
+        if not fn.endswith('.tex'):
+            continue
+        out.append(f'% ---------------- math/{fn} ----------------')
+        out.append(open(os.path.join(MATH_DIR, fn)).read().rstrip())
+        out.append('')
+    return '\n'.join(out)
+
+
 def main():
     ver, stamp = nb_version()
     fx = fixtures()
@@ -740,6 +870,7 @@ def main():
         '@@HISTORY@@': hist,
         '@@NOTES@@': version_notes_list(vs),
         '@@SWEEP@@': sweep_table(sweep()),
+        '@@MATH@@': math_part(),
         '@@MDOT_VENT@@': f"{nb_scalar('mdot_vent') or 10.0:.2f}",
         '@@MDOT_REG@@': f"{23.52:.2f}",
         '@@DRA_CAP@@': f"{10.0/23.52:.3f}",
