@@ -51,6 +51,8 @@ class MarchResult:
     Q: np.ndarray = field(default_factory=lambda: np.array([]))
     T_out: np.ndarray = field(default_factory=lambda: np.array([]))
     closure: float = float("nan")
+    Q_rejected_J: float = 0.0
+    warnings_energy: str = ""
     warnings: list = field(default_factory=list)
 
 
@@ -90,7 +92,8 @@ def _h_i(fluid, T, P, r_i, m_dot):
 
 
 def march(geom, pcm, *, T_inlet, T_m_seg, m_dot, P, fluid, k_wall, Rf_i,
-          times, n_segments=100, state=None, mode="charge", strict_bounds=False):
+          times, n_segments=100, state=None, mode="charge", strict_bounds=False,
+          A_max=None):
     """March one tube of one well over `times`, starting from `state`.
 
     T_m_seg : melting temperature per segment [K] (the multilayer PCM profile)
@@ -99,13 +102,22 @@ def march(geom, pcm, *, T_inlet, T_m_seg, m_dot, P, fluid, k_wall, Rf_i,
     L_tube = geom.L_tube
     dz = L_tube / n_segments
     r_i, r_e = geom.r_i, geom.r_e
+    # k_m IS directional: the layer around the tube is liquid while melting and
+    # solid while freezing. rho is NOT -- see PCM.rho_latent. Making the latent
+    # inventory directional too would hand back rho_s/rho_l = 1.069 times the
+    # energy that went in.
     k_m = pcm.k_l if mode == "charge" else pcm.k_s
-    rho_m = pcm.rho_l if mode == "charge" else pcm.rho_s
+    rho_m = pcm.rho_latent
 
     st = WellState.solid(n_segments) if state is None else state.copy()
+    # Closure is on the CHANGE in melted area over this march, not on the
+    # absolute area -- otherwise a discharge starting from a charged state
+    # compares its own extracted heat against the inventory it inherited.
+    A0 = st.A_melt.copy()
     res = MarchResult(state=st)
     t_prev = 0.0
     Q_cum = 0.0
+    Q_rejected = 0.0
     ts, Qs, Touts = [], [], []
 
     for t in np.asarray(times, dtype=float):
@@ -116,6 +128,7 @@ def march(geom, pcm, *, T_inlet, T_m_seg, m_dot, P, fluid, k_wall, Rf_i,
         delta = stefan.delta_from_area(st.A_melt, r_e)
         T0 = T_inlet
         q_prime = np.zeros(n_segments)
+        q_demand = np.zeros(n_segments)
         for i in range(n_segments):
             h_i, cp_d, _, _ = _h_i(fluid, T0, P, r_i, m_dot)
             U_i = L.compute_U_i(h_i, r_i, r_e, k_wall, Rf_i, k_m, float(delta[i]),
@@ -124,23 +137,51 @@ def march(geom, pcm, *, T_inlet, T_m_seg, m_dot, P, fluid, k_wall, Rf_i,
             NTU = float(np.clip(NTU, -50.0, 50.0))
             T1 = T_m_seg[i] + (T0 - T_m_seg[i]) * np.exp(-NTU)
             q_seg = m_dot * cp_d * (T0 - T1)          # W, positive when melting
-            q_prime[i] = q_seg / dz
+            q_demand[i] = q_seg / dz
+
+            # Limit the segment to the latent heat it can actually supply or
+            # absorb THIS STEP, and take the fluid temperature from the limited
+            # value. Clamping only the front afterwards leaves the fluid warmed
+            # (on discharge) by heat no PCM gave up, so downstream segments see
+            # an inlet temperature that the energy balance does not support.
+            # Only latent heat is modelled: a segment whose melt is exhausted
+            # stops contributing rather than cooling sensibly, so `Q_rejected`
+            # below is a lower bound on what a sensible-heat model would recover.
+            q_avail_melt = st.A_melt[i] * rho_m * pcm.h_m / dt      # W/m, freezing
+            if q_seg / dz < -q_avail_melt:
+                q_prime[i] = -q_avail_melt
+            elif A_max is not None and q_seg / dz > (A_max - st.A_melt[i]) * rho_m * pcm.h_m / dt:
+                q_prime[i] = (A_max - st.A_melt[i]) * rho_m * pcm.h_m / dt
+            else:
+                q_prime[i] = q_seg / dz
+            T1 = T0 - q_prime[i] * dz / (m_dot * cp_d)
             T0 = T1
 
-        st.A_melt = stefan.advance(st.A_melt, q_prime, dt, rho_m, pcm.h_m)
+        st.A_melt, q_eff = stefan.advance(st.A_melt, q_prime, dt, rho_m,
+                                          pcm.h_m, A_max=A_max)
         st.t = t
-        Q_step = float(np.sum(q_prime) * dz) * dt
-        Q_cum += Q_step
+        # Accumulate the heat actually taken up as latent heat. Where the segment
+        # hit a limit (fully solid on discharge, or fully melted when A_max is
+        # set) q_eff < q_prime, and the difference is recorded rather than
+        # quietly booked as delivered energy.
+        Q_cum += float(np.sum(q_eff) * dz) * dt
+        Q_rejected += float(np.sum(q_demand - q_eff) * dz) * dt
         ts.append(t)
-        Qs.append(float(np.sum(q_prime) * dz))
+        Qs.append(float(np.sum(q_eff) * dz))
         Touts.append(T0)
         t_prev = t
 
     res.Q_cum_J = Q_cum
+    res.Q_rejected_J = Q_rejected
     res.t = np.array(ts)
     res.Q = np.array(Qs)
     res.T_out = np.array(Touts)
-    res.closure = stefan.closure_error(Q_cum, st.A_melt, dz, rho_m, pcm.h_m)
+    res.closure = stefan.closure_error(Q_cum, st.A_melt - A0, dz, rho_m, pcm.h_m)
+    if abs(Q_rejected) > 1e-9 * max(abs(Q_cum), 1.0):
+        res.warnings_energy = (
+            f"{Q_rejected/1e9:.4f} GJ of the network's heat could not be taken up "
+            f"({abs(Q_rejected)/max(abs(Q_cum), 1.0)*100:.2f} % of delivered): "
+            "segments reached a physical limit (fully solid, or A_max)")
     # NOTE: L_tube = 2*L_well already covers both legs of ONE hairpin, so the
     # per-borehole multiplier is num_tubes (hairpins), not 2*num_tubes.
     res.warnings = stefan.check_bounds(st.A_melt, r_e, dz, geom.num_tubes,

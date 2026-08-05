@@ -29,14 +29,30 @@ Read in this order before changing anything:
 5. `docs/THUMS_unification_and_KPI_plan.md` — the KPI registry and post-processing design
 6. `docs/Colab_GitHub_Token_Workflow.docx` — the author's own workflow rules; follow them
 
-Then continue with:
+## Status after v0.2 (done in the follow-up session)
 
-- wire `well_marched.march` into `system.run_cycle` (currently `run_cycle` still calls the
-  legacy front through `_legacy_physics`)
-- regenerate `verification/reference/thums_v0_baseline.json` with the marched front
-- start `docs/changes_from_IHTC.md`, one row per change, recording how the headline numbers move
-- correct the `k_w` argument in the charging chain (now a small effect, see FIX doc)
-- port the DoE onto the unified core using the Resolution IV design in `thums_core/doe.py`
+Done:
+
+- package renamed `thums_core/` so the importable tree holds no notebooks; the four
+  legacy notebooks stay in `thums/`
+- `well_marched.march` is wired into `system.run_cycle`; `Case.front` selects
+  `"marched"` (default) or `"legacy"` (reproduces v0.1 exactly, 4e-11)
+- `verification/reference/thums_v0_baseline.json` regenerated with the marched front;
+  the legacy values it replaced are at tag `v0.2` and in `docs/changes_from_IHTC.md` §6
+- `docs/changes_from_IHTC.md` written -- read this before anything else
+
+Still open, in order:
+
+1. make `loss_surplus` an output rather than an assumed 5 % -- it is now measurable
+   and it is wrong by 5-22 % once `k_w` is corrected
+2. correct the `k_w` argument in the charging chain (largest single mover:
+   N_wells 21.7 -> 12.8, binding constraint flips to inventory)
+3. set `Case.strict = True` and fix `delta_max`
+4. add PCM sensible heat
+5. port the DoE onto the unified core using the Resolution IV design in `thums_core/doe.py`
+
+Note `UPLOAD_INSTRUCTIONS.md` describes the manual GitHub drag-and-drop route and is
+obsolete now that the package is in git.
 
 ---
 

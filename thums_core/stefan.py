@@ -66,12 +66,41 @@ def area_from_delta(delta, r_e: float):
     return np.pi * ((r_e + d) ** 2 - r_e ** 2)
 
 
-def advance(A_melt, q_prime, dt: float, rho_m: float, h_m: float):
+def advance(A_melt, q_prime, dt: float, rho_m: float, h_m: float, A_max=None):
     """One explicit step of  rho*h_m*dA/dt = q'.
 
     q_prime is heat per unit tube length [W/m]; positive melts, negative freezes.
+
+    Returns
+    -------
+    A_new : ndarray
+        Melted (solid-equivalent) cross-sectional area after the step.
+    q_eff : ndarray
+        The heat per unit length actually ABSORBED as latent heat, i.e. after
+        the physical limits below. Callers must accumulate `q_eff`, not
+        `q_prime`, or closure stops being exact.
+
+    Two limits apply:
+
+    * `A_melt >= 0` -- you cannot freeze PCM that is already solid. The earlier
+      version clipped here and kept accumulating the unclipped `q_prime`, so a
+      discharge that ran past the stored inventory reported latent heat it had
+      not extracted. That defect is unreachable in v0.1 (its discharge always
+      restarts from a bare tube) and becomes reachable the moment the melt state
+      carries across the cycle.
+    * `A_melt <= A_max` when given -- the segment cannot melt more PCM than it
+      contains. Left as None during sizing, so that `eps(N) > 1` remains
+      observable and the inventory constraint has a root to find.
+
+    Energy rejected by either limit is not lost silently: it is the difference
+    between `q_prime` and `q_eff`, which `march` records.
     """
-    return np.maximum(A_melt + q_prime * dt / (rho_m * h_m), 0.0)
+    A_raw = A_melt + q_prime * dt / (rho_m * h_m)
+    A_new = np.maximum(A_raw, 0.0)
+    if A_max is not None:
+        A_new = np.minimum(A_new, A_max)
+    q_eff = (A_new - A_melt) * (rho_m * h_m) / dt
+    return A_new, q_eff
 
 
 def check_bounds(A_melt, r_e: float, dz: float, n_tubes_in_hole: int,

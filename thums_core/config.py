@@ -42,6 +42,31 @@ class PCM:
         """Ste = cp*dT/h_m -- the quasi-steady melt-layer assumption degrades as this grows."""
         return self.cp_l * dT / self.h_m
 
+    @property
+    def rho_latent(self) -> float:
+        """Density for the latent-heat inventory, used in BOTH directions.
+
+        The melt front is carried as a *solid-equivalent* cross-sectional area.
+        Two things follow: `V_melt / V_well` is the melted MASS fraction, and the
+        latent energy banked during charging is exactly the latent energy
+        available during discharging.
+
+        Using `rho_l` to melt and `rho_s` to freeze -- the directional choice the
+        conduction model correctly makes for `k_m` -- would return `rho_s/rho_l`
+        = 1.069 times more latent energy than went in. That is a 6.9 % round-trip
+        gain produced by bookkeeping alone. It is invisible in v0.1 because the
+        legacy discharge restarts from a bare tube in fully solid PCM; it only
+        becomes reachable once the melt state carries across the cycle, which is
+        what `well_marched` introduced.
+
+        The 6.9 % volume change on melting is a real effect and is NOT modelled;
+        representing it needs a void or expansion treatment. Its consequence is
+        that the liquid layer is ~2.3 % thicker in radius than `delta_from_area`
+        reports, so the melt-layer conduction resistance is mildly
+        under-predicted.
+        """
+        return self.rho_s
+
 
 @dataclass(frozen=True)
 class Geometry:
@@ -173,6 +198,12 @@ class Numerics:
     delta_tol: float = 1e-5
     delta_maxiter: int = 20
     N_wells_bracket: tuple = (3.0, 120.0)
+    # v0.1 value, retained. It was checked and not merely inherited: with the
+    # marched front the discharge root sits at ratio ~0.96 at the design point,
+    # comfortably inside. (An intermediate version of the marched discharge
+    # pushed the root to 2.4 and appeared to need a wider bracket; that was an
+    # artefact of segments passing warmed fluid downstream without supplying the
+    # heat, since fixed in well_marched.march.)
     ratio_bracket: tuple = (0.2, 2.0)
     tol_Q_ratio: float = 1e-3
     max_iterations: int = 40
@@ -192,11 +223,16 @@ class Case:
     # strict=False reproduces legacy behaviour (warnings, not errors) so the
     # frozen fixture stays valid during the port. Flip to True afterwards.
     strict: bool = False
+    # Which melt-front formulation run_cycle uses.
+    #   'marched' : rho*h_m*dA/dt = q', state carried across the cycle (v0.2)
+    #   'legacy'  : the independent closed-form Stefan solve (v0.1, for comparison)
+    front: str = "marched"
 
     def with_(self, **kw) -> "Case":
         """Return a copy with overrides, e.g. case.with_(N_lay=12)."""
         top = {k: v for k, v in kw.items()
-               if k in ("N_lay", "charge_uses_wall_conductivity", "strict")}
+               if k in ("N_lay", "charge_uses_wall_conductivity", "strict",
+                        "front")}
         rest = {k: v for k, v in kw.items() if k not in top}
         obj = replace(self, **top) if top else self
         for group in ("pcm", "geometry", "cycle", "numerics"):
@@ -221,4 +257,5 @@ class Case:
         return hashlib.sha256(blob.encode()).hexdigest()[:16]
 
 
-BASELINE = Case()   # the v0.1 reference point
+BASELINE = Case()                      # v0.2 default: marched front
+LEGACY = Case(front="legacy")          # the v0.1 reference point, defects intact

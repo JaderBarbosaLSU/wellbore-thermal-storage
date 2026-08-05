@@ -7,6 +7,8 @@ __version__ = "0.2.0"
 
 def _stamp():
     c = results.git_commit()
-    return f"THUMS v{__version__} · commit {c}"
+    ref = results.git_ref()
+    return (f"THUMS v{__version__} · {ref} · commit {c}" if ref
+            else f"THUMS v{__version__} · commit {c}")
 
 VERSION_STAMP = _stamp()

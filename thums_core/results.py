@@ -35,12 +35,60 @@ STATUS_COLUMNS = ("converged", "n_iter", "residual", "warnings",
 
 
 def git_commit(short: bool = True) -> str:
+    """The commit this package was built from.
+
+    Order matters, and the old implementation had it wrong. It ran `git` in the
+    *current working directory*, which in Colab is `/content` -- not a repository,
+    so the stamp read "unknown"; and in any other checkout it would have
+    cheerfully reported that unrelated repository's HEAD. The version stamp is
+    the thing that tells you whether Colab fetched the new notebook
+    (Colab_GitHub_Token_Workflow section 8), so it has to describe the installed
+    package, not the shell's location.
+    """
+    # 1. Installed from a git URL. pip records the exact resolved commit, which
+    #    is what `pip install git+https://...` in a Colab cell produces.
     try:
-        out = subprocess.run(["git", "rev-parse", "--short" if short else "HEAD", "HEAD"],
-                             capture_output=True, text=True, timeout=5)
-        return out.stdout.strip() or "unknown"
+        import json
+        from importlib.metadata import distribution
+        raw = distribution("thums_core").read_text("direct_url.json")
+        if raw:
+            cid = json.loads(raw).get("vcs_info", {}).get("commit_id")
+            if cid:
+                return cid[:7] if short else cid
     except Exception:
-        return "unknown"
+        pass
+    # 2. Running from a source checkout: ask git about THIS file's repository,
+    #    not the caller's working directory.
+    try:
+        import pathlib
+        out = subprocess.run(
+            ["git", "-C", str(pathlib.Path(__file__).resolve().parent),
+             "rev-parse", "--short" if short else "HEAD", "HEAD"],
+            capture_output=True, text=True, timeout=5)
+        return out.stdout.strip().splitlines()[0] if out.stdout.strip() else "unknown"
+    except Exception:
+        pass
+    return "unknown"
+
+
+def git_ref() -> str:
+    """The branch or tag that was installed, when pip recorded one.
+
+    `pip install git+https://...@v0.2` stores "v0.2" here. Printing it next to
+    the commit is what makes a stale Colab tab obvious: the tab shows the ref you
+    asked for AND the commit it resolved to, so "v0.2" against an unexpected
+    commit is visible immediately.
+    """
+    try:
+        import json
+        from importlib.metadata import distribution
+        raw = distribution("thums_core").read_text("direct_url.json")
+        if raw:
+            return json.loads(raw).get("vcs_info", {}).get(
+                "requested_revision") or ""
+    except Exception:
+        pass
+    return ""
 
 
 @dataclass

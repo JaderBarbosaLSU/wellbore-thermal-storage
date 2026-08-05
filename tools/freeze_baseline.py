@@ -19,9 +19,25 @@ import sys
 import numpy as np
 
 import thums_core
-from thums_core.config import BASELINE
+from thums_core.config import BASELINE, LEGACY
 from thums_core.errors import ThumsError
 from thums_core.system import run_cycle
+
+NOTE_LEGACY = (
+    "Legacy physics, defects intact: charging uses PCM liquid conductivity as "
+    "the wall/fin conductivity, delta_max exceeds the borehole radius, melt "
+    "fronts are unbounded. This fixture records behaviour, not correctness.")
+
+NOTE_MARCHED = (
+    "v0.2 marched front. The melt front advances from the heat the resistance "
+    "network delivers (rho*h_m*dA/dt = q'), so energy closure is structural; "
+    "the melt state carries from charging into discharging; and the well count "
+    "is max(heat transfer, inventory). Still present and NOT fixed here: the "
+    "charging path uses PCM liquid conductivity as k_wall "
+    "(charge_uses_wall_conductivity=False), delta_max exceeds the borehole "
+    "radius, and there is no formation heat loss, no natural convection in the "
+    "melt, and no sensible heat in the PCM. Compare against tag v0.2, which "
+    "holds the legacy values this file replaced.")
 
 # (DT_3C_2C, N_lay) points that converge under the legacy physics.
 POINTS = [(55.0, 9), (40.0, 12), (30.0, 20)]
@@ -31,7 +47,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("-o", "--out",
                     default="verification/reference/thums_v0_baseline.json")
+    ap.add_argument("--front", choices=("marched", "legacy"), default="marched",
+                    help="melt-front formulation; 'legacy' reproduces v0.1")
     a = ap.parse_args()
+    base = BASELINE if a.front == "marched" else LEGACY
 
     fixture = {
         "schema": 1,
@@ -41,15 +60,13 @@ def main():
         "python": sys.version.split()[0],
         "numpy": np.__version__,
         "platform": platform.platform(),
-        "note": ("Legacy physics, defects intact: charging uses PCM liquid "
-                 "conductivity as the wall/fin conductivity, delta_max exceeds "
-                 "the borehole radius, melt fronts are unbounded. This fixture "
-                 "records behaviour, not correctness."),
+        "front": a.front,
+        "note": (NOTE_MARCHED if a.front == "marched" else NOTE_LEGACY),
         "points": [],
     }
 
     for DT, N_lay in POINTS:
-        case = BASELINE.with_(DT_3C_2C=DT, N_lay=N_lay,
+        case = base.with_(DT_3C_2C=DT, N_lay=N_lay,
                               N_wells_bracket=(1.0, 400.0))
         entry = {"inputs": {"DT_3C_2C": DT, "N_lay": N_lay},
                  "case_key": case.key()}

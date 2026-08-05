@@ -1,2 +1,8 @@
 __pycache__/
 *.pyc
+
+# python build artefacts
+build/
+dist/
+*.egg-info/
+.venv/
