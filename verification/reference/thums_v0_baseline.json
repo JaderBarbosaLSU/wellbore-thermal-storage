@@ -1,0 +1,126 @@
+{
+  "schema": 1,
+  "generated_by": "tools/freeze_baseline.py",
+  "thums_version": "1.0.0.dev0",
+  "git_commit": "unknown",
+  "python": "3.11.15",
+  "numpy": "2.4.4",
+  "platform": "Linux-6.18.5-fc-v18-x86_64-with-glibc2.39",
+  "note": "Legacy physics, defects intact: charging uses PCM liquid conductivity as the wall/fin conductivity, delta_max exceeds the borehole radius, melt fronts are unbounded. This fixture records behaviour, not correctness.",
+  "points": [
+    {
+      "inputs": {
+        "DT_3C_2C": 55.0,
+        "N_lay": 9
+      },
+      "case_key": "5a802b0f1edae2ea",
+      "converged": true,
+      "kpis": {
+        "eta_rte": 0.43027101049765343,
+        "eta_rte_nopump": 0.4348350503020928,
+        "cop_hp": 2.956330409531823,
+        "eta_orc": 0.23685132027873143,
+        "eps_pcm": 0.5200473147142692,
+        "E_well": 2.167417633092469,
+        "rho_E": 78.29462518690391,
+        "N_wells": 24.123429921001843,
+        "wells_per_MW": 24.123429921001843,
+        "f_pump": 0.015081686346236986,
+        "c_pcm": 20.0
+      },
+      "detail": {
+        "Q_dot_out_HP_kW": 5489.982475052237,
+        "Q_dot_in_ORC_kW": 5228.554738144987,
+        "W_dot_el_in_kW": 2299.722617358629,
+        "m_dot_w_ch_kg_s": 23.40677583278621,
+        "m_dot_d_well1_kg_s": 0.46396477470054737,
+        "flow_ratio_dc_ch": 0.9563403185691791,
+        "pumping_ch_kW": 8.048845794995385,
+        "pumping_dc_kW": 7.0328405512416,
+        "D_E_in_ORC_kWh": 52285.54738144987,
+        "stefan_charge": 0.04736842105263158
+      },
+      "warnings": [
+        "delta_max = 0.5 m exceeds the borehole radius 0.0889 m, so the melt front is not bounded by the well (audit 2.5)",
+        "charge path uses PCM liquid conductivity as k_wall (legacy defect)",
+        "charging pressure drop evaluated between T_4c and T_4a (source-loop pair); T_2c is the borehole return"
+      ]
+    },
+    {
+      "inputs": {
+        "DT_3C_2C": 40.0,
+        "N_lay": 12
+      },
+      "case_key": "fa5b9904045f8424",
+      "converged": true,
+      "kpis": {
+        "eta_rte": 0.419756645691732,
+        "eta_rte_nopump": 0.4348350503020928,
+        "cop_hp": 2.956330409531823,
+        "eta_orc": 0.23685132027873143,
+        "eps_pcm": 0.5983257937144157,
+        "E_well": 2.6166121373585245,
+        "rho_E": 94.52108510425177,
+        "N_wells": 19.982154265412923,
+        "wells_per_MW": 19.982154265412923,
+        "f_pump": 0.05011372132110686,
+        "c_pcm": 20.0
+      },
+      "detail": {
+        "Q_dot_out_HP_kW": 5489.982475052237,
+        "Q_dot_in_ORC_kW": 5228.554738144987,
+        "W_dot_el_in_kW": 2299.722617358629,
+        "m_dot_w_ch_kg_s": 32.06252168127781,
+        "m_dot_d_well1_kg_s": 0.7680948737768946,
+        "flow_ratio_dc_ch": 0.9573913375157268,
+        "pumping_ch_kW": 26.60534255214229,
+        "pumping_dc_kW": 23.508378768964576,
+        "D_E_in_ORC_kWh": 52285.54738144987,
+        "stefan_charge": 0.04736842105263158
+      },
+      "warnings": [
+        "delta_max = 0.5 m exceeds the borehole radius 0.0889 m, so the melt front is not bounded by the well (audit 2.5)",
+        "charge path uses PCM liquid conductivity as k_wall (legacy defect)",
+        "charging pressure drop evaluated between T_4c and T_4a (source-loop pair); T_2c is the borehole return"
+      ]
+    },
+    {
+      "inputs": {
+        "DT_3C_2C": 30.0,
+        "N_lay": 20
+      },
+      "case_key": "af62a72c55826f1c",
+      "converged": true,
+      "kpis": {
+        "eta_rte": 0.3945257609555505,
+        "eta_rte_nopump": 0.4348350503020928,
+        "cop_hp": 2.956330409531823,
+        "eta_orc": 0.23685132027873143,
+        "eps_pcm": 0.6429616691151382,
+        "E_well": 2.9098255357678453,
+        "rho_E": 105.11296771041152,
+        "N_wells": 17.96861933430409,
+        "wells_per_MW": 17.96861933430409,
+        "f_pump": 0.1361728651415322,
+        "c_pcm": 20.0
+      },
+      "detail": {
+        "Q_dot_out_HP_kW": 5489.982475052237,
+        "Q_dot_in_ORC_kW": 5228.554738144987,
+        "W_dot_el_in_kW": 2299.722617358629,
+        "m_dot_w_ch_kg_s": 42.631671807296904,
+        "m_dot_d_well1_kg_s": 1.1406937590878439,
+        "flow_ratio_dc_ch": 0.9615711073548656,
+        "pumping_ch_kW": 71.79938953347332,
+        "pumping_dc_kW": 64.37347560805888,
+        "D_E_in_ORC_kWh": 52285.54738144987,
+        "stefan_charge": 0.04736842105263158
+      },
+      "warnings": [
+        "delta_max = 0.5 m exceeds the borehole radius 0.0889 m, so the melt front is not bounded by the well (audit 2.5)",
+        "charge path uses PCM liquid conductivity as k_wall (legacy defect)",
+        "charging pressure drop evaluated between T_4c and T_4a (source-loop pair); T_2c is the borehole return"
+      ]
+    }
+  ]
+}

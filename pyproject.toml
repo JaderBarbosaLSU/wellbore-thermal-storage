@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thums_core"
+version = "0.2.0"
+description = "Thermal storage in repurposed wells with phase-change materials"
+requires-python = ">=3.10"
+dependencies = ["numpy>=2.0", "scipy>=1.11", "pandas>=2.0", "matplotlib>=3.8", "CoolProp>=6.6"]
+
+[project.urls]
+Repository = "https://github.com/JaderBarbosaLSU/wellbore-thermal-storage"
+
+[tool.setuptools.packages.find]
+include = ["thums_core*"]
