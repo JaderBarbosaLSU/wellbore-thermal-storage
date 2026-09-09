@@ -4,9 +4,13 @@ Code cells are EXTRACTED from /tmp/build/thums_model.py by function name, not
 retyped, so the notebook runs the same code that was verified against the frozen
 IHTC fixture. Markdown cells carry the equations.
 """
+import datetime as _dt
 import json
 import pathlib
 import re
+
+# Build stamp in BRT (UTC-3), so a stale Colab tab is identifiable at a glance.
+STAMP = (_dt.datetime.utcnow() - _dt.timedelta(hours=3)).strftime('%Y-%m-%d %H:%M BRT')
 
 SRC = pathlib.Path('/tmp/build/thums_model.py').read_text()
 OUT = pathlib.Path('/tmp/build/P2H2P_PCM_wellbore_storage.ipynb')
@@ -80,7 +84,9 @@ cells.append(md(r"""
 
 ### Power-to-Heat-to-Power conversion with phase-change material in repurposed wells
 
-**THUMS · model version 0.2 · every equation visible in this notebook**
+**THUMS · model version 0.3 · every equation visible in this notebook**
+
+**Last updated: __STAMP__**
 
 `JaderBarbosaLSU/wellbore-thermal-storage` · `notebooks/P2H2P_PCM_wellbore_storage.ipynb`
 
@@ -126,6 +132,10 @@ from CoolProp.CoolProp import PropsSI
 from math import log, pi
 from dataclasses import dataclass, replace
 
+LAST_UPDATED = '__STAMP__'
+MODEL_VERSION = '0.3'
+
+print(f'THUMS P2H2P model v{MODEL_VERSION} · last updated {LAST_UPDATED}')
 print('ready ·', np.__version__, '·', CP.get_global_param_string('version'))
 """))
 
@@ -176,6 +186,25 @@ One flat `Case` object holds every input. v0.1 passed sixteen positional
 arguments between functions, which is how the PCM conductivity ended up in the
 slot meant for the tube wall for months without anything contradicting it.
 
+> ### Correction notice — wall thermal conductivity
+>
+> **Versions of this model up to and including the IHTC paper used the wrong
+> value of the wall thermal conductivity during charging.** The PCM *liquid*
+> conductivity, $k_l = 0.45$ W/m·K, was passed into the argument carrying the
+> tube-wall and fin conductivity, where steel, $k_w = 45$ W/m·K, belongs — two
+> orders of magnitude low. The error is visible in the original solver
+> signature, whose parameter is literally named `k_m_l`.
+>
+> Its dominant effect was not on the wall resistance, which is small either way,
+> but on the **fin efficiency**: it collapsed $\eta_f$ to about $0.33$,
+> throttling the fluid-side conductance to roughly what a bare tube could
+> absorb. That accidentally compensated the finned-versus-bare surface mismatch
+> in the melt front (§5), which is why the energy balance appeared to close.
+>
+> **From v0.3 the correct value is the default.** `charge_uses_wall_conductivity`
+> is `True`. Set it to `False` only to reproduce the published v0.1 results, as
+> §13 does.
+
 Geometry notes that matter later:
 
 $$L_{\text{tube}} = 2\,L_{\text{well}}, \qquad
@@ -187,8 +216,12 @@ Per-borehole quantities therefore multiply by $n_t$ (hairpins), **not** $2n_t$ �
 a recurring source of factor-of-two errors.
 """))
 cells.append(code("FT = 0.3048   # foot  -> m\nIN = 0.0254   # inch  -> m\n\n"
-                  + src('Case', drop_trailing=('CASE',)) + '\n\nCASE = Case()                        # the design point\n'
-                  'CASE_V01 = Case(front="closed_form")  # the conference-paper configuration'))
+                  + src('Case', drop_trailing=('CASE',))
+                  + '\n\nCASE = Case()          # the design point, all corrections applied\n\n'
+                  '# The published configuration. BOTH switches must be set: the closed-form\n'
+                  '# front AND the wall-conductivity error, because the two compensated each\n'
+                  '# other. Setting only one gives a model that never existed.\n'
+                  'CASE_V01 = Case(front="closed_form", charge_uses_wall_conductivity=False)'))
 
 cells.append(code(r"""
 c = CASE
@@ -350,6 +383,29 @@ from what charging left behind.
 > **Closure is now exact by construction** — but that is an arithmetic identity,
 > not evidence the model is right. `advance_front` and `closure_error` are
 > inverse operations, so a residual of $10^{-16}$ measures floating point.
+
+### 5.3 The fins are metal, not PCM
+
+$A_{\text{melt}}$ is the quantity the latent balance conserves, so it must be
+**PCM and nothing else**. The annulus between $r_e$ and $r_e+\delta$ is not all
+PCM — the fins occupy metal inside it:
+
+$$A_{\text{melt}} = \pi\left[(r_e+\delta)^2 - r_e^2\right]
+- n_f\,t_f\,\min(\delta,\,L_f)$$
+
+The fin term saturates once the front passes the fin tips. Inverting for
+$\delta$ is still closed form, just a shifted quadratic:
+
+$$\delta \le L_f:\quad \pi\delta^2+\left(2\pi r_e-n_f t_f\right)\delta-A=0
+\qquad
+\delta > L_f:\quad \pi\delta^2+2\pi r_e\delta-\left(A+n_f t_f L_f\right)=0$$
+
+**Corrected in v0.3.** Earlier versions treated the whole annulus as PCM, which
+overstated the melted volume by 11 % when the layer is thin and 6 % at the
+design point, and understated $\delta$ — and therefore the melt-layer
+conduction resistance — by up to 34 %. Because it inflated
+$\varepsilon_{\text{PCM}}$, it also pushed $N_{\text{inventory}}$ slightly
+**up**; correcting it moves the design point from 12.79 to 12.74 wells.
 """))
 cells.append(code(src('delta_from_area', 'area_from_delta', 'advance_front',
                       'closure_error')))
@@ -451,13 +507,28 @@ $$\Phi_{\text{heat}}(N)=\frac{\Delta E_{out,HP}}{\Delta E_{\text{del}}(N)}-1=0,
 
 $$\boxed{N_{\text{wells}}=\max\left(N_{\text{heat}},N_{\text{inventory}}\right)}$$
 
-The inventory number *existed* in the v0.1 notebook — printed as "Ideal number
-of wells" — and was never used again. With the `k_w` defect it never bound, so
-the omission stayed invisible. Correct the conductivity and it binds.
+With the `k_w` defect the rate criterion was always the larger of the two, so
+the omission stayed invisible. Correct the conductivity and the inventory
+constraint binds instead.
 
 The constraint is only meaningful once the front conserves energy: under
 Formulation A the melted volume is set by an independent solve, so
 $\varepsilon_{\text{PCM}}$ says nothing about the delivered energy.
+
+### $N_{\text{inventory}}$ is not the "ideal number of wells"
+
+The v0.1 notebook printed `Ideal number of wells: 12.215`. That is a **different
+and simpler calculation**: the thermal load divided by the sensible *plus*
+latent capacity of the PCM, giving the total PCM volume required and hence a
+well count. It carries no thermal resistance and no losses.
+
+It is therefore a genuine **lower bound** — the best any design could achieve —
+and $N_{\text{inventory}}$, computed from the marched model, must sit at or
+above it. Designs with high $\varepsilon_{\text{PCM}}$ are desirable precisely
+because they approach that bound: the PCM in the ground is being used rather
+than merely occupying the borehole.
+
+§12 checks the two against each other.
 """))
 cells.append(code(src('_bisect', 'size_well_field')))
 
@@ -489,10 +560,10 @@ corrected front with the steel conductivity also fixed.
 cells.append(code(r"""
 runs = {}
 for label, case in (
-    ('v0.1 (closed form)',   CASE_V01.with_(N_wells_bracket=(1., 400.))),
-    ('v0.2 marched',         CASE.with_(N_wells_bracket=(1., 400.))),
-    ('v0.2 + correct k_w',   CASE.with_(N_wells_bracket=(1., 400.),
-                                        charge_uses_wall_conductivity=True)),
+    ('v0.1 published',      CASE_V01.with_(N_wells_bracket=(1., 400.))),
+    ('marched, old k_w',    CASE.with_(N_wells_bracket=(1., 400.),
+                                       charge_uses_wall_conductivity=False)),
+    ('v0.3 (default)',      CASE.with_(N_wells_bracket=(1., 400.))),
 ):
     runs[label] = run_cycle(case)
 
@@ -514,16 +585,15 @@ cells.append(md(r"""
 Three things to read from that table.
 
 **The sizing moves a long way; the efficiency hardly at all.** `N_wells` falls
-from 24.1 to 12.8 once the conductivity is also corrected — a 47 % reduction —
-while `eta_RTE` moves by about 2 %.
+from 24.1 to 12.7 — a 47 % reduction — while `eta_RTE` moves by about 2 %.
 
 **`eta_RTE_nopump` is identical to twelve significant figures** across all three
 columns. The cycles are untouched by any of this. What the storage model
-determines is how much hardware the cycle needs.
+determines is how much hardware the cycle needs, not how efficiently it runs.
 
-**The binding constraint flips.** With the legacy conductivity, heat transfer
-binds and the inventory constraint is slack. Correct the conductivity and the
-heat-transfer requirement collapses to ~8 wells, at which point the store would
+**The binding constraint flips.** With the old conductivity, heat transfer binds
+and the inventory constraint is slack. With the correct value the heat-transfer
+requirement collapses to about 8 wells — at which point the store would have to
 melt more PCM than it contains — so inventory takes over.
 """))
 cells.append(code(r"""
@@ -535,8 +605,40 @@ for label, r in runs.items():
               f"  closure={d['closure_charge']:.1e}")
 print()
 print('The assumed storage loss lambda = 0.05 implies eta_storage = 0.952.')
-print('With the correct conductivity the model says it is 0.90 -- so lambda')
-print('should become an OUTPUT of the model rather than an input. Not done yet.')
+print('At the v0.3 design point the model computes about 0.91, so the field')
+print('banks ~10% more than the ORC withdraws. lambda should become an OUTPUT')
+print('of the model rather than an input. Not done yet -- see section 15.')
+"""))
+
+cells.append(md(r"""
+### Check against the lower bound
+
+The v0.1 notebook printed `Ideal number of wells: 12.215` from a load-versus-
+capacity calculation with no thermal resistance and no losses (§10). That is a
+lower bound. Our $N_{\text{inventory}}$ must sit above it — and the gap should
+be about the sensible heat the marched model omits under **H5**, i.e. a factor
+$1+\mathrm{Ste}$.
+
+This is one of the few genuinely independent checks available on the storage
+model, since energy closure is structural and proves nothing (§5.2).
+"""))
+
+cells.append(code(r"""
+N_IDEAL = 12.215336443485063   # 'Ideal number of wells', THUMS_Multilayer_BB_Jan_12b
+d = runs['v0.3 (default)']['detail']
+Ste = CASE.stefan_number(CASE.DT_4C_M)
+
+print(f'N_ideal      (load / capacity, sensible + latent, no resistance) = {N_IDEAL:7.3f}')
+print(f'N_inventory  (marched model, latent only)                        = {d["N_inventory"]:7.3f}')
+print(f'N_heat       (rate criterion)                                    = {d["N_heat"]:7.3f}')
+print()
+print(f'N_inventory / N_ideal = {d["N_inventory"]/N_IDEAL:.4f}')
+print(f'1 + Ste               = {1+Ste:.4f}     (Ste = {Ste:.4f})')
+print()
+if d['N_inventory'] < N_IDEAL:
+    print('FAIL: below the lower bound -- the inventory constraint is wrong.')
+else:
+    print('OK: above the lower bound, by close to the omitted sensible heat.')
 """))
 
 # ---------------------------------------------------------------- 13. verify
@@ -560,7 +662,7 @@ IHTC = {   # frozen v0.1 results, DT_3C_2C = 55 K, N_lay = 9
     'f_pump':         0.015081686346236986,
 }
 
-got = runs['v0.1 (closed form)']['kpis']
+got = runs['v0.1 published']['kpis']
 print(f"{'KPI':16s} {'published':>22s} {'this notebook':>22s}   rel. diff")
 worst = 0.0
 for k, v in IHTC.items():
@@ -586,8 +688,8 @@ Where the PCM actually melts. The steps are the PCM layer boundaries: each layer
 has its own melting temperature, following the fluid glide down the well.
 """))
 cells.append(code(r"""
-case = CASE.with_(charge_uses_wall_conductivity=True)
-res  = runs['v0.2 + correct k_w']
+case = CASE                      # v0.3 defaults: corrected k_w, fins excluded
+res  = runs['v0.3 (default)']
 N    = res['kpis']['N_wells']          # taken from the run, not hard-coded
 
 rank, hp, T = cycle_state_points(case)
@@ -629,6 +731,7 @@ Read this before quoting any number above.
 | **Buoyancy head** (H7) | ±7.5 bar in the 1,524 m loop, asymmetric between charge and discharge |
 | **Isentropic efficiencies** | both cycles are idealised, so every efficiency here is an upper bound |
 | **Volume change on melting** | 6.9 %, neglected; the liquid layer is ~2.3 % thicker than modelled |
+| **Non-circular melt front** | the fins enhance heat transfer through $\eta_o$, but the front is still modelled as a circular annulus (H3). Their *metal* is excluded from $A_{\text{melt}}$ (§5.3); their effect on front *shape* is not modelled |
 | **Front interaction** (H3) | `delta_max = 0.5 m` against an 0.0889 m borehole radius — a factor of 5.62. Nothing in the solver enforces it |
 
 ### Two quantities the code defines twice
@@ -648,12 +751,25 @@ consistency is not validation, and a reviewer will ask.
 
 ### Open work, in order
 
-1. Make $\lambda$ an output rather than an assumed 5 % — it is now measurable,
-   and it is wrong by 5–22 % once `k_w` is corrected.
-2. Correct the `k_w` default (largest single mover: `N_wells` 21.7 → 12.8).
-3. Enforce the geometric bounds instead of warning.
-4. Add PCM sensible heat.
-5. Find an external validation case.
+1. Make $\lambda$ an output rather than an assumed 5 %. It is now measurable:
+   at the v0.3 design point the field banks about 10 % more than the ORC
+   withdraws, against the 5 % assumed.
+2. Enforce the geometric bounds instead of warning ($\delta_{\max} = 0.5$ m
+   against an 0.0889 m borehole radius).
+3. Add PCM sensible heat — it would close most of the gap to the ideal bound
+   in §12 and remove the $(1+\mathrm{Ste})$ penalty.
+4. Model the melt-front shape around the fins.
+5. **Find an external validation case.** Still the largest gap.
+
+---
+
+## Version history
+
+| version | date | change |
+|---|---|---|
+| **0.3** | this build | Wall conductivity corrected: charging now uses steel, $k_w = 45$ W/m·K, by default (§2). Fin metal excluded from the melted PCM area (§5.3). `N_wells` 21.65 → **12.74**, binding constraint now inventory. Lower-bound check against the ideal well count added (§12). |
+| 0.2 | 2026-08 | Melt front reformulated by energy balance (§5.2); melt state carried across the cycle; two-constraint sizing (§10); latent inventory made density-consistent; segment latent limiting. Model moved into this notebook, every equation visible. |
+| 0.1 | — | IHTC paper. Closed-form Stefan front, single sizing criterion, wall conductivity error. Reproduced exactly by §13. |
 """))
 
 nb = {"cells": cells,
