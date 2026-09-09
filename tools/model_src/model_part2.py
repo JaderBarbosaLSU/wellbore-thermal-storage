@@ -285,7 +285,8 @@ def layer_map(T_m_lay, n_segments, N_lay):
 
 
 def march(case, T_inlet, T_m_seg, m_dot, k_wall, times,
-          n_segments=None, A_melt0=None, mode="charge", A_max=None):
+          n_segments=None, A_melt0=None, mode="charge", A_max=None,
+          record=False):
     """March one tube over `times`, starting from the melt state `A_melt0`.
 
     Returns a dict. The melt state is returned so the discharge can START from
@@ -306,6 +307,12 @@ def march(case, T_inlet, T_m_seg, m_dot, k_wall, times,
     t_prev, Q_cum, Q_rejected = 0.0, 0.0, 0.0
     ts, Qs, T_outs = [], [], []
 
+    # Optional per-segment history, for the diagnostic plots. Recording only
+    # appends to lists; it touches nothing the solution depends on, which the
+    # notebook verifies by comparing a recorded and an unrecorded run.
+    hist = {k: [] for k in ("T_fluid", "A_melt", "delta", "NTU", "U_i",
+                            "q_prime", "q_demand")} if record else None
+
     for t in np.asarray(times, float):
         dt = t - t_prev
         if dt <= 0:
@@ -316,6 +323,9 @@ def march(case, T_inlet, T_m_seg, m_dot, k_wall, times,
         T0 = T_inlet
         q_prime = np.zeros(n_segments)
         q_demand = np.zeros(n_segments)
+        if record:
+            T_prof = np.empty(n_segments + 1); T_prof[0] = T_inlet
+            NTU_prof = np.empty(n_segments); U_prof = np.empty(n_segments)
 
         for i in range(n_segments):
             h_i, cp_d, _, _ = h_internal(case.fluid2, T0, case.P, r_i, m_dot)
@@ -340,8 +350,22 @@ def march(case, T_inlet, T_m_seg, m_dot, k_wall, times,
             else:
                 q_prime[i] = q_demand[i]
             T0 = T0 - q_prime[i] * dz / (m_dot * cp_d)
+            if record:
+                T_prof[i + 1] = T0
+                NTU_prof[i] = NTU
+                U_prof[i] = U_i
+
+        if record:
+            hist["T_fluid"].append(T_prof.copy())
+            hist["delta"].append(delta.copy())
+            hist["NTU"].append(NTU_prof.copy())
+            hist["U_i"].append(U_prof.copy())
+            hist["q_prime"].append(q_prime.copy())
+            hist["q_demand"].append(q_demand.copy())
 
         A, q_eff = advance_front(A, q_prime, dt, rho_m, case.h_m, A_max)
+        if record:
+            hist["A_melt"].append(A.copy())     # state AFTER the step
         Q_cum += float(np.sum(q_eff) * dz) * dt
         Q_rejected += float(np.sum(q_demand - q_eff) * dz) * dt
         ts.append(t)
@@ -359,4 +383,6 @@ def march(case, T_inlet, T_m_seg, m_dot, k_wall, times,
         "T_out": np.array(T_outs),
         "V_melt_tube": float(np.sum(A * dz)),
         "closure": closure_error(Q_cum, A - A0, dz, rho_m, case.h_m),
+        "z": np.linspace(0.0, case.L_tube, n_segments),
+        "history": {k: np.array(v) for k, v in hist.items()} if record else None,
     }

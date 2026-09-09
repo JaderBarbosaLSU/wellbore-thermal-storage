@@ -108,7 +108,8 @@ used. Read it top to bottom and you have seen the whole thing.
 | 6 | the segment-by-segment march down the well |
 | 7–8 | the ORC and heat-pump cycles, pressure drop |
 | 9–11 | well-field sizing and the full cycle calculation |
-| 12–14 | results, verification against the published numbers, plots |
+| 12–13 | results, and verification against the published numbers |
+| 14 | **profiles along the well** — fluid temperature, melt fraction, NTU |
 | 15 | what the model still does **not** contain |
 
 ### Working rules
@@ -681,43 +682,236 @@ $10^{-8}$ means something real has moved.
 """))
 
 # ---------------------------------------------------------------- 14. plots
+# ============================================================ 14. diagnostics
 cells.append(md(r"""
-## 14. The melt front along the well
+## 14. Profiles along the well
 
-Where the PCM actually melts. The steps are the PCM layer boundaries: each layer
-has its own melting temperature, following the fluid glide down the well.
+The quantities the IHTC notebooks plotted, restored: **secondary-fluid
+temperature**, **PCM melt fraction** and **NTU**, each as a function of depth
+and time, for charging and for discharging.
+
+`march(..., record=True)` retains the per-segment state at every time level.
+Recording appends to lists and touches nothing the solution depends on — §14.5
+verifies that a recorded and an unrecorded run are bit-identical.
+
+### Reading the melt-fraction plots
+
+The local melt fraction is the melted PCM in a segment divided by the PCM that
+segment actually contains:
+
+$$\varepsilon_{\rm local}(z) = \frac{A_{\rm melt}(z)}{A_{\rm avail}},
+\qquad A_{\rm avail} = \frac{V_{\rm well}}{n_t\,L_{\rm tube}}$$
+
+Two horizontal limits are drawn on those plots, and both matter:
+
+- **$\varepsilon_{\rm local} = 1$** — the segment has melted all the PCM it owns.
+  Beyond this the model is drawing latent heat from material that is not there.
+- **front merge** — the melt front has reached the midpoint between neighbouring
+  tubes. With $2n_t = 4$ legs sharing the borehole, each owns an equivalent cell
+  of radius $r_{\rm cell}=\sqrt{\pi R^2/4}/\sqrt{\pi}$, and the fronts meet at
+  $\delta = r_{\rm cell}-r_e$. Hypothesis **H3** fails above this line.
+
+**PCM that never melts is dead volume** — it holds no energy and contributes
+nothing to the round trip. PCM that over-melts is fictitious. Both show up as
+departures from a flat $\varepsilon_{\rm local}=1$ line, and the spread is what
+the multilayer cascade exists to reduce (§14.4).
 """))
+
 cells.append(code(r"""
-case = CASE                      # v0.3 defaults: corrected k_w, fins excluded
+# --- run charge and discharge at the design point, recording history --------
+case = CASE
 res  = runs['v0.3 (default)']
-N    = res['kpis']['N_wells']          # taken from the run, not hard-coded
+N    = res['kpis']['N_wells']
 
 rank, hp, T = cycle_state_points(case)
 E = energy_budget(case, rank['rank_eff'], hp['hp_cop'], T)
-T_m_lay, _ = melting_temperatures(case)
-T_m_seg = layer_map(T_m_lay, case.n_segments, case.N_lay)
-times   = np.logspace(0., np.log10(case.t_ch*3600.), case.n_times)
-m1      = E['m_dot_w_ch'] / (N * case.num_tubes)
+T_m_lay, T_m_lay_dc = melting_temperatures(case)
+n = case.n_segments
+T_m_seg    = layer_map(T_m_lay,    n, case.N_lay)
+T_m_seg_dc = layer_map(T_m_lay_dc, n, case.N_lay)
+t_ch = np.logspace(0, np.log10(case.t_ch*3600), case.n_times)
+t_dc = np.logspace(0, np.log10(case.t_dc*3600), case.n_times)
+m1   = E['m_dot_w_ch']/(N*case.num_tubes)
 
-r = march(case, T['T_4c'], T_m_seg, m1, case.k_wall, times, mode='charge')
+ch = march(case, T['T_4c'], T_m_seg, m1, case.k_wall, t_ch,
+           mode='charge', record=True)
+ratio = res['detail']['flow_ratio_dc_ch']
+dc = march(case, T['T_3d'], T_m_seg_dc, ratio*m1, case.k_wall, t_dc,
+           A_melt0=ch['A_melt'], mode='discharge', record=True)
 
-z = np.linspace(0, case.L_well, case.n_segments)
-fig, ax = plt.subplots(1, 2, figsize=(11, 4))
-ax[0].plot(r['delta']*1000, z, lw=1.5)
-ax[0].set_xlabel('melt layer thickness  δ  [mm]'); ax[0].set_ylabel('depth [m]')
-ax[0].invert_yaxis(); ax[0].grid(alpha=.3)
-ax[0].set_title(f'end of charging · N = {N:.2f} wells')
+# --- geometric limits ------------------------------------------------------
+A_avail = case.V_well/(case.num_tubes*case.L_tube)          # PCM per unit tube length
+r_cell  = np.sqrt(np.pi*(case.D_well/2)**2/(2*case.num_tubes)/np.pi)
+d_merge = r_cell - case.r_e
+A_merge = area_from_delta(d_merge, case.r_e, case.num_fins, case.fin_t, case.fin_L)
 
-ax[1].plot(np.array(T_m_seg)-273.15, z, lw=1.5)
-ax[1].set_xlabel('PCM melting temperature [°C]'); ax[1].invert_yaxis()
-ax[1].grid(alpha=.3); ax[1].set_title(f'{case.N_lay} PCM layers')
-plt.tight_layout(); plt.show()
-
-print(f"eps_PCM = {r['V_melt_tube']*case.num_tubes/case.V_well:.4f}"
-      f"   energy closure = {r['closure']:.1e}")
+print(f'PCM available per tube per unit length  A_avail = {A_avail:.5f} m2')
+print(f'equivalent cell radius                          {r_cell*1000:.2f} mm')
+print(f'fronts merge at delta                           {d_merge*1000:.2f} mm'
+      f'   (eps_local = {A_merge/A_avail:.3f})')
+print(f'borehole wall at delta                          {(case.D_well/2-case.r_e)*1000:.2f} mm')
 """))
 
-# ---------------------------------------------------------------- 15. gaps
+cells.append(md(r"""
+### 14.1 Charging
+"""))
+
+cells.append(code(r"""
+z = ch['z']/2.0                    # developed tube length -> depth (hairpin)
+h = ch['history']
+picks = [0, 4, 9, 19, 29, 39]      # time levels to draw
+cmap = plt.cm.viridis(np.linspace(0.15, 0.95, len(picks)))
+
+fig, ax = plt.subplots(1, 3, figsize=(15, 4.6))
+
+for c_, k in zip(cmap, picks):
+    lab = f"{ch['t'][k]/3600:.2f} h"
+    ax[0].plot(h['T_fluid'][k][1:]-273.15, z, color=c_, lw=1.4, label=lab)
+    ax[1].plot(h['A_melt'][k]/A_avail,     z, color=c_, lw=1.4, label=lab)
+    ax[2].plot(h['NTU'][k],                z, color=c_, lw=1.4, label=lab)
+
+ax[0].plot(np.array(T_m_seg)-273.15, z, 'k--', lw=1, label='$T_m$ (cascade)')
+ax[0].set_xlabel('secondary-fluid temperature [°C]'); ax[0].set_ylabel('depth [m]')
+ax[1].axvline(1.0, color='crimson', ls='-',  lw=1.2, label='all local PCM melted')
+ax[1].axvline(A_merge/A_avail, color='darkorange', ls=':', lw=1.5,
+              label='fronts merge (H3 fails)')
+ax[1].set_xlabel(r'local melt fraction  $\varepsilon_{local}$')
+ax[2].set_xlabel('NTU per segment')
+for a in ax:
+    a.invert_yaxis(); a.grid(alpha=.3); a.legend(fontsize=7)
+fig.suptitle(f'CHARGING · N = {N:.2f} wells · {case.N_lay} PCM layers', y=1.02)
+plt.tight_layout(); plt.show()
+"""))
+
+cells.append(md(r"""
+### 14.2 Discharging
+
+The discharge starts from the melt distribution charging left behind, so
+$\varepsilon_{\rm local}$ falls from its end-of-charge profile rather than from
+zero. Where it reaches zero the segment is fully solid and stops contributing —
+under **H5** there is no sensible heat left to give, so the fluid simply passes
+over it.
+"""))
+
+cells.append(code(r"""
+hd = dc['history']
+fig, ax = plt.subplots(1, 3, figsize=(15, 4.6))
+for c_, k in zip(cmap, picks):
+    lab = f"{dc['t'][k]/3600:.2f} h"
+    ax[0].plot(hd['T_fluid'][k][1:]-273.15, z, color=c_, lw=1.4, label=lab)
+    ax[1].plot(hd['A_melt'][k]/A_avail,     z, color=c_, lw=1.4, label=lab)
+    ax[2].plot(hd['NTU'][k],                z, color=c_, lw=1.4, label=lab)
+ax[0].plot(np.array(T_m_seg_dc)-273.15, z, 'k--', lw=1, label='$T_m$ (cascade)')
+ax[0].set_xlabel('secondary-fluid temperature [°C]'); ax[0].set_ylabel('depth [m]')
+ax[1].axvline(1.0, color='crimson', ls='-', lw=1.2)
+ax[1].axvline(0.0, color='k', lw=1)
+ax[1].set_xlabel(r'local melt fraction  $\varepsilon_{local}$')
+ax[2].set_xlabel('NTU per segment')
+for a in ax:
+    a.invert_yaxis(); a.grid(alpha=.3); a.legend(fontsize=7)
+fig.suptitle(f'DISCHARGING · flow ratio {ratio:.3f}', y=1.02)
+plt.tight_layout(); plt.show()
+"""))
+
+cells.append(md(r"""
+### 14.3 The whole cycle as a map
+
+Melt fraction over depth and time, charge then discharge. The white contour is
+$\varepsilon_{\rm local}=1$; everything to its warm side is PCM the model melted
+but does not have.
+"""))
+
+cells.append(code(r"""
+fig, ax = plt.subplots(1, 2, figsize=(13, 4.6), sharey=True)
+for a, hh, tt, ttl in ((ax[0], h, ch['t'], 'charging'),
+                       (ax[1], hd, dc['t'], 'discharging')):
+    F = hh['A_melt']/A_avail
+    im = a.pcolormesh(tt/3600, z, F.T, shading='auto', cmap='inferno',
+                      vmin=0, vmax=max(1.8, F.max()))
+    cs = a.contour(tt/3600, z, F.T, levels=[1.0], colors='w', linewidths=1.5)
+    a.clabel(cs, fmt=r'$\varepsilon=1$', fontsize=8)
+    a.set_xlabel('time [h]'); a.set_title(ttl)
+    plt.colorbar(im, ax=a, label=r'$\varepsilon_{local}$')
+ax[0].set_ylabel('depth [m]'); ax[0].invert_yaxis()
+plt.tight_layout(); plt.show()
+
+F_end = ch['A_melt']/A_avail
+print(f'end of charge:  eps_local  min {F_end.min():.3f}   max {F_end.max():.3f}'
+      f'   aggregate {ch["A_melt"].sum()*(case.L_tube/n)*case.num_tubes/case.V_well:.4f}')
+print(f'  segments over capacity (eps>1):        {(F_end>1).sum():3d} of {n}')
+print(f'  segments with merged fronts (H3 fails):{(ch["delta"]>d_merge).sum():3d} of {n}')
+F_dc = dc['A_melt']/A_avail          # final state, all segments
+print(f'end of discharge: eps_local min {F_dc.min():.3f}  max {F_dc.max():.3f}'
+      f'   aggregate {F_dc.mean():.4f}')
+print(f'  segments left fully solid:             {(F_dc<0.01).sum():3d} of {n}')
+print(f'  PCM that never melted at all:          '
+      f'{(F_end<0.05).sum():3d} of {n} segments  <- dead volume')
+print()
+print('NOTE: eps_local = 1 and "fronts merge" are the SAME line -- each leg owns')
+print('exactly the PCM in its cell, so melting all of it puts the front on the')
+print('cell boundary. The bounds check against the borehole WALL can therefore')
+print('never fire before capacity is exceeded; it is testing the wrong radius.')
+"""))
+
+cells.append(md(r"""
+### 14.4 What the cascade is for
+
+The multilayer PCM exists to make the phase change more uniform along the well:
+each layer melts at a temperature matched to the local fluid temperature, so the
+whole column changes phase rather than only the hot end. PCM that never cycles
+is dead volume — it carries no energy through the round trip.
+
+Sweeping $N_{\rm lay}$ at fixed well count shows whether it works.
+"""))
+
+cells.append(code(r"""
+rows = []
+for N_lay in (1, 3, 6, 9, 12, 20):
+    cc = case.with_(N_lay=N_lay)
+    Tml, _ = melting_temperatures(cc)
+    seg = layer_map(Tml, n, N_lay)
+    r = march(cc, T['T_4c'], seg, m1, cc.k_wall, t_ch, mode='charge')
+    F = r['A_melt']/A_avail
+    rows.append({'N_lay': N_lay, 'eps_mean': F.mean(), 'eps_min': F.min(),
+                 'eps_max': F.max(), 'spread': F.max()-F.min(),
+                 'std': F.std(),
+                 'frac_dead_%': 100*(F < 0.05).mean(),
+                 'frac_over_%': 100*(F > 1).mean()})
+df_c = pd.DataFrame(rows).set_index('N_lay')
+print(df_c.round(3).to_string())
+
+fig, ax = plt.subplots(1, 2, figsize=(12, 4))
+ax[0].plot(df_c.index, df_c['spread'], 'o-', label='max - min')
+ax[0].plot(df_c.index, df_c['std'], 's-', label='std. deviation')
+ax[0].set_xlabel('number of PCM layers  $N_{lay}$')
+ax[0].set_ylabel(r'spread in $\varepsilon_{local}$'); ax[0].legend(); ax[0].grid(alpha=.3)
+ax[1].plot(df_c.index, df_c['frac_over_%'], '^-', color='crimson',
+           label='over capacity ($\\varepsilon>1$)')
+ax[1].plot(df_c.index, df_c['frac_dead_%'], 'v-', color='steelblue',
+           label='dead ($\\varepsilon<0.05$)')
+ax[1].set_xlabel('number of PCM layers  $N_{lay}$')
+ax[1].set_ylabel('% of the well'); ax[1].legend(); ax[1].grid(alpha=.3)
+plt.tight_layout(); plt.show()
+"""))
+
+cells.append(md(r"""
+### 14.5 Recording does not perturb the solution
+
+The history arrays are written from inside the segment loop. This confirms the
+recorded run and the plain run agree exactly, so nothing in §14 is an artefact
+of instrumenting the march.
+"""))
+
+cells.append(code(r"""
+a_ = march(case, T['T_4c'], T_m_seg, m1, case.k_wall, t_ch, mode='charge')
+b_ = march(case, T['T_4c'], T_m_seg, m1, case.k_wall, t_ch, mode='charge',
+           record=True)
+same_A = np.array_equal(a_['A_melt'], b_['A_melt'])
+same_Q = a_['Q_cum_J'] == b_['Q_cum_J']
+print(f'A_melt identical: {same_A}     Q_cum identical: {same_Q}')
+print('PASS' if (same_A and same_Q) else 'FAIL - recording perturbs the march')
+"""))
+
 cells.append(md(r"""
 ## 15. What this model still does not contain
 
