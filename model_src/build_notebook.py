@@ -110,7 +110,7 @@ used. Read it top to bottom and you have seen the whole thing.
 | 9–11 | well-field sizing and the full cycle calculation |
 | 12 | results — and **12.1, do the fins earn their place?** |
 | 13 | verification — reproduces the published IHTC numbers exactly |
-| 14 | **profiles along the well** — fluid temperature, melt fraction, NTU |
+| 14 | **profiles along the well** — fluid temperature, melt fraction, $U_i$, NTU |
 | 15 | what the model still does **not** contain |
 
 ### Working rules
@@ -881,8 +881,9 @@ cells.append(md(r"""
 ## 14. Profiles along the well
 
 The quantities the IHTC notebooks plotted, restored: **secondary-fluid
-temperature**, **PCM melt fraction** and **NTU**, each as a function of depth
-and time, for charging and for discharging.
+temperature**, **PCM melt fraction**, the **overall coefficient $U_i$** and
+**NTU**, each as a function of depth and time, for charging and for
+discharging.
 
 `march(..., record=True)` retains the per-segment state at every time level.
 Recording appends to lists and touches nothing the solution depends on — §14.5
@@ -955,28 +956,81 @@ cells.append(md(r"""
 cells.append(code(r"""
 z = ch['z']/2.0                    # developed tube length -> depth (hairpin)
 h = ch['history']
-picks = [0, 4, 9, 19, 29, 39]      # time levels to draw
+
+# Choose the time levels to draw by TARGET TIME, not by index. The grid is
+# logarithmic, so evenly spaced indices bunch at the start: the old picks
+# [0,4,9,...] put three of six curves inside the first 12 seconds, where they
+# are indistinguishable, and left the hours unrepresented.
+def pick_times(t_s, targets_h):
+    return [int(np.argmin(np.abs(t_s - th*3600))) for th in targets_h]
+
+def tlabel(t_s):
+    return f'{t_s:.0f} s' if t_s < 60 else (
+           f'{t_s/60:.0f} min' if t_s < 3600 else f'{t_s/3600:.2f} h')
+
+targets = [0.01, 0.1, 0.5, 1.0, 3.0, 10.0]      # hours
+picks = pick_times(ch['t'], targets)
 cmap = plt.cm.viridis(np.linspace(0.15, 0.95, len(picks)))
 
-fig, ax = plt.subplots(1, 3, figsize=(15, 4.6))
+fig, ax = plt.subplots(1, 4, figsize=(19, 4.6))
 
 for c_, k in zip(cmap, picks):
-    lab = f"{ch['t'][k]/3600:.2f} h"
+    lab = tlabel(ch['t'][k])
     ax[0].plot(h['T_fluid'][k][1:]-273.15, z, color=c_, lw=1.4, label=lab)
     ax[1].plot(h['A_melt'][k]/A_avail,     z, color=c_, lw=1.4, label=lab)
-    ax[2].plot(h['NTU'][k],                z, color=c_, lw=1.4, label=lab)
+    ax[2].plot(h['U_i'][k],                z, color=c_, lw=1.4, label=lab)
+    ax[3].plot(h['NTU'][k],                z, color=c_, lw=1.4, label=lab)
 
 ax[0].plot(np.array(T_m_seg)-273.15, z, 'k--', lw=1, label='$T_m$ (cascade)')
 ax[0].set_xlabel('secondary-fluid temperature [°C]'); ax[0].set_ylabel('depth [m]')
-ax[1].axvline(1.0, color='crimson', ls='-',  lw=1.2, label='all local PCM melted')
-ax[1].axvline(A_merge/A_avail, color='darkorange', ls=':', lw=1.5,
-              label='fronts merge (H3 fails)')
+# eps_local = 1 and "fronts merge" are the SAME line -- see the check below
+ax[1].axvline(1.0, color='crimson', ls='-', lw=1.2,
+              label=r'$\varepsilon_{local}=1$ = fronts merge')
 ax[1].set_xlabel(r'local melt fraction  $\varepsilon_{local}$')
-ax[2].set_xlabel('NTU per segment')
+ax[2].set_xscale('log')
+ax[2].set_xlabel(r'$U_i$  [W m$^{-2}$ K$^{-1}$]  (on inner area)')
+ax[3].set_xlabel('NTU per segment')
 for a in ax:
-    a.invert_yaxis(); a.grid(alpha=.3); a.legend(fontsize=7)
+    a.invert_yaxis(); a.grid(alpha=.3)
+ax[0].legend(fontsize=7, title='time', title_fontsize=7)
+ax[1].legend(fontsize=7)
 fig.suptitle(f'CHARGING · N = {N:.2f} wells · {case.N_lay} PCM layers', y=1.02)
 plt.tight_layout(); plt.show()
+"""))
+
+cells.append(md(r"""
+### Reading the $U_i$ and NTU panels together
+
+The two right-hand panels look alike, and they nearly are. From §6,
+
+$$\mathrm{NTU}=\frac{2\pi r_i\,U_i\,\Delta z}{\dot m\,c_p}$$
+
+so along a well at fixed flow they differ only through $c_p(T)$ — a few per cent
+across the glide. Plotting both is still worth it, because they answer different
+questions:
+
+- **$U_i$** is the *physical* quantity: the conductance of the borehole at that
+  depth and time, in W m⁻² K⁻¹. It is comparable **across cases** — charge
+  against discharge, finned against bare — because it carries no flow rate.
+- **NTU** is the *dimensionless* group that decides the segment effectiveness
+  $1-e^{-\mathrm{NTU}}$, and therefore how much of the available temperature
+  difference a segment actually uses. It is **not** comparable across cases with
+  different flow.
+
+The cell after the discharge figure makes that concrete. Here the discharge flow
+ratio is only $1.023$, so the two comparisons very nearly agree — mid-well at
+end of run, $U_i$ rises by $1.401$ from charge to discharge while NTU rises by
+$1.386$, and $1.401/1.023 = 1.370$ recovers the NTU ratio to within the
+variation of $c_p$. The distinction is small at this design point but is not
+guaranteed to stay small, which is the reason to plot the quantity that does not
+depend on the flow.
+
+$U_i$ is drawn on a log axis, though it spans only about a factor of seven
+($117$ to $835$ W m⁻² K⁻¹ over both half-cycles): the log scale keeps
+the late-time curves, which bunch at the low end, readable against the $t\to0$
+curve. That $t\to0$ value is worth noting — the melt layer is absent, $h_e$
+saturates at its cap, and the borehole is limited by the tube alone. It is the
+ceiling no amount of PCM-side design can beat.
 """))
 
 cells.append(md(r"""
@@ -984,29 +1038,50 @@ cells.append(md(r"""
 
 The discharge starts from the melt distribution charging left behind, so
 $\varepsilon_{\rm local}$ falls from its end-of-charge profile rather than from
-zero. Where it reaches zero the segment is fully solid and stops contributing —
-under **H5** there is no sensible heat left to give, so the fluid simply passes
-over it.
+zero. Under **Formulation C** a segment that reaches $\varepsilon_{\rm local}=0$
+does *not* stop contributing: it continues to subcool below $T_m$, giving up
+sensible heat, until it reaches the fluid temperature. That recovered
+desuperheating and subcooling is the energy Formulation B discarded.
 """))
 
 cells.append(code(r"""
 hd = dc['history']
-fig, ax = plt.subplots(1, 3, figsize=(15, 4.6))
+picks = pick_times(dc['t'], targets)          # dc grid, same target times
+fig, ax = plt.subplots(1, 4, figsize=(19, 4.6))
 for c_, k in zip(cmap, picks):
-    lab = f"{dc['t'][k]/3600:.2f} h"
+    lab = tlabel(dc['t'][k])
     ax[0].plot(hd['T_fluid'][k][1:]-273.15, z, color=c_, lw=1.4, label=lab)
     ax[1].plot(hd['A_melt'][k]/A_avail,     z, color=c_, lw=1.4, label=lab)
-    ax[2].plot(hd['NTU'][k],                z, color=c_, lw=1.4, label=lab)
+    ax[2].plot(hd['U_i'][k],                z, color=c_, lw=1.4, label=lab)
+    ax[3].plot(hd['NTU'][k],                z, color=c_, lw=1.4, label=lab)
 ax[0].plot(np.array(T_m_seg_dc)-273.15, z, 'k--', lw=1, label='$T_m$ (cascade)')
 ax[0].set_xlabel('secondary-fluid temperature [°C]'); ax[0].set_ylabel('depth [m]')
 ax[1].axvline(1.0, color='crimson', ls='-', lw=1.2)
 ax[1].axvline(0.0, color='k', lw=1)
 ax[1].set_xlabel(r'local melt fraction  $\varepsilon_{local}$')
-ax[2].set_xlabel('NTU per segment')
+ax[2].set_xscale('log')
+ax[2].set_xlabel(r'$U_i$  [W m$^{-2}$ K$^{-1}$]  (on inner area)')
+ax[3].set_xlabel('NTU per segment')
 for a in ax:
-    a.invert_yaxis(); a.grid(alpha=.3); a.legend(fontsize=7)
+    a.invert_yaxis(); a.grid(alpha=.3)
+ax[0].legend(fontsize=7, title='time', title_fontsize=7)
 fig.suptitle(f'DISCHARGING · flow ratio {ratio:.3f}', y=1.02)
 plt.tight_layout(); plt.show()
+"""))
+
+cells.append(code(r"""
+# U_i is comparable across charge and discharge; NTU is not. Quantify both.
+print(f"{'':22s} {'charge':>12s} {'discharge':>12s}   ratio")
+for name, a, b in (
+    ('U_i  mid-well, t=0',  h['U_i'][0][50],   hd['U_i'][0][50]),
+    ('U_i  mid-well, end',  h['U_i'][-1][50],  hd['U_i'][-1][50]),
+    ('NTU  mid-well, end',  h['NTU'][-1][50],  hd['NTU'][-1][50]),
+):
+    print(f'  {name:20s} {a:12.4g} {b:12.4g}   {b/a:6.3f}')
+print(f'\n  discharge/charge flow ratio = {ratio:.4f}')
+print('  The U_i ratio is set by the PCM conductivity (k_s freezing vs k_l')
+print('  melting) and the melt-layer thickness. The NTU ratio carries the')
+print('  flow ratio on top of that, which is why the two differ.')
 """))
 
 cells.append(md(r"""
@@ -1176,7 +1251,7 @@ consistency is not validation, and a reviewer will ask.
 
 | version | date | change |
 |---|---|---|
-| **0.4a** | this build | Sizing report rewritten to lead with `N_wells` and name the binding criterion; `N_capacity` labelled a lower bound (§10). Melt-front limit moved from the borehole wall to the cell radius via `Case.r_cell` / `Case.delta_merge`, and H3 proximity reported (§12, §14). New §12.1: fin sweep, charging-window sweep, and why reading `N_capacity` alone inverts the answer. |
+| **0.4a** | this build | Sizing report rewritten to lead with `N_wells` and name the binding criterion; `N_capacity` labelled a lower bound (§10). Melt-front limit moved from the borehole wall to the cell radius via `Case.r_cell` / `Case.delta_merge`, and H3 proximity reported (§12, §14). New §12.1: fin sweep, charging-window sweep, and why reading `N_capacity` alone inverts the answer. §13 (verification against the frozen IHTC fixture) restored — it had been dropped from the generator. **Build stamp repaired**: the `__STAMP__` placeholder was never substituted, so the notebook shipped reading `Last updated: __STAMP__`; the generator now asserts the substitution happened. §14 gains a **$U_i$ panel** beside NTU, and the plotted time levels are now chosen by target time rather than by index — on a logarithmic grid the old picks put three of six curves inside the first 12 seconds. |
 | 0.4 | 2026-09 | Melt front carries **enthalpy** rather than melted area (§5.4): PCM superheats when fully molten and subcools when fully solid, $\varepsilon_{\rm local}\in[0,1]$ by construction, branchwise-exact time integration. Sensible heat is self-levelling — melt-fraction spread falls $1.321\to0.078$. |
 | 0.3 | 2026-09 | Wall conductivity corrected: charging now uses steel, $k_w = 45$ W/m·K, by default (§2). Fin metal excluded from the melted PCM area (§5.3). `N_wells` 21.65 → **12.74**, binding constraint now inventory. Lower-bound check against the ideal well count added (§12). |
 | 0.2 | 2026-08 | Melt front reformulated by energy balance (§5.2); melt state carried across the cycle; two-constraint sizing (§10); latent inventory made density-consistent; segment latent limiting. Model moved into this notebook, every equation visible. |
@@ -1190,7 +1265,21 @@ nb = {"cells": cells,
                    "colab": {"provenance": [], "toc_visible": True}},
       "nbformat": 4, "nbformat_minor": 0}
 
-OUT.write_text(json.dumps(nb, indent=1))
+doc = json.dumps(nb, indent=1)
+
+# Substitute the build stamp. This step went missing once and the notebook
+# shipped reading "Last updated: __STAMP__" -- a dead placeholder is worse than
+# no timestamp, because it looks like a rendering fault rather than a stale
+# build. Assert afterwards so it cannot fail silently again.
+n_stamp = doc.count('__STAMP__')
+doc = doc.replace('__STAMP__', STAMP)
+if n_stamp == 0:
+    raise SystemExit('no __STAMP__ placeholder found -- the build stamp is gone')
+if '__STAMP__' in doc:
+    raise SystemExit('__STAMP__ survived substitution')
+
+OUT.write_text(doc)
+print(f'  build stamp: {STAMP}  ({n_stamp} substitutions)')
 n_code = sum(1 for c in cells if c['cell_type'] == 'code')
 n_lines = sum(len(c['source']) for c in cells if c['cell_type'] == 'code')
 print(f'wrote {OUT}')
