@@ -408,27 +408,240 @@ does not own, and superheat is where the extra energy goes. This is the sense in
 which $\varepsilon_{\mathrm{local}}\in[0,1]$ is \emph{structural} in
 Formulation~C: there is no code path that can violate it, so no test is needed.
 
-\subsubsection{The segment equation}
+\subsubsection{The segment equation, derived}
+\label{sec:front:segeq}
 
-The PCM in a segment exchanges heat only with the fluid passing over it (H2: no
-axial conduction), so
+Equation~\eqref{eq:enth-ode} below is the heart of the march, and it is short
+enough to look like a definition. It is not: it is the result of writing an
+energy balance on two different control volumes and then eliminating the
+quantity they share. This subsection does that in full, because the conductance
+$K$ that comes out is \emph{not} the $\Ui P_{i}$ a reader would write down
+unaided, and the difference reaches \SI{33}{\percent} at this design point.
+
+\paragraph{The two control volumes.}
+Fix a segment $j$, spanning $z\in[z_{j},z_{j+1}]$ with $\Delta z =
+z_{j+1}-z_{j}$. Two control volumes share the tube wall over that interval:
+
+\begin{description}[leftmargin=1.9em,itemsep=2pt]
+\item[CV\,1 --- the PCM] belonging to segment $j$: cross-section
+  $A_{\mathrm{avail}}$, length $\Delta z$, stationary, closed.
+\item[CV\,2 --- the fluid] inside the tube over the same interval:
+  cross-section $A_{\mathrm{flow}}=\pi r_{i}^{2}$, open, with mass flow $\md$
+  entering at $T_{j}$ and leaving at $T_{j+1}$.
+\end{description}
+
+\noindent
+Write $q'_{j}$ for the heat per unit tube length crossing from CV\,2 into
+CV\,1. It appears in both balances with opposite sign, and eliminating it is
+the whole exercise.
+
+\medskip
+\noindent\textbf{Step 1 --- the PCM balance.}
+CV\,1 is closed and stationary, so the first law reduces to a statement about
+its enthalpy alone. With $E'$ the enthalpy per unit tube length
+(\S\ref{sec:front:enthalpy}), the enthalpy of the control volume is
+$E'\Delta z$ and
 \begin{equation}
+  \frac{\mathrm{d}}{\mathrm{d}t}\bigl(E'_{j}\,\Delta z\bigr)
+  \;=\;
+  \underbrace{q'_{j}\,\Delta z}_{\text{through the tube wall}}
+  \;\underbrace{-\;\bigl[\dot Q_{\mathrm{ax}}\bigr]_{z_{j}}^{z_{j+1}}}
+              _{\text{axial conduction, H2}}
+  \;+\;\underbrace{\dot Q_{\mathrm{form}}}_{\text{formation, H6}}
+  \;+\;\underbrace{\dot Q_{\mathrm{azi}}}_{\text{neighbours, H9}} ,
+\end{equation}
+and the last three terms are dropped by hypothesis. Two of those deletions are
+worth a number rather than a citation:
+
+\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
+\item \textbf{Axial conduction (H2)} is negligible by an enormous margin. The
+  axial diffusion time over one segment is $\Delta z^{2}/\alpha_{l} =
+  \SI{5.4e9}{\second}$ against a \SI{3.6e4}{\second} charging window --- a ratio
+  of $1.5\times10^{5}$. With $\Delta z = \SI{30.5}{\meter}$ this is not a close
+  call, and it would remain safe at a hundred times the segment count.
+\item \textbf{Azimuthal conduction (H9)} is \emph{not} negligible and is
+  assumed away pending the calculation described in \S\ref{sec:defects:h9}. At
+  the wellhead the neighbouring cell is \SI{48.9}{\kelvin} away and a slab
+  estimate gives $\sim\SI{22}{\watt\per\meter}$ against a useful duty of
+  $\sim\SI{83}{\watt\per\meter}$. This is the least defensible term in the
+  model.
+\end{itemize}
+
+\noindent
+Dividing by $\Delta z$ leaves the PCM balance in the form used by the code:
+\begin{equation}
+  \boxed{\;\frac{\mathrm{d}E'_{j}}{\mathrm{d}t} \;=\; q'_{j}\;}
+  \label{eq:pcm-balance}
+\end{equation}
+
+\medskip
+\noindent\textbf{Step 2 --- the fluid balance.}
+CV\,2 is open. For incompressible single-phase flow (H7) with no viscous
+dissipation, the energy equation per unit tube length is
+\begin{equation}
+  \underbrace{\rho A_{\mathrm{flow}} c_{p}\,\frac{\partial T}{\partial t}}
+             _{\text{fluid thermal inertia}}
+  \;+\;
+  \md\,c_{p}\,\frac{\partial T}{\partial z}
+  \;=\;
+  -\,q'(z) .
+  \label{eq:fluid-pde}
+\end{equation}
+
+The model drops the first term, and this deserves justification rather than
+assertion. Two comparisons, pointing the same way:
+
+\begin{center}
+\begin{tabular}{@{}l r l@{}}
+\toprule
+fluid transit time over $L_{\mathrm{tube}}$ & \SI{2264}{\second} & ($u=\SI{1.35}{\meter\per\second}$) \\
+charging window $t_{\mathrm{ch}}$           & \SI{36000}{\second} & \\
+\midrule
+ratio                                        & \num{0.063} & \\
+$\rho A_{\mathrm{flow}}c_{p} \,/\, C_{l}$    & \num{0.257} & fluid vs.\ PCM sensible capacity \\
+$\rho A_{\mathrm{flow}}c_{p}\Delta T \,/\, E'_{\mathrm{lat}}$
+   & \num{0.0122} & fluid swing vs.\ PCM latent, $\Delta T=\SI{10}{\kelvin}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The fluid re-establishes its profile in one transit, $\SI{2264}{\second}$,
+while the PCM state evolves over \SI{10}{\hour}: a $16\times$ separation, so
+quasi-steady is reasonable but \emph{not} asymptotic. The honest reading is
+that the first \SI{38}{\minute} of each half-cycle is a startup transient the
+model does not resolve, worth about \SI{6}{\percent} of the window. What makes
+this tolerable is the third row: the energy parked in the fluid is only
+\SI{1.2}{\percent} of the latent inventory it is charging, so the transient
+misplaces very little energy even though it lasts a noticeable fraction of the
+run.
+
+Setting $\partial T/\partial t = 0$ and using the fact that CV\,1 presents a
+\emph{single} temperature $T_{\mathrm{pcm}}$ to the whole segment
+(H5, the lumped state of \S\ref{sec:front:enthalpy}), the driving difference is
+$T(z)-T_{\mathrm{pcm}}$ and the local flux closes on the network of
+\S\ref{sec:network}:
+\begin{equation}
+  q'(z) \;=\; \Ui\,\bigl(2\pi r_{i}\bigr)\,\bigl[T(z)-T_{\mathrm{pcm}}\bigr].
+  \label{eq:local-flux}
+\end{equation}
+Note that $2\pi r_{i}$ appears, not $P_{T}$: $\Ui$ was referred to the
+\emph{inner} area in Eq.~\eqref{eq:Ui}, and the finned perimeter is already
+inside it through $R'_{\mathrm{outer}}$. Using $P_{T}$ here would count the fins
+twice --- which is a compact statement of the v0.1 defect.
+
+\medskip
+\noindent\textbf{Step 3 --- integrate across the segment.}
+Substituting Eq.~\eqref{eq:local-flux} into the steady form of
+Eq.~\eqref{eq:fluid-pde} gives a linear ODE in $z$ with $T_{\mathrm{pcm}}$ and
+$\Ui$ held constant over the segment:
+\begin{equation}
+  \md c_{p}\frac{\mathrm{d}T}{\mathrm{d}z}
+  = -2\pi r_{i}\Ui\bigl(T-T_{\mathrm{pcm}}\bigr)
+  \quad\Longrightarrow\quad
+  \frac{\mathrm{d}\bigl(T-T_{\mathrm{pcm}}\bigr)}{T-T_{\mathrm{pcm}}}
+  = -\frac{2\pi r_{i}\Ui}{\md c_{p}}\,\mathrm{d}z .
+\end{equation}
+Integrating from $z_{j}$ to $z_{j+1}$,
+\begin{equation}
+  T_{j+1} \;=\; T_{\mathrm{pcm}}
+    + \bigl(T_{j}-T_{\mathrm{pcm}}\bigr)e^{-\mathrm{NTU}_{j}},
+  \qquad
+  \mathrm{NTU}_{j} \;=\; \frac{2\pi r_{i}\,\Ui\,\Delta z}{\md\,c_{p}},
+  \label{eq:ntu-derived}
+\end{equation}
+which is Eq.~\eqref{eq:ntu}. It is the single-stream heat-exchanger result: one
+stream with finite capacity rate $\md c_{p}$, the other an isothermal reservoir
+of infinite capacity rate, effectiveness $\varepsilon = 1-e^{-\mathrm{NTU}}$.
+The reservoir idealisation is exactly what the lumped PCM state licenses.
+
+\medskip
+\noindent\textbf{Step 4 --- the closure.}
+The heat the fluid actually gives up over the segment is the enthalpy it loses,
+\begin{equation}
+  q'_{j}\,\Delta z \;=\; \md c_{p}\bigl(T_{j}-T_{j+1}\bigr)
+  \;\overset{\eqref{eq:ntu-derived}}{=}\;
+  \md c_{p}\bigl(T_{j}-T_{\mathrm{pcm}}\bigr)\bigl(1-e^{-\mathrm{NTU}_{j}}\bigr),
+\end{equation}
+and dividing by $\Delta z$ gives the conductance that closes
+Eq.~\eqref{eq:pcm-balance}:
+\begin{equation}
+  \boxed{\;
+  q'_{j} = K_{j}\bigl(T_{j}-T_{\mathrm{pcm}}\bigr),
+  \qquad
+  K_{j} = \frac{\md\,c_{p}\bigl(1-e^{-\mathrm{NTU}_{j}}\bigr)}{\Delta z} .
+  \;}
+  \label{eq:K-derived}
+\end{equation}
+
+Combining Eqs.~\eqref{eq:pcm-balance} and \eqref{eq:K-derived} with the
+enthalpy curve $T_{\mathrm{pcm}}(E')$ of Eq.~\eqref{eq:enth-curve} closes the
+system. This is the segment equation:
+\begin{equation}
+  \boxed{\;
   \frac{\mathrm{d}E'}{\mathrm{d}t}
-  \;=\; q' \;=\; K\left(T_{j} - T_{\mathrm{pcm}}(E')\right),
+  \;=\; K\left(T_{j} - T_{\mathrm{pcm}}(E')\right),
   \qquad
   K = \frac{\md\,c_{p}\left(1-e^{-\mathrm{NTU}}\right)}{\Delta z}.
+  \;}
   \label{eq:enth-ode}
 \end{equation}
 
-The conductance $K$ deserves a comment, because it is where the segment march
-and the melt front meet. It is not $U_{i}P_{i}$; it is the conductance
-\emph{implied by the effectiveness} of Eq.~\eqref{eq:ntu}. The distinction
-matters when $\mathrm{NTU}$ is large: a segment cannot extract more than the
-fluid's own capacity rate $\md c_{p}$ can carry, and the factor
-$\left(1-e^{-\mathrm{NTU}}\right)$ enforces that automatically. Writing $K$ this
-way makes the heat taken by the PCM and the heat given up by the fluid the same
-number by construction, which is what keeps energy closure structural rather
-than approximate.
+One unknown per segment, $E'$; everything else is either geometry, a property,
+or the upstream fluid temperature $T_{j}$ handed down by the segment before it.
+
+\paragraph{Why $K$ is not $\Ui P_{i}$.}
+This is the step most easily got wrong, so it is worth isolating. The naive
+closure takes Eq.~\eqref{eq:local-flux} with $T(z)\approx T_{j}$, giving
+$q'_{j}\approx 2\pi r_{i}\Ui (T_{j}-T_{\mathrm{pcm}})$. Comparing:
+\begin{equation}
+  \frac{K_{j}}{2\pi r_{i}\Ui}
+  \;=\;
+  \frac{1-e^{-\mathrm{NTU}_{j}}}{\mathrm{NTU}_{j}}
+  \;\le\; 1 .
+  \label{eq:K-ratio}
+\end{equation}
+The two limits say what the difference means:
+
+\begin{description}[leftmargin=1.9em,itemsep=3pt]
+\item[$\mathrm{NTU}\to0$:] the ratio $\to1$. The fluid barely cools across the
+  segment, $T(z)\approx T_{j}$ throughout, and the naive closure is right.
+\item[$\mathrm{NTU}\to\infty$:] $K\to \md c_{p}/\Delta z$, a finite limit set
+  by the \emph{fluid}, not the wall. No matter how good the borehole is, a
+  segment cannot absorb more than the stream can carry to it. The naive closure
+  has no such limit and would let $T_{j+1}$ fall below $T_{\mathrm{pcm}}$ ---
+  heat flowing from cold to hot, at a rate that grows without bound as $\Ui$
+  improves.
+\end{description}
+
+\noindent
+At this design point $\mathrm{NTU}$ runs from \num{0.083} to \num{0.602} over
+the charge, so Eq.~\eqref{eq:K-ratio} lies between \num{0.96} and \num{0.75}:
+\textbf{using $\Ui P_{i}$ would overstate the conductance by \SI{4}{\percent}
+to \SI{33}{\percent}}, worst where the melt layer is thinnest and the borehole
+best. The error is largest exactly where the model is most active, which is why
+it cannot be waved away as second order.
+
+\paragraph{Two properties inherited from this derivation.}
+
+\begin{description}[leftmargin=1.9em,itemsep=3pt]
+\item[Closure is structural.] The code does not evaluate
+  Eq.~\eqref{eq:K-derived} and Eq.~\eqref{eq:pcm-balance} independently. It
+  integrates Eq.~\eqref{eq:pcm-balance} over the step and \emph{reports}
+  $q'_{j}=(E'^{\,n+1}-E'^{\,n})/\Delta t$, then drops the fluid temperature by
+  exactly that amount, $T_{j+1}=T_{j}-q'_{j}\Delta z/(\md c_{p})$. Whatever the
+  PCM gained, the fluid lost, to machine precision, with no possibility of
+  drift.
+\item[$K$ is frozen over a time step, $T_{\mathrm{pcm}}$ is not.] $K_{j}$ is
+  evaluated once per step from the melt thickness at the start of it, whereas
+  $T_{\mathrm{pcm}}$ is advanced exactly inside the step by
+  Eq.~\eqref{eq:enth-exact}. The consequence is that $T_{j+1}$ equals the
+  $\varepsilon$--NTU result of Eq.~\eqref{eq:ntu-derived} only while the segment
+  is on the latent plateau, where $T_{\mathrm{pcm}}=\Tm$ is genuinely constant.
+  In the sensible branches the two differ at second order in $\Delta t$. This
+  is a deliberate choice: it keeps closure exact, which matters more than
+  matching an $\varepsilon$--NTU relation that is itself only quasi-steady.
+\end{description}
 
 Two properties of Eq.~\eqref{eq:enth-ode} drive everything that follows:
 

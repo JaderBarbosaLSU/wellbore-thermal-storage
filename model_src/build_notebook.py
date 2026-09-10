@@ -86,7 +86,7 @@ cells.append(md(r"""
 
 **THUMS · model version 0.4 · every equation visible in this notebook**
 
-**Last updated: __STAMP__**
+**Last updated: @@BUILD_STAMP@@**
 
 `JaderBarbosaLSU/wellbore-thermal-storage` · `notebooks/P2H2P_PCM_wellbore_storage.ipynb`
 
@@ -134,7 +134,7 @@ from CoolProp.CoolProp import PropsSI
 from math import log, pi
 from dataclasses import dataclass, replace
 
-LAST_UPDATED = '__STAMP__'
+LAST_UPDATED = '@@BUILD_STAMP@@'
 MODEL_VERSION = '0.4'
 
 print(f'THUMS P2H2P model v{MODEL_VERSION} · last updated {LAST_UPDATED}')
@@ -177,7 +177,8 @@ no change to the storage model can move them.
 | **H5** | *Revised in v0.4.* PCM carries latent **and** sensible energy, lumped into one enthalpy per segment: molten PCM superheats, solid PCM subcools. | no radial resolution *within* a phase — one PCM temperature per segment |
 | **H6** | Adiabatic borehole wall — no formation heat loss. | fine over 10 h, not over a season |
 | **H7** | Incompressible single-phase water, no buoyancy head. | ±7.5 bar in a 1,524 m loop is neglected |
-| **H8** | The PCM is layered along the well, melting point following the fluid glide. | |
+| **H8** | The PCM is layered along the well, melting point following the fluid glide. Layers are spaced along the **developed** tube length, so a hairpin's two legs are in *different* layers at the same depth. | see H9 |
+| **H9** | *New in v0.4a.* **Perfect azimuthal insulation**: each leg's PCM cell is adiabatic at its outer boundary, so no heat crosses between neighbouring legs at the same depth. | the two legs are up to **48.9 K** apart at the wellhead; a slab estimate puts the neglected leak at ~22 W/m against ~83 W/m of useful duty — §15 |
 """))
 
 # ---------------------------------------------------------------- 2. config
@@ -889,6 +890,37 @@ discharging.
 Recording appends to lists and touches nothing the solution depends on — §14.5
 verifies that a recorded and an unrecorded run are bit-identical.
 
+### Reading the depth axis: a hairpin has two legs
+
+The tube is a **hairpin** — down and back — so the developed coordinate $s$ runs
+$0\to L_{\rm tube}=2L_{\rm well}$ while the **depth** runs $0\to L_{\rm well}\to 0$.
+Every profile below is folded accordingly:
+
+$$\text{down leg: } s\in[0,L_{\rm well}],\ d=s \qquad
+\text{return leg: } s\in[L_{\rm well},L_{\rm tube}],\ d=L_{\rm tube}-s$$
+
+so **each depth carries two curves**: a solid line for the down leg and a dotted
+line for the return leg.
+
+> **This was previously wrong.** Earlier builds plotted $s/2$ and labelled it
+> depth, which linearly compressed the whole hairpin into the depth range and
+> drew the return leg upside down — developed $s=3000$ m is 48 m below surface,
+> not 1500 m.
+
+The fold makes an assumption visible that was hidden before. Because the cascade
+(**H8**) is laid out along $s$, the two legs sit in **different PCM layers at the
+same depth**:
+
+| depth [m] | down leg $T_m$ | return leg $T_m$ | gap |
+|---|---|---|---|
+| 0 | 150.0 °C | 101.1 °C | **48.9 K** |
+| 800 | 137.8 °C | 113.3 °C | 24.4 K |
+| 1524 | 125.6 °C | 125.6 °C | 0.0 K |
+
+The borehole cross-section must therefore be *partitioned*, with the down-leg
+PCM held apart from the return-leg PCM. **H9** assumes that partition is
+perfectly insulating. It is not free — see §15.
+
 ### Reading the melt-fraction plots
 
 The local melt fraction is the melted PCM in a segment divided by the PCM that
@@ -954,7 +986,31 @@ cells.append(md(r"""
 """))
 
 cells.append(code(r"""
-z = ch['z']/2.0                    # developed tube length -> depth (hairpin)
+# ---------------------------------------------------------------------------
+# DEPTH, not developed length. A hairpin goes down and comes back, so the
+# developed coordinate s runs 0 -> L_tube = 2 L_well while the DEPTH runs
+# 0 -> L_well -> 0. Earlier builds plotted s/2 and called it depth, which
+# linearly compressed the whole hairpin into the depth range and drew the
+# return leg upside down: developed s = 3000 m is 48 m below surface, not
+# 1500 m. The fold below is the correct map.
+#
+#     down leg    s in [0, L_well]          depth = s
+#     return leg  s in [L_well, L_tube]     depth = L_tube - s
+#
+# Because the cascade (H8) is laid out along s, the two legs carry DIFFERENT
+# melting temperatures at the same depth -- up to 48.9 K apart at the wellhead.
+# Under H9 they are assumed perfectly insulated from one another.
+s_dev = ch['z']                    # developed tube coordinate [m]
+half  = len(s_dev)//2
+z_dn  = s_dev[:half]                       # depth of the down leg
+z_up  = case.L_tube - s_dev[half:]         # depth of the return leg
+
+def legs(arr):
+    'Split a per-segment profile into (depth, values) for each leg.'
+    a = np.asarray(arr)
+    return (z_dn, a[:half]), (z_up, a[half:])
+
+z = s_dev/2.0                      # kept only for the time-depth maps below
 h = ch['history']
 
 # Choose the time levels to draw by TARGET TIME, not by index. The grid is
@@ -976,13 +1032,22 @@ fig, ax = plt.subplots(1, 4, figsize=(19, 4.6))
 
 for c_, k in zip(cmap, picks):
     lab = tlabel(ch['t'][k])
-    ax[0].plot(h['T_fluid'][k][1:]-273.15, z, color=c_, lw=1.4, label=lab)
-    ax[1].plot(h['A_melt'][k]/A_avail,     z, color=c_, lw=1.4, label=lab)
-    ax[2].plot(h['U_i'][k],                z, color=c_, lw=1.4, label=lab)
-    ax[3].plot(h['NTU'][k],                z, color=c_, lw=1.4, label=lab)
+    for col, series in ((0, h['T_fluid'][k][1:]-273.15),
+                        (1, h['A_melt'][k]/A_avail),
+                        (2, h['U_i'][k]),
+                        (3, h['NTU'][k])):
+        (zd, vd), (zu, vu) = legs(series)
+        ax[col].plot(vd, zd, color=c_, lw=1.4, ls='-',
+                     label=(lab if col == 0 else None))
+        ax[col].plot(vu, zu, color=c_, lw=1.4, ls=':')
 
-ax[0].plot(np.array(T_m_seg)-273.15, z, 'k--', lw=1, label='$T_m$ (cascade)')
-ax[0].set_xlabel('secondary-fluid temperature [°C]'); ax[0].set_ylabel('depth [m]')
+# the cascade itself, folded the same way -- the gap between the two dashed
+# curves at a given depth is what H9 assumes is perfectly insulated
+(zd, vd), (zu, vu) = legs(np.array(T_m_seg)-273.15)
+ax[0].plot(vd, zd, 'k--', lw=1, label='$T_m$ down leg')
+ax[0].plot(vu, zu, 'k:',  lw=1, label='$T_m$ return leg')
+ax[0].set_xlabel('secondary-fluid temperature [°C]')
+ax[0].set_ylabel('depth [m]   (solid = down leg, dotted = return leg)')
 # eps_local = 1 and "fronts merge" are the SAME line -- see the check below
 ax[1].axvline(1.0, color='crimson', ls='-', lw=1.2,
               label=r'$\varepsilon_{local}=1$ = fronts merge')
@@ -1050,12 +1115,19 @@ picks = pick_times(dc['t'], targets)          # dc grid, same target times
 fig, ax = plt.subplots(1, 4, figsize=(19, 4.6))
 for c_, k in zip(cmap, picks):
     lab = tlabel(dc['t'][k])
-    ax[0].plot(hd['T_fluid'][k][1:]-273.15, z, color=c_, lw=1.4, label=lab)
-    ax[1].plot(hd['A_melt'][k]/A_avail,     z, color=c_, lw=1.4, label=lab)
-    ax[2].plot(hd['U_i'][k],                z, color=c_, lw=1.4, label=lab)
-    ax[3].plot(hd['NTU'][k],                z, color=c_, lw=1.4, label=lab)
-ax[0].plot(np.array(T_m_seg_dc)-273.15, z, 'k--', lw=1, label='$T_m$ (cascade)')
-ax[0].set_xlabel('secondary-fluid temperature [°C]'); ax[0].set_ylabel('depth [m]')
+    for col, series in ((0, hd['T_fluid'][k][1:]-273.15),
+                        (1, hd['A_melt'][k]/A_avail),
+                        (2, hd['U_i'][k]),
+                        (3, hd['NTU'][k])):
+        (zd, vd), (zu, vu) = legs(series)
+        ax[col].plot(vd, zd, color=c_, lw=1.4, ls='-',
+                     label=(lab if col == 0 else None))
+        ax[col].plot(vu, zu, color=c_, lw=1.4, ls=':')
+(zd, vd), (zu, vu) = legs(np.array(T_m_seg_dc)-273.15)
+ax[0].plot(vd, zd, 'k--', lw=1, label='$T_m$ down leg')
+ax[0].plot(vu, zu, 'k:',  lw=1, label='$T_m$ return leg')
+ax[0].set_xlabel('secondary-fluid temperature [°C]')
+ax[0].set_ylabel('depth [m]   (solid = down leg, dotted = return leg)')
 ax[1].axvline(1.0, color='crimson', ls='-', lw=1.2)
 ax[1].axvline(0.0, color='k', lw=1)
 ax[1].set_xlabel(r'local melt fraction  $\varepsilon_{local}$')
@@ -1103,7 +1175,7 @@ for a, hh, tt, ttl in ((ax[0], h, ch['t'], 'charging'),
     a.clabel(cs, fmt=r'$\varepsilon=1$', fontsize=8)
     a.set_xlabel('time [h]'); a.set_title(ttl)
     plt.colorbar(im, ax=a, label=r'$\varepsilon_{local}$')
-ax[0].set_ylabel('depth [m]'); ax[0].invert_yaxis()
+ax[0].set_ylabel('developed tube length / 2 [m]'); ax[0].invert_yaxis()
 plt.tight_layout(); plt.show()
 
 F_end = ch['A_melt']/A_avail
@@ -1235,14 +1307,23 @@ consistency is not validation, and a reviewer will ask.
    Both errors point the same way — the model **understates** late-stage
    resistance and **cannot credit** fins for relieving it. This now carries a
    design decision (§12.1), so it is the most consequential open item.
-2. Make $\lambda$ an output rather than an assumed 5 %. At the v0.4 design point
+2. **Evaluate H9 — the azimuthal leak between cascade layers.** Assumed perfect
+   for now. At the wellhead the neighbouring cell is 48.9 K away and a slab
+   estimate gives ~22 W/m against ~83 W/m of useful duty — of order **25 %**,
+   and it flows from the hot layer to the cold one, partially undoing what
+   $N_{\rm lay}$ is for. Three consequences: $N_{\rm lay}$ cannot be swept for
+   free; a leg's neighbour *within* a partition half is a genuine front merge
+   while *across* it is a heat leak; and the insulation itself displaces PCM,
+   raising $N_{\rm capacity}$. The same 2-D cell calculation that settles
+   item 1 would settle this.
+3. Make $\lambda$ an output rather than an assumed 5 %. At the v0.4 design point
    the field banks about 7 % more than the ORC withdraws, against the 5 % assumed.
-3. Quote results at $n_{times}=160$: `eps_PCM` moves $-0.3\,\%$ from 40 to 320
+4. Quote results at $n_{times}=160$: `eps_PCM` moves $-0.3\,\%$ from 40 to 320
    time levels, one-sided, so the default carries a small known bias.
-4. Model the melt-front shape around the fins, and the volume change on melting.
-5. Re-optimise the fin geometry once (1) is settled. §12.1 puts the optimum at
+5. Model the melt-front shape around the fins, and the volume change on melting.
+6. Re-optimise the fin geometry once (1) is settled. §12.1 puts the optimum at
    16 fins × 7.5 mm, but for the reasons above that is a floor, not an answer.
-6. **Find an external validation case.** Still the largest gap — energy closure
+7. **Find an external validation case.** Still the largest gap — energy closure
    is structural and proves nothing about correctness.
 
 ---
@@ -1271,12 +1352,13 @@ doc = json.dumps(nb, indent=1)
 # shipped reading "Last updated: __STAMP__" -- a dead placeholder is worse than
 # no timestamp, because it looks like a rendering fault rather than a stale
 # build. Assert afterwards so it cannot fail silently again.
-n_stamp = doc.count('__STAMP__')
-doc = doc.replace('__STAMP__', STAMP)
-if n_stamp == 0:
-    raise SystemExit('no __STAMP__ placeholder found -- the build stamp is gone')
-if '__STAMP__' in doc:
-    raise SystemExit('__STAMP__ survived substitution')
+SENTINEL = '@@BUILD' + '_STAMP@@'      # split so this line never self-matches
+n_stamp = doc.count(SENTINEL)
+doc = doc.replace(SENTINEL, STAMP)
+if n_stamp != 2:
+    raise SystemExit(f'expected 2 build-stamp sites, found {n_stamp}')
+if SENTINEL in doc:
+    raise SystemExit('build stamp survived substitution')
 
 OUT.write_text(doc)
 print(f'  build stamp: {STAMP}  ({n_stamp} substitutions)')

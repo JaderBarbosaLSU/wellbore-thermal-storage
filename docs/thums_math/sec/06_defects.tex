@@ -137,6 +137,109 @@ comfortably inside the \SI{10}{\hour} window --- which is why a bare tube
 they are not marginal at all.
 
 %---------------------------------------------------------------------
+\subsection{H9 --- azimuthal insulation between cascade layers}
+\label{sec:defects:h9}
+
+\emph{Assumed perfect in v0.4a so that the rest of the model can be evaluated.
+This section states what is being assumed away, and what it is worth, so the
+assumption can be tested rather than inherited.}
+
+\subsubsection*{Where the requirement comes from}
+
+The cascade (H8) assigns melting temperatures along the \emph{developed} tube
+length $L_{\mathrm{tube}}=2L_{\mathrm{well}}$, because that is the coordinate
+the fluid actually traverses. A hairpin's down leg occupies
+$s\in[0,L_{\mathrm{well}}]$ and its return leg $s\in[L_{\mathrm{well}},
+L_{\mathrm{tube}}]$, so at a given \emph{depth} $d$ the two legs sit at
+developed positions $s=d$ and $s=L_{\mathrm{tube}}-d$ --- in different layers:
+
+\begin{center}
+\begin{tabular}{@{}r r r r@{}}
+\toprule
+depth [m] & down leg $\Tm$ [\degC] & return leg $\Tm$ [\degC] & gap [K] \\
+\midrule
+   0 & 150.0 & 101.1 & \textbf{48.9} \\
+ 400 & 143.9 & 107.2 & 36.7 \\
+ 800 & 137.8 & 113.3 & 24.4 \\
+1200 & 131.7 & 119.4 & 12.2 \\
+1524 & 125.6 & 125.6 & \phantom{0}0.0 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The borehole cross-section must therefore be \emph{partitioned}: at every depth
+the PCM around the down legs is a different material from the PCM around the
+return legs, and the two are asked to hold a temperature difference of up to
+\SI{48.9}{\kelvin} across a gap of a few centimetres. The design is silent on
+how this partition is built.
+
+The per-leg area bookkeeping is nonetheless correct.
+$A_{\mathrm{avail}}=V_{\mathrm{well}}/(n_{t}L_{\mathrm{tube}})$ and
+$L_{\mathrm{tube}}=2L_{\mathrm{well}}$, so the divisor is the total \emph{leg}
+length $2n_{t}L_{\mathrm{well}}$ and each of the $2n_{t}=4$ legs owns exactly a
+quarter of the PCM cross-section, \SI{4.5411e-3}{\meter\squared}. That is what
+Eq.~\eqref{eq:rcell} encodes, and it is unaffected by how the partition is
+drawn --- a quarter-disc and a half-of-a-half-disc have the same area, hence the
+same $\delta_{\mathrm{merge}}$.
+
+\subsubsection*{What it is worth}
+
+Treating the interface between adjacent cells as a slab of width and path length
+both $\sim 2r_{\mathrm{cell}}$ gives $q'_{\mathrm{leak}} \sim \km\,\Delta T$:
+
+\begin{center}
+\begin{tabular}{@{}l r r@{}}
+\toprule
+ & $\Delta T$ [K] & $q'_{\mathrm{leak}}$ [\si{\watt\per\meter}] \\
+\midrule
+wellhead    & 48.9 & 22.0 \\
+mid-depth   & 24.4 & 11.0 \\
+well bottom &  0.0 &  0.0 \\
+\midrule
+useful duty $q'$, time-mean over the charge & & 82.8 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Of order \SI{25}{\percent} of the useful duty at the wellhead. Even allowing a
+shape factor two or three times kinder than a slab, this is a first-order term,
+and its sign is unfavourable in a specific way: the leak flows from the hot
+layer to the cold layer, which is exactly the temperature separation the cascade
+is built to create. An uninsulated partition does not merely lose energy --- it
+partially undoes $N_{\mathrm{lay}}$.
+
+Three consequences follow for the work still to be done.
+
+\begin{enumerate}[leftmargin=1.7em,itemsep=3pt]
+\item \textbf{$N_{\mathrm{lay}}$ can no longer be swept for free.} More layers
+  means a finer cascade and a better match to the glide, but also a larger
+  layer-to-layer $\Delta T$ at the wellhead and hence a larger leak. There is an
+  optimum, and the present model cannot see it because the leak is zero by
+  assumption.
+\item \textbf{The neighbour relationship is not uniform.} Within one half of the
+  partition a leg's neighbour carries the \emph{same} $\Tm$, so their fronts
+  meeting is a genuine merge (H3, \S\ref{sec:defects:h3}). Across the partition
+  the neighbour carries a different $\Tm$, so the same geometric event is a heat
+  leak, not a merge. The model treats all four legs identically and adiabatically.
+\item \textbf{The partition displaces PCM.} Whatever insulates the two halves
+  occupies borehole volume and therefore reduces $V_{\mathrm{well}}$, which by
+  \S\ref{sec:hydraulics:capacity} raises $N_{\mathrm{capacity}}$ directly. The
+  insulation is not free even before its thermal performance is considered.
+\end{enumerate}
+
+\subsubsection*{How to settle it}
+
+The same two-dimensional conduction calculation in the cell that
+\S\ref{sec:defects:h3} requires would also deliver this, since both are
+questions about what happens at a cell's outer boundary. One calculation, on the
+real cross-section rather than an equivalent annulus, resolves the corner PCM,
+the reduced conducting azimuth, the fins' reach into the corners, and the
+cross-partition leak together. Until then H9 is held as an idealisation and the
+well counts in this document should be read as optimistic.
+
+%---------------------------------------------------------------------
 \subsection{Where the closed-form front fails}
 
 Formulation~A (\S\ref{sec:front:legacy}) rests on two premises, both false in
@@ -324,7 +427,9 @@ version & date & change \\
   alone. Melt-front limit corrected from the borehole wall to the cell radius,
   Eq.~\eqref{eq:rcell}, and H3 proximity now reported
   (\S\ref{sec:defects:h3}); the fin count and the charging window follow from
-  it. \\
+  it. The segment equation is derived in full (\S\ref{sec:front:segeq}).
+  Hypothesis \textbf{H9} (perfect azimuthal insulation between cascade layers)
+  stated explicitly and quantified (\S\ref{sec:defects:h9}). \\
 0.4 & 2026-09 &
   Melt front carries \emph{enthalpy} rather than melted area
   (\S\ref{sec:front:enthalpy}): superheat above $\Tm$, subcool below it, no

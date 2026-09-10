@@ -111,7 +111,24 @@ operating regime are revisited in \S\ref{sec:defects}.
 \item[H8 --- Multilayer PCM.] The well is divided into $N_{\mathrm{lay}}$ axial
   layers of distinct melting temperature, so that the PCM melting point follows
   the fluid glide down the well. Layer boundaries are equally spaced along the
-  tube.
+  \emph{developed} tube length $L_{\mathrm{tube}}$, not the depth --- so a
+  hairpin's down leg and return leg belong to \emph{different} layers at the
+  same depth. See H9.
+\item[H9 --- Perfect azimuthal insulation.] \emph{New in v0.4a, and the
+  weakest assumption in the set.} Each tube leg owns an equivalent PCM cell of
+  radius $r_{\mathrm{cell}}$ (Eq.~\eqref{eq:rcell}) whose outer boundary is
+  adiabatic: no heat crosses between the cells of neighbouring legs at the same
+  depth. Because H8 cascades along the developed length, those neighbours are at
+  \emph{different} melting temperatures --- up to \SI{48.9}{\kelvin} apart at
+  the wellhead, falling to zero at the well bottom where the two legs meet. The
+  assumption therefore requires a physical partition between the down-leg and
+  return-leg PCM \emph{and} that the partition be insulating. Neither is
+  designed, costed, or modelled. A slab estimate puts the neglected leak at
+  $\sim\SI{22}{\watt\per\meter}$ against a useful duty of
+  $\sim\SI{83}{\watt\per\meter}$ at the wellhead --- of order
+  \SI{25}{\percent}, and acting to erase precisely the temperature separation
+  the cascade exists to create. Held as an idealisation pending evaluation;
+  \S\ref{sec:defects:h9}.
 \end{description}
 
 %---------------------------------------------------------------------
