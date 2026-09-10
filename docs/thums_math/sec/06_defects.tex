@@ -150,8 +150,9 @@ The cascade (H8) assigns melting temperatures along the \emph{developed} tube
 length $L_{\mathrm{tube}}=2L_{\mathrm{well}}$, because that is the coordinate
 the fluid actually traverses. A hairpin's down leg occupies
 $s\in[0,L_{\mathrm{well}}]$ and its return leg $s\in[L_{\mathrm{well}},
-L_{\mathrm{tube}}]$, so at a given \emph{depth} $d$ the two legs sit at
-developed positions $s=d$ and $s=L_{\mathrm{tube}}-d$ --- in different layers:
+L_{\mathrm{tube}}]$, so by Eq.~\eqref{eq:depth-fold} the two legs at a given
+depth $d$ sit at developed positions $s=d$ and $s=L_{\mathrm{tube}}-d$ --- in
+different layers:
 
 \begin{center}
 \begin{tabular}{@{}r r r r@{}}
@@ -338,6 +339,15 @@ one gives a model that never existed.
 \subsection{Absent terms}
 
 \begin{description}[leftmargin=1.6em,itemsep=3pt]
+\item[Azimuthal conduction between cells.] Hypothesis H9,
+  \S\ref{sec:defects:h9}. The largest single omission: neighbouring legs are up
+  to \SI{48.9}{\kelvin} apart by construction and the term is simply absent from
+  the balance of \S\ref{sec:front:segeq}.
+\item[Fluid thermal inertia.] Hypothesis H7, quantified in
+  \S\ref{sec:front:segeq}. Dropping $\partial T/\partial t$ leaves an
+  unresolved startup transient of about \SI{38}{\minute} per half-cycle,
+  \SI{6}{\percent} of the window, though only \SI{1.2}{\percent} of the latent
+  inventory is involved.
 \item[Formation heat loss.] Hypothesis H6. The borehole wall is adiabatic. Over
   a \SI{10}{\hour} cycle this is defensible; over seasonal storage it is not.
   The geothermal gradient is carried in the configuration and used in no energy

@@ -1,0 +1,701 @@
+%---------------------------------------------------------------------
+\subsection{Formulation C --- enthalpy state (v0.4)}
+\label{sec:front:enthalpy}
+
+\emph{This subsection is written at greater length than the rest of the
+document. Formulation~C is the part of the model a new student is most likely to
+have to modify, and it is the part where the reasoning --- not the final
+formula --- is what has to be understood. Readers who only want the equations
+can take Eqs.~\eqref{eq:enth-curve}, \eqref{eq:enth-ode} and
+\eqref{eq:enth-exact} and skip the discussion.}
+
+\subsubsection{The question a state variable answers}
+
+Every transient model must decide what it \emph{remembers} from one instant to
+the next. That choice --- the state variable --- is not cosmetic. It decides
+which physical situations the model can represent at all, because anything the
+state cannot encode is a situation the model cannot be in.
+
+The three formulations in this section are three answers to that one question,
+and they are best read as a sequence:
+
+\begin{center}
+\begin{tabular}{@{}l l l@{}}
+\toprule
+ & state variable & what it can represent \\
+\midrule
+A (v0.1) & $\delta$, from a closed form & a melt front, at one prescribed $\Tre$ \\
+B (v0.2) & $\Amelt$, integrated & a melt front, driven by the actual heat flow \\
+C (v0.4) & $E'$, integrated & a melt front \emph{and} a PCM temperature \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Formulations A and B both store \emph{how much has melted} and nothing else.
+Ask either of them ``how hot is the PCM in segment~$j$?'' and the only available
+answer is $\Tm$ --- because that is all the state can say. While some solid
+remains that answer is correct, and it is why the omission went unnoticed for so
+long.
+
+\subsubsection{Where Formulation B breaks, and why it is not a small error}
+
+Consider a segment near the well head during charging. The secondary fluid
+enters at $T_{4c}=\SI{160}{\celsius}$; the PCM melts at
+$\Tm=\SI{150}{\celsius}$. That segment sees the hottest fluid, so it melts
+first. Once its last solid is gone, the resistance network still reports a
+positive heat flow --- the fluid is still \SI{10}{\kelvin} hotter than the
+melting point, and nothing in Eq.~\eqref{eq:Ui} knows the segment is finished.
+
+Formulation~B must then do one of two things, and both are wrong:
+
+\begin{enumerate}[leftmargin=1.7em,itemsep=2pt]
+\item \textbf{Keep melting.} $\Amelt$ grows past the PCM the segment actually
+  contains. This is what the unguarded version did, and it produced local melt
+  fractions up to $\varepsilon_{\mathrm{local}}=1.78$: the model drew latent
+  heat from material that was not there.
+\item \textbf{Clip and discard.} Cap $\Amelt$ at $A_{\mathrm{avail}}$ and throw
+  the surplus away. Now the melt fraction is physical, but energy is not
+  conserved --- and the fluid leaves the segment at the wrong temperature,
+  because it gave up heat that went nowhere.
+\end{enumerate}
+
+The second is what the guarded version did, and the magnitude is the reason this
+is not a rounding-level concern. At the design point the heat discarded during
+\emph{discharge} reached \SI{148}{\percent} of the heat delivered. Most of what
+the resistance network asked for was thrown away, and the round-trip figures
+were computed on what was left.
+
+Notice that no amount of care inside the march can fix this. The defect is in
+the \emph{state}: a variable that counts melted area has no slot for ``liquid
+above $\Tm$''. The physics has to be given somewhere to live.
+
+\subsubsection{Why enthalpy, and not temperature}
+
+The obvious repair is to carry a PCM temperature alongside the melted area. It
+is also the wrong repair, and the reason is worth understanding because it
+recurs throughout phase-change modelling.
+
+At a phase change, temperature is a \emph{bad} state variable: it is not
+invertible. During melting the PCM sits at $\Tm$ while its energy content
+climbs by the entire latent heat, so $T$ carries no information at all
+throughout the process that dominates the problem. Carrying $(T, \Amelt)$ as a
+pair works, but then the code must decide at every step which of the two is
+active, keep them consistent, and handle the moments when the active variable
+changes.
+
+Enthalpy is invertible. Every state of the PCM --- subcooled solid, mid-melt,
+superheated liquid --- corresponds to exactly one value of $E'$, and $E'$ moves
+monotonically as heat is added. So a \emph{single} scalar per segment encodes
+all three regimes, and the regime is read off from the value rather than tracked
+separately. Figure~\ref{fig:enthalpy-curve} is the whole idea in one picture.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[>=Stealth, scale=1.0]
+  % axes
+  \draw[->,thick] (0,0) -- (9.6,0) node[right] {$T_{\mathrm{pcm}}$};
+  \draw[->,thick] (0,0) -- (0,5.8) node[above] {$E'$};
+  % melting temperature
+  \draw[dashed,gray] (4.9,0) -- (4.9,5.4);
+  \node[below] at (4.9,0) {$\Tm$};
+  % latent plateau markers
+  \draw[dashed,gray] (0,1.5) -- (4.9,1.5) node[pos=0,left] {$0$};
+  \draw[dashed,gray] (0,3.5) -- (4.9,3.5) node[pos=0,left] {$E'_{\mathrm{lat}}$};
+  % the curve: solid branch, plateau, liquid branch
+  \draw[very thick] (1.2,0.05) -- (4.9,1.5);
+  \draw[very thick] (4.9,1.5) -- (4.9,3.5);
+  \draw[very thick] (4.9,3.5) -- (8.9,5.05);
+  % branch labels, all kept clear of the curve and of each other
+  \node[align=left,font=\small,anchor=west] at (0.85,2.65)
+    {solid, subcooled\\[1pt] slope $C_{s}$};
+  \node[align=center,font=\small] at (6.9,5.3)
+    {liquid, superheated\\[1pt] slope $C_{l}$};
+  % latent plateau annotation, placed to the LEFT of the vertical segment
+  \draw[<->,thick,black!60] (4.55,1.5) -- (4.55,3.5);
+  \node[font=\small,align=right,anchor=east,black!70] at (4.4,1.95)
+    {latent heat\\$\rhom\hm A_{\mathrm{avail}}$};
+  % melt-fraction callout, to the RIGHT and well below the liquid branch
+  \filldraw (4.9,2.6) circle (1.6pt);
+  \draw[->,black!60] (5.9,1.75) -- (4.99,2.53);
+  \node[font=\small,align=left,anchor=west,black!70] at (5.95,1.6)
+    {position here is\\$\Amelt = E'/(\rhom\hm)$};
+\end{tikzpicture}
+\caption{The enthalpy curve, Eq.~\eqref{eq:enth-curve}. Reading it as
+$E'(T)$ it is multivalued at $\Tm$ --- which is exactly why $T$ cannot be the
+state. Reading it as $T(E')$, the direction the code uses, it is single-valued
+everywhere. Position on the vertical segment is the melt fraction.}
+\label{fig:enthalpy-curve}
+\end{figure}
+
+\subsubsection{The state, its capacities, and their sizes}
+
+Let $E'$ be the enthalpy per unit tube length of the PCM belonging to one
+segment, measured from a datum of \emph{fully solid at $\Tm$}. The datum is
+arbitrary but this choice puts the two branch boundaries at $0$ and
+$E'_{\mathrm{lat}}$, which keeps the tests in the code short.
+
+With $A_{\mathrm{avail}}=V_{\mathrm{well}}/(n_{t}L_{\mathrm{tube}})$ the PCM
+cross-section a segment actually owns,
+\begin{equation}
+  E'_{\mathrm{lat}} = \rhom \hm A_{\mathrm{avail}},
+  \qquad
+  C_{s} = \rhom c_{p,s} A_{\mathrm{avail}},
+  \qquad
+  C_{l} = \rhom c_{p,l} A_{\mathrm{avail}},
+  \label{eq:enth-caps}
+\end{equation}
+are the latent capacity and the two sensible capacities, all per unit tube
+length. Their numerical values at the design point are worth committing to
+memory, because they explain the behaviour of the whole formulation:
+
+\begin{center}
+\begin{tabular}{@{}l r l@{}}
+\toprule
+quantity & value & \\
+\midrule
+$A_{\mathrm{avail}}$      & \num{4.5411e-3} & \si{\meter\squared} \\
+$E'_{\mathrm{lat}}$       & \num{2.675}     & \si{\mega\joule\per\meter} \\
+$C_{s}$                   & \num{9.010e3}   & \si{\joule\per\meter\per\kelvin} \\
+$C_{l}$                   & \num{1.267e4}   & \si{\joule\per\meter\per\kelvin} \\
+\midrule
+$C_{l}/E'_{\mathrm{lat}}$ & \num{4.74e-3}   & \si{\per\kelvin} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+That last ratio is the Stefan number in disguise. One kelvin of superheat is
+worth \SI{0.47}{\percent} of the latent capacity, so the sensible branches are
+\emph{energetically} minor --- with the \SI{10}{\kelvin} approach available
+here, at most about \SI{4.7}{\percent}. A reader could reasonably conclude that
+the whole formulation is a small correction. It is not, and
+\S\ref{sec:front:levelling} explains why: the sensible branches matter through
+the \emph{driving temperature difference}, not through the energy they store.
+
+The enthalpy curve and the melted area follow directly:
+\begin{equation}
+  T_{\mathrm{pcm}} =
+  \begin{dcases}
+    \Tm + E'/C_{s}, & E' < 0 \quad\text{(solid, subcooled)},\\[2pt]
+    \Tm, & 0 \le E' \le E'_{\mathrm{lat}} \quad\text{(two-phase)},\\[2pt]
+    \Tm + \bigl(E'-E'_{\mathrm{lat}}\bigr)/C_{l},
+      & E' > E'_{\mathrm{lat}} \quad\text{(liquid, superheated)},
+  \end{dcases}
+  \qquad
+  \Amelt = \frac{\min\!\left(\max(E',0),\,E'_{\mathrm{lat}}\right)}{\rhom \hm}.
+  \label{eq:enth-curve}
+\end{equation}
+
+The clipping in $\Amelt$ is not a guard bolted on to prevent bad behaviour ---
+it is the definition. Melted area saturates because a segment cannot melt PCM it
+does not own, and superheat is where the extra energy goes. This is the sense in
+which $\varepsilon_{\mathrm{local}}\in[0,1]$ is \emph{structural} in
+Formulation~C: there is no code path that can violate it, so no test is needed.
+
+\subsubsection{The segment equation, derived}
+\label{sec:front:segeq}
+
+Equation~\eqref{eq:enth-ode} below is the heart of the march, and it is short
+enough to look like a definition. It is not: it is the result of writing an
+energy balance on two different control volumes and then eliminating the
+quantity they share. This subsection does that in full, because the conductance
+$K$ that comes out is \emph{not} the $\Ui P_{i}$ a reader would write down
+unaided, and the difference reaches \SI{33}{\percent} at this design point.
+
+\paragraph{The two control volumes.}
+Fix a segment $j$, spanning $z\in[z_{j},z_{j+1}]$ with $\Delta z =
+z_{j+1}-z_{j}$. Two control volumes share the tube wall over that interval:
+
+\begin{description}[leftmargin=1.9em,itemsep=2pt]
+\item[CV\,1 --- the PCM] belonging to segment $j$: cross-section
+  $A_{\mathrm{avail}}$, length $\Delta z$, stationary, closed.
+\item[CV\,2 --- the fluid] inside the tube over the same interval:
+  cross-section $A_{\mathrm{flow}}=\pi r_{i}^{2}$, open, with mass flow $\md$
+  entering at $T_{j}$ and leaving at $T_{j+1}$.
+\end{description}
+
+\noindent
+Write $q'_{j}$ for the heat per unit tube length crossing from CV\,2 into
+CV\,1. It appears in both balances with opposite sign, and eliminating it is
+the whole exercise.
+
+\medskip
+\noindent\textbf{Step 1 --- the PCM balance.}
+CV\,1 is closed and stationary, so the first law reduces to a statement about
+its enthalpy alone. With $E'$ the enthalpy per unit tube length
+(\S\ref{sec:front:enthalpy}), the enthalpy of the control volume is
+$E'\Delta z$ and
+\begin{equation}
+  \frac{\mathrm{d}}{\mathrm{d}t}\bigl(E'_{j}\,\Delta z\bigr)
+  \;=\;
+  \underbrace{q'_{j}\,\Delta z}_{\text{through the tube wall}}
+  \;\underbrace{-\;\bigl[\dot Q_{\mathrm{ax}}\bigr]_{z_{j}}^{z_{j+1}}}
+              _{\text{axial conduction, H2}}
+  \;+\;\underbrace{\dot Q_{\mathrm{form}}}_{\text{formation, H6}}
+  \;+\;\underbrace{\dot Q_{\mathrm{azi}}}_{\text{neighbours, H9}} ,
+\end{equation}
+and the last three terms are dropped by hypothesis. Two of those deletions are
+worth a number rather than a citation:
+
+\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
+\item \textbf{Axial conduction (H2)} is negligible by an enormous margin. The
+  axial diffusion time over one segment is $\Delta z^{2}/\alpha_{l} =
+  \SI{5.4e9}{\second}$ against a \SI{3.6e4}{\second} charging window --- a ratio
+  of $1.5\times10^{5}$. With $\Delta z = \SI{30.5}{\meter}$ this is not a close
+  call, and it would remain safe at a hundred times the segment count.
+\item \textbf{Azimuthal conduction (H9)} is \emph{not} negligible and is
+  assumed away pending the calculation described in \S\ref{sec:defects:h9}. At
+  the wellhead the neighbouring cell is \SI{48.9}{\kelvin} away and a slab
+  estimate gives $\sim\SI{22}{\watt\per\meter}$ against a useful duty of
+  $\sim\SI{83}{\watt\per\meter}$. This is the least defensible term in the
+  model.
+\end{itemize}
+
+\noindent
+Dividing by $\Delta z$ leaves the PCM balance in the form used by the code:
+\begin{equation}
+  \boxed{\;\frac{\mathrm{d}E'_{j}}{\mathrm{d}t} \;=\; q'_{j}\;}
+  \label{eq:pcm-balance}
+\end{equation}
+
+\medskip
+\noindent\textbf{Step 2 --- the fluid balance.}
+CV\,2 is open. For incompressible single-phase flow (H7) with no viscous
+dissipation, the energy equation per unit tube length is
+\begin{equation}
+  \underbrace{\rho A_{\mathrm{flow}} c_{p}\,\frac{\partial T}{\partial t}}
+             _{\text{fluid thermal inertia}}
+  \;+\;
+  \md\,c_{p}\,\frac{\partial T}{\partial z}
+  \;=\;
+  -\,q'(z) .
+  \label{eq:fluid-pde}
+\end{equation}
+
+The model drops the first term, and this deserves justification rather than
+assertion. Two comparisons, pointing the same way:
+
+\begin{center}
+\begin{tabular}{@{}l r l@{}}
+\toprule
+fluid transit time over $L_{\mathrm{tube}}$ & \SI{2264}{\second} & ($u=\SI{1.35}{\meter\per\second}$) \\
+charging window $t_{\mathrm{ch}}$           & \SI{36000}{\second} & \\
+\midrule
+ratio                                        & \num{0.063} & \\
+$\rho A_{\mathrm{flow}}c_{p} \,/\, C_{l}$    & \num{0.257} & fluid vs.\ PCM sensible capacity \\
+$\rho A_{\mathrm{flow}}c_{p}\Delta T \,/\, E'_{\mathrm{lat}}$
+   & \num{0.0122} & fluid swing vs.\ PCM latent, $\Delta T=\SI{10}{\kelvin}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The fluid re-establishes its profile in one transit, $\SI{2264}{\second}$,
+while the PCM state evolves over \SI{10}{\hour}: a $16\times$ separation, so
+quasi-steady is reasonable but \emph{not} asymptotic. The honest reading is
+that the first \SI{38}{\minute} of each half-cycle is a startup transient the
+model does not resolve, worth about \SI{6}{\percent} of the window. What makes
+this tolerable is the third row: the energy parked in the fluid is only
+\SI{1.2}{\percent} of the latent inventory it is charging, so the transient
+misplaces very little energy even though it lasts a noticeable fraction of the
+run.
+
+Setting $\partial T/\partial t = 0$ and using the fact that CV\,1 presents a
+\emph{single} temperature $T_{\mathrm{pcm}}$ to the whole segment
+(H5, the lumped state of \S\ref{sec:front:enthalpy}), the driving difference is
+$T(z)-T_{\mathrm{pcm}}$ and the local flux closes on the network of
+\S\ref{sec:network}:
+\begin{equation}
+  q'(z) \;=\; \Ui\,\bigl(2\pi r_{i}\bigr)\,\bigl[T(z)-T_{\mathrm{pcm}}\bigr].
+  \label{eq:local-flux}
+\end{equation}
+Note that $2\pi r_{i}$ appears, not $P_{T}$: $\Ui$ was referred to the
+\emph{inner} area in Eq.~\eqref{eq:Ui}, and the finned perimeter is already
+inside it through $R'_{\mathrm{outer}}$. Using $P_{T}$ here would count the fins
+twice --- which is a compact statement of the v0.1 defect.
+
+\medskip
+\noindent\textbf{Step 3 --- integrate across the segment.}
+Substituting Eq.~\eqref{eq:local-flux} into the steady form of
+Eq.~\eqref{eq:fluid-pde} gives a linear ODE in $z$ with $T_{\mathrm{pcm}}$ and
+$\Ui$ held constant over the segment:
+\begin{equation}
+  \md c_{p}\frac{\mathrm{d}T}{\mathrm{d}z}
+  = -2\pi r_{i}\Ui\bigl(T-T_{\mathrm{pcm}}\bigr)
+  \quad\Longrightarrow\quad
+  \frac{\mathrm{d}\bigl(T-T_{\mathrm{pcm}}\bigr)}{T-T_{\mathrm{pcm}}}
+  = -\frac{2\pi r_{i}\Ui}{\md c_{p}}\,\mathrm{d}z .
+\end{equation}
+Integrating from $z_{j}$ to $z_{j+1}$,
+\begin{equation}
+  T_{j+1} \;=\; T_{\mathrm{pcm}}
+    + \bigl(T_{j}-T_{\mathrm{pcm}}\bigr)e^{-\mathrm{NTU}_{j}},
+  \qquad
+  \mathrm{NTU}_{j} \;=\; \frac{2\pi r_{i}\,\Ui\,\Delta z}{\md\,c_{p}},
+  \label{eq:ntu-derived}
+\end{equation}
+which is Eq.~\eqref{eq:ntu}. It is the single-stream heat-exchanger result: one
+stream with finite capacity rate $\md c_{p}$, the other an isothermal reservoir
+of infinite capacity rate, effectiveness $\varepsilon = 1-e^{-\mathrm{NTU}}$.
+The reservoir idealisation is exactly what the lumped PCM state licenses.
+
+\medskip
+\noindent\textbf{Step 4 --- the closure.}
+The heat the fluid actually gives up over the segment is the enthalpy it loses,
+\begin{equation}
+  q'_{j}\,\Delta z \;=\; \md c_{p}\bigl(T_{j}-T_{j+1}\bigr)
+  \;\overset{\eqref{eq:ntu-derived}}{=}\;
+  \md c_{p}\bigl(T_{j}-T_{\mathrm{pcm}}\bigr)\bigl(1-e^{-\mathrm{NTU}_{j}}\bigr),
+\end{equation}
+and dividing by $\Delta z$ gives the conductance that closes
+Eq.~\eqref{eq:pcm-balance}:
+\begin{equation}
+  \boxed{\;
+  q'_{j} = K_{j}\bigl(T_{j}-T_{\mathrm{pcm}}\bigr),
+  \qquad
+  K_{j} = \frac{\md\,c_{p}\bigl(1-e^{-\mathrm{NTU}_{j}}\bigr)}{\Delta z} .
+  \;}
+  \label{eq:K-derived}
+\end{equation}
+
+Combining Eqs.~\eqref{eq:pcm-balance} and \eqref{eq:K-derived} with the
+enthalpy curve $T_{\mathrm{pcm}}(E')$ of Eq.~\eqref{eq:enth-curve} closes the
+system. This is the segment equation:
+\begin{equation}
+  \boxed{\;
+  \frac{\mathrm{d}E'}{\mathrm{d}t}
+  \;=\; K\left(T_{j} - T_{\mathrm{pcm}}(E')\right),
+  \qquad
+  K = \frac{\md\,c_{p}\left(1-e^{-\mathrm{NTU}}\right)}{\Delta z}.
+  \;}
+  \label{eq:enth-ode}
+\end{equation}
+
+One unknown per segment, $E'$; everything else is either geometry, a property,
+or the upstream fluid temperature $T_{j}$ handed down by the segment before it.
+
+\paragraph{Why $K$ is not $\Ui P_{i}$.}
+This is the step most easily got wrong, so it is worth isolating. The naive
+closure takes Eq.~\eqref{eq:local-flux} with $T(z)\approx T_{j}$, giving
+$q'_{j}\approx 2\pi r_{i}\Ui (T_{j}-T_{\mathrm{pcm}})$. Comparing:
+\begin{equation}
+  \frac{K_{j}}{2\pi r_{i}\Ui}
+  \;=\;
+  \frac{1-e^{-\mathrm{NTU}_{j}}}{\mathrm{NTU}_{j}}
+  \;\le\; 1 .
+  \label{eq:K-ratio}
+\end{equation}
+The two limits say what the difference means:
+
+\begin{description}[leftmargin=1.9em,itemsep=3pt]
+\item[$\mathrm{NTU}\to0$:] the ratio $\to1$. The fluid barely cools across the
+  segment, $T(z)\approx T_{j}$ throughout, and the naive closure is right.
+\item[$\mathrm{NTU}\to\infty$:] $K\to \md c_{p}/\Delta z$, a finite limit set
+  by the \emph{fluid}, not the wall. No matter how good the borehole is, a
+  segment cannot absorb more than the stream can carry to it. The naive closure
+  has no such limit and would let $T_{j+1}$ fall below $T_{\mathrm{pcm}}$ ---
+  heat flowing from cold to hot, at a rate that grows without bound as $\Ui$
+  improves.
+\end{description}
+
+\noindent
+At this design point $\mathrm{NTU}$ runs from \num{0.083} to \num{0.602} over
+the charge, so Eq.~\eqref{eq:K-ratio} lies between \num{0.96} and \num{0.75}:
+\textbf{using $\Ui P_{i}$ would overstate the conductance by \SI{4}{\percent}
+to \SI{33}{\percent}}, worst where the melt layer is thinnest and the borehole
+best. The error is largest exactly where the model is most active, which is why
+it cannot be waved away as second order.
+
+\paragraph{Two properties inherited from this derivation.}
+
+\begin{description}[leftmargin=1.9em,itemsep=3pt]
+\item[Closure is structural.] The code does not evaluate
+  Eq.~\eqref{eq:K-derived} and Eq.~\eqref{eq:pcm-balance} independently. It
+  integrates Eq.~\eqref{eq:pcm-balance} over the step and \emph{reports}
+  $q'_{j}=(E'^{\,n+1}-E'^{\,n})/\Delta t$, then drops the fluid temperature by
+  exactly that amount, $T_{j+1}=T_{j}-q'_{j}\Delta z/(\md c_{p})$. Whatever the
+  PCM gained, the fluid lost, to machine precision, with no possibility of
+  drift.
+\item[$K$ is frozen over a time step, $T_{\mathrm{pcm}}$ is not.] $K_{j}$ is
+  evaluated once per step from the melt thickness at the start of it, whereas
+  $T_{\mathrm{pcm}}$ is advanced exactly inside the step by
+  Eq.~\eqref{eq:enth-exact}. The consequence is that $T_{j+1}$ equals the
+  $\varepsilon$--NTU result of Eq.~\eqref{eq:ntu-derived} only while the segment
+  is on the latent plateau, where $T_{\mathrm{pcm}}=\Tm$ is genuinely constant.
+  In the sensible branches the two differ at second order in $\Delta t$. This
+  is a deliberate choice: it keeps closure exact, which matters more than
+  matching an $\varepsilon$--NTU relation that is itself only quasi-steady.
+\end{description}
+
+Two properties of Eq.~\eqref{eq:enth-ode} drive everything that follows:
+
+\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
+\item It is \textbf{nonlinear}, because $T_{\mathrm{pcm}}(E')$ is piecewise.
+\item It is \textbf{linear inside each branch}, because each piece of
+  Eq.~\eqref{eq:enth-curve} is affine in $E'$.
+\end{itemize}
+
+\noindent
+The second property is what makes an exact integration possible, and
+\S\ref{sec:front:integration} takes it up. But first, why an exact integration
+is not optional.
+
+\subsubsection{Why explicit stepping fails --- and why nobody noticed until v0.4}
+\label{sec:front:integration}
+
+Look again at the three branches. On the plateau, $T_{\mathrm{pcm}}=\Tm$ is
+\emph{constant}: it does not respond to $E'$ at all. The segment therefore
+behaves as though it had infinite heat capacity, Eq.~\eqref{eq:enth-ode} reduces
+to $\mathrm{d}E'/\mathrm{d}t = \text{constant}$, and an explicit Euler step is
+not merely stable but \emph{exact}.
+
+This is precisely the regime Formulations A and B live in permanently. Explicit
+stepping was safe in v0.1 and v0.2 for a structural reason, not a lucky one ---
+and that is why the time grid was never examined.
+
+Add the sensible branches and the capacity becomes finite. Equation
+\eqref{eq:enth-ode} is now a relaxation equation with time constant $C/K$, and
+explicit Euler requires $\Delta t < C/K$. At the design point:
+
+\begin{center}
+\begin{tabular}{@{}l r r@{}}
+\toprule
+ & early ($t=\SI{1}{\second}$) & late ($t\to t_{ch}$) \\
+\midrule
+$\mathrm{NTU}$, segment 1        & \num{0.592}  & \num{0.083} \\
+$K$ \si{[\watt\per\meter\per\kelvin]} & \num{64.3} & \num{11.5} \\
+$C_{l}/K$ \si{[\second]}         & \num{197}    & \num{1106}  \\
+time-grid step $\Delta t$ \si{[\second]} & \num{0.31} & \num{8491} \\
+\midrule
+$\Delta t\,K/C_{l}$              & \num{0.002}  & \textbf{\num{7.7}} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The grid is logarithmic, so it is fine at the start and violates the limit by
+almost an order of magnitude at the end. The first implementation duly
+diverged: the oscillation fed back through the fluid temperature and drove the
+secondary fluid to \SI{261}{\kelvin}, some \SI{170}{\kelvin} below anything
+physical.
+
+This is a good failure to have seen once. It was loud, it was immediate, and it
+was diagnosable. The dangerous version of the same error is a step ratio of
+$1.5$ rather than $7.7$: still unstable in principle, but slowly enough to look
+like a plausible answer.
+
+\subsubsection{Branchwise-exact integration}
+
+Rather than shrink $\Delta t$ --- which would multiply the cost of every run by
+$\sim\!10^{3}$ --- exploit the linearity within each branch and integrate in
+closed form. Holding the fluid temperature $T_{j}$ fixed across the step:
+
+\begin{equation}
+  \underbrace{E'(t+\Delta t) = E' + K\left(T_{j}-\Tm\right)\Delta t}
+             _{\text{plateau: linear}},
+  \qquad
+  \underbrace{E'(t+\Delta t) = E'_{\mathrm{eq}}
+    + \bigl(E'-E'_{\mathrm{eq}}\bigr)e^{-K\Delta t/C}}
+             _{\text{sensible: exponential relaxation}},
+  \label{eq:enth-exact}
+\end{equation}
+
+\noindent
+with the equilibrium enthalpy and the relevant capacity
+\begin{equation}
+  \left(C,\;E'_{\mathrm{eq}}\right) =
+  \begin{cases}
+    \left(C_{s},\; C_{s}\left(T_{j}-\Tm\right)\right), & E' < 0,\\[3pt]
+    \left(C_{l},\; E'_{\mathrm{lat}} + C_{l}\left(T_{j}-\Tm\right)\right),
+      & E' > E'_{\mathrm{lat}}.
+  \end{cases}
+\end{equation}
+
+$E'_{\mathrm{eq}}$ is the enthalpy at which the PCM would sit in equilibrium
+with the fluid --- the state the segment relaxes toward and never quite reaches.
+The exponential is unconditionally stable and monotone: no step size, however
+large, can overshoot it. That is the property explicit Euler lacks.
+
+\paragraph{Crossing a branch boundary.}
+A step may start in one branch and end in another. The step is then split at the
+crossing. Let $E'_{b}$ be the boundary being approached ($0$ or
+$E'_{\mathrm{lat}}$). The crossing time is
+\begin{equation}
+  t^{*} =
+  \begin{dcases}
+    \frac{E'_{b}-E'}{K\left(T_{j}-\Tm\right)}, & \text{from the plateau},\\[8pt]
+    \frac{C}{K}\,
+      \ln\!\left(\frac{E'-E'_{\mathrm{eq}}}{E'_{b}-E'_{\mathrm{eq}}}\right),
+      & \text{from a sensible branch},
+  \end{dcases}
+  \label{eq:crossing}
+\end{equation}
+and if $t^{*} < \Delta t$ the state is advanced to $E'_{b}$, the remaining
+$\Delta t - t^{*}$ is integrated in the adjacent branch, and the test is
+repeated. At most a handful of crossings can occur in one step, so the loop is
+bounded.
+
+The heat reported to the fluid is then
+\begin{equation}
+  q'_{j} = \frac{E'^{\,n+1}-E'^{\,n}}{\Delta t},
+  \label{eq:qfromE}
+\end{equation}
+\emph{by definition}, not by a separate flux evaluation. Whatever the segment
+gained, the fluid lost. Closure is exact to machine precision and cannot drift.
+
+\begin{worked}[A bug worth studying: the sticky boundary]
+The branch test in the code is written with closed intervals,
+$0 \le E' \le E'_{\mathrm{lat}}$, so a state landing \emph{exactly} on
+$E'_{\mathrm{lat}}$ is still classified as two-phase. Follow the logic: the
+plateau branch computes $t^{*} = (E'_{\mathrm{lat}} - E')/\text{rate} = 0$,
+finds $t^{*} < \Delta t$, advances the state to $E'_{\mathrm{lat}}$ ---
+where it already is --- and subtracts zero from the remaining time. The next
+iteration does the same. The segment is pinned at the boundary for ever and
+never enters the liquid branch.
+
+The symptom was not a crash. It was every segment reporting a melt fraction of
+exactly $1.000$ and a superheat of exactly zero --- results that look
+\emph{excellent}. The tell was a single diagnostic line printing ``sensible
+energy stored: \num{0.000}'', a quantity that had no business being identically
+zero.
+
+The fix is to step just past the boundary rather than onto it,
+\[
+  E' \leftarrow E'_{\mathrm{lat}} + \epsilon,
+  \qquad \epsilon = 10^{-9}\max\!\left(E'_{\mathrm{lat}},1\right),
+\]
+so the next iteration selects the liquid branch. The general lesson: when a
+solver switches on the sign of a quantity, decide deliberately which side of the
+boundary the equality belongs to, and make sure the state cannot come to rest
+on it.
+\end{worked}
+
+\paragraph{Verification.}
+The scheme was checked against a brute-force explicit integration of
+Eq.~\eqref{eq:enth-ode} using \num{200000} substeps, over a charge and a
+discharge, including steps that cross branch boundaries. Agreement is
+$3\times10^{-13}$ relative --- machine precision. This is a genuine
+verification: the two calculations share no code path beyond
+Eq.~\eqref{eq:enth-curve}.
+
+\subsubsection{Recovering the melt-layer thickness}
+
+The resistance network needs $\delta$, not $\Amelt$. Inverting
+Eq.~\eqref{eq:area-fins} --- which excludes the fin metal from the melted PCM
+--- gives $\delta$ as described in \S\ref{sec:front:finmetal}, and the network
+of \S\ref{sec:network} is otherwise unchanged in form.
+
+One thing \emph{is} changed: the driving temperature. In Formulations~A and~B
+the outer boundary of the resistance chain sits at $\Tm$. In Formulation~C it
+sits at $T_{\mathrm{pcm}}$, which equals $\Tm$ only while some solid remains.
+This single substitution is the mechanism of the next subsection.
+
+\subsubsection{Sensible heat is self-levelling}
+\label{sec:front:levelling}
+
+Here is why a \SI{4.7}{\percent} energy term produces a first-order change in
+the answer.
+
+Consider again the well-head segment that melts first. Under Formulation~B it
+finished melting and then continued to absorb heat at the full driving
+difference $T_{j}-\Tm$, because its boundary temperature was pinned at $\Tm$
+regardless of state. It monopolised the fluid's heat. The segments downstream,
+which had not finished, received whatever was left.
+
+Under Formulation~C the same segment starts to superheat the instant its solid
+is gone. $T_{\mathrm{pcm}}$ rises, $T_{j}-T_{\mathrm{pcm}}$ collapses, its
+demand falls away, and the heat continues down the well to segments that still
+have solid to melt. The mechanism is a negative feedback, and it is automatic:
+nothing in the code distributes the heat, and no parameter was tuned.
+
+The effect on the distribution of melt is large:
+
+\begin{center}
+\begin{tabular}{@{}l l r@{}}
+\toprule
+formulation & $\varepsilon_{\mathrm{local}}$ at ten stations & spread \\
+\midrule
+B (latent only) & 1.78\; 0.73\; 0.69\; 0.71\; 0.77\; 0.85\; 0.94\; 1.03\; 1.12\; 1.23 & 1.321 \\
+C (enthalpy)    & 1.00\; 1.00\; 1.00\; 1.00\; 1.00\; 1.00\; 1.00\; 1.00\; 1.00\; 1.00 & \textbf{0.078} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+where the spread is
+$\max_{j}\varepsilon_{\mathrm{local}}-\min_{j}\varepsilon_{\mathrm{local}}$ over
+the \num{100} segments at end of charge. Two separate things improved. The
+values above $1$ are gone, because Eq.~\eqref{eq:enth-curve} makes them
+impossible. The values well below $1$ are gone too, and that is the physical
+result: PCM that never melts is \emph{dead volume} --- it occupies borehole,
+costs money, and carries no energy through the round trip. Formulation~C says
+there is far less of it than Formulation~B implied.
+
+\subsubsection{What Formulation C still does not do}
+
+Three limitations, stated plainly because they bound how far the result can be
+pushed.
+
+\begin{description}[leftmargin=1.7em,itemsep=3pt]
+\item[One temperature per segment.] $E'$ is a lumped quantity: all the PCM in a
+  segment is at a single $T_{\mathrm{pcm}}$. There is no radial resolution
+  \emph{within} a phase, so superheat appears instantaneously and uniformly
+  across the whole liquid annulus rather than diffusing outward from the tube.
+  The model therefore reaches its superheated state sooner than the real
+  material would, and the self-levelling above is an upper bound on the effect.
+\item[H1 is inherited, not repaired.] The quasi-steady melt layer of
+  \S\ref{sec:front:legacy} is still assumed: the conduction profile through the
+  liquid is taken as instantaneously steady. This is justified by
+  $\mathrm{Ste}=\num{0.047}$ and is a good approximation here, but it is an
+  approximation, and it is the same one in all three formulations.
+\item[H3 is now \emph{saturated}.] Because $\varepsilon_{\mathrm{local}}\to1$
+  over essentially the whole well, $\delta \to \delta_{\mathrm{merge}}$
+  everywhere --- the melt fronts of neighbouring legs are touching. The annular
+  conduction resistance is being evaluated at the exact limit of its validity.
+  \S\ref{sec:defects:h3} takes this up, because it now carries a design
+  decision.
+\end{description}
+
+Formulation~C is nonetheless the first of the three that is \emph{closed}: every
+joule the resistance network delivers has a place to go, and the melt fraction
+cannot leave $[0,1]$. Whatever is wrong with the answer is now wrong in the heat
+transfer, not in the bookkeeping.
+
+\emph{Source:} \code{pcm\_capacities}, \code{pcm\_state},
+\code{advance\_segment}, \code{march\_h}.
+
+%---------------------------------------------------------------------
+\subsection{Latent inventory and the melted fraction}
+\label{sec:front:inventory}
+
+The melted volume per tube and the melted fraction of the borehole inventory are
+\begin{equation}
+  \Vmelt \;=\; \sum_{j=1}^{n_{s}} \Amelt^{(j)}\,\Delta z,
+  \qquad
+  \varepsilon_{\mathrm{PCM}}
+  \;=\;
+  \frac{\Vmelt\, n_{t}}{V_{\mathrm{well}}},
+  \label{eq:eps}
+\end{equation}
+with $V_{\mathrm{well}}$ from Eq.~\eqref{eq:Vwell} and the multiplier $n_{t}$,
+not $2n_{t}$, for the reason given after Eq.~\eqref{eq:Ltube}.
+
+The density $\rhom$ in Eqs.~\eqref{eq:marched}--\eqref{eq:qeff} is the
+\emph{same in both directions}, and is taken as the solid density $\rho_{s}$.
+The thermal conductivity $\km$ by contrast \emph{is} directional, $k_{l}$ while
+melting and $k_{s}$ while freezing, because the layer adjacent to the tube is
+liquid in the first case and solid in the second.
+
+The asymmetry is deliberate. Making the latent inventory directional as well
+would bank energy at $\rho_{l}$ and return it at $\rho_{s}$, yielding
+$\rho_{s}/\rho_{l}=1.069$ times more energy out than in --- a \SI{6.9}{\percent}
+round-trip gain from bookkeeping alone. Carrying the front as a
+\emph{solid-equivalent} area instead makes $\varepsilon_{\mathrm{PCM}}$ a true
+melted \emph{mass} fraction and makes stored energy equal to available energy.
+The price is that the \SI{6.9}{\percent} volume change on melting is not
+represented: the liquid layer is about \SI{2.3}{\percent} thicker in radius than
+Eq.~\eqref{eq:area-fins} reports, so Eq.~\eqref{eq:he} mildly under-predicts the
+melt-layer resistance.
+
+\emph{Source:} \code{thums\_core/stefan.py}; \code{config.PCM.rho\_latent}.

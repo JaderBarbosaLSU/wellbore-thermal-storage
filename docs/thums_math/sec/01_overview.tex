@@ -88,7 +88,10 @@ operating regime are revisited in \S\ref{sec:defects}.
   \end{equation}
   and degrades as it grows; at the design point $\mathrm{Ste}=0.0474$.
 \item[H2 --- No axial conduction.] Neither the tube wall nor the PCM conducts
-  along the well. Segments are coupled only through the fluid stream.
+  along the well. Segments are coupled only through the fluid stream. This one
+  is safe by a wide margin: the axial diffusion time over a segment is
+  $\Delta z^{2}/\alpha_{l}=\SI{5.4e9}{\second}$ against a
+  \SI{3.6e4}{\second} window (\S\ref{sec:front:segeq}).
 \item[H3 --- Concentric annular front.] The melt region around each tube is a
   cylindrical annulus of uniform thickness $\delta$, so that the melted
   cross-section is $\pi[(r_e+\delta)^2-r_e^2]$. Fronts from neighbouring tubes
@@ -107,7 +110,10 @@ operating regime are revisited in \S\ref{sec:defects}.
 \item[H6 --- Adiabatic borehole wall.] No heat exchange with the formation in
   either direction, and no geothermal gradient in the energy balance.
 \item[H7 --- Incompressible, single-phase secondary fluid.] Pressurised water at
-  constant $P$; no buoyancy head in the vertical loop.
+  constant $P$; no buoyancy head in the vertical loop. The fluid is also taken
+  as \emph{quasi-steady}: $\partial T/\partial t$ is dropped from its energy
+  equation, which costs an unresolved startup transient of about
+  \SI{38}{\minute} in each half-cycle (\S\ref{sec:front:segeq}).
 \item[H8 --- Multilayer PCM.] The well is divided into $N_{\mathrm{lay}}$ axial
   layers of distinct melting temperature, so that the PCM melting point follows
   the fluid glide down the well. Layer boundaries are equally spaced along the
@@ -147,6 +153,20 @@ factor-of-two bookkeeping is a recurring source of error: per-borehole
 quantities multiply the per-tube result by $n_{t}$, not by $2n_{t}$, because
 Eq.~\eqref{eq:Ltube} has already counted both legs.
 
+The distinction between the developed coordinate $s\in[0,L_{\mathrm{tube}}]$
+and the depth $d$ matters wherever a profile is plotted or a layer assigned:
+\begin{equation}
+  d(s) =
+  \begin{cases}
+    s, & s \le L_{\mathrm{well}} \quad\text{(down leg)},\\
+    L_{\mathrm{tube}} - s, & s > L_{\mathrm{well}} \quad\text{(return leg)}.
+  \end{cases}
+  \label{eq:depth-fold}
+\end{equation}
+Every depth therefore carries \emph{two} legs of the same hairpin, at developed
+positions $s$ and $L_{\mathrm{tube}}-s$, and by H8 those two are in different
+PCM layers. H9 assumes they do not exchange heat.
+
 Each leg carries $n_{f}$ longitudinal fins of thickness $t_{f}$ and radial
 length $L_{f}$. The PCM volume available in one borehole is the borehole volume
 less the tubes and their fins,
@@ -176,6 +196,9 @@ symbol & meaning & unit \\
 \midrule
 \endhead
 $\Amelt$ & melted cross-section per unit tube length & \si{\meter\squared} \\
+$A_{\mathrm{flow}}$ & tube flow area, $\pi r_{i}^{2}$ & \si{\meter\squared} \\
+$d$ & depth below surface & \si{\meter} \\
+$s$ & developed tube coordinate & \si{\meter} \\
 $A_{\mathrm{avail}}$ & PCM cross-section owned by one segment & \si{\meter\squared} \\
 $C_{s}$, $C_{l}$ & sensible capacity per unit tube length & \si{\joule\per\meter\per\kelvin} \\
 $E'$ & PCM enthalpy per unit tube length & \si{\joule\per\meter} \\
