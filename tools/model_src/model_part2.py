@@ -77,6 +77,10 @@ class Case:
 
     # ---- switches ----
     front: str = "energy_balance"        # or "closed_form" (= v0.1)
+    # v0.4. True carries PCM enthalpy (latent + sensible in both phases), so a
+    # fully melted segment superheats and a fully solid one subcools instead of
+    # the march discarding the heat. False pins the PCM at T_m (v0.3 behaviour).
+    sensible_heat: bool = True
     # CORRECTED 2026-09. Versions of this model up to and including the IHTC
     # paper passed the PCM LIQUID conductivity (0.45 W/m/K) into the slot that
     # carries the tube-wall and fin conductivity during CHARGING, where steel
@@ -386,3 +390,229 @@ def march(case, T_inlet, T_m_seg, m_dot, k_wall, times,
         "z": np.linspace(0.0, case.L_tube, n_segments),
         "history": {k: np.array(v) for k, v in hist.items()} if record else None,
     }
+
+
+# ==========================================================================
+# enthalpy state   (v0.4: sensible heat in both phases)
+# ==========================================================================
+# Formulation B tracks A_melt and nothing else, so a segment that runs out of
+# PCM has nowhere to put further heat: the march clips it and discards the
+# remainder. At the design point the discarded heat on discharge was 148% of
+# the heat delivered -- i.e. most of what the network asked for.
+#
+# The fix is to carry ENTHALPY per unit tube length instead of melted area, with
+# the melted area recovered from it. One scalar per segment, measured from the
+# fully-solid-at-T_m datum:
+#
+#     E' < 0            solid, SUBCOOLED     T = T_m + E'/C_s
+#     0 <= E' <= E'_lat two-phase            T = T_m,  A_melt = E'/(rho h_m)
+#     E' > E'_lat       liquid, SUPERHEATED  T = T_m + (E'-E'_lat)/C_l
+#
+# Three things follow, and the third is the reason to do it:
+#
+#   1. no clipping anywhere -- heat always has somewhere to go;
+#   2. the melt fraction is bounded in [0,1] BY CONSTRUCTION, so the
+#      eps_local > 1 that the latent-only model produced cannot occur;
+#   3. desuperheating and subcooling during discharge are recovered, which is
+#      the energy the latent-only model threw away.
+#
+# delta still follows from A_melt exactly as before, so the heat-transfer
+# coefficient is unchanged in form -- only its driving temperature is now
+# T_pcm rather than T_m.
+
+
+def pcm_capacities(case):
+    """Per unit tube length: latent capacity and the two sensible capacities."""
+    A_avail = case.V_well / (case.num_tubes * case.L_tube)   # PCM area per tube [m2]
+    E_lat = case.rho_latent * case.h_m * A_avail             # J/m to melt it all
+    C_s = case.rho_latent * case.cp_s * A_avail              # J/m/K, solid
+    C_l = case.rho_latent * case.cp_l * A_avail              # J/m/K, liquid
+    return A_avail, E_lat, C_s, C_l
+
+
+def pcm_state(E, T_m_seg, case):
+    """Enthalpy per unit tube length -> (melted area, PCM temperature).
+
+    The inverse of the enthalpy curve above. `A_melt` saturates at the segment's
+    own PCM content, which is what makes eps_local <= 1 structural.
+    """
+    A_avail, E_lat, C_s, C_l = pcm_capacities(case)
+    T_m_seg = np.asarray(T_m_seg, dtype=float)
+    A = np.clip(E, 0.0, E_lat) / (case.rho_latent * case.h_m)
+    if not case.sensible_heat:                    # v0.3 behaviour: PCM pinned at T_m
+        return A, T_m_seg.copy()
+    T = np.where(E < 0.0, T_m_seg + E / C_s,
+                 np.where(E > E_lat, T_m_seg + (E - E_lat) / C_l, T_m_seg))
+    return A, T
+
+
+
+def advance_segment(E, T_m, T0, K, dt, E_lat, C_s, C_l, sensible):
+    """Integrate ONE segment's enthalpy over dt, exactly, branch by branch.
+
+    The segment obeys   dE'/dt = K (T0 - T_pcm(E'))   with T0 held over the step.
+    That is linear inside each branch of the enthalpy curve, so it can be solved
+    in closed form rather than stepped:
+
+      plateau  T_pcm = T_m constant           -> dE'/dt constant, E' linear in t
+      solid    T_pcm = T_m + E'/C_s           -> exponential relaxation to
+      liquid   T_pcm = T_m + (E'-E_lat)/C_l      E'_eq = C (T0 - T_m) [+E_lat]
+
+    Explicit Euler is NOT usable here. On the latent plateau the segment has
+    effectively infinite heat capacity, so any step is stable; the moment
+    sensible heat is added the capacity becomes finite and the stability limit
+    is dt < C/K, about 620 s at the design point. The time grid's last step is
+    8491 s, fourteen times that, and an explicit update diverges -- it drove the
+    secondary fluid to 261 K on the first attempt.
+
+    Returns (E_new, q_avg) with q_avg = (E_new - E)/dt, so the heat taken from
+    the fluid is exactly the enthalpy the PCM gained: closure stays structural.
+    """
+    if K <= 0.0 or dt <= 0.0:
+        return E, 0.0
+    E0, t_left = E, dt
+    for _ in range(6):   # at most a few branch crossings
+        if t_left <= 0.0:
+            break
+        if not sensible:                     # v0.3: PCM pinned at T_m
+            E = E + K * (T0 - T_m) * t_left
+            break
+        if 0.0 <= E <= E_lat:                # ---- latent plateau: linear ----
+            rate = K * (T0 - T_m)
+            if rate == 0.0:
+                break
+            t_edge = ((E_lat - E) / rate) if rate > 0 else (E / -rate)
+            if t_edge >= t_left:
+                E = E + rate * t_left
+                break
+            # Land on the boundary and step just PAST it. Without the nudge the
+            # next iteration re-enters the plateau at zero rate and the segment
+            # sticks at E_lat for ever -- which showed up as every segment
+            # reporting a melt fraction of exactly 1.000 and no superheat.
+            eps = 1e-9 * max(E_lat, 1.0)
+            E = (E_lat + eps) if rate > 0 else -eps
+            t_left -= t_edge
+        else:                                # ---- sensible: exponential ----
+            if E < 0.0:
+                C, E_ref, lo, hi = C_s, 0.0, -np.inf, 0.0
+            else:
+                C, E_ref, lo, hi = C_l, E_lat, E_lat, np.inf
+            E_eq = E_ref + C * (T0 - T_m)
+            E_new = E_eq + (E - E_eq) * np.exp(-K * t_left / C)
+            if lo <= E_new <= hi:
+                E = E_new
+                break
+            edge = hi if E_new > hi else lo   # crosses back onto the plateau
+            num, den = E_eq - edge, E_eq - E
+            if den == 0.0 or num / den <= 0.0:
+                E = edge
+                break
+            t_edge = -C / K * np.log(num / den)
+            if t_edge >= t_left or t_edge <= 0.0:
+                E = E_new
+                break
+            E = edge
+            t_left -= t_edge
+    return E, (E - E0) / dt
+
+
+def march_h(case, T_inlet, T_m_seg, m_dot, k_wall, times,
+            n_segments=None, E0=None, record=False):
+    """Segment march on the ENTHALPY state. Replaces `march` from v0.4.
+
+    Identical to `march` in every respect except what is integrated: the state
+    is E' [J per m of tube] rather than A_melt [m2], so no heat is ever clipped
+    and the PCM temperature is free to leave T_m.
+    """
+    n_segments = n_segments or case.n_segments
+    dz = case.L_tube / n_segments
+    r_i, r_e = case.r_i, case.r_e
+    A_avail, E_lat, C_s, C_l = pcm_capacities(case)
+
+    E = np.zeros(n_segments) if E0 is None else np.array(E0, float)
+    E_start = E.copy()
+    t_prev, Q_cum = 0.0, 0.0
+    ts, Qs, T_outs = [], [], []
+    hist = {k: [] for k in ("T_fluid", "T_pcm", "A_melt", "delta", "NTU",
+                            "U_i", "q_prime", "E")} if record else None
+
+    for t in np.asarray(times, float):
+        dt = t - t_prev
+        if dt <= 0:
+            t_prev = t
+            continue
+
+        A, T_pcm = pcm_state(E, T_m_seg, case)
+        delta = delta_from_area(A, r_e, case.num_fins, case.fin_t, case.fin_L)
+        T0 = T_inlet
+        q_prime = np.zeros(n_segments)
+        if record:
+            T_prof = np.empty(n_segments + 1); T_prof[0] = T_inlet
+            NTU_prof = np.empty(n_segments); U_prof = np.empty(n_segments)
+
+        for i in range(n_segments):
+            # the layer next to the tube is liquid wherever any melt exists
+            k_m = case.k_l if E[i] > 0.0 else case.k_s
+            h_i, cp_d, _, _ = h_internal(case.fluid2, T0, case.P, r_i, m_dot)
+            U_i = compute_U_i(h_i, r_i, r_e, k_wall, case.Rf_i, k_m,
+                              float(delta[i]), case.L_tube, case.fin_t,
+                              case.fin_L, case.num_fins)
+            NTU = float(np.clip((2 * np.pi * r_i * U_i * dz) / (m_dot * cp_d),
+                                -50.0, 50.0))
+            # conductance of the segment to the fluid, per unit tube length:
+            # q' = K (T0 - T_pcm), from the NTU effectiveness
+            K = m_dot * cp_d * (1.0 - np.exp(-NTU)) / dz
+            E[i], q_prime[i] = advance_segment(E[i], T_m_seg[i], T0, K, dt,
+                                               E_lat, C_s, C_l,
+                                               case.sensible_heat)
+            # the fluid gives up exactly what the PCM took
+            T0 = T0 - q_prime[i] * dz / (m_dot * cp_d)
+            if record:
+                T_prof[i + 1] = T0; NTU_prof[i] = NTU; U_prof[i] = U_i
+
+        if record:
+            hist["T_fluid"].append(T_prof.copy()); hist["T_pcm"].append(T_pcm.copy())
+            hist["A_melt"].append(A.copy());       hist["delta"].append(delta.copy())
+            hist["NTU"].append(NTU_prof.copy());   hist["U_i"].append(U_prof.copy())
+            hist["q_prime"].append(q_prime.copy()); hist["E"].append(E.copy())
+
+        Q_cum += float(np.sum(q_prime) * dz) * dt
+        ts.append(t); Qs.append(float(np.sum(q_prime) * dz)); T_outs.append(T0)
+        t_prev = t
+
+    A, T_pcm = pcm_state(E, T_m_seg, case)
+    dE = float(np.sum(E - E_start) * dz)
+    return {
+        "E": E, "A_melt": A, "T_pcm": T_pcm,
+        "delta": delta_from_area(A, r_e, case.num_fins, case.fin_t, case.fin_L),
+        "Q_cum_J": Q_cum,
+        "closure": abs(Q_cum - dE) / abs(Q_cum) if Q_cum else np.nan,
+        "t": np.array(ts), "Q": np.array(Qs), "T_out": np.array(T_outs),
+        "V_melt_tube": float(np.sum(A * dz)),
+        "eps_local": A / A_avail,
+        "E_sensible_J": float(np.sum(np.where(E > E_lat, E - E_lat,
+                                              np.where(E < 0, E, 0.0))) * dz),
+        "z": np.linspace(0.0, case.L_tube, n_segments),
+        "history": {k: np.array(v) for k, v in hist.items()} if record else None,
+    }
+
+
+def well_capacity_kJ(case, T_charge_in, T_discharge_in):
+    """Energy ONE well can hold, latent plus sensible -- the capacity criterion.
+
+    This is the quantity the v0.1 notebook computed as `N_wells_ideal` and then
+    used only for costing. Written here as an energy per well so it can size the
+    field directly:
+
+        E_well = rho V_well [ h_m + cp_l (T_charge_in - T_m) ]
+
+    The sensible term is the zero-resistance limit: with no thermal resistance
+    the liquid would reach the charging fluid inlet temperature. `cycle=True`
+    adds the solid subcooling the discharge can also reach, which is the full
+    swing between the charged and discharged states.
+    """
+    m_well = case.rho_latent * case.V_well
+    E = case.h_m
+    if case.sensible_heat:
+        E += case.cp_l * max(T_charge_in - case.T_m, 0.0)
+    return m_well * E / 1000.0                      # kJ

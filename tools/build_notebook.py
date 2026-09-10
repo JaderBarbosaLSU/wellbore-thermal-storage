@@ -84,7 +84,7 @@ cells.append(md(r"""
 
 ### Power-to-Heat-to-Power conversion with phase-change material in repurposed wells
 
-**THUMS · model version 0.3 · every equation visible in this notebook**
+**THUMS · model version 0.4 · every equation visible in this notebook**
 
 **Last updated: __STAMP__**
 
@@ -134,7 +134,7 @@ from math import log, pi
 from dataclasses import dataclass, replace
 
 LAST_UPDATED = '__STAMP__'
-MODEL_VERSION = '0.3'
+MODEL_VERSION = '0.4'
 
 print(f'THUMS P2H2P model v{MODEL_VERSION} · last updated {LAST_UPDATED}')
 print('ready ·', np.__version__, '·', CP.get_global_param_string('version'))
@@ -413,6 +413,47 @@ cells.append(code(src('delta_from_area', 'area_from_delta', 'advance_front',
 
 # ---------------------------------------------------------------- 6. march
 cells.append(md(r"""
+### 5.4 Enthalpy state — sensible heat in both phases (v0.4)
+
+Formulation B tracks $A_{\rm melt}$ and nothing else, so a segment that runs out
+of PCM has nowhere to put further heat: the march clips it and discards the
+remainder. On discharge the discarded heat reached **148 % of the heat
+delivered** — most of what the network asked for.
+
+Carry **enthalpy per unit tube length** instead, measured from fully-solid-at-$T_m$:
+
+$$E' < 0:\quad \text{solid, subcooled}\quad T = T_m + E'/C_s$$
+$$0 \le E' \le E'_{\rm lat}:\quad \text{two-phase}\quad T = T_m,\;\;
+A_{\rm melt} = E'/(\rho h_m)$$
+$$E' > E'_{\rm lat}:\quad \text{liquid, superheated}\quad
+T = T_m + (E'-E'_{\rm lat})/C_l$$
+
+with $E'_{\rm lat}=\rho h_m A_{\rm avail}$, $C_s=\rho c_{p,s}A_{\rm avail}$,
+$C_l=\rho c_{p,l}A_{\rm avail}$. Three consequences:
+
+1. **no clipping** — heat always has somewhere to go;
+2. **$\varepsilon_{\rm local}\in[0,1]$ by construction** — the over-melt the
+   latent-only model produced cannot occur;
+3. **desuperheating and subcooling on discharge are recovered.**
+
+$\delta$ still follows from $A_{\rm melt}$ exactly as before, so the
+heat-transfer coefficient is unchanged in form — only its driving temperature is
+now $T_{\rm pcm}$ rather than $T_m$.
+
+> **Explicit Euler is not usable here.** On the latent plateau the segment has
+> effectively infinite heat capacity, so any step is stable. Adding sensible heat
+> makes it finite, with a stability limit $\Delta t < C/K \approx 620$ s. The
+> time grid's last step is 8491 s — fourteen times that — and an explicit update
+> diverges; it drove the secondary fluid to \SI{261}{\kelvin} on the first
+> attempt. `advance_segment` integrates each branch in closed form instead,
+> splitting the step where the state crosses a branch boundary. It agrees with a
+> 200 000-substep reference to $3\times10^{-13}$.
+"""))
+
+cells.append(code(src('pcm_capacities', 'pcm_state', 'advance_segment')))
+cells.append(code(src('march_h')))
+
+cells.append(md(r"""
 ## 6. The segment march
 
 The tube is cut into $n_s$ segments. Within a segment the PCM surface is
@@ -506,7 +547,20 @@ $$\Phi_{\text{heat}}(N)=\frac{\Delta E_{out,HP}}{\Delta E_{\text{del}}(N)}-1=0,
 \qquad
 \Phi_{\text{inv}}(N)=\varepsilon_{\text{PCM}}(N)-1=0$$
 
-$$\boxed{N_{\text{wells}}=\max\left(N_{\text{heat}},N_{\text{inventory}}\right)}$$
+$$\boxed{N_{\text{wells}}=\max\left(N_{\text{charge\ rate}},\;N_{\text{capacity}}\right)}$$
+
+with the capacity criterion written the way the v0.1 notebook computed
+`N_wells_ideal`, but now used to size rather than only to cost:
+
+$$N_{\text{capacity}}=\frac{\Delta E_{\text{out,HP}}}{E_{\text{well}}},\qquad
+E_{\text{well}}=\rho V_{\text{well}}\left[h_m+c_{p,l}(T_{3c}-T_m)\right]$$
+
+**Why not size on the discharge instead?** Sizing must act on whichever variable
+is free. Charging pins the flow to the specified glide, so $N$ is the only
+freedom. Discharging has $N$ already fixed, so the flow is the freedom. Pin the
+discharge flow to its glide as well and the delivered energy saturates at
+$0.996$ of the requirement for *any* well count — there is no root, because the
+fluid leaves slightly short of the nominal outlet temperature.
 
 With the `k_w` defect the rate criterion was always the larger of the two, so
 the omission stayed invisible. Correct the conductivity and the inventory
@@ -531,7 +585,7 @@ than merely occupying the borehole.
 
 §12 checks the two against each other.
 """))
-cells.append(code(src('_bisect', 'size_well_field')))
+cells.append(code(src('_bisect', 'well_capacity_kJ', 'size_well_field')))
 
 # ---------------------------------------------------------------- 11. run
 cells.append(md(r"""
@@ -601,7 +655,7 @@ cells.append(code(r"""
 for label, r in runs.items():
     d = r['detail']
     if 'N_heat' in d:
-        print(f"{label:22s}  N_heat={d['N_heat']:6.2f}  N_inventory={d['N_inventory']:6.2f}"
+        print(f"{label:22s}  N_rate={d['N_heat']:6.2f}  N_capacity={d['N_capacity']:6.2f}"
               f"  binding={d['binding']:14s}  eta_storage={d['eta_storage']:.4f}"
               f"  closure={d['closure_charge']:.1e}")
 print()
@@ -733,11 +787,10 @@ t_ch = np.logspace(0, np.log10(case.t_ch*3600), case.n_times)
 t_dc = np.logspace(0, np.log10(case.t_dc*3600), case.n_times)
 m1   = E['m_dot_w_ch']/(N*case.num_tubes)
 
-ch = march(case, T['T_4c'], T_m_seg, m1, case.k_wall, t_ch,
-           mode='charge', record=True)
+ch = march_h(case, T['T_4c'], T_m_seg, m1, case.k_wall, t_ch, record=True)
 ratio = res['detail']['flow_ratio_dc_ch']
-dc = march(case, T['T_3d'], T_m_seg_dc, ratio*m1, case.k_wall, t_dc,
-           A_melt0=ch['A_melt'], mode='discharge', record=True)
+dc = march_h(case, T['T_3d'], T_m_seg_dc, ratio*m1, case.k_wall, t_dc,
+             E0=ch['E'], record=True)
 
 # --- geometric limits ------------------------------------------------------
 A_avail = case.V_well/(case.num_tubes*case.L_tube)          # PCM per unit tube length
@@ -870,8 +923,8 @@ for N_lay in (1, 3, 6, 9, 12, 20):
     cc = case.with_(N_lay=N_lay)
     Tml, _ = melting_temperatures(cc)
     seg = layer_map(Tml, n, N_lay)
-    r = march(cc, T['T_4c'], seg, m1, cc.k_wall, t_ch, mode='charge')
-    F = r['A_melt']/A_avail
+    r = march_h(cc, T['T_4c'], seg, m1, cc.k_wall, t_ch)
+    F = r['eps_local']
     rows.append({'N_lay': N_lay, 'eps_mean': F.mean(), 'eps_min': F.min(),
                  'eps_max': F.max(), 'spread': F.max()-F.min(),
                  'std': F.std(),
@@ -903,9 +956,8 @@ of instrumenting the march.
 """))
 
 cells.append(code(r"""
-a_ = march(case, T['T_4c'], T_m_seg, m1, case.k_wall, t_ch, mode='charge')
-b_ = march(case, T['T_4c'], T_m_seg, m1, case.k_wall, t_ch, mode='charge',
-           record=True)
+a_ = march_h(case, T['T_4c'], T_m_seg, m1, case.k_wall, t_ch)
+b_ = march_h(case, T['T_4c'], T_m_seg, m1, case.k_wall, t_ch, record=True)
 same_A = np.array_equal(a_['A_melt'], b_['A_melt'])
 same_Q = a_['Q_cum_J'] == b_['Q_cum_J']
 print(f'A_melt identical: {same_A}     Q_cum identical: {same_Q}')

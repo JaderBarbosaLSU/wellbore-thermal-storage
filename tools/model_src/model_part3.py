@@ -82,60 +82,71 @@ def _bisect(f, lo, hi, tol, max_iter, what):
 
 
 def size_well_field(case, T_inlet, T_m_seg, m_dot_total, D_E_required_kJ,
-                    times, k_wall, n_segments=60):
-    """N_wells = max(N_heat_transfer, N_inventory).
+                    times, k_wall, n_segments=60, T_discharge_in=None):
+    """N_wells = max(N_charge_rate, N_capacity).
 
-    v0.1 solved only the first: can the wells ABSORB the energy in time? That is
-    a rate question. Nothing in the sizing required the wells to CONTAIN the
-    energy, so with the k_w error -- which made the rate criterion the larger of
-    the two -- the omission never showed.
+    TWO CRITERIA, and they answer different questions.
 
-    N_inventory here is NOT the same quantity as the 'Ideal number of wells'
-    printed by the v0.1 notebook. That figure (12.215) comes from a separate,
-    simpler calculation: the thermal load divided by the sensible plus latent
-    capacity of the PCM, giving the PCM volume required and hence a well count.
-    It carries no thermal resistance and no losses, so it is a genuine LOWER
-    BOUND on N -- the best any design could do. N_inventory is computed from the
-    marched model and must sit at or above it.
+    N_charge_rate -- can the field ABSORB D_E_required within t_ch? A rate
+    question. This is the loop v0.1 actually solved
+    (`find_N_wells_for_Q_ratio_ch_fast`), and it is the only one it used.
 
-    The two should differ by roughly the sensible-heat contribution the marched
-    model omits (H5). See the check in section 12.
+    N_capacity -- can the field CONTAIN D_E_required at all? A capacity
+    question, and the one the v0.1 notebook computed as `N_wells_ideal` and then
+    spent only on costing:
+
+        N_capacity = D_E_required / E_well,
+        E_well = rho V_well [ h_m + cp_l (T_charge_in - T_m) ]
+
+    It is a hard lower bound: no thermal resistance, no losses, so no design can
+    do better. Because it is a closed form it costs nothing to evaluate, unlike
+    the version this replaces.
+
+    WHY NOT SIZE ON THE DISCHARGE. Sizing must act on whichever variable is
+    free. During charging the flow is pinned by the specified glide
+    (m_dot = Q_out_HP / cp / DT_3C_2C), so N is the only freedom and the charge
+    can size it. During discharging N is already fixed, so the flow is the
+    freedom and the discharge sizes that instead. Pinning the discharge flow to
+    its glide as well leaves the delivered energy saturating at 0.996 of the
+    requirement for ANY well count -- there is no root -- because the fluid
+    leaves slightly short of the nominal outlet temperature. The v0.1
+    arrangement is correct, and this is why.
     """
     def evaluate(N):
         m1 = m_dot_total / (N * case.num_tubes)
-        r = march(case, T_inlet, T_m_seg, m1, k_wall, times,
-                  n_segments=n_segments, mode="charge")
-        dz = case.L_tube / n_segments
-        eps = float(np.sum(r["A_melt"] * dz)) * case.num_tubes / case.V_well
+        r = march_h(case, T_inlet, T_m_seg, m1, k_wall, times,
+                    n_segments=n_segments)
         Q_total = r["Q_cum_J"] * case.num_tubes * N / 1000.0        # kJ
-        return eps, Q_total
+        return r, Q_total
 
     lo, hi = case.N_wells_bracket
 
-    try:                                    # inventory: smallest N with eps <= 1
-        N_inv, _ = _bisect(lambda N: evaluate(N)[0] - 1.0, lo, hi, 1e-3,
-                           case.max_iterations, "inventory constraint")
-    except RuntimeError:
-        if evaluate(lo)[0] <= 1.0:
-            N_inv = lo                      # inventory never binds
-        else:
-            raise
+    # ---- capacity: closed form, no march needed ---------------------------
+    E_well = well_capacity_kJ(case, T_inlet, T_discharge_in)
+    N_cap = D_E_required_kJ / E_well
 
-    try:                                    # heat transfer: Q delivered >= required
-        N_heat, _ = _bisect(lambda N: D_E_required_kJ / evaluate(N)[1] - 1.0,
+    # ---- charge rate ------------------------------------------------------
+    try:
+        N_rate, _ = _bisect(lambda N: D_E_required_kJ / evaluate(N)[1] - 1.0,
                             lo, hi, case.tol_Q_ratio, case.max_iterations,
-                            "heat-transfer sizing")
+                            "charge-rate sizing")
     except RuntimeError:
         if D_E_required_kJ / evaluate(lo)[1] <= 1.0:
-            N_heat = lo
+            N_rate = lo
         else:
             raise
 
-    N = max(N_heat, N_inv)
-    eps, Q_total = evaluate(N)
-    return dict(N_wells=N, N_heat=N_heat, N_inventory=N_inv,
-                binding="inventory" if N_inv >= N_heat else "heat_transfer",
-                eps_pcm=eps)
+    N = max(N_rate, N_cap)
+    r, Q_total = evaluate(N)
+    A_avail, E_lat, _, _ = pcm_capacities(case)
+    dz = case.L_tube / n_segments
+    eps = float(np.sum(r["A_melt"] * dz)) * case.num_tubes / case.V_well
+    return dict(N_wells=N, N_heat=N_rate, N_capacity=N_cap,
+                N_inventory=N_cap,                    # back-compat alias
+                binding="capacity" if N_cap >= N_rate else "charge_rate",
+                eps_pcm=eps, E_well_kJ=E_well,
+                eps_local_max=float(r["eps_local"].max()),
+                eps_local_min=float(r["eps_local"].min()))
 
 
 # ==========================================================================
@@ -164,20 +175,21 @@ def run_cycle(case):
         T_m_seg_dc = layer_map(T_m_lay_dc, n_seg, case.N_lay)
 
         sz = size_well_field(case, T["T_4c"], T_m_seg, E["m_dot_w_ch"],
-                             E["D_E_out_HP"], times_ch, k_charge, n_seg)
+                             E["D_E_out_HP"], times_ch, k_charge, n_seg,
+                             T_discharge_in=T["T_3d"])
         N_wells = sz["N_wells"]
         eps_pcm = sz["eps_pcm"]
         detail.update(sz)
 
         m1_ch = E["m_dot_w_ch"] / (N_wells * case.num_tubes)
-        r_ch = march(case, T["T_4c"], T_m_seg, m1_ch, k_charge, times_ch,
-                     n_segments=n_seg, mode="charge")
+        r_ch = march_h(case, T["T_4c"], T_m_seg, m1_ch, k_charge, times_ch,
+                       n_segments=n_seg)
         E_stored = r_ch["Q_cum_J"] * case.num_tubes * N_wells / 1000.0
 
         def discharged(ratio):
-            r = march(case, T["T_3d"], T_m_seg_dc, ratio * m1_ch, case.k_wall,
-                      times_dc, n_segments=n_seg, A_melt0=r_ch["A_melt"],
-                      mode="discharge")
+            r = march_h(case, T["T_3d"], T_m_seg_dc, ratio * m1_ch,
+                        case.k_wall, times_dc, n_segments=n_seg,
+                        E0=r_ch["E"])
             return abs(r["Q_cum_J"]) * case.num_tubes * N_wells / 1000.0, r
 
         ratio, _ = _bisect(lambda x: E["D_E_in_ORC"] / discharged(x)[0] - 1.0,
@@ -191,7 +203,9 @@ def run_cycle(case):
             E_stored_kJ=E_stored, E_discharged_kJ=Q_dc,
             eta_storage=Q_dc / E_stored,
             eps_end_of_discharge=float(np.sum(r_dc["A_melt"] * dz))
-            * case.num_tubes / case.V_well)
+            * case.num_tubes / case.V_well,
+            E_sensible_charge_J=r_ch["E_sensible_J"],
+            E_sensible_discharge_J=r_dc["E_sensible_J"])
 
     elif case.front == "closed_form":
         lo, hi = case.N_wells_bracket
