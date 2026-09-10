@@ -1,0 +1,206 @@
+%=====================================================================
+\section{Scope, hypotheses and notation}
+\label{sec:overview}
+
+THUMS stores electrical energy as latent heat in a phase-change material packed
+into the annulus of a repurposed oil-and-gas well. A high-temperature heat pump
+melts the PCM during charging; an organic Rankine cycle recovers the energy
+during discharging. The storage medium is a trimodal PCM melting at
+\SI{150}{\celsius}; the heat-transfer fluid is pressurised water; the borehole
+contains longitudinally finned hairpin tubes.
+
+The model answers two questions: \emph{how many wells does a given power block
+need}, and \emph{what round-trip efficiency does the resulting plant achieve}.
+Everything below serves those two numbers.
+
+%---------------------------------------------------------------------
+\subsection*{Headline results, version 0.4}
+
+\begin{center}
+\begin{tabular}{@{}l r r r@{}}
+\toprule
+ & v0.1 published & marched, old $k_{w}$ & \textbf{v0.4} \\
+\midrule
+$\Nwells$                     & 24.123 & 22.431 & \textbf{11.573} \\
+binding constraint            & --- & charge rate & \textbf{capacity} \\
+$\varepsilon_{\mathrm{PCM}}$  & 0.5200 & 0.5402 & \textbf{0.9992} \\
+local $\varepsilon$, min--max & --- & 0.46--1.78 & \textbf{0.922--1.000} \\
+$\eta_{\mathrm{RTE}}$         & 0.43027 & 0.42955 & 0.41585 \\
+$\eta_{\mathrm{RTE}}^{0}$     & 0.43484 & 0.43484 & 0.43484 \\
+$\mathrm{COP}$                & 2.95633 & 2.95633 & 2.95633 \\
+$\eta_{\mathrm{ORC}}$         & 0.23685 & 0.23685 & 0.23685 \\
+$\eta_{\mathrm{storage}}$     & --- & 0.953 & 0.9364 \\
+closure error                 & 3--54\,\% & $10^{-16}$ & $10^{-16}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent The sizing moves a long way and the efficiency hardly at all:
+$\Nwells$ falls by \SI{52}{\percent} while $\eta_{\mathrm{RTE}}$ moves by about
+\SI{3}{\percent}. $\eta_{\mathrm{RTE}}^{0}$ is identical to twelve significant
+figures throughout --- the cycles are untouched by any of this. What the storage
+model determines is how much hardware the cycle needs, not how efficiently it
+runs.
+
+%---------------------------------------------------------------------
+\subsection{The structure of the model}
+
+The calculation is a chain, not a coupled system. Each stage consumes the
+previous stage's output and nothing flows backwards:
+
+\begin{enumerate}[itemsep=1pt]
+\item the ORC and heat-pump cycles fix $\eta_{\mathrm{ORC}}$ and
+      $\mathrm{COP}$ from CoolProp property calls alone
+      (\S\ref{sec:cycles:states});
+\item an energy budget converts the specified electrical output into a charging
+      heat duty and a secondary-fluid mass flow (\S\ref{sec:cycles:budget});
+\item a resistance network gives the local overall coefficient $\Ui$ along the
+      tube (\S\ref{sec:network});
+\item an effectiveness--NTU march integrates the fluid temperature down the
+      tube, segment by segment (\S\ref{sec:front:march});
+\item a melt-front model converts the delivered heat into a melted volume
+      (\S\ref{sec:front:legacy} or \S\ref{sec:front:marched});
+\item the well count is chosen so that the field satisfies its constraints, and
+      the performance indices follow (\S\ref{sec:hydraulics}).
+\end{enumerate}
+
+The consequence worth stating explicitly is that the cycles are decoupled from
+the storage. $\eta_{\mathrm{ORC}}$ and $\mathrm{COP}$ do not depend on anything
+the borehole does. No change to the storage model can move them, which is why
+the ideal round-trip efficiency $\eta_{\mathrm{RTE}}^{0}$ of
+Eq.~\eqref{eq:rte0} is invariant across every formulation in this document.
+
+%---------------------------------------------------------------------
+\subsection{Modelling hypotheses}
+\label{sec:overview:hypotheses}
+
+The following are assumed throughout. Those known to be violated in the
+operating regime are revisited in \S\ref{sec:defects}.
+
+\begin{description}[leftmargin=1.6em,itemsep=2pt]
+\item[H1 --- Quasi-steady conduction.] The melt layer carries no thermal mass.
+  Its temperature profile is the steady cylindrical profile corresponding to the
+  instantaneous front position. Time enters the model \emph{only} through the
+  front position. The hypothesis is controlled by the Stefan number
+  \begin{equation}
+    \mathrm{Ste} \;=\; \frac{c_{p,m}\,\Delta T}{\hm},
+    \label{eq:stefan-number}
+  \end{equation}
+  and degrades as it grows; at the design point $\mathrm{Ste}=0.0474$.
+\item[H2 --- No axial conduction.] Neither the tube wall nor the PCM conducts
+  along the well. Segments are coupled only through the fluid stream.
+\item[H3 --- Concentric annular front.] The melt region around each tube is a
+  cylindrical annulus of uniform thickness $\delta$, so that the melted
+  cross-section is $\pi[(r_e+\delta)^2-r_e^2]$. Fronts from neighbouring tubes
+  do not interact and do not merge. \emph{Under Formulation~C this cannot be
+  violated, but it is saturated over the whole well --- see
+  \S\ref{sec:defects:h3}.}
+\item[H4 --- Conduction only in the melt.] No natural convection in the liquid
+  PCM. This is conservative early and increasingly wrong as $\delta$ grows.
+\item[H5 --- Enthalpy state, no radial resolution.] \emph{Revised in v0.4.} The
+  PCM carries latent \emph{and} sensible energy, lumped into one enthalpy per
+  segment (\S\ref{sec:front:enthalpy}): fully molten PCM superheats, fully solid
+  PCM subcools. What is still absent is any radial resolution of temperature
+  \emph{within} a phase --- each segment has a single PCM temperature, so the
+  thermal gradient through the melt layer is quasi-steady (H1) rather than
+  resolved.
+\item[H6 --- Adiabatic borehole wall.] No heat exchange with the formation in
+  either direction, and no geothermal gradient in the energy balance.
+\item[H7 --- Incompressible, single-phase secondary fluid.] Pressurised water at
+  constant $P$; no buoyancy head in the vertical loop.
+\item[H8 --- Multilayer PCM.] The well is divided into $N_{\mathrm{lay}}$ axial
+  layers of distinct melting temperature, so that the PCM melting point follows
+  the fluid glide down the well. Layer boundaries are equally spaced along the
+  tube.
+\end{description}
+
+%---------------------------------------------------------------------
+\subsection{Geometry}
+\label{sec:overview:geometry}
+
+One borehole of diameter $D_{\mathrm{well}}$ and depth $L_{\mathrm{well}}$
+contains $n_{t}$ hairpin tubes. A hairpin runs down and back, so its developed
+length is
+\begin{equation}
+  L_{\mathrm{tube}} \;=\; 2\,L_{\mathrm{well}},
+  \label{eq:Ltube}
+\end{equation}
+and the number of tube \emph{legs} in the borehole is $2n_{t}$. This
+factor-of-two bookkeeping is a recurring source of error: per-borehole
+quantities multiply the per-tube result by $n_{t}$, not by $2n_{t}$, because
+Eq.~\eqref{eq:Ltube} has already counted both legs.
+
+Each leg carries $n_{f}$ longitudinal fins of thickness $t_{f}$ and radial
+length $L_{f}$. The PCM volume available in one borehole is the borehole volume
+less the tubes and their fins,
+\begin{equation}
+  V_{\mathrm{well}}
+  \;=\;
+  \frac{\pi D_{\mathrm{well}}^{2}}{4}\,L_{\mathrm{well}}
+  \;-\;
+  2n_{t}\Bigl(\pi r_{e}^{2} + n_{f} t_{f} L_{f}\Bigr) L_{\mathrm{well}} .
+  \label{eq:Vwell}
+\end{equation}
+
+Equation~\eqref{eq:Vwell} deserves a second look, because it is the source of a
+reporting trap taken up in \S\ref{sec:hydraulics:capacity}: fin metal displaces
+PCM, so \emph{any} change to the fins moves $V_{\mathrm{well}}$ and hence the
+storage capacity of a borehole, entirely independently of what the fins do
+thermally.
+
+\emph{Source:} \code{thums\_core/config.py}, class \code{Geometry}.
+
+%---------------------------------------------------------------------
+\subsection{Nomenclature}
+
+\begin{longtable}{@{}l l l@{}}
+\toprule
+symbol & meaning & unit \\
+\midrule
+\endhead
+$\Amelt$ & melted cross-section per unit tube length & \si{\meter\squared} \\
+$A_{\mathrm{avail}}$ & PCM cross-section owned by one segment & \si{\meter\squared} \\
+$C_{s}$, $C_{l}$ & sensible capacity per unit tube length & \si{\joule\per\meter\per\kelvin} \\
+$E'$ & PCM enthalpy per unit tube length & \si{\joule\per\meter} \\
+$E'_{\mathrm{lat}}$ & latent capacity per unit tube length & \si{\joule\per\meter} \\
+$K$ & segment conductance per unit tube length & \si{\watt\per\meter\per\kelvin} \\
+$c_{p}$ & specific heat capacity & \si{\joule\per\kilogram\per\kelvin} \\
+$D_{\mathrm{well}}$ & borehole diameter & \si{\meter} \\
+$\hm$ & latent heat of fusion & \si{\joule\per\kilogram} \\
+$h_{i}$ & internal convective coefficient & \si{\watt\per\meter\squared\per\kelvin} \\
+$h_{e}$ & melt-layer conductance, outer side & \si{\watt\per\meter\squared\per\kelvin} \\
+$\km$ & PCM thermal conductivity & \si{\watt\per\meter\per\kelvin} \\
+$k_{w}$ & tube-wall and fin conductivity & \si{\watt\per\meter\per\kelvin} \\
+$L_{f}$, $t_{f}$, $n_{f}$ & fin length, thickness, count & \si{\meter}, \si{\meter}, -- \\
+$L_{\mathrm{well}}$, $L_{\mathrm{tube}}$ & well depth, developed tube length & \si{\meter} \\
+$\md$ & mass flow rate & \si{\kilogram\per\second} \\
+$n_{t}$ & hairpin tubes per borehole & -- \\
+$N_{\mathrm{lay}}$ & PCM layers along the well & -- \\
+$\Nwells$ & number of boreholes & -- \\
+$\mathrm{NTU}$ & number of transfer units, per segment & -- \\
+$q'$ & heat rate per unit tube length & \si{\watt\per\meter} \\
+$r_{i}$, $r_{e}$ & tube inner and outer radius & \si{\meter} \\
+$r_{\mathrm{cell}}$ & equivalent cell radius of one tube leg & \si{\meter} \\
+$R'$ & thermal resistance referred to inner area & \si{\meter\squared\kelvin\per\watt} \\
+$R''_{f,i}$ & internal fouling resistance & \si{\meter\squared\kelvin\per\watt} \\
+$t_{\mathrm{ch}}$, $t_{\mathrm{dc}}$ & charging, discharging duration & \si{\hour} \\
+$\Tm$ & PCM melting temperature & \si{\kelvin} \\
+$T_{\mathrm{pcm}}$ & PCM temperature, recovered from $E'$ & \si{\kelvin} \\
+$\Tre$ & tube outer-surface temperature & \si{\kelvin} \\
+$\Ui$ & overall coefficient on inner area & \si{\watt\per\meter\squared\per\kelvin} \\
+$V_{\mathrm{well}}$, $\Vmelt$ & PCM volume, melted volume & \si{\meter\cubed} \\
+$\delta$ & melt-layer thickness & \si{\meter} \\
+$\delta_{\mathrm{merge}}$ & thickness at which neighbouring fronts touch & \si{\meter} \\
+$\Delta z$ & segment length & \si{\meter} \\
+$\varepsilon_{\mathrm{PCM}}$ & melted fraction of the PCM inventory & -- \\
+$\varepsilon_{\mathrm{local}}$ & melted fraction of one segment's PCM & -- \\
+$\etaf$, $\etao$ & fin and overall surface efficiency & -- \\
+$\lambda$ & assumed storage-loss surplus & -- \\
+$\rhom$ & PCM density & \si{\kilogram\per\meter\cubed} \\
+\bottomrule
+\end{longtable}
+
+Subscripts $s$ and $l$ denote the solid and liquid PCM phases. Subscripts
+$\mathrm{ch}$ and $\mathrm{dc}$ denote charging and discharging. A prime on a
+resistance denotes referral to the inner tube area, and a prime on a heat rate
+denotes per unit tube length.

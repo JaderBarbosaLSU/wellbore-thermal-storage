@@ -1,0 +1,187 @@
+%=====================================================================
+\section{The borehole resistance network}
+\label{sec:network}
+
+At a given axial station the heat leaving the secondary fluid crosses, in
+series: the internal convective film, the fouling layer, the tube wall, and the
+melt layer standing on a finned outer surface. All four are referred to the
+inner tube area, so that a single coefficient $\Ui$ drives the segment march of
+\S\ref{sec:front:march}.
+
+%---------------------------------------------------------------------
+\subsection{Internal convection}
+
+With $D_{i}=2r_{i}$ and $\md$ the flow in one tube,
+\begin{equation}
+  \mathrm{Re} \;=\; \frac{4\md}{\pi D_{i}\,\mu},
+  \qquad
+  \mathrm{Pr} \;=\; \frac{c_{p}\mu}{k}.
+\end{equation}
+The Nusselt number is the Gnielinski correlation in turbulent flow and a fixed
+fully-developed value in laminar flow:
+\begin{equation}
+  \mathrm{Nu} =
+  \begin{dcases}
+    \mathrm{Nu}_{\mathrm{lam}}, & \mathrm{Re} < 2300, \\[4pt]
+    \frac{(f_{G}/8)(\mathrm{Re}-1000)\,\mathrm{Pr}}
+         {1 + 12.7\sqrt{f_{G}/8}\,\bigl(\mathrm{Pr}^{2/3}-1\bigr)},
+      & \mathrm{Re} \geq 2300,
+  \end{dcases}
+  \qquad
+  f_{G} = \bigl(0.79\ln\mathrm{Re} - 1.64\bigr)^{-2},
+  \label{eq:gnielinski}
+\end{equation}
+and
+\begin{equation}
+  h_{i} \;=\; \frac{\mathrm{Nu}\,k}{D_{i}} .
+\end{equation}
+
+The laminar constant differs between the two implementations:
+$\mathrm{Nu}_{\mathrm{lam}}=4.36$ in \code{well\_marched} (uniform wall flux) and
+$3.66$ in the legacy \code{temperature\_profile\_melt} (uniform wall
+temperature). For a melting boundary the wall is closer to isothermal, so $3.66$
+is the better constant of the two; the discrepancy is recorded in
+\S\ref{sec:defects} and is inconsequential at the design point, where the flow
+is strongly turbulent.
+
+%---------------------------------------------------------------------
+\subsection{Wall, fouling and melt layer}
+
+The wall and fouling resistances, referred to the inner area, are
+\begin{equation}
+  R'_{\mathrm{wall}} \;=\; \frac{r_{i}}{k_{w}}\,\ln\!\frac{r_{e}}{r_{i}},
+  \qquad
+  R'_{f} \;=\; R''_{f,i},
+  \qquad
+  R'_{\mathrm{conv}} \;=\; \frac{1}{h_{i}} .
+  \label{eq:R-wall}
+\end{equation}
+
+The melt layer is treated as a steady cylindrical conduction shell between
+$r_{e}$ and $r_{e}+\delta$. Expressed as a conductance on the tube outer
+surface,
+\begin{equation}
+  h_{e} \;=\; \frac{\km}{r_{e}\,\ln\!\bigl(1+\delta/r_{e}\bigr)} .
+  \label{eq:he}
+\end{equation}
+As $\delta\to 0$ the layer vanishes and $h_{e}\to\infty$; the code caps this at
+$10^{9}$, which is the correct limit and not, as an earlier audit asserted, a
+defect. What \emph{is} defective is that error paths also route into that
+branch, so a failed solve is reported as maximum heat transfer
+(\S\ref{sec:defects}).
+
+Equation~\eqref{eq:he} carries an assumption that becomes important in
+\S\ref{sec:defects:h3}: it presumes the \emph{entire} azimuth
+$2\pi(r_{e}+\delta)$ is available for conduction at every radius. That holds
+only while the melt front is free of its neighbours.
+
+%---------------------------------------------------------------------
+\subsection{Fin efficiency and the finned surface}
+\label{sec:network:fins}
+
+The fins are straight longitudinal fins of rectangular profile, treated with the
+adiabatic-tip correction $L_{c}=L_{f}+t_{f}/2$:
+\begin{equation}
+  m \;=\; \sqrt{\frac{2h_{e}}{k_{w}\,t_{f}}},
+  \qquad
+  \etaf \;=\; \frac{\tanh(m L_{c})}{m L_{c}} .
+  \label{eq:fin-eff}
+\end{equation}
+
+With the fin surface and total outer surface per tube
+\begin{equation}
+  A_{f} \;=\; L_{\mathrm{tube}}\,\bigl(2L_{f}+t_{f}\bigr),
+  \qquad
+  A_{t} \;=\; 2L_{\mathrm{tube}}\,\bigl(\pi r_{e} + n_{f} L_{f}\bigr),
+  \label{eq:areas}
+\end{equation}
+the overall surface efficiency is
+\begin{equation}
+  \etao \;=\; 1 - \frac{n_{f}A_{f}}{A_{t}}\,\bigl(1-\etaf\bigr),
+  \label{eq:eta-o}
+\end{equation}
+and the wetted perimeter of the finned tube is
+\begin{equation}
+  P_{T} \;=\; 2\pi r_{e} + 2 n_{f} L_{f} .
+  \label{eq:perim}
+\end{equation}
+
+Equation~\eqref{eq:perim} is the quantity at the centre of the v0.2 correction.
+At the design geometry $P_{T}=\SI{0.4924}{\meter}$, against a bare-tube
+perimeter $2\pi r_{e}=\SI{0.1324}{\meter}$ --- a factor of $3.72$. The legacy
+melt-front model of \S\ref{sec:front:legacy} uses the bare perimeter while the
+network above uses $P_{T}$, and nothing in v0.1 compared them.
+
+\medskip
+\noindent\textbf{How the fins enter, and how they do not.} Equations
+\eqref{eq:fin-eff}--\eqref{eq:perim} represent a fin as \emph{additional surface
+at the tube}: more perimeter, discounted by an efficiency. That is the whole of
+the fin model. A fin is \emph{not} represented as a radial conduction path
+carrying heat outward to PCM the tube cannot easily reach. The distinction is
+immaterial while the melt layer is thin and becomes material once the fronts
+approach one another, which is the situation analysed in
+\S\ref{sec:defects:h3}.
+
+Note also that $k_{w}$ appears twice with different physical meanings: as the
+tube-wall conductivity in Eq.~\eqref{eq:R-wall} and as the \emph{fin}
+conductivity in Eq.~\eqref{eq:fin-eff}. A single argument carries both. This is
+what allowed the PCM liquid conductivity to be passed in that slot for months
+without contradiction (\S\ref{sec:defects:kw}).
+
+%---------------------------------------------------------------------
+\subsection{Overall coefficient}
+
+The melt-layer resistance referred to the inner area carries the ratio of
+perimeters and the surface efficiency,
+\begin{equation}
+  R'_{\mathrm{outer}} \;=\; \frac{2\pi r_{i}}{P_{T}\,\etao\,h_{e}},
+  \label{eq:R-outer}
+\end{equation}
+and the overall coefficient is the inverse of the series sum,
+\begin{equation}
+  \boxed{\;
+  \Ui \;=\;
+  \Bigl[\,
+    \underbrace{\tfrac{1}{h_{i}}}_{\text{convection}}
+    +\;\underbrace{R''_{f,i}}_{\text{fouling}}
+    +\;\underbrace{\tfrac{r_{i}}{k_{w}}\ln\tfrac{r_{e}}{r_{i}}}_{\text{wall}}
+    +\;\underbrace{\tfrac{2\pi r_{i}}{P_{T}\etao h_{e}}}_{\text{melt layer}}
+  \,\Bigr]^{-1} .
+  \;}
+  \label{eq:Ui}
+\end{equation}
+
+\emph{Source:} \code{\_legacy\_physics.compute\_U\_i}.
+
+%---------------------------------------------------------------------
+\subsection{Outer-surface temperature}
+\label{sec:network:Tre}
+
+The legacy melt-front model is driven by the tube outer-surface temperature
+rather than by the heat flow. Splitting the network at $r_{e}$, with
+\begin{equation}
+  R_{1} \;=\; R''_{f,i} + \frac{1}{h_{i}}
+              + \frac{r_{i}}{k_{w}}\ln\frac{r_{e}}{r_{i}},
+  \qquad
+  R_{2} \;=\; \frac{2\pi r_{i}}{P_{T}\,h_{e}\,\etao},
+\end{equation}
+and $T_{\mathrm{avg}}=\tfrac{1}{2}(T_{j}+T_{j+1})$ the mean fluid temperature
+over the segment, a series voltage-divider gives
+\begin{equation}
+  \Tre \;=\; T_{\mathrm{avg}}
+             - \frac{R_{1}\bigl(T_{\mathrm{avg}}-\Tm\bigr)}{R_{1}+R_{2}} .
+  \label{eq:Tre}
+\end{equation}
+
+\emph{Source:} \code{\_legacy\_physics.compute\_T\_re}.
+
+Equations~\eqref{eq:Ui} and~\eqref{eq:Tre} are solved together with the melt
+front in a fixed-point loop at each segment, since $h_{e}$ depends on $\delta$,
+$\delta$ depends on $\Tre$, and $\Tre$ depends on $h_{e}$. The loop runs to a
+tolerance $\delta_{\mathrm{tol}}$ or a maximum iteration count, warm-started
+from the previous segment.
+
+Equation~\eqref{eq:Tre} is required \emph{only} by the legacy front. The
+formulations of \S\ref{sec:front:marched} and \S\ref{sec:front:enthalpy} advance
+the front from $q'$ directly and never form $\Tre$, which removes the
+fixed-point loop along with it.

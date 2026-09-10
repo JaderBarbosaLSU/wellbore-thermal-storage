@@ -1,0 +1,125 @@
+%=====================================================================
+\section{Thermodynamic cycles and the energy budget}
+\label{sec:cycles}
+
+%---------------------------------------------------------------------
+\subsection{State points}
+\label{sec:cycles:states}
+
+The plant contains two cycles. During charging a two-stage high-temperature heat
+pump with two regenerators lifts heat from a source at $T_{\mathrm{source}}$ to
+the PCM melting temperature. During discharging a two-stage organic Rankine
+cycle rejects to a sink at $T_{\mathrm{sink}}$. Both use cyclopentane; the
+secondary fluid circulating through the boreholes is pressurised water.
+
+Every state point is fixed by a specified approach temperature rather than by a
+component model. Writing $\Tm$ for the PCM melting point,
+\begin{align}
+  T_{1e} &= T_{\mathrm{sink}} + \Delta T_{E,\mathrm{sink}}, &
+  T_{2d} &= \Tm - \Delta T_{m,2D}, \\
+  T_{3e} &= T_{2d} - \Delta T_{2D,3E}, &
+  T_{3d} &= T_{2d} - \Delta T_{2D,3D}, \\
+  T_{4c} &= \Tm + \Delta T_{4C,M}, &
+  T_{4a} &= T_{\mathrm{source}} - \Delta T_{3A,4A}, \\
+  T_{13h} &= T_{\mathrm{source}} - \Delta T_{3A,13H}, &
+  T_{3c} &= T_{4c}, \\
+  T_{2c} &= T_{3c} - \Delta T_{3C,2C}, &
+  T_{2h} &= T_{3c} + \Delta T_{2H,3C}.
+\end{align}
+
+The secondary-fluid glide across the borehole field, $\Delta T_{3C,2C}$, is the
+principal design variable of the study. The discharge-side glide is tied to it,
+\begin{equation}
+  \Delta T_{2D,3D} \;=\; \Delta T_{3C,2C},
+  \label{eq:glide-tied}
+\end{equation}
+by construction. In v0.1 these were two independent variables carrying a comment
+that they must be equal; a comment is not a constraint, and
+Eq.~\eqref{eq:glide-tied} now enforces it.
+
+Given the state points, the cycle efficiencies
+\begin{equation}
+  \eta_{\mathrm{ORC}} \;=\; \frac{w_{\mathrm{net}}}{q_{\mathrm{in}}},
+  \qquad
+  \mathrm{COP} \;=\; \frac{q_{\mathrm{out}}}{w_{\mathrm{comp}}}
+  \label{eq:cycle-eff}
+\end{equation}
+follow from enthalpies evaluated by CoolProp at those points.
+
+\emph{Source:} \code{\_legacy\_physics.double\_stage\_rankine},
+\code{two\_stage\_htheatpump\_2regs}; assembled in \code{system.\_cycles}.
+
+\medskip
+\noindent\textbf{Caveat, stated here because it bounds every efficiency in this
+document.} The expansion and compression steps are evaluated between the
+prescribed state points without isentropic efficiencies. $\eta_{\mathrm{ORC}}$
+and $\mathrm{COP}$ are therefore idealised, and the round-trip efficiencies of
+\S\ref{sec:hydraulics:kpi} inherit that idealisation. Only the electrical and
+mechanical efficiencies $\eta_{T}$, $\eta_{G}$, $\eta_{C}$, $\eta_{H}$ of
+Eq.~\eqref{eq:budget} appear. This is a property of the model as built, not a
+simplification introduced by this document.
+
+%---------------------------------------------------------------------
+\subsection{Energy budget}
+\label{sec:cycles:budget}
+
+The chain runs backwards from the specified net electrical output
+$\dot W_{\mathrm{el,out}}$ of the power block:
+\begin{align}
+  \dot W_{T} &= \frac{\dot W_{\mathrm{el,out}}}{\eta_{T}\,\eta_{G}}, &
+  \dot Q_{\mathrm{in,ORC}} &= \frac{\dot W_{T}}{\eta_{\mathrm{ORC}}},
+  \nonumber\\[2pt]
+  \Delta E_{\mathrm{in,ORC}} &= \dot Q_{\mathrm{in,ORC}}\, t_{\mathrm{dc}}, &
+  \Delta E_{\mathrm{out,HP}} &= \Delta E_{\mathrm{in,ORC}}\,(1+\lambda),
+  \nonumber\\[2pt]
+  \dot Q_{\mathrm{out,HP}} &= \frac{\Delta E_{\mathrm{out,HP}}}{t_{\mathrm{ch}}}, &
+  \dot W_{C,\mathrm{HP}} &= \frac{\dot Q_{\mathrm{out,HP}}}{\mathrm{COP}},
+  \nonumber\\[2pt]
+  \dot W_{\mathrm{el,in}} &= \frac{\dot W_{C,\mathrm{HP}}}{\eta_{C}\,\eta_{H}}. &&
+  \label{eq:budget}
+\end{align}
+
+The charging mass flow of secondary fluid follows from the duty and the glide,
+\begin{equation}
+  \mdw^{\mathrm{ch}}
+  \;=\;
+  \frac{\dot Q_{\mathrm{out,HP}}}{c_{p,w}\,\Delta T_{3C,2C}},
+  \qquad
+  c_{p,w} = c_p\!\left(\tfrac{1}{2}(T_{3c}+T_{2c}),\,P\right),
+  \label{eq:mdot-charge}
+\end{equation}
+and is divided equally among all tubes of all wells,
+\begin{equation}
+  \md_{1}^{\mathrm{ch}} \;=\; \frac{\mdw^{\mathrm{ch}}}{\Nwells\, n_{t}} .
+  \label{eq:mdot-per-tube}
+\end{equation}
+
+Note for \S\ref{sec:hydraulics:sizing}: Eq.~\eqref{eq:mdot-charge} \emph{pins}
+the charging flow to the specified glide. It is therefore not free, and this is
+what decides which side of the cycle can size the well field.
+
+%---------------------------------------------------------------------
+\subsection{The storage-loss surplus \texorpdfstring{$\lambda$}{lambda}}
+\label{sec:cycles:lambda}
+
+The factor $(1+\lambda)$ in Eq.~\eqref{eq:budget} is the one place where the
+budget anticipates a loss it does not compute. It asserts that charging must
+deposit $\lambda$ more energy than discharging will recover, and it is set to
+$\lambda = 0.05$ by fiat.
+
+In v0.1 this could not be checked, because the discharge model began from a bare
+tube in fully solid PCM irrespective of what charging had produced
+(\S\ref{sec:front:legacy}). With the melt state carried across the cycle
+(\S\ref{sec:front:marched}) the recovered fraction becomes an output,
+\begin{equation}
+  \eta_{\mathrm{storage}}
+  \;=\;
+  \frac{\Delta E_{\mathrm{discharged}}}{\Delta E_{\mathrm{stored}}},
+  \label{eq:eta-storage}
+\end{equation}
+and can be compared with the $1/(1+\lambda)=0.952$ that Eq.~\eqref{eq:budget}
+presumes. At the design point with the legacy wall conductivity
+$\eta_{\mathrm{storage}}=0.953$, and the assumption survives. With the correct
+steel conductivity it falls to $0.9364$, and it does not: the field banks about
+\SI{7}{\percent} more than the ORC withdraws, against the \SI{5}{\percent}
+assumed. Making $\lambda$ an output rather than an input remains open work.

@@ -1,0 +1,350 @@
+%=====================================================================
+\section{Violated assumptions, duplicated definitions, absent terms}
+\label{sec:defects}
+
+This section is part of the model specification, not an appendix to it. Every
+item below is either an assumption the operating regime violates, a physical
+quantity the code defines twice, or a term omitted altogether. A reader
+reproducing these results needs all three.
+
+%---------------------------------------------------------------------
+\subsection{H3 is saturated, and it now carries a design decision}
+\label{sec:defects:h3}
+
+\subsubsection*{The limit was being tested at the wrong radius}
+
+Hypothesis~H3 takes the melt region to be a concentric annulus whose front never
+meets the front of a neighbouring leg. Until this version the geometric check
+guarding it compared $r_{e}+\delta$ against the \emph{borehole wall}. That is
+the wrong radius. The $2n_{t}=4$ legs share the borehole cross-section equally,
+so each owns
+\begin{equation}
+  \pi r_{\mathrm{cell}}^{2} = \frac{\pi R^{2}}{2n_{t}},
+  \qquad\text{i.e.}\qquad
+  r_{\mathrm{cell}} = \frac{R}{\sqrt{2n_{t}}},
+  \qquad
+  \delta_{\mathrm{merge}} = r_{\mathrm{cell}} - r_{e},
+  \label{eq:rcell}
+\end{equation}
+with $R=D_{\mathrm{well}}/2$. Numerically $r_{\mathrm{cell}}=\SI{44.45}{\milli\meter}$
+against a wall at \SI{88.90}{\milli\meter}, so the check permitted
+$\delta=\SI{67.82}{\milli\meter}$ where the true limit is
+\SI{23.37}{\milli\meter} --- a factor \num{2.9} too permissive, and therefore
+silent at every design point ever run. Equation~\eqref{eq:rcell} is now
+\code{Case.r\_cell} and \code{Case.delta\_merge}, and the plots, the diagnostics
+and the sizing report all read the same limit.
+
+\subsubsection*{Under Formulation C the limit cannot be exceeded --- it is sat on}
+
+Correcting the radius turns out not to produce a violation, for a reason worth
+stating precisely:
+\begin{equation}
+  A\!\left(\delta_{\mathrm{merge}}\right) \equiv A_{\mathrm{avail}},
+\end{equation}
+identically --- a leg owns exactly the PCM inside its own cell, so melting all
+of it puts the front exactly on the cell boundary. Since Formulation~C caps
+$\Amelt$ at $A_{\mathrm{avail}}$ (\S\ref{sec:front:enthalpy}), it follows that
+$\delta \le \delta_{\mathrm{merge}}$ always. \emph{$\varepsilon_{\mathrm{local}}=1$
+and ``the fronts merge'' are the same line.}
+
+What the corrected diagnostic reveals instead is that the design \emph{sits} on
+that line: at the v0.4 design point $\delta/\delta_{\mathrm{merge}}=1.000$ over
+\SI{99}{\percent} of the well. The annular conduction resistance is being
+evaluated at the exact limit of its validity almost everywhere. Two errors
+follow, and both point the same way:
+
+\begin{enumerate}[leftmargin=1.7em,itemsep=3pt]
+\item The resistance $\ln\!\left(1+\delta/r_{e}\right)/2\pi\km$ assumes the full
+  azimuth $2\pi\left(r_{e}+\delta\right)$ conducts. Past merge it does not --- a
+  neighbour has taken part of it --- and the residual solid sits in the
+  \emph{corners} between legs, on a longer and narrower path. Late-stage
+  resistance is \textbf{understated}.
+\item Fins enter $\Ui$ only as added \emph{surface at the tube}, through
+  $\etaf$ and $P_{T}$ (\S\ref{sec:network:fins}). They are not represented as
+  radial conduction paths
+  reaching into that corner PCM --- which is the single thing a fin does best in
+  this regime. The benefit is \textbf{uncredited}.
+\end{enumerate}
+
+\subsubsection*{Why this now matters: the fin count}
+
+This ceased to be a bookkeeping concern when it began to decide geometry.
+Sweeping the fins gives:
+
+\begin{center}
+\begin{tabular}{@{}l r r r l@{}}
+\toprule
+configuration & $N_{\mathrm{capacity}}$ & $N_{\mathrm{rate}}$
+              & $\Nwells$ & binding \\
+\midrule
+$24\times\SI{7.50}{\milli\meter}$ & 11.573 & 11.263 & \textbf{11.573} & capacity \\
+$16\times\SI{7.50}{\milli\meter}$ & 11.348 & 11.287 & \textbf{11.348} & capacity \\
+$12\times\SI{7.50}{\milli\meter}$ & 11.239 & 11.529 & \textbf{11.529} & charge rate \\
+$\phantom{0}8\times\SI{7.50}{\milli\meter}$ & 11.132 & 12.208 & \textbf{12.208} & charge rate \\
+bare tube & 10.924 & 16.569 & \textbf{16.569} & charge rate \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Read the $N_{\mathrm{capacity}}$ column alone and the conclusion is that fins
+make matters worse --- it falls monotonically as fin metal is removed. That
+column contains \emph{no heat transfer at all}: it is
+$\Delta E/\left(\rho V_{\mathrm{well}}\left[\hm+c_{p,l}\Delta T\right]\right)$,
+and removing a fin returns its metal volume to the PCM. Indeed
+$N_{\mathrm{capacity}}\cdot V_{\mathrm{well}}$ is constant to machine precision
+across the whole sweep. The real answer, $\Nwells=\max$ of the two criteria,
+moves the other way: removing the fins costs \SI{42}{\percent} more wells.
+\S\ref{sec:hydraulics:capacity} states the reporting rule that follows.
+
+The optimum sits where the two criteria cross, at $16\times\SI{7.5}{\milli\meter}$
+--- so the design point is mildly over-finned, by about \SI{2}{\percent} in well
+count. But given the two biases above, that figure should be read as a
+\textbf{floor} on the fin count rather than an optimum. Settling it requires a
+two-dimensional conduction calculation in the cell, which is the most
+consequential piece of open work in this model.
+
+\subsubsection*{The charging window is what decides it}
+
+Fins buy \emph{rate}, so their worth is set by how much rate is demanded:
+
+\begin{center}
+\begin{tabular}{@{}r r r r@{}}
+\toprule
+$t_{ch}$ [h] & bare & $24$ fins & gain \\
+\midrule
+ 4 & 28.976 & 15.794 & 1.84 \\
+ 6 & 22.579 & 12.499 & 1.81 \\
+10 & 16.569 & 11.573 & 1.43 \\
+14 & 13.468 & 11.573 & 1.16 \\
+20 & 11.432 & 11.573 & 0.99 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Break-even is near \SI{20}{\hour}. The origin is visible in the closed form of
+\S\ref{sec:front:legacy}: putting $x=r_{\mathrm{cell}}/r_{e}$ in
+Eq.~\eqref{eq:stefan-implicit}, a \emph{bare} tube at $\Delta T=\SI{10}{\kelvin}$ reaches
+the cell boundary in
+\begin{equation}
+  t = \frac{\rhom\hm r_{e}^{2}}{\km\Delta T}
+      \left[\tfrac12 x^{2}\ln x - \tfrac14 x^{2} + \tfrac14\right]
+    \approx \SI{6.4}{\hour},
+\end{equation}
+comfortably inside the \SI{10}{\hour} window --- which is why a bare tube
+\emph{nearly} works here, and why the fins look marginal. Halve the window and
+they are not marginal at all.
+
+%---------------------------------------------------------------------
+\subsection{Where the closed-form front fails}
+
+Formulation~A (\S\ref{sec:front:legacy}) rests on two premises, both false in
+this application, acting in opposite directions.
+
+\paragraph{Surface mismatch.} The fluid gives up heat through the finned
+perimeter $P_{T}=\SI{0.4924}{\meter}$ of Eq.~\eqref{eq:perim}; the front absorbs
+it through the bare perimeter $2\pi r_{e}=\SI{0.1324}{\meter}$ assumed by
+Eq.~\eqref{eq:stefan-explicit}. Factor $3.72$. The front therefore
+\emph{under}-melts.
+
+\paragraph{Retroactive driving temperature.}
+Equation~\eqref{eq:stefan-explicit} assumes $\Tre$ constant since $t=0$, and is
+handed its current value. Measured at mid-well over the charging window,
+$\Tre-\Tm$ runs $0 \to \SI{8.62}{\kelvin}$. Applying the final value
+retroactively \emph{over}-melts by a factor of about $1.56$.
+
+The two are separable by setting $n_{f}=0$, which makes the surfaces coincide
+and leaves only the second error:
+
+\begin{center}
+\begin{tabular}{@{}c c c@{}}
+\toprule
+$n_{f}$ & $k_{w}$ [\si{\watt\per\meter\per\kelvin}]
+        & $\int q'\mathrm{d}t \,/\, \rhom\hm\Vmelt$ \\
+\midrule
+24 & 0.45 & 1.032 \\
+24 & 45   & 2.021 \\
+ 0 & 0.45 & 0.642 \\
+ 0 & 45   & 0.642 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+With the fins removed the imbalance does not vanish --- it inverts, and becomes
+almost independent of $k_{w}$. The near-unity entry in the first row is
+therefore not evidence of a sound model. It is a \emph{triple} cancellation
+between the surface mismatch, the retroactive $\Tre$, and the conductivity error
+below.
+
+\emph{Evidence:} \code{verification/verify\_fins\_off.py},
+\code{verification/verify\_frozen\_Tre.py}.
+
+%---------------------------------------------------------------------
+\subsection{The wall conductivity argument --- corrected in v0.3}
+\label{sec:defects:kw}
+
+\noindent\fbox{\parbox{0.97\linewidth}{\textbf{Correction notice.} Versions of
+this model up to and including the IHTC paper used the wrong value of the wall
+thermal conductivity during charging. The results reported in this document for
+v0.3 and later use the corrected value.}}
+
+\medskip
+$k_{w}$ carries two physical meanings, tube-wall conductivity in
+Eq.~\eqref{eq:R-wall} and fin conductivity in Eq.~\eqref{eq:fin-eff}, through a
+single positional argument. In the charging chain that slot received the PCM
+liquid conductivity, $\SI{0.45}{\watt\per\meter\per\kelvin}$, instead of steel
+at $\SI{45}{\watt\per\meter\per\kelvin}$ --- two orders of magnitude low. The
+error is visible in the original solver signature, whose parameter is named
+\code{k\_m\_l}.
+
+The consequence was not confined to the wall resistance, which is small either
+way. Through Eq.~\eqref{eq:fin-eff} it collapsed the fin efficiency to
+$\etaf\approx 0.33$, throttling the fluid-side conductance to roughly what a
+bare cylinder can absorb, and so accidentally compensating the surface mismatch
+above. This is why correcting $k_{w}$ \emph{alone} makes the model worse, and
+why it could only be corrected together with the front formulation.
+
+From v0.3 the correct value is the default
+(\code{Case.charge\_uses\_wall\_conductivity = True}). Setting it \code{False}
+reproduces the published v0.1 configuration, which is how the verification of
+\S\ref{sec:defects:verification} is performed. Both switches must be set
+together: the closed-form front \emph{and} the conductivity error. Setting only
+one gives a model that never existed.
+
+%---------------------------------------------------------------------
+\subsection{Quantities defined twice}
+
+\begin{description}[leftmargin=1.6em,itemsep=3pt]
+\item[Melt-layer conductance $h_{e}$.] Equation~\eqref{eq:he} is the cylindrical
+  shell used in \code{compute\_T\_re}. The small-$\delta$ branch of
+  \code{compute\_U\_i} instead falls back to the plane-slab form
+  $h_{e}=\km/\delta$. Same physical quantity, two formulas, iterated against
+  each other in the fixed-point loop of \S\ref{sec:network:Tre}. The two agree
+  as $\delta/r_{e}\to0$ and diverge as the layer grows.
+\item[Laminar Nusselt number.] $4.36$ (uniform flux) in \code{well\_marched},
+  $3.66$ (uniform temperature) in the legacy march. For a melting boundary the
+  isothermal value is the defensible one.
+\item[Charging pressure-drop end states.] The charging drop is evaluated between
+  $T_{4c}$ and $T_{4a}$, a source-loop pair, whereas $T_{2c}$ is the borehole
+  return. The affected property is the water density, so the error is small, but
+  the temperatures are not the ones the flow actually sees.
+\end{description}
+
+%---------------------------------------------------------------------
+\subsection{Absent terms}
+
+\begin{description}[leftmargin=1.6em,itemsep=3pt]
+\item[Formation heat loss.] Hypothesis H6. The borehole wall is adiabatic. Over
+  a \SI{10}{\hour} cycle this is defensible; over seasonal storage it is not.
+  The geothermal gradient is carried in the configuration and used in no energy
+  balance.
+\item[Natural convection in the melt.] Hypothesis H4. Conduction-only transport
+  in the liquid PCM under-predicts the melting rate once the layer is
+  established, and does so increasingly as $\delta$ grows. Note that this is the
+  one absent term that argues \emph{against} fins rather than for them.
+\item[Sensible heat in the PCM.] \emph{Supplied in v0.4} --- see
+  \S\ref{sec:front:enthalpy}. What remains absent is any \emph{radial
+  resolution} of temperature within a phase: each segment carries one lumped
+  $T_{\mathrm{pcm}}$, so superheat appears uniformly across the liquid annulus
+  rather than diffusing outward from the tube.
+\item[Buoyancy head.] Hypothesis H7. The \SI{1524}{\meter} loop carries roughly
+  \SI{\pm 7.5}{\bar} of static head, asymmetric between charge and discharge,
+  and it is absent from Eq.~\eqref{eq:dp}.
+\item[Isentropic efficiencies.] \S\ref{sec:cycles:states}. Both cycles are
+  evaluated between prescribed state points, so $\eta_{\mathrm{ORC}}$ and
+  $\mathrm{COP}$ are idealised.
+\item[Volume change on melting.] \S\ref{sec:front:inventory}. The
+  \SI{6.9}{\percent} expansion is not represented.
+\item[Melt-front shape around the fins.] \S\ref{sec:front:finmetal}. The fin
+  \emph{metal} is excluded from $\Amelt$ as of v0.3, but the front is still
+  taken as a circular annulus; physically it bulges along the fins.
+\item[Front interaction in the corners between legs.] Hypothesis H3, treated at
+  length in \S\ref{sec:defects:h3}. The geometric limit is now tested at the
+  cell radius rather than the borehole wall, and under Formulation~C it cannot
+  be exceeded --- but it is \emph{saturated} over \SI{99}{\percent} of the well,
+  so the annular resistance runs at the limit of its validity and neither the
+  reduced conducting azimuth nor the fins' reach into the corner PCM is
+  represented. The most consequential open item in the model.
+\item[$\lambda$ as an output.] \S\ref{sec:cycles:lambda}. The storage loss is
+  still an input, at \SI{5}{\percent}, while the model computes
+  $\eta_{\mathrm{storage}}=0.9364$.
+\end{description}
+
+%---------------------------------------------------------------------
+\subsection{Error handling}
+
+Both v0.1 bisections return the bracket bound when they fail to converge and
+report it as an answer, and the driver cell continues past it. In
+\code{thums\_core} these raise \code{ThumsConvergenceError} carrying the last
+iterate. Similarly, failed property lookups formerly routed into the
+$\delta\to0$ branch of Eq.~\eqref{eq:he}, so that a failed solve was reported as
+\emph{maximum} heat transfer; they now raise \code{ThumsPropertyError}.
+
+The value $h_{e}=10^{9}$ in that branch is itself correct --- a zero-thickness
+melt layer has zero conduction resistance --- notwithstanding an inverted
+comment in the source and an earlier audit that repeated it.
+
+%---------------------------------------------------------------------
+\subsection{Verification status}
+\label{sec:defects:verification}
+
+\begin{description}[leftmargin=1.6em,itemsep=3pt]
+\item[Regression.] \code{Case(front="closed\_form")} reproduces the frozen v0.1
+  fixture to $4\times10^{-11}$ on every index; the residual is CoolProp and
+  NumPy version drift.
+\item[Energy closure.] Structural under Formulations~B and~C, and therefore
+  \emph{not} an independent check (\S\ref{sec:front:marched}).
+\item[Analytical.] Equation~\eqref{eq:stefan-explicit} verified against its own
+  defining quadrature to a residual of $10^{-15}$.
+\item[Numerical.] The branchwise-exact enthalpy integration of
+  Eq.~\eqref{eq:enth-exact} agrees with a \num{200000}-substep explicit
+  reference to $3\times10^{-13}$, including across branch crossings.
+\item[Grid.] Not converged and not quoted as such: $\varepsilon_{\mathrm{PCM}}$
+  moves $-0.3\,\%$ from $n_{\mathrm{times}}=40$ to $320$, one-sided, so the
+  default carries a small known bias.
+\item[External validation.] None. No experimental or independently computed data
+  set has been identified against which any formulation can be checked. This
+  is the principal gap in the verification ladder, and no amount of internal
+  consistency substitutes for it.
+\end{description}
+
+%---------------------------------------------------------------------
+\subsection{Version history}
+
+\begin{longtable}{@{}l l p{0.60\linewidth}@{}}
+\toprule
+version & date & change \\
+\midrule
+\endhead
+\textbf{0.4a} & 2026-09 &
+  No physics. \S\ref{sec:front:enthalpy} rewritten as a teaching treatment of
+  Formulation~C. Reporting rule added (\S\ref{sec:hydraulics:capacity}):
+  $N_{\mathrm{capacity}}$ is a lower bound and must not be read across a sweep
+  alone. Melt-front limit corrected from the borehole wall to the cell radius,
+  Eq.~\eqref{eq:rcell}, and H3 proximity now reported
+  (\S\ref{sec:defects:h3}); the fin count and the charging window follow from
+  it. \\
+0.4 & 2026-09 &
+  Melt front carries \emph{enthalpy} rather than melted area
+  (\S\ref{sec:front:enthalpy}): superheat above $\Tm$, subcool below it, no
+  clipping, local melt fraction confined to $[0,1]$ by construction. Branchwise
+  exact time integration replaces explicit Euler, which is unstable once the PCM
+  has finite heat capacity. Sizing moves to a capacity criterion
+  (\S\ref{sec:hydraulics:capacity}). $\Nwells$ $12.74\to11.57$; spread in local
+  melt fraction $1.321\to0.078$. The v0.3 lower-bound comparison is corrected
+  (\S\ref{sec:hydraulics:ideal}); it compared inconsistent bases. \\
+0.3 & 2026-09 &
+  Wall conductivity corrected to steel during charging
+  (\S\ref{sec:defects:kw}); fin metal excluded from the melted PCM area
+  (\S\ref{sec:front:finmetal}). \\
+0.2 & 2026-08 &
+  Melt front reformulated by energy balance (\S\ref{sec:front:marched}); melt
+  state carried across the cycle; two-constraint sizing; latent inventory made
+  density-consistent. \\
+0.1 & --- &
+  IHTC paper. Closed-form Stefan front, single sizing criterion, wall
+  conductivity error. Reproduced exactly by the regression of
+  \S\ref{sec:defects:verification}. \\
+\bottomrule
+\end{longtable}

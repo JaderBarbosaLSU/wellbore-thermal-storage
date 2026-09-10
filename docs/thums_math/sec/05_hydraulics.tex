@@ -1,0 +1,302 @@
+%=====================================================================
+\section{Hydraulics, well-field sizing and performance indices}
+\label{sec:hydraulics}
+
+%---------------------------------------------------------------------
+\subsection{Pressure drop and pumping power}
+\label{sec:hydraulics:dp}
+
+Properties are evaluated at the mean of the inlet and outlet temperatures. With
+the flow area $A_{\mathrm{flow}}=\pi r_{i}^{2}$,
+\begin{equation}
+  u \;=\; \frac{\md}{\rho A_{\mathrm{flow}}},
+  \qquad
+  \mathrm{Re} \;=\; \frac{\rho\,u\,D_{i}}{\mu},
+\end{equation}
+and the Darcy friction factor is taken as laminar or Blasius,
+\begin{equation}
+  f =
+  \begin{dcases}
+    \dfrac{64}{\mathrm{Re}}, & \mathrm{Re} < 2000, \\[6pt]
+    \dfrac{0.3164}{\mathrm{Re}^{1/4}}, & \mathrm{Re} \leq 10^{5},
+  \end{dcases}
+  \label{eq:friction}
+\end{equation}
+giving the Darcy--Weisbach frictional drop
+\begin{equation}
+  \Delta p_{\mathrm{fric}}
+  \;=\; f\,\frac{L_{\mathrm{tube}}}{D_{i}}\,\frac{\rho u^{2}}{2} .
+  \label{eq:dp-fric}
+\end{equation}
+
+Minor losses are added with a lumped coefficient for one hairpin --- a
+sharp-edged entrance, two $180^{\circ}$ return bends and an exit:
+\begin{equation}
+  K_{\mathrm{tot}}
+  \;=\; K_{\mathrm{ent}} + 2K_{\mathrm{bend}} + K_{\mathrm{exit}}
+  \;=\; 0.5 + 2(2.2) + 1.0 \;=\; 5.9,
+  \qquad
+  \Delta p_{\mathrm{min}} \;=\; K_{\mathrm{tot}}\,\frac{\rho u^{2}}{2} .
+  \label{eq:dp-minor}
+\end{equation}
+The total drop and the hydraulic power for one tube are then
+\begin{equation}
+  \Delta p \;=\; \Delta p_{\mathrm{fric}} + \Delta p_{\mathrm{min}},
+  \qquad
+  \dot W_{\mathrm{pump,tube}} \;=\; \frac{\md\,\Delta p}{\rho} .
+  \label{eq:dp}
+\end{equation}
+
+The three coefficients in Eq.~\eqref{eq:dp-minor} are hard-coded literals rather
+than configuration parameters, and the source describes them as example values.
+They are not derived from the completion geometry and cannot be varied from
+\code{Case}. At the design point $\Delta p_{\mathrm{min}}$ is small beside
+$\Delta p_{\mathrm{fric}}$ because $L_{\mathrm{tube}}/D_{i}\approx 10^{5}$, but
+the asymmetry is worth knowing: any sensitivity study on pumping power is
+varying only the friction term.
+The field total scales by the tube and well counts,
+\begin{equation}
+  \dot W_{\mathrm{pump}}
+  \;=\;
+  \dot W_{\mathrm{pump,tube}}\; n_{t}\,\Nwells .
+\end{equation}
+
+Two properties of Eq.~\eqref{eq:friction} deserve note. The smooth-tube
+assumption sets the roughness to zero, which is optimistic for a well
+completion. And no correlation is supplied above $\mathrm{Re}=10^{5}$; the
+Blasius branch is simply extrapolated, which is where discharge cases with
+elevated flow will land.
+
+\emph{Source:} \code{\_legacy\_physics.calculate\_pressure\_drop}.
+
+%---------------------------------------------------------------------
+\subsection{Well-field sizing}
+\label{sec:hydraulics:sizing}
+
+\subsubsection*{The v0.1 criterion}
+
+v0.1 sized the field on a single requirement: that the wells absorb the charging
+energy within the charging window. Writing $\Delta E_{\mathrm{del}}(\Nwells)$ for
+the energy the field takes up over $t_{\mathrm{ch}}$,
+\begin{equation}
+  \Phi_{\mathrm{heat}}(\Nwells)
+  \;\equiv\;
+  \frac{\Delta E_{\mathrm{out,HP}}}{\Delta E_{\mathrm{del}}(\Nwells)} - 1
+  \;=\; 0 .
+  \label{eq:N-heat}
+\end{equation}
+This is a rate question. Nothing in v0.1 required the wells to \emph{contain}
+enough PCM to hold that energy.
+
+\subsubsection*{The capacity criterion}
+\label{sec:hydraulics:capacity}
+
+The missing requirement is that the field be able to \emph{contain} the energy
+at all, not merely absorb it fast enough:
+\begin{equation}
+  \boxed{\;
+  \Nwells \;=\; \max\bigl(N_{\mathrm{charge\ rate}},\; N_{\mathrm{capacity}}\bigr),
+  \qquad
+  N_{\mathrm{capacity}}
+  = \frac{\Delta E_{\mathrm{out,HP}}}{E_{\mathrm{well}}},
+  \;}
+  \label{eq:sizing}
+\end{equation}
+with the capacity of one well written, as in the v0.1 notebook, from latent
+\emph{and} sensible heat:
+\begin{equation}
+  E_{\mathrm{well}}
+  = \rhom V_{\mathrm{well}}
+    \left[\hm + c_{p,l}\left(T_{3c}-\Tm\right)\right].
+  \label{eq:E-well}
+\end{equation}
+The sensible term is the zero-resistance limit: with no thermal resistance the
+liquid would reach the charging inlet temperature. Equation~\eqref{eq:E-well} is
+closed form, so unlike the constraint it replaces it costs nothing to evaluate.
+
+This is the quantity the v0.1 notebook computed as \code{N\_wells\_ideal} and
+then spent only on costing. In v0.3 its place was taken by a melted-volume
+condition, $\varepsilon_{\mathrm{PCM}}(N)=1$, which on inspection was not a
+capacity statement at all but ``the well count at which an unthrottled
+\SI{10}{\hour} charge exactly saturates the store'' --- a strange thing to size
+on, and one that allowed the field to over-charge by \SI{7}{\percent} relative
+to the requirement.
+
+Which criterion binds depends on the wall conductivity. With the legacy value
+the rate criterion dominates, which is why the omission stayed invisible for so
+long. With the correct steel conductivity the rate requirement collapses and
+capacity takes over.
+
+\subsubsection*{A reporting rule: $N_{\mathrm{capacity}}$ is a bound, not a result}
+
+Equation~\eqref{eq:sizing} is a maximum, and that has a consequence for how its
+parts may be read. $N_{\mathrm{capacity}}$ is the seductive one --- it is closed
+form, it is smooth, it responds to every geometric parameter, and \emph{it is
+wrong to read on its own}. Whenever the rate criterion binds,
+$N_{\mathrm{capacity}}$ moves while the answer does not, and it can move the
+opposite way.
+
+The failure is not hypothetical; \S\ref{sec:defects:h3} records a fin sweep in
+which $N_{\mathrm{capacity}}$ falls monotonically while $\Nwells$ rises by
+\SI{42}{\percent}. Two properties of Eq.~\eqref{eq:E-well} explain it:
+$E_{\mathrm{well}} \propto V_{\mathrm{well}}$, and $V_{\mathrm{well}}$ counts
+whatever the metal does not occupy --- so $N_{\mathrm{capacity}}\cdot
+V_{\mathrm{well}}$ is invariant under any change to the fins, and the column is
+pure volume bookkeeping.
+
+The model therefore reports through \code{sizing\_report}, which leads with
+$\Nwells$, names the criterion that set it, gives the margin by which the other
+is slack, and labels $N_{\mathrm{capacity}}$ as a lower bound. At the design
+point the margin is \SI{2.6}{\percent}: the design sits \emph{on} the crossover,
+so any parameter sweep switches criterion partway through, and the report warns
+when this is so.
+
+\subsubsection*{Why the field is not sized on the discharge}
+
+It is natural to ask whether $\Nwells$ should instead be converged on the
+discharge --- the duty that must actually be met --- with the flow converged on
+the charge. It cannot, and the reason is structural: \emph{sizing must act on
+whichever variable is free.}
+
+During charging the flow is pinned by the specified glide,
+$\mdw^{\mathrm{ch}} = \dot Q_{\mathrm{out,HP}}/(c_{p,w}\Delta T_{3C,2C})$, so
+$\Nwells$ is the only freedom and the charge can size it. During discharging
+$\Nwells$ is already fixed, so the flow is the freedom and the discharge sizes
+that instead.
+
+Pinning the discharge flow to its own glide as well --- $\Delta T_{2D,3D}$ is
+tied to $\Delta T_{3C,2C}$ by Eq.~\eqref{eq:glide-tied} --- over-determines the
+problem, and measurably so:
+
+\begin{center}
+\begin{tabular}{@{}r r r@{}}
+\toprule
+$\Nwells$ & $\varepsilon_{\mathrm{PCM}}$ & $\Delta E_{\mathrm{dc}}/\Delta E_{\mathrm{in,ORC}}$ \\
+\midrule
+ 8    & 1.505 & 0.9285 \\
+12.74 & 0.999 & 0.9776 \\
+18    & 0.719 & 0.9925 \\
+24    & 0.541 & 0.9960 \\
+40    & 0.325 & 0.9962 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent The delivered energy saturates at $0.996$ and never reaches unity for
+\emph{any} well count, because the fluid leaves slightly short of the nominal
+outlet temperature and so carries about \SI{0.4}{\percent} less energy per unit
+mass than $c_{p}\Delta T$ presumes. There is no root. Letting the discharge flow
+float by the required \SI{1.3}{\percent} is precisely what the flow loop exists
+to do, and the v0.1 arrangement is therefore correct and is retained.
+
+\subsubsection*{Comparison with the v0.1 ideal well count}
+\label{sec:hydraulics:ideal}
+
+The v0.1 notebook printed \code{Ideal number of wells: 12.215} from
+\begin{equation}
+  m_{\mathrm{ideal}}
+  = \frac{\Delta E_{\mathrm{out,HP}}}{\hm + c_{p,l}\left(T_{3c}-\Tm\right)},
+  \qquad
+  m_{\mathrm{well}} = V_{\mathrm{well}}\,\rho_{l},
+  \label{eq:N-ideal-v01}
+\end{equation}
+which is Eq.~\eqref{eq:E-well} with $\rho_{l}$ in place of $\rhom$. It carries
+no thermal resistance and no losses, so it is a genuine \textbf{lower bound}:
+the best any design could achieve. Designs with high
+$\varepsilon_{\mathrm{PCM}}$ are desirable precisely because they approach it
+--- the PCM in the ground is being used rather than merely occupying the
+borehole.
+
+\medskip
+\noindent\textbf{Correction to version 0.3 of this document.} v0.3 stated that
+$N_{\mathrm{inventory}}/N_{\mathrm{ideal}} = 1.0428$ agreed with
+$1+\mathrm{Ste} = 1.0474$, and attributed the gap to the sensible heat the model
+then omitted. That comparison was made on \emph{inconsistent bases} and the
+agreement was a coincidence. Equation~\eqref{eq:N-ideal-v01} uses $\rho_{l}$ and
+credits sensible heat; the v0.3 model used $\rho_{s}$ and credited none. On a
+common basis:
+
+\begin{center}
+\begin{tabular}{@{}l r@{}}
+\toprule
+variant & $N$ \\
+\midrule
+Eq.~\eqref{eq:N-ideal-v01} as coded: $\hm+c_{p,l}\Delta T$, $\rho_{l}$ & 12.371 \\
+latent only, $\rho_{s}$ & 12.121 \\
+$\hm+c_{p,l}\Delta T$, $\rho_{s}$ --- \textbf{consistent with v0.4} & \textbf{11.573} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent The two offsetting differences were a factor $0.955$ from the sensible
+credit and $0.936$ from the density, net $0.893$. With v0.4 the question
+disappears: $N_{\mathrm{capacity}}$ \emph{is} Eq.~\eqref{eq:N-ideal-v01}
+evaluated on the model's own conventions, so the comparison is an identity
+rather than a check.
+
+\emph{Source:} \code{thums\_core/sizing.py}; reported by \code{sizing\_report}.
+
+\subsubsection*{Discharge flow}
+
+The discharge flow is then found so that the field delivers the ORC's heat
+demand over $t_{\mathrm{dc}}$. With $\mathcal{R}=\md^{\mathrm{dc}}_{1}/\md^{\mathrm{ch}}_{1}$
+the ratio of per-tube flows,
+\begin{equation}
+  \frac{\Delta E_{\mathrm{in,ORC}}}
+       {\Delta E_{\mathrm{dc}}(\mathcal{R})} - 1 \;=\; 0,
+  \label{eq:ratio}
+\end{equation}
+solved by bisection on $\mathcal{R}$. Under Formulations~B and~C the discharge
+march starts from the melt distribution charging left behind, so
+Eq.~\eqref{eq:ratio} is bounded by the stored inventory; under Formulation~A it
+starts from a bare tube in fully solid PCM and is not.
+
+%---------------------------------------------------------------------
+\subsection{Performance indices}
+\label{sec:hydraulics:kpi}
+
+The round-trip efficiency, with and without parasitics:
+\begin{align}
+  \eta_{\mathrm{RTE}}
+  &=
+  \frac{\bigl(\dot W_{\mathrm{el,out}}
+        - \dot W_{\mathrm{pump}}^{\mathrm{dc}}\bigr)\,t_{\mathrm{dc}}}
+       {\bigl(\dot W_{\mathrm{el,in}}
+        + \dot W_{\mathrm{pump}}^{\mathrm{ch}}\bigr)\,t_{\mathrm{ch}}},
+  \label{eq:rte}\\[4pt]
+  \eta_{\mathrm{RTE}}^{0}
+  &=
+  \frac{\dot W_{\mathrm{el,out}}\,t_{\mathrm{dc}}}
+       {\dot W_{\mathrm{el,in}}\,t_{\mathrm{ch}}} .
+  \label{eq:rte0}
+\end{align}
+By Eq.~\eqref{eq:budget}, $\eta_{\mathrm{RTE}}^{0}$ depends only on the two cycle
+efficiencies, the four electrical and mechanical efficiencies, and $\lambda$. It
+is therefore invariant to every storage-model change in this document, and a
+useful check that a modification has not leaked into the cycles.
+
+The remaining indices are
+\begin{align}
+  \varepsilon_{\mathrm{PCM}} &= \frac{\Vmelt n_{t}}{V_{\mathrm{well}}}
+    &&\text{melted fraction of inventory}, \\
+  E_{\mathrm{well}} &= \frac{\Delta E_{\mathrm{in,ORC}}}{\Nwells}
+    &&\text{energy delivered per well}, \\
+  \rho_{E} &= \frac{E_{\mathrm{well}}}{V_{\mathrm{well}}}
+    &&\text{volumetric energy density}, \\
+  f_{\mathrm{pump}} &=
+    \frac{\dot W_{\mathrm{pump}}^{\mathrm{ch}}
+        + \dot W_{\mathrm{pump}}^{\mathrm{dc}}}{\dot W_{\mathrm{el,out}}}
+    &&\text{parasitic fraction}, \\
+  \eta_{\mathrm{storage}} &=
+    \frac{\Delta E_{\mathrm{discharged}}}{\Delta E_{\mathrm{stored}}}
+    &&\text{recovered fraction, Formulations B and C}.
+\end{align}
+
+\emph{Source:} \code{thums\_core/kpi.py}; assembled in \code{system.run\_cycle}.
+
+\medskip
+\noindent Note that $E_{\mathrm{well}}$ is formed from
+$\Delta E_{\mathrm{in,ORC}}$, the energy the ORC consumes, and not from the
+energy the store holds. It is a measure of duty per well, not of storage
+capacity per well, and the two coincide only when
+$\varepsilon_{\mathrm{PCM}}\to 1$.

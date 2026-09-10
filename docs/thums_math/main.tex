@@ -1,0 +1,150 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{mathtools}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage[margin=1in]{geometry}
+\usepackage{siunitx}
+\usepackage{graphicx}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{amsfonts}
+\usepackage{textcomp}
+\usepackage{tikz}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usetikzlibrary{arrows.meta,positioning,calc}
+
+% Worked-example boxes, for the teaching sections.
+\newtcolorbox{worked}[1][]{breakable, enhanced, colback=black!3,
+  colframe=black!55, boxrule=0.5pt, left=6pt, right=6pt, top=5pt, bottom=5pt,
+  fonttitle=\bfseries, title={#1}}
+
+% siunitx v2 spellings used by some model sections
+\providecommand{\celsius}{\degreeCelsius}
+\ProvideDocumentCommand\squared{}{\tothe{2}}
+\ProvideDocumentCommand\cubed{}{\tothe{3}}
+
+\sisetup{per-mode=symbol}
+
+% ---------- macros, matching the companion model report ----------
+\newcommand{\md}{\ensuremath{\dot m}}
+\newcommand{\mdw}{\ensuremath{\dot m_{w}}}
+\newcommand{\UA}{\ensuremath{U\!A}}
+\newcommand{\degC}{\ensuremath{^{\circ}\mathrm{C}}}
+% ---------- THUMS-specific ----------
+\newcommand{\Ui}{\ensuremath{U_{i}}}
+\newcommand{\hm}{\ensuremath{h_{m}}}
+\newcommand{\Tm}{\ensuremath{T_{m}}}
+\newcommand{\Tre}{\ensuremath{T_{r_{e}}}}
+\newcommand{\km}{\ensuremath{k_{m}}}
+\newcommand{\rhom}{\ensuremath{\rho_{m}}}
+\newcommand{\Amelt}{\ensuremath{A_{\mathrm{melt}}}}
+\newcommand{\Vmelt}{\ensuremath{V_{\mathrm{melt}}}}
+\newcommand{\Nwells}{\ensuremath{N_{\mathrm{wells}}}}
+\newcommand{\etao}{\ensuremath{\eta_{o}}}
+\newcommand{\etaf}{\ensuremath{\eta_{f}}}
+\newcommand{\code}[1]{\texttt{\small #1}}
+
+\title{\textbf{P2H2P PCM Wellbore Storage}\\[4pt]
+\large Mathematical Model of Power-to-Heat-to-Power Conversion\\
+with Phase-Change Material in Repurposed Wells\\[6pt]
+\normalsize Thermodynamic Cycles, Borehole Resistance Network,\\
+Melt-Front Formulations, Sizing and Performance Indices\\[4pt]
+\normalsize Model version 0.4a \textperiodcentered\ last updated 2026-09-10 BRT}
+\author{Craft \& Hawkins Department of Petroleum Engineering\\
+Louisiana State University}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This document states the governing equations of THUMS --- thermal storage in
+repurposed wells with phase-change material --- as the code actually implements
+them. It is a companion to the master-architecture report of the DBHE plant and
+follows the same convention: the model is written \emph{against the source
+rather than from memory}, and every equation carries the function that evaluates
+it.
+
+That convention matters more here than usual. Until this document, the THUMS
+equations existed nowhere except as Python. Four Colab notebooks and a
+conference paper were produced without a written model statement, and the
+principal defect corrected in v0.2 --- the fluid side giving up heat through a
+finned surface of \SI{0.4924}{\meter} while the melt front absorbed it through a
+bare cylinder of \SI{0.1324}{\meter} --- is of exactly the kind that a document
+placing both surfaces on the same page would have exposed immediately.
+
+Section~\ref{sec:overview} fixes notation and states the modelling hypotheses.
+Sections~\ref{sec:cycles}--\ref{sec:hydraulics} give the model proper.
+Section~\ref{sec:defects} is not an appendix of caveats but part of the
+specification: it lists the assumptions that are known to be violated, the two
+places where the same physical quantity is given two different formulas, and the
+terms that are absent altogether. A reader reproducing these results needs that
+section as much as the equations.
+
+Two melt-front formulations are given. Section~\ref{sec:front:legacy} states the
+closed-form Stefan solve used through v0.1 and the conference paper;
+Section~\ref{sec:front:marched} states the energy-balance formulation that
+replaced it. Both remain in the code and are selected by \code{Case.front}, so
+the difference between them is measurable rather than arguable.
+
+\medskip
+\noindent\textbf{Changes in version 0.3.} Two corrections, both now the default.
+The tube-wall and fin conductivity used during charging was corrected from the
+PCM liquid value to steel (\S\ref{sec:defects:kw}); and the fin metal is now
+excluded from the melted PCM cross-section (\S\ref{sec:front:finmetal}).
+
+\medskip
+\noindent\textbf{Changes in version 0.4.} The melt front now carries
+\emph{enthalpy} rather than melted area (\S\ref{sec:front:enthalpy}), so the PCM
+may superheat above $\Tm$ once fully molten and subcool below it once fully
+solid. Formulation~B previously had nowhere to put heat delivered to a saturated
+segment and discarded it --- on discharge the discarded heat reached
+\SI{148}{\percent} of the heat delivered. Three things follow: no heat is
+clipped, the local melt fraction is confined to $[0,1]$ by construction, and
+desuperheating and subcooling are recovered during discharge. The well count is
+now set by a \emph{capacity} criterion (\S\ref{sec:hydraulics:capacity}) rather
+than by the melted-volume constraint of v0.3.
+
+The consequence worth noting is not the headline number but the
+\emph{uniformity}: sensible heat is self-levelling, because a segment that
+finishes melting superheats, its driving temperature difference collapses, and
+the heat passes downstream. The spread in local melt fraction along the well
+falls from $1.321$ to $0.078$.
+
+\medskip
+\noindent\textbf{Changes in version 0.4a.} No physics. Two reporting
+corrections, both of which changed a conclusion.
+Section~\ref{sec:front:enthalpy} is rewritten at length as a teaching treatment
+of Formulation~C --- the choice of state variable, the enthalpy curve, the
+branchwise-exact integration and its verification, and the failures that
+motivated each.
+Section~\ref{sec:hydraulics:capacity} adds a reporting rule:
+$N_{\mathrm{capacity}}$ is a lower bound and must not be read across a parameter
+sweep on its own, because $\Nwells$ is a maximum and the binding criterion
+changes.
+Section~\ref{sec:defects:h3} corrects the geometric limit on the melt front from
+the borehole wall to the \emph{cell} radius, Eq.~\eqref{eq:rcell} --- the old
+check was a factor $2.9$ too permissive in $\delta$ and could never fire. Under
+Formulation~C the corrected limit cannot be violated, but it is being
+\emph{saturated} over \SI{99}{\percent} of the well, which now bears on the fin
+count and is the leading open item.
+\end{abstract}
+
+\tableofcontents
+\clearpage
+
+\input{sec/01_overview}
+\input{sec/02_cycles}
+\input{sec/03_network}
+\input{sec/04_front}
+\input{sec/05_hydraulics}
+\input{sec/06_defects}
+
+\end{document}
