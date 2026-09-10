@@ -104,7 +104,7 @@ used. Read it top to bottom and you have seen the whole thing.
 |---|---|
 | 1–2 | what is being modelled, and the assumptions |
 | 3–4 | fluid properties, the borehole resistance network, fin efficiency |
-| 5 | **the melt front** — the defect, and the two formulations |
+| 5 | **the melt front** — the defect, and three formulations |
 | 6 | the segment-by-segment march down the well |
 | 7–8 | the ORC and heat-pump cycles, pressure drop |
 | 9–11 | well-field sizing and the full cycle calculation |
@@ -173,7 +173,7 @@ no change to the storage model can move them.
 | **H2** | No axial conduction, in wall or PCM. Segments couple only through the fluid. | |
 | **H3** | The melt region is a concentric annulus of uniform thickness $\delta$. Fronts from neighbouring tubes never merge. | not enforced — see §15 |
 | **H4** | Conduction only in the melt; no natural convection. | increasingly wrong as $\delta$ grows |
-| **H5** | Latent heat only. No sensible heat in either phase. | a segment that runs out of melt simply stops |
+| **H5** | *Revised in v0.4.* PCM carries latent **and** sensible energy, lumped into one enthalpy per segment: molten PCM superheats, solid PCM subcools. | no radial resolution *within* a phase — one PCM temperature per segment |
 | **H6** | Adiabatic borehole wall — no formation heat loss. | fine over 10 h, not over a season |
 | **H7** | Incompressible single-phase water, no buoyancy head. | ±7.5 bar in a 1,524 m loop is neglected |
 | **H8** | The PCM is layered along the well, melting point following the fluid glide. | |
@@ -618,7 +618,7 @@ for label, case in (
     ('v0.1 published',      CASE_V01.with_(N_wells_bracket=(1., 400.))),
     ('marched, old k_w',    CASE.with_(N_wells_bracket=(1., 400.),
                                        charge_uses_wall_conductivity=False)),
-    ('v0.3 (default)',      CASE.with_(N_wells_bracket=(1., 400.))),
+    ('v0.4 (default)',      CASE.with_(N_wells_bracket=(1., 400.))),
 ):
     runs[label] = run_cycle(case)
 
@@ -666,76 +666,48 @@ print('of the model rather than an input. Not done yet -- see section 15.')
 """))
 
 cells.append(md(r"""
-### Check against the lower bound
+### Check against the v0.1 ideal well count
 
-The v0.1 notebook printed `Ideal number of wells: 12.215` from a load-versus-
-capacity calculation with no thermal resistance and no losses (§10). That is a
-lower bound. Our $N_{\text{inventory}}$ must sit above it — and the gap should
-be about the sensible heat the marched model omits under **H5**, i.e. a factor
-$1+\mathrm{Ste}$.
+The v0.1 notebook printed `Ideal number of wells: 12.215` from
 
-This is one of the few genuinely independent checks available on the storage
-model, since energy closure is structural and proves nothing (§5.2).
+$$m_{\rm ideal}=\frac{\Delta E_{\rm out,HP}}{h_m+c_{p,l}(T_{3c}-T_m)},
+\qquad m_{\rm well}=V_{\rm well}\,\rho_l$$
+
+which is exactly the capacity criterion of §10 — but evaluated with $\rho_l$,
+whereas the model uses $\rho_s$ (see `Case.rho_latent`).
+
+> **A correction to what this notebook said at v0.3.** It previously reported
+> $N_{\rm inventory}/N_{\rm ideal}=1.0428$ as agreeing with $1+\mathrm{Ste}$, and
+> attributed the gap to omitted sensible heat. That compared **inconsistent
+> bases** and the agreement was a coincidence: two offsetting differences, a
+> factor 0.955 from the sensible credit and 0.936 from the density.
+>
+> Under v0.4 the question dissolves — `N_capacity` *is* that formula on the
+> model's own conventions, so the comparison below is an identity, not a test.
 """))
 
 cells.append(code(r"""
-N_IDEAL = 12.215336443485063   # 'Ideal number of wells', THUMS_Multilayer_BB_Jan_12b
-d = runs['v0.3 (default)']['detail']
-Ste = CASE.stefan_number(CASE.DT_4C_M)
+d = runs['v0.4 (default)']['detail']
+dT = cycle_state_points(CASE)[2]['T_3c'] - CASE.T_m
+E = energy_budget(CASE, *[cycle_state_points(CASE)[k][n] for k, n in
+                          ((0,'rank_eff'), (1,'hp_cop'))], cycle_state_points(CASE)[2])
+D = E['D_E_out_HP'] * 1000.0          # J
 
-print(f'N_ideal      (load / capacity, sensible + latent, no resistance) = {N_IDEAL:7.3f}')
-print(f'N_inventory  (marched model, latent only)                        = {d["N_inventory"]:7.3f}')
-print(f'N_heat       (rate criterion)                                    = {d["N_heat"]:7.3f}')
-print()
-print(f'N_inventory / N_ideal = {d["N_inventory"]/N_IDEAL:.4f}')
-print(f'1 + Ste               = {1+Ste:.4f}     (Ste = {Ste:.4f})')
-print()
-if d['N_inventory'] < N_IDEAL:
-    print('FAIL: below the lower bound -- the inventory constraint is wrong.')
-else:
-    print('OK: above the lower bound, by close to the omitted sensible heat.')
+print(f"{'variant':52s} {'N':>9s}")
+for lbl, cap, rho in (
+    ("v0.1 as coded:  h_m + cp_l*dT,  rho_l",  CASE.h_m + CASE.cp_l*dT, CASE.rho_l),
+    ("latent only,                    rho_s",  CASE.h_m,                CASE.rho_s),
+    ("h_m + cp_l*dT,  rho_s  <- v0.4 convention", CASE.h_m + CASE.cp_l*dT, CASE.rho_s),
+):
+    print(f"  {lbl:50s} {D/(cap*rho*CASE.V_well):9.3f}")
+print(f"\n  model N_capacity (should equal the last row)  {d['N_capacity']:9.3f}")
+print(f"  sensible credit  cp_l*dT/h_m = {CASE.cp_l*dT/CASE.h_m:.4f}  (= Ste)")
+print(f"  density factor   rho_l/rho_s = {CASE.rho_l/CASE.rho_s:.4f}")
+
+ident = abs(d['N_capacity'] - D/((CASE.h_m+CASE.cp_l*dT)*CASE.rho_s*CASE.V_well))
+print('\nIDENTITY HOLDS' if ident < 1e-6 else f'MISMATCH {ident:.2e}')
 """))
 
-# ---------------------------------------------------------------- 13. verify
-cells.append(md(r"""
-## 13. Verification against the published numbers
-
-The v0.1 path in this notebook must still reproduce the conference-paper values
-exactly. If it ever stops, a change has leaked into the legacy path and every
-comparison in §12 becomes unattributable.
-"""))
-cells.append(code(r"""
-IHTC = {   # frozen v0.1 results, DT_3C_2C = 55 K, N_lay = 9
-    'cop_hp':         2.956330409531823,
-    'eta_orc':        0.23685132027873143,
-    'eta_rte_nopump': 0.4348350503020928,
-    'eta_rte':        0.43027101049765343,
-    'eps_pcm':        0.5200473147142692,
-    'N_wells':        24.123429921001843,
-    'E_well':         2.167417633092469,
-    'rho_E':          78.29462518690391,
-    'f_pump':         0.015081686346236986,
-}
-
-got = runs['v0.1 published']['kpis']
-print(f"{'KPI':16s} {'published':>22s} {'this notebook':>22s}   rel. diff")
-worst = 0.0
-for k, v in IHTC.items():
-    n = got[k]; d = abs(n - v) / abs(v); worst = max(worst, d)
-    print(f'{k:16s} {v:22.12g} {n:22.12g}   {d:.1e}')
-print()
-print(f'worst relative difference: {worst:.1e}')
-print('PASS -- reproduces the published model' if worst < 1e-8 else
-      'FAIL -- the legacy path has changed')
-"""))
-
-cells.append(md(r"""
-A residual of order $10^{-11}$ rather than exactly zero is CoolProp and NumPy
-version drift between machines, not a change in the model. Anything above
-$10^{-8}$ means something real has moved.
-"""))
-
-# ---------------------------------------------------------------- 14. plots
 # ============================================================ 14. diagnostics
 cells.append(md(r"""
 ## 14. Profiles along the well
@@ -774,7 +746,7 @@ the multilayer cascade exists to reduce (§14.4).
 cells.append(code(r"""
 # --- run charge and discharge at the design point, recording history --------
 case = CASE
-res  = runs['v0.3 (default)']
+res  = runs['v0.4 (default)']
 N    = res['kpis']['N_wells']
 
 rank, hp, T = cycle_state_points(case)
@@ -973,7 +945,7 @@ Read this before quoting any number above.
 |---|---|
 | **Formation heat loss** (H6) | fine over a 10 h cycle, wrong for seasonal storage |
 | **Natural convection in the melt** (H4) | under-predicts melting once the layer is established |
-| **Sensible heat in the PCM** (H5) | a segment whose melt is exhausted stops contributing rather than continuing to cool |
+| **Radial resolution within a phase** (H5) | sensible heat is carried but *lumped* — one PCM temperature per segment, so the gradient through the melt layer is quasi-steady rather than resolved |
 | **Buoyancy head** (H7) | ±7.5 bar in the 1,524 m loop, asymmetric between charge and discharge |
 | **Isentropic efficiencies** | both cycles are idealised, so every efficiency here is an upper bound |
 | **Volume change on melting** | 6.9 %, neglected; the liquid layer is ~2.3 % thicker than modelled |
@@ -997,15 +969,18 @@ consistency is not validation, and a reviewer will ask.
 
 ### Open work, in order
 
-1. Make $\lambda$ an output rather than an assumed 5 %. It is now measurable:
-   at the v0.3 design point the field banks about 10 % more than the ORC
-   withdraws, against the 5 % assumed.
-2. Enforce the geometric bounds instead of warning ($\delta_{\max} = 0.5$ m
-   against an 0.0889 m borehole radius).
-3. Add PCM sensible heat — it would close most of the gap to the ideal bound
-   in §12 and remove the $(1+\mathrm{Ste})$ penalty.
-4. Model the melt-front shape around the fins.
-5. **Find an external validation case.** Still the largest gap.
+1. **Fix the bounds check to use the cell radius.** It compares $r_e+\delta$
+   against the borehole *wall* at 67.82 mm; the physically binding limit is the
+   cell radius at 44.45 mm, where neighbouring fronts meet. A factor of 2.9 too
+   permissive, which is why it stays silent while fronts have merged over
+   **99 of 100** segments at the v0.4 design point. Most consequential open item.
+2. Make $\lambda$ an output rather than an assumed 5 %. At the v0.4 design point
+   the field banks about 7 % more than the ORC withdraws, against the 5 % assumed.
+3. Quote results at $n_{times}=160$: `eps_PCM` moves $-0.3\,\%$ from 40 to 320
+   time levels, one-sided, so the default carries a small known bias.
+4. Model the melt-front shape around the fins, and the volume change on melting.
+5. **Find an external validation case.** Still the largest gap — energy closure
+   is structural and proves nothing about correctness.
 
 ---
 
