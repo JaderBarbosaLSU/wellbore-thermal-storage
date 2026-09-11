@@ -326,6 +326,14 @@ one gives a model that never existed.
   $h_{e}=\km/\delta$. Same physical quantity, two formulas, iterated against
   each other in the fixed-point loop of \S\ref{sec:network:Tre}. The two agree
   as $\delta/r_{e}\to0$ and diverge as the layer grows.
+\item[$E_{\mathrm{well}}$.] A \emph{capacity} per well in
+  Eq.~\eqref{eq:E-well}, a \emph{duty} per well in \S\ref{sec:hydraulics:kpi}.
+  Different keys in the code, one name, and related by the model input
+  $1/(1+\lambda)$ --- Eq.~\eqref{eq:Ewell-ratio}.
+\item[$k_{w}$.] Tube-wall conductivity in Eq.~\eqref{eq:R-wall}, fin
+  conductivity in Eq.~\eqref{eq:fin-eff}, one positional argument
+  (\S\ref{sec:defects:kw}). This one has already caused a
+  two-order-of-magnitude error that survived to publication.
 \item[Laminar Nusselt number.] $4.36$ (uniform flux) in \code{well\_marched},
   $3.66$ (uniform temperature) in the legacy march. For a melting boundary the
   isothermal value is the defensible one.
@@ -393,6 +401,12 @@ report it as an answer, and the driver cell continues past it. In
 iterate. Similarly, failed property lookups formerly routed into the
 $\delta\to0$ branch of Eq.~\eqref{eq:he}, so that a failed solve was reported as
 \emph{maximum} heat transfer; they now raise \code{ThumsPropertyError}.
+
+Retired output names follow the same principle. \code{N\_inventory} and
+\code{N\_heat} raise a \code{KeyError} carrying an explanation rather than
+returning a number, and the guard overrides \code{.get()} as well as
+\code{[\,]}, because a silent \code{None} from \code{.get()} is the exact
+failure the guard exists to prevent (\S\ref{sec:hydraulics:twoq}).
 
 The value $h_{e}=10^{9}$ in that branch is itself correct --- a zero-thickness
 melt layer has zero conduction resistance --- notwithstanding an inverted

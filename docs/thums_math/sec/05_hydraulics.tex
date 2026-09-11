@@ -347,8 +347,26 @@ The remaining indices are
 \emph{Source:} \code{thums\_core/kpi.py}; assembled in \code{system.run\_cycle}.
 
 \medskip
-\noindent Note that $E_{\mathrm{well}}$ is formed from
-$\Delta E_{\mathrm{in,ORC}}$, the energy the ORC consumes, and not from the
-energy the store holds. It is a measure of duty per well, not of storage
-capacity per well, and the two coincide only when
-$\varepsilon_{\mathrm{PCM}}\to 1$.
+\noindent\textbf{A symbol that carries two meanings.} $E_{\mathrm{well}}$
+above is formed from $\Delta E_{\mathrm{in,ORC}}$, the energy the ORC
+\emph{consumes}: a duty per well. The $E_{\mathrm{well}}$ of
+Eq.~\eqref{eq:E-well} is the energy one well can \emph{hold}: a capacity. The
+code keeps them in different keys (\code{kpis['E\_well']} and
+\code{detail['E\_well\_kJ']}) but under one name, and they are not equal ---
+\SI{4.518}{\mega\watt\hour} against \SI{4.744}{\mega\watt\hour} at the
+design point.
+
+The gap is not a rounding artefact and not a property of
+$\varepsilon_{\mathrm{PCM}}$. Whenever the capacity criterion binds,
+$\Nwells = \Delta E_{\mathrm{out,HP}}/E_{\mathrm{well}}^{\,\mathrm{cap}}$,
+so
+\begin{equation}
+  \frac{E_{\mathrm{well}}^{\,\mathrm{duty}}}{E_{\mathrm{well}}^{\,\mathrm{cap}}}
+  = \frac{\Delta E_{\mathrm{in,ORC}}}{\Delta E_{\mathrm{out,HP}}}
+  = \frac{1}{1+\lambda} = 0.9524 ,
+  \label{eq:Ewell-ratio}
+\end{equation}
+exactly the assumed storage-loss surplus of \S\ref{sec:cycles:lambda}, and the
+observed ratio is $0.9524$. The two symbols are therefore related by a
+\emph{model input}, which makes the shared name actively misleading. Renaming
+one of them is on the list.
