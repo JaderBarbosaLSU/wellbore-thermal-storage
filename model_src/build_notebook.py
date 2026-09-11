@@ -588,6 +588,44 @@ than merely occupying the borehole.
 §12 checks the two against each other.
 """))
 cells.append(md(r"""
+### Two questions, not one
+
+A well field must satisfy **two independent requirements**, and the model names
+one number for each. State them as questions before any algebra:
+
+| symbol | the question it answers | how it is found |
+|---|---|---|
+| $N_{\rm rate}$ | Can the field **absorb** $\Delta E$ *within* $t_{\rm ch}$? | root solve on the march |
+| $N_{\rm capacity}$ | Can the field **contain** $\Delta E$ *at all*? | closed form |
+| $N_{\rm wells}$ | **Both must hold.** | $\max$ of the two |
+
+The distinction is between a **rate** and a **stock**. A field could have ample
+PCM but transfer heat into it too slowly to finish inside the window; or it
+could transfer heat beautifully into a store too small to hold the energy.
+Neither failure implies the other, so the design must clear both.
+
+$N_{\rm rate}$ has no closed form — it comes from marching the whole well, so it
+carries *everything thermal*: fins, wall conductivity, melt-layer resistance,
+NTU, the cascade, the charging window. $N_{\rm capacity}$ contains **none** of
+that:
+
+$$N_{\rm capacity}=\frac{\Delta E_{\rm out,HP}}
+{\rho V_{\rm well}\left[h_m+c_{p,l}\Delta T\right]}$$
+
+No $U_i$, no $\delta$, no NTU, no $t_{\rm ch}$ — volume and material properties
+only. That makes it a **hard lower bound**: no design, however good thermally,
+and no window, however long, can beat it.
+
+> **Two names have been retired**, because they were traps.
+> `N_inventory` was a silent *alias* for `N_capacity` in v0.4 — the two compared
+> equal and could not be told apart. Worse, in **v0.3 the same name meant
+> something else**: the well count at which $\varepsilon_{\rm PCM}(N)=1$, a
+> marched quantity. *A v0.3 printout of `N_inventory` is not comparable with a
+> v0.4 one.* And `N_heat` was the dict key while the report said "charge-rate"
+> and the sweep column said `N_rate` — three labels, one quantity.
+> Both now raise a `KeyError` carrying this explanation. The surviving
+> vocabulary is three words: **rate**, **capacity**, **the maximum of the two**.
+
 ### How to read the two criteria — and how not to
 
 $N_{\rm capacity}$ is the seductive one. It is a closed form, it is smooth, it
@@ -612,8 +650,8 @@ sweep explicitly.
 `sizing_report` therefore leads with $N_{\rm wells}$, names the criterion that
 set it, and labels $N_{\rm capacity}$ as a bound.
 """))
-cells.append(code(src('_bisect', 'well_capacity_kJ', 'size_well_field',
-                      'sizing_report')))
+cells.append(code(src('SizingResult', '_bisect', 'well_capacity_kJ',
+                      'size_well_field', 'sizing_report')))
 
 # ---------------------------------------------------------------- 11. run
 cells.append(md(r"""
@@ -682,15 +720,32 @@ melt more PCM than it contains — so inventory takes over.
 cells.append(code(r"""
 for label, r in runs.items():
     d = r['detail']
-    if 'N_heat' in d:
+    if 'N_rate' in d:
         sizing_report(CASE, d, label)
         print()
 """))
 
 cells.append(code(r"""
+# The retired names fail loudly rather than returning a number that may mean
+# something other than you think.
+d = runs['v0.4 (default)']['detail']
+print(f"N_rate     = {d['N_rate']:.3f}   <- rate:     absorb it in time?")
+print(f"N_capacity = {d['N_capacity']:.3f}   <- capacity: contain it at all?")
+print(f"N_wells    = {d['N_wells']:.3f}   <- max of the two")
+print()
+for retired in ('N_inventory', 'N_heat'):
+    try:
+        d[retired]
+        print(f'{retired}: returned a value -- the guard is not working')
+    except KeyError as e:
+        print(f'{retired} ->', str(e).strip('"')[:78], '...')
+"""))
+
+
+cells.append(code(r"""
 for label, r in runs.items():
     d = r['detail']
-    if 'N_heat' in d:
+    if 'N_rate' in d:
         print(f"{label:22s}  eta_storage={d['eta_storage']:.4f}"
               f"  closure={d['closure_charge']:.1e}")
 print()
@@ -763,7 +818,7 @@ def sweep(param_sets, bracket=(3., 400.)):
         c = CASE.with_(N_wells_bracket=bracket, ratio_bracket=(0.05, 8.0), **kw)
         r = run_cycle(c); d = r['detail']
         out.append({'config': label, 'V_well_m3': c.V_well,
-                    'N_capacity': d['N_capacity'], 'N_rate': d['N_heat'],
+                    'N_capacity': d['N_capacity'], 'N_rate': d['N_rate'],
                     'N_wells': d['N_wells'], 'binding': d['binding'],
                     'eps_PCM': d['eps_pcm'],
                     'delta/delta_merge': d['merge_proximity_max']})

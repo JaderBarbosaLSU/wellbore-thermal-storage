@@ -79,9 +79,9 @@ configuration & $N_{\mathrm{capacity}}$ & $N_{\mathrm{rate}}$
 \midrule
 $24\times\SI{7.50}{\milli\meter}$ & 11.573 & 11.263 & \textbf{11.573} & capacity \\
 $16\times\SI{7.50}{\milli\meter}$ & 11.348 & 11.287 & \textbf{11.348} & capacity \\
-$12\times\SI{7.50}{\milli\meter}$ & 11.239 & 11.529 & \textbf{11.529} & charge rate \\
-$\phantom{0}8\times\SI{7.50}{\milli\meter}$ & 11.132 & 12.208 & \textbf{12.208} & charge rate \\
-bare tube & 10.924 & 16.569 & \textbf{16.569} & charge rate \\
+$12\times\SI{7.50}{\milli\meter}$ & 11.239 & 11.529 & \textbf{11.529} & rate \\
+$\phantom{0}8\times\SI{7.50}{\milli\meter}$ & 11.132 & 12.208 & \textbf{12.208} & rate \\
+bare tube & 10.924 & 16.569 & \textbf{16.569} & rate \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -439,7 +439,12 @@ version & date & change \\
   (\S\ref{sec:defects:h3}); the fin count and the charging window follow from
   it. The segment equation is derived in full (\S\ref{sec:front:segeq}).
   Hypothesis \textbf{H9} (perfect azimuthal insulation between cascade layers)
-  stated explicitly and quantified (\S\ref{sec:defects:h9}). \\
+  stated explicitly and quantified (\S\ref{sec:defects:h9}). Sizing vocabulary
+  reduced to the two independent numbers it always had
+  (\S\ref{sec:hydraulics:twoq}): \code{N\_inventory} and \code{N\_heat} are
+  retired and now raise --- the first because it was a silent alias for
+  $N_{\mathrm{capacity}}$ that had meant a \emph{different} quantity in v0.3,
+  the second because it was one of three labels for the rate criterion. \\
 0.4 & 2026-09 &
   Melt front carries \emph{enthalpy} rather than melted area
   (\S\ref{sec:front:enthalpy}): superheat above $\Tm$, subcool below it, no

@@ -2332,6 +2332,53 @@ def melting_temperatures(case):
 # sizing
 # ==========================================================================
 
+class SizingResult(dict):
+    """The sizing dict, with retired key names that fail loudly.
+
+    THERE ARE ONLY TWO INDEPENDENT NUMBERS. The model once exposed four names
+    for them, and two of those names were traps:
+
+      N_inventory  was an ALIAS for N_capacity, so `N_inventory == N_capacity`
+                   returned True and nobody could tell them apart -- but in
+                   v0.3 the same name meant something ELSE entirely (the well
+                   count at which eps_PCM(N) = 1, a marched quantity needing a
+                   root solve). Same name, two meanings, no warning. Anyone
+                   comparing a v0.3 printout with a v0.4 one was comparing
+                   different quantities.
+
+      N_heat       was the dict key, while the report said "charge-rate
+                   criterion" and the sweep column said N_rate. Three labels,
+                   one quantity, and `d['N_rate']` raised KeyError.
+
+    Both are now retired. Reading either raises with an explanation rather
+    than returning a number that may mean something other than you think.
+    """
+
+    _RETIRED = {
+        'N_inventory':
+            "'N_inventory' is retired. In v0.4 it was a silent alias for "
+            "'N_capacity'; in v0.3 it meant the well count at which "
+            "eps_PCM(N) = 1, which is NOT the same quantity. Use "
+            "'N_capacity' if you want the closed-form capacity bound, and "
+            "do not compare v0.3 printouts of N_inventory with it.",
+        'N_heat':
+            "'N_heat' is retired; the rate criterion is now 'N_rate' "
+            "everywhere -- dict key, report text and sweep column.",
+    }
+
+    def __missing__(self, key):
+        if key in self._RETIRED:
+            raise KeyError(self._RETIRED[key])
+        raise KeyError(key)
+
+    def get(self, key, default=None):
+        # .get() must not silently return None for a retired name: that is the
+        # exact failure this class exists to prevent.
+        if key in self._RETIRED and key not in self:
+            raise KeyError(self._RETIRED[key])
+        return super().get(key, default)
+
+
 def _bisect(f, lo, hi, tol, max_iter, what):
     flo, fhi = f(lo), f(hi)
     if flo * fhi > 0:
@@ -2413,11 +2460,10 @@ def size_well_field(case, T_inlet, T_m_seg, m_dot_total, D_E_required_kJ,
     # few percent means the design sits on the crossover: a parameter sweep will
     # switch criterion partway through, and reading either criterion ALONE
     # across such a sweep gives a trend that is not the trend in N_wells.
-    binding = "capacity" if N_cap >= N_rate else "charge_rate"
+    binding = "capacity" if N_cap >= N_rate else "rate"
     margin = abs(N_cap - N_rate) / N
 
-    return dict(N_wells=N, N_heat=N_rate, N_capacity=N_cap,
-                N_inventory=N_cap,                    # back-compat alias
+    return SizingResult(N_wells=N, N_rate=N_rate, N_capacity=N_cap,
                 binding=binding, binding_margin=margin,
                 near_crossover=bool(margin < 0.05),
                 eps_pcm=eps, E_well_kJ=E_well,
@@ -2431,12 +2477,18 @@ def size_well_field(case, T_inlet, T_m_seg, m_dot_total, D_E_required_kJ,
 def sizing_report(case, detail, label=""):
     """Print the well count with the criterion that SET it named first.
 
-    WHY THIS EXISTS. `size_well_field` returns N_wells, N_heat and N_capacity
-    side by side, and N_capacity is the seductive one: it is a closed form, it
-    is smooth, it responds to every geometric parameter, and it is wrong to
-    read on its own. It is a LOWER BOUND. N_wells is max(N_heat, N_capacity),
-    so whenever the rate criterion binds, N_capacity moves while the answer
-    does not -- and it can move the opposite way.
+    THERE ARE ONLY TWO INDEPENDENT NUMBERS, and one derived from them:
+
+        N_rate      can the field ABSORB the energy within t_ch?   RATE
+        N_capacity  can the field CONTAIN the energy at all?       CAPACITY
+        N_wells     = max(N_rate, N_capacity)                      THE ANSWER
+
+    N_capacity is the seductive one: it is a closed form, it is smooth, it
+    responds to every geometric parameter, and it is wrong to read on its own.
+    It is a LOWER BOUND -- the best any design could do with no thermal
+    resistance and infinite time. Because N_wells is a MAXIMUM, whenever the
+    rate criterion binds N_capacity moves while the answer does not, and it
+    can move the opposite way.
 
     The failure this guards against is real and was made by a careful reader.
     Sweeping fin radial length, N_capacity fell monotonically (11.573, 11.239,
@@ -2452,17 +2504,17 @@ def sizing_report(case, detail, label=""):
     """
     d = detail
     N = d["N_wells"]
-    name = {"capacity": "CAPACITY   (can the field hold it?)",
-            "charge_rate": "CHARGE RATE (can the field absorb it in time?)"}
-    slack = "capacity" if d["binding"] == "charge_rate" else "charge_rate"
+    name = {"capacity": "CAPACITY (can the field CONTAIN the energy at all?)",
+            "rate":     "RATE     (can the field ABSORB it within t_ch?)"}
+    slack = "capacity" if d["binding"] == "rate" else "rate"
 
     head = f"WELL FIELD SIZING{('  --  ' + label) if label else ''}"
     print(head)
     print("=" * max(len(head), 66))
     print(f"  N_wells = {N:8.3f}        set by {name[d['binding']]}")
     print()
-    print(f"    charge-rate criterion   N_heat     = {d['N_heat']:8.3f}"
-          f"   {'<-- BINDING' if d['binding'] == 'charge_rate' else ''}")
+    print(f"    rate criterion          N_rate     = {d['N_rate']:8.3f}"
+          f"   {'<-- BINDING' if d['binding'] == 'rate' else ''}")
     print(f"    capacity criterion      N_capacity = {d['N_capacity']:8.3f}"
           f"   {'<-- BINDING' if d['binding'] == 'capacity' else ''}")
     print(f"    N_wells = max(the two);  {slack} criterion is slack by "
@@ -2533,7 +2585,7 @@ def run_cycle(case):
     # The k_w slot of the charging chain. False reproduces the v0.1 defect.
     k_charge = case.k_wall if case.charge_uses_wall_conductivity else case.k_l
 
-    detail = {}
+    detail = SizingResult()
 
     if case.front == "energy_balance":
         n_seg = case.n_segments

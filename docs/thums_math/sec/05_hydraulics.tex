@@ -73,37 +73,65 @@ elevated flow will land.
 \subsection{Well-field sizing}
 \label{sec:hydraulics:sizing}
 
-\subsubsection*{The v0.1 criterion}
+\subsubsection*{Two questions, not one}
+\label{sec:hydraulics:twoq}
 
-v0.1 sized the field on a single requirement: that the wells absorb the charging
-energy within the charging window. Writing $\Delta E_{\mathrm{del}}(\Nwells)$ for
-the energy the field takes up over $t_{\mathrm{ch}}$,
+A well field must satisfy \emph{two} independent requirements, and the model
+names one number for each. They are easy to confuse, so state them as questions
+before writing any algebra:
+
+\begin{center}
+\begin{tabular}{@{}l l l@{}}
+\toprule
+symbol & the question it answers & how it is found \\
+\midrule
+$N_{\mathrm{rate}}$ & Can the field \textbf{absorb} $\Delta E$
+                      \emph{within} $t_{\mathrm{ch}}$? & root solve on the march \\
+$N_{\mathrm{capacity}}$ & Can the field \textbf{contain} $\Delta E$
+                      \emph{at all}? & closed form \\
+\midrule
+$\Nwells$ & \textbf{Both must hold.} & $\max$ of the two \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The distinction is between a \emph{rate} and a \emph{stock}. A field could have
+ample PCM but transfer heat into it too slowly to finish within the charging
+window; or it could transfer heat beautifully into a store too small to hold the
+energy. Neither failure implies the other, so neither criterion implies the
+other, and the design must clear both.
+
+\paragraph{The rate criterion.}
+This is the only requirement v0.1 imposed. Writing
+$\Delta E_{\mathrm{del}}(\Nwells)$ for the energy the field takes up over
+$t_{\mathrm{ch}}$,
 \begin{equation}
-  \Phi_{\mathrm{heat}}(\Nwells)
+  \Phi_{\mathrm{rate}}(\Nwells)
   \;\equiv\;
   \frac{\Delta E_{\mathrm{out,HP}}}{\Delta E_{\mathrm{del}}(\Nwells)} - 1
   \;=\; 0 .
-  \label{eq:N-heat}
+  \label{eq:N-rate}
 \end{equation}
-This is a rate question. Nothing in v0.1 required the wells to \emph{contain}
-enough PCM to hold that energy.
+There is no closed form for $\Delta E_{\mathrm{del}}$: it comes from marching
+the whole well, so $N_{\mathrm{rate}}$ carries \emph{everything thermal} ---
+fin count and geometry, wall conductivity, melt-layer resistance, NTU, the
+cascade, and the length of the charging window. Every root evaluation is a full
+march, which is why this criterion is expensive.
 
-\subsubsection*{The capacity criterion}
-\label{sec:hydraulics:capacity}
-
-The missing requirement is that the field be able to \emph{contain} the energy
-at all, not merely absorb it fast enough:
+\paragraph{The capacity criterion.}
+The requirement v0.1 omitted. It asks only whether the PCM in the ground can
+hold the energy, with no reference to how fast it arrives:
 \begin{equation}
   \boxed{\;
-  \Nwells \;=\; \max\bigl(N_{\mathrm{charge\ rate}},\; N_{\mathrm{capacity}}\bigr),
+  \Nwells \;=\; \max\bigl(N_{\mathrm{rate}},\; N_{\mathrm{capacity}}\bigr),
   \qquad
   N_{\mathrm{capacity}}
   = \frac{\Delta E_{\mathrm{out,HP}}}{E_{\mathrm{well}}},
   \;}
   \label{eq:sizing}
 \end{equation}
-with the capacity of one well written, as in the v0.1 notebook, from latent
-\emph{and} sensible heat:
+with the capacity of one well from latent \emph{and} sensible heat:
 \begin{equation}
   E_{\mathrm{well}}
   = \rhom V_{\mathrm{well}}
@@ -111,32 +139,28 @@ with the capacity of one well written, as in the v0.1 notebook, from latent
   \label{eq:E-well}
 \end{equation}
 The sensible term is the zero-resistance limit: with no thermal resistance the
-liquid would reach the charging inlet temperature. Equation~\eqref{eq:E-well} is
-closed form, so unlike the constraint it replaces it costs nothing to evaluate.
+liquid would reach the charging inlet temperature. Note what is \emph{not} in
+Eq.~\eqref{eq:E-well} --- no $\Ui$, no $\delta$, no NTU, no $t_{\mathrm{ch}}$.
+It is a statement about volume and material properties and nothing else, which
+makes it a \textbf{hard lower bound}: no design, however good thermally, and no
+charging window, however long, can do better. It is also closed form, so unlike
+the constraint it replaces it costs nothing to evaluate.
 
-This is the quantity the v0.1 notebook computed as \code{N\_wells\_ideal} and
-then spent only on costing. In v0.3 its place was taken by a melted-volume
-condition, $\varepsilon_{\mathrm{PCM}}(N)=1$, which on inspection was not a
-capacity statement at all but ``the well count at which an unthrottled
-\SI{10}{\hour} charge exactly saturates the store'' --- a strange thing to size
-on, and one that allowed the field to over-charge by \SI{7}{\percent} relative
-to the requirement.
-
-Which criterion binds depends on the wall conductivity. With the legacy value
-the rate criterion dominates, which is why the omission stayed invisible for so
-long. With the correct steel conductivity the rate requirement collapses and
-capacity takes over.
+At the design point $N_{\mathrm{rate}}=11.255$ and
+$N_{\mathrm{capacity}}=11.573$, so capacity binds and $\Nwells=11.573$. With
+the legacy wall conductivity the rate criterion dominated instead, which is why
+the omission stayed invisible for so long.
 
 \subsubsection*{A reporting rule: $N_{\mathrm{capacity}}$ is a bound, not a result}
+\label{sec:hydraulics:capacity}
 
-Equation~\eqref{eq:sizing} is a maximum, and that has a consequence for how its
-parts may be read. $N_{\mathrm{capacity}}$ is the seductive one --- it is closed
-form, it is smooth, it responds to every geometric parameter, and \emph{it is
-wrong to read on its own}. Whenever the rate criterion binds,
-$N_{\mathrm{capacity}}$ moves while the answer does not, and it can move the
-opposite way.
+Equation~\eqref{eq:sizing} is a \emph{maximum}, and that governs how its parts
+may be read. $N_{\mathrm{capacity}}$ is the seductive one --- closed form,
+smooth, responsive to every geometric parameter --- and it is wrong to read on
+its own. Whenever the rate criterion binds, $N_{\mathrm{capacity}}$ moves while
+the answer does not, and it can move the opposite way.
 
-The failure is not hypothetical; \S\ref{sec:defects:h3} records a fin sweep in
+The failure is not hypothetical. \S\ref{sec:defects:h3} records a fin sweep in
 which $N_{\mathrm{capacity}}$ falls monotonically while $\Nwells$ rises by
 \SI{42}{\percent}. Two properties of Eq.~\eqref{eq:E-well} explain it:
 $E_{\mathrm{well}} \propto V_{\mathrm{well}}$, and $V_{\mathrm{well}}$ counts
@@ -147,9 +171,37 @@ pure volume bookkeeping.
 The model therefore reports through \code{sizing\_report}, which leads with
 $\Nwells$, names the criterion that set it, gives the margin by which the other
 is slack, and labels $N_{\mathrm{capacity}}$ as a lower bound. At the design
-point the margin is \SI{2.6}{\percent}: the design sits \emph{on} the crossover,
+point the margin is \SI{2.7}{\percent}: the design sits \emph{on} the crossover,
 so any parameter sweep switches criterion partway through, and the report warns
 when this is so.
+
+\subsubsection*{Two names that have been retired}
+
+Earlier versions exposed \emph{four} names for these two numbers, and two of
+them were traps. Both now raise an error carrying this explanation rather than
+returning a number:
+
+\begin{description}[leftmargin=1.9em,itemsep=3pt]
+\item[\code{N\_inventory}] was a silent \emph{alias} for
+  $N_{\mathrm{capacity}}$ in v0.4 --- the two compared equal and could not be
+  told apart. Worse, in \textbf{v0.3 the same name meant something else}: the
+  well count at which $\varepsilon_{\mathrm{PCM}}(N)=1$, a marched quantity
+  requiring its own root solve. That condition is not a capacity statement at
+  all but ``the well count at which an unthrottled \SI{10}{\hour} charge
+  exactly saturates the store'', and it allowed the field to over-charge by
+  \SI{7}{\percent} relative to the requirement. \emph{A v0.3 printout of
+  \code{N\_inventory} is therefore not comparable with a v0.4 one}, and nothing
+  in the output said so.
+\item[\code{N\_heat}] was the dictionary key for the rate criterion while the
+  printed report called it ``charge-rate'' and the sweep column headed it
+  \code{N\_rate}. Three labels for one quantity, and the obvious guess
+  \code{N\_rate} raised a bare \code{KeyError}. The rate criterion is now
+  \code{N\_rate} everywhere.
+\end{description}
+
+\noindent
+The surviving vocabulary is three words: \textbf{rate}, \textbf{capacity},
+\textbf{the maximum of the two}.
 
 \subsubsection*{Why the field is not sized on the discharge}
 
