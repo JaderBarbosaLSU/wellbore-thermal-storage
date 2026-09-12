@@ -76,25 +76,12 @@ class Case:
     max_iterations: int = 40
 
     # ---- switches ----
-    front: str = "energy_balance"        # or "closed_form" (= v0.1)
-    # v0.4. True carries PCM enthalpy (latent + sensible in both phases), so a
-    # fully melted segment superheats and a fully solid one subcools instead of
-    # the march discarding the heat. False pins the PCM at T_m (v0.3 behaviour).
+    # The ONLY remaining switch. True carries PCM enthalpy (latent + sensible in
+    # both phases), so a fully melted segment superheats and a fully solid one
+    # subcools. False pins the PCM at T_m, which is retained not as a model but
+    # as the control case for the self-levelling comparison: it isolates what
+    # the sensible branches do, at a fixed well count.
     sensible_heat: bool = True
-    # CORRECTED 2026-09. Versions of this model up to and including the IHTC
-    # paper passed the PCM LIQUID conductivity (0.45 W/m/K) into the slot that
-    # carries the tube-wall and fin conductivity during CHARGING, where steel
-    # (45 W/m/K) belongs -- two orders of magnitude low. The error is visible in
-    # the original solver signature, whose parameter is literally named `k_m_l`.
-    #
-    # Its main effect is not on the wall resistance, which is small either way,
-    # but on the fin efficiency: it collapsed eta_f to about 0.33, throttling the
-    # fluid-side conductance to roughly what a bare tube could absorb. That
-    # accidentally compensated the finned-vs-bare surface mismatch in the melt
-    # front, which is why the energy balance appeared to close.
-    #
-    # Set False only to reproduce the published v0.1 results (section 13).
-    charge_uses_wall_conductivity: bool = True
 
     # ---- derived ----
     @property
@@ -173,7 +160,7 @@ class Case:
         return self.r_cell - self.r_e
 
     def geom_vector(self):
-        """The eleven positional geometry arguments the v0.1 functions expect."""
+        """The eleven positional geometry arguments the geometry helpers expect."""
         return [self.L_well, self.L_tube, self.D_well, self.r_i, self.r_e,
                 2 * self.r_i, 2 * self.r_e, self.fin_t, self.fin_L,
                 self.num_fins, self.num_tubes]
@@ -186,11 +173,8 @@ class Case:
         return replace(self, **kw)
 
 
-CASE = Case()          # the design point, all corrections applied
+CASE = Case()          # the design point
 
-# The published configuration. BOTH switches must be set: the closed-form front
-# AND the wall-conductivity error, because the two compensated each other.
-CASE_V01 = Case(front="closed_form", charge_uses_wall_conductivity=False)
 
 
 # ==========================================================================
@@ -237,37 +221,6 @@ def delta_from_area(A_melt, r_e, n_f=0, t_f=0.0, L_f=0.0):
     # branch 2: front beyond the fin tips
     d_out = np.sqrt(r_e ** 2 + (A + n_f * t_f * L_f) / np.pi) - r_e
     return np.where(d_in <= L_f, d_in, d_out)
-
-
-def advance_front(A_melt, q_prime, dt, rho_m, h_m, A_max=None):
-    """One explicit step of   rho * h_m * dA/dt = q'.
-
-    THIS IS THE WHOLE CORRECTION. v0.1 solved for the front independently of the
-    heat the network delivered, using a bare-cylinder Stefan solution, while the
-    fluid gave up its heat through a FINNED surface 3.72 times larger. Here the
-    front simply follows the delivered heat, so the two can no longer disagree.
-
-    Returns the new area AND the heat actually taken up. They differ wherever a
-    segment hits a physical limit: you cannot freeze PCM that is already solid,
-    and you cannot melt more than the segment contains. Accumulating q_prime
-    instead of q_eff would credit the fluid with heat no PCM supplied.
-    """
-    A_raw = A_melt + q_prime * dt / (rho_m * h_m)
-    A_new = np.maximum(A_raw, 0.0)
-    if A_max is not None:
-        A_new = np.minimum(A_new, A_max)
-    q_eff = (A_new - A_melt) * (rho_m * h_m) / dt
-    return A_new, q_eff
-
-
-def closure_error(Q_in_J, dA_melt, dz, rho_m, h_m):
-    """|Q_in - rho h_m dV| / Q_in.
-
-    Zero by construction when advance_front was used -- the two are inverse
-    operations. This is an arithmetic check, NOT evidence the model is right.
-    """
-    V = float(np.sum(dA_melt * dz))
-    return abs(Q_in_J - rho_m * h_m * V) / abs(Q_in_J) if Q_in_J else np.nan
 
 
 # ==========================================================================
@@ -320,110 +273,6 @@ def layer_map(T_m_lay, n_segments, N_lay):
         T_m[(z >= z_lay[j]) & (z < z_lay[j + 1])] = T_m_lay[j]
     T_m[-1] = T_m_lay[-1]
     return T_m[1:]
-
-
-def march(case, T_inlet, T_m_seg, m_dot, k_wall, times,
-          n_segments=None, A_melt0=None, mode="charge", A_max=None,
-          record=False):
-    """March one tube over `times`, starting from the melt state `A_melt0`.
-
-    Returns a dict. The melt state is returned so the discharge can START from
-    what the charge left behind -- v0.1 could not do this, and restarted every
-    discharge from a bare tube in fully solid PCM, which is why its recovered
-    energy was not bounded by its stored energy.
-    """
-    n_segments = n_segments or case.n_segments
-    dz = case.L_tube / n_segments
-    r_i, r_e = case.r_i, case.r_e
-    # k_m IS directional: liquid layer while melting, solid while freezing.
-    # rho is NOT -- see Case.rho_latent.
-    k_m = case.k_l if mode == "charge" else case.k_s
-    rho_m = case.rho_latent
-
-    A = np.zeros(n_segments) if A_melt0 is None else np.array(A_melt0, float)
-    A0 = A.copy()
-    t_prev, Q_cum, Q_rejected = 0.0, 0.0, 0.0
-    ts, Qs, T_outs = [], [], []
-
-    # Optional per-segment history, for the diagnostic plots. Recording only
-    # appends to lists; it touches nothing the solution depends on, which the
-    # notebook verifies by comparing a recorded and an unrecorded run.
-    hist = {k: [] for k in ("T_fluid", "A_melt", "delta", "NTU", "U_i",
-                            "q_prime", "q_demand")} if record else None
-
-    for t in np.asarray(times, float):
-        dt = t - t_prev
-        if dt <= 0:
-            t_prev = t
-            continue
-        delta = delta_from_area(A, r_e, case.num_fins, case.fin_t,
-                                case.fin_L)
-        T0 = T_inlet
-        q_prime = np.zeros(n_segments)
-        q_demand = np.zeros(n_segments)
-        if record:
-            T_prof = np.empty(n_segments + 1); T_prof[0] = T_inlet
-            NTU_prof = np.empty(n_segments); U_prof = np.empty(n_segments)
-
-        for i in range(n_segments):
-            h_i, cp_d, _, _ = h_internal(case.fluid2, T0, case.P, r_i, m_dot)
-            U_i = compute_U_i(h_i, r_i, r_e, k_wall, case.Rf_i, k_m,
-                              float(delta[i]), case.L_tube, case.fin_t,
-                              case.fin_L, case.num_fins)
-            NTU = float(np.clip((2 * np.pi * r_i * U_i * dz) / (m_dot * cp_d),
-                                -50.0, 50.0))
-            T1 = T_m_seg[i] + (T0 - T_m_seg[i]) * np.exp(-NTU)
-            q_seg = m_dot * cp_d * (T0 - T1)          # W, +ve when melting
-            q_demand[i] = q_seg / dz
-
-            # Limit the segment to the latent heat it can supply or absorb THIS
-            # step, and take the fluid temperature from the limited value.
-            # Clamping only the front afterwards leaves the fluid warmed by heat
-            # no PCM gave up, which starves every segment downstream.
-            q_avail = A[i] * rho_m * case.h_m / dt
-            if q_demand[i] < -q_avail:
-                q_prime[i] = -q_avail
-            elif A_max is not None and q_demand[i] > (A_max - A[i]) * rho_m * case.h_m / dt:
-                q_prime[i] = (A_max - A[i]) * rho_m * case.h_m / dt
-            else:
-                q_prime[i] = q_demand[i]
-            T0 = T0 - q_prime[i] * dz / (m_dot * cp_d)
-            if record:
-                T_prof[i + 1] = T0
-                NTU_prof[i] = NTU
-                U_prof[i] = U_i
-
-        if record:
-            hist["T_fluid"].append(T_prof.copy())
-            hist["delta"].append(delta.copy())
-            hist["NTU"].append(NTU_prof.copy())
-            hist["U_i"].append(U_prof.copy())
-            hist["q_prime"].append(q_prime.copy())
-            hist["q_demand"].append(q_demand.copy())
-
-        A, q_eff = advance_front(A, q_prime, dt, rho_m, case.h_m, A_max)
-        if record:
-            hist["A_melt"].append(A.copy())     # state AFTER the step
-        Q_cum += float(np.sum(q_eff) * dz) * dt
-        Q_rejected += float(np.sum(q_demand - q_eff) * dz) * dt
-        ts.append(t)
-        Qs.append(float(np.sum(q_eff) * dz))
-        T_outs.append(T0)
-        t_prev = t
-
-    return {
-        "A_melt": A,
-        "delta": delta_from_area(A, r_e, case.num_fins, case.fin_t, case.fin_L),
-        "Q_cum_J": Q_cum,
-        "Q_rejected_J": Q_rejected,
-        "t": np.array(ts),
-        "Q": np.array(Qs),
-        "T_out": np.array(T_outs),
-        "V_melt_tube": float(np.sum(A * dz)),
-        "closure": closure_error(Q_cum, A - A0, dz, rho_m, case.h_m),
-        "z": np.linspace(0.0, case.L_tube, n_segments),
-        "history": {k: np.array(v) for k, v in hist.items()} if record else None,
-    }
 
 
 # ==========================================================================

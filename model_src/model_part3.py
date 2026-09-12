@@ -305,7 +305,7 @@ def sizing_report(case, detail, label=""):
 # ==========================================================================
 
 def run_cycle(case):
-    """The whole calculation. `case.front` selects the melt-front formulation."""
+    """The whole calculation: cycles, budget, sizing, charge, discharge, KPIs."""
     rank, hp, T = cycle_state_points(case)
     rank_eff, hp_cop = rank["rank_eff"], hp["hp_cop"]
     E = energy_budget(case, rank_eff, hp_cop, T)
@@ -314,65 +314,46 @@ def run_cycle(case):
     times_ch = np.logspace(0.0, np.log10(case.t_ch * 3600.0), case.n_times)
     times_dc = np.logspace(0.0, np.log10(case.t_dc * 3600.0), case.n_times)
     gv = case.geom_vector()
-
-    # The k_w slot of the charging chain. False reproduces the v0.1 defect.
-    k_charge = case.k_wall if case.charge_uses_wall_conductivity else case.k_l
+    k_charge = case.k_wall
 
     detail = SizingResult()
 
-    if case.front == "energy_balance":
-        n_seg = case.n_segments
-        T_m_seg = layer_map(T_m_lay, n_seg, case.N_lay)
-        T_m_seg_dc = layer_map(T_m_lay_dc, n_seg, case.N_lay)
+    n_seg = case.n_segments
+    T_m_seg = layer_map(T_m_lay, n_seg, case.N_lay)
+    T_m_seg_dc = layer_map(T_m_lay_dc, n_seg, case.N_lay)
 
-        sz = size_well_field(case, T["T_4c"], T_m_seg, E["m_dot_w_ch"],
-                             E["D_E_out_HP"], times_ch, k_charge, n_seg,
-                             T_discharge_in=T["T_3d"])
-        N_wells = sz["N_wells"]
-        eps_pcm = sz["eps_pcm"]
-        detail.update(sz)
+    sz = size_well_field(case, T["T_4c"], T_m_seg, E["m_dot_w_ch"],
+                         E["D_E_out_HP"], times_ch, k_charge, n_seg,
+                         T_discharge_in=T["T_3d"])
+    N_wells = sz["N_wells"]
+    eps_pcm = sz["eps_pcm"]
+    detail.update(sz)
 
-        m1_ch = E["m_dot_w_ch"] / (N_wells * case.num_tubes)
-        r_ch = march_h(case, T["T_4c"], T_m_seg, m1_ch, k_charge, times_ch,
-                       n_segments=n_seg)
-        E_stored = r_ch["Q_cum_J"] * case.num_tubes * N_wells / 1000.0
+    m1_ch = E["m_dot_w_ch"] / (N_wells * case.num_tubes)
+    r_ch = march_h(case, T["T_4c"], T_m_seg, m1_ch, k_charge, times_ch,
+                   n_segments=n_seg)
+    E_stored = r_ch["Q_cum_J"] * case.num_tubes * N_wells / 1000.0
 
-        def discharged(ratio):
-            r = march_h(case, T["T_3d"], T_m_seg_dc, ratio * m1_ch,
-                        case.k_wall, times_dc, n_segments=n_seg,
-                        E0=r_ch["E"])
-            return abs(r["Q_cum_J"]) * case.num_tubes * N_wells / 1000.0, r
+    def discharged(ratio):
+        r = march_h(case, T["T_3d"], T_m_seg_dc, ratio * m1_ch,
+                    case.k_wall, times_dc, n_segments=n_seg,
+                    E0=r_ch["E"])
+        return abs(r["Q_cum_J"]) * case.num_tubes * N_wells / 1000.0, r
 
-        ratio, _ = _bisect(lambda x: E["D_E_in_ORC"] / discharged(x)[0] - 1.0,
-                           *case.ratio_bracket, case.tol_Q_ratio,
-                           case.max_iterations, "discharge flow")
-        Q_dc, r_dc = discharged(ratio)
-        m_dot_d_well1 = ratio * m1_ch
-        dz = case.L_tube / n_seg
-        detail.update(
-            closure_charge=r_ch["closure"], closure_discharge=r_dc["closure"],
-            E_stored_kJ=E_stored, E_discharged_kJ=Q_dc,
-            eta_storage=Q_dc / E_stored,
-            eps_end_of_discharge=float(np.sum(r_dc["A_melt"] * dz))
-            * case.num_tubes / case.V_well,
-            E_sensible_charge_J=r_ch["E_sensible_J"],
-            E_sensible_discharge_J=r_dc["E_sensible_J"])
-
-    elif case.front == "closed_form":
-        lo, hi = case.N_wells_bracket
-        N_wells = _find_N_wells_closed_form(case, gv, T, T_m_lay, k_charge,
-                                            times_ch, E)
-        m1_ch = E["m_dot_w_ch"] / (N_wells * case.num_tubes)
-        _, _, Vm, _ = time_profiles_melt(
-            [case.t_ch * 3600.0], gv, T["T_4c"], case.N_lay, T_m_lay, k_charge,
-            case.Rf_i, m1_ch, case.P, case.fluid2, case.k_l, case.cp_l,
-            case.rho_l, case.h_m, case.n_segments, case.delta_max)
-        V_tube = Vm[case.t_ch * 3600.0]
-        eps_pcm = V_tube * case.num_tubes / case.V_well
-        m_dot_d_well1, ratio = _find_discharge_closed_form(
-            case, gv, T, T_m_lay_dc, times_dc, m1_ch, N_wells, E)
-    else:
-        raise ValueError(f"unknown front: {case.front!r}")
+    ratio, _ = _bisect(lambda x: E["D_E_in_ORC"] / discharged(x)[0] - 1.0,
+                       *case.ratio_bracket, case.tol_Q_ratio,
+                       case.max_iterations, "discharge flow")
+    Q_dc, r_dc = discharged(ratio)
+    m_dot_d_well1 = ratio * m1_ch
+    dz = case.L_tube / n_seg
+    detail.update(
+        closure_charge=r_ch["closure"], closure_discharge=r_dc["closure"],
+        E_stored_kJ=E_stored, E_discharged_kJ=Q_dc,
+        eta_storage=Q_dc / E_stored,
+        eps_end_of_discharge=float(np.sum(r_dc["A_melt"] * dz))
+        * case.num_tubes / case.V_well,
+        E_sensible_charge_J=r_ch["E_sensible_J"],
+        E_sensible_discharge_J=r_dc["E_sensible_J"])
 
     # ---- parasitics ----
     _, pp_dc = calculate_pressure_drop(gv, m_dot_d_well1, case.fluid2,
@@ -402,40 +383,7 @@ def run_cycle(case):
         "c_pcm": case.cost_per_kWh,
     }
     detail.update(flow_ratio_dc_ch=ratio, m_dot_d_well1=m_dot_d_well1,
-                  pumping_ch_kW=pumping_ch, pumping_dc_kW=pumping_dc,
-                  front=case.front)
+                  pumping_ch_kW=pumping_ch, pumping_dc_kW=pumping_dc)
     return {"kpis": kpis, "detail": detail, "T": T}
 
 
-def _find_N_wells_closed_form(case, gv, T, T_m_lay, k_charge, times_ch, E):
-    """v0.1 sizing, using the ORIGINAL Illinois regula-falsi solver.
-
-    Note the parameter this solver names `k_m_l` -- PCM liquid conductivity --
-    is the slot the wall conductivity is passed into. The defect is visible in
-    the signature itself.
-    """
-    lo, hi = case.N_wells_bracket
-    N = find_N_wells_for_Q_ratio_ch_fast(
-        1.0, case.tol_Q_ratio, lo, hi, E["m_dot_w_ch"], case.num_tubes, gv,
-        times_ch, T["T_4c"], case.N_lay, T_m_lay, k_charge, case.Rf_i, case.P,
-        case.fluid2, case.cp_l, case.rho_l, case.h_m, case.n_segments,
-        case.delta_max, E["D_E_out_HP"], N_hint=None,
-        max_iterations=case.max_iterations, verbose=False)
-    if not np.isfinite(N) or N >= hi - 1.0:
-        raise RuntimeError(f"well-field sizing did not converge (N={N})")
-    return N
-
-
-def _find_discharge_closed_form(case, gv, T, T_m_lay_dc, times_dc, m1_ch,
-                                N_wells, E):
-    """v0.1 discharge, original solver. The front restarts from solid PCM."""
-    rlo, rhi = case.ratio_bracket
-    m_dot_d = find_m_dot_d_well1_for_Q_ratio_dc_fast(
-        1.0, case.tol_Q_ratio, rlo, rhi, m1_ch, N_wells, case.num_tubes, gv,
-        times_dc, T["T_3d"], case.N_lay, T_m_lay_dc, case.k_wall, case.Rf_i,
-        case.P, case.fluid2, case.k_s, case.cp_s, case.rho_s, case.h_m,
-        case.n_segments, case.delta_max, E["D_E_in_ORC"], ratio_hint=None,
-        max_iterations=case.max_iterations, verbose=False)
-    if not np.isfinite(m_dot_d) or m_dot_d <= 0:
-        raise RuntimeError(f"discharge flow did not converge ({m_dot_d})")
-    return m_dot_d, m_dot_d / m1_ch

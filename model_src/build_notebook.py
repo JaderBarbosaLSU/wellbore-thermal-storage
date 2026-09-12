@@ -135,7 +135,7 @@ from math import log, pi
 from dataclasses import dataclass, replace
 
 LAST_UPDATED = '@@BUILD_STAMP@@'
-MODEL_VERSION = '0.4'
+MODEL_VERSION = '0.4c'
 
 print(f'THUMS P2H2P model v{MODEL_VERSION} · last updated {LAST_UPDATED}')
 print('ready ·', np.__version__, '·', CP.get_global_param_string('version'))
@@ -204,9 +204,9 @@ slot meant for the tube wall for months without anything contradicting it.
 > absorb. That accidentally compensated the finned-versus-bare surface mismatch
 > in the melt front (§5), which is why the energy balance appeared to close.
 >
-> **From v0.3 the correct value is the default.** `charge_uses_wall_conductivity`
-> is `True`. Set it to `False` only to reproduce the published v0.1 results, as
-> §13 does.
+> **The correct value is now the only value.** The switch that reproduced the
+> defect was removed in v0.4b along with the rest of the superseded code; steel
+> at $k_w = 45$ W/m·K is simply what the model uses.
 
 Geometry notes that matter later:
 
@@ -220,11 +220,7 @@ a recurring source of factor-of-two errors.
 """))
 cells.append(code("FT = 0.3048   # foot  -> m\nIN = 0.0254   # inch  -> m\n\n"
                   + src('Case', drop_trailing=('CASE',))
-                  + '\n\nCASE = Case()          # the design point, all corrections applied\n\n'
-                  '# The published configuration. BOTH switches must be set: the closed-form\n'
-                  '# front AND the wall-conductivity error, because the two compensated each\n'
-                  '# other. Setting only one gives a model that never existed.\n'
-                  'CASE_V01 = Case(front="closed_form", charge_uses_wall_conductivity=False)'))
+                  + '\n\nCASE = Case()          # the design point'))
 
 cells.append(code(r"""
 c = CASE
@@ -294,100 +290,27 @@ $$U_i=\left[\frac{1}{h_i}+R''_{f,i}
 """))
 cells.append(code(src('compute_U_i')))
 
-cells.append(md(r"""
-The closed-form front (§5.1) is driven by the tube outer-surface temperature
-rather than by the heat flow. Splitting the network at $r_e$:
-
-$$R_1=R''_{f,i}+\frac{1}{h_i}+\frac{r_i}{k_w}\ln\frac{r_e}{r_i},
-\qquad R_2=\frac{2\pi r_i}{P_T h_e \eta_o},
-\qquad T_{r_e}=T_{\text{avg}}-\frac{R_1\left(T_{\text{avg}}-T_m\right)}{R_1+R_2}$$
-
-The energy-balance front of §5.2 never forms $T_{r_e}$ at all.
-"""))
-cells.append(code(src('compute_T_re')))
 
 # ---------------------------------------------------------------- 5. front
 cells.append(md(r"""
-## 5. The melt front — where the model was wrong
+## 5. The melt front
 
-### The inconsistency
+The melt front is carried as an **enthalpy per unit tube length**, $E'$,
+measured from a datum of fully solid PCM at the local melting temperature.
+Subcooled solid, two-phase and superheated liquid are three branches of one
+single-valued curve, and the melted fraction follows from $E'$ rather than being
+tracked separately.
 
-v0.1 computed two things from two **independent** models that never spoke:
+> **What used to be here.** Earlier versions carried two other formulations: a
+> closed-form Stefan front (v0.1, the conference paper) and an energy-balance
+> front on the melted *area* (v0.2). Both have been **deleted** from the code as
+> of v0.4b. Neither is physically consistent — a variable counting melted area
+> has no slot for liquid above $T_m$ or solid below it, so a segment that
+> finishes melting must either melt material that is not there or discard the
+> heat delivered to it. The reasoning is preserved in the project report and in
+> git history; it is no longer carried as executable code.
 
-| | surface used | perimeter |
-|---|---|---|
-| fluid side (`compute_U_i`) | finned, with fin efficiency | **0.4924 m** |
-| melt front (`compute_delta2_fast`) | bare cylinder of radius $r_e$ | **0.1324 m** |
-
-A factor of **3.72**. The fluid gave up heat through a finned surface; the front
-absorbed it through a bare tube. They are not the same energy, and nothing in the
-code ever compared them.
-"""))
-cells.append(code(r"""
-c = CASE
-P_T   = 2*np.pi*c.r_e + 2*c.num_fins*c.fin_L
-P_bare = 2*np.pi*c.r_e
-print(f'finned perimeter P_T   {P_T:.4f} m')
-print(f'bare perimeter 2*pi*r_e {P_bare:.4f} m')
-print(f'ratio                   {P_T/P_bare:.3f}   <-- the two surfaces the model used')
-"""))
-
-cells.append(md(r"""
-### 5.1 Formulation A — the closed-form Stefan front (v0.1)
-
-The quasi-steady solution for melting around a **bare** cylinder. With
-$\alpha_m = k_m/(\rho_m c_{p,m})$, $x = 1+\delta/r_e$,
-
-$$\mathrm{Fo}=\frac{\alpha_m t}{r_e^2},\qquad
-\mathrm{Ph}=\left|\frac{h_m}{c_{p,m}(T_{r_e}-T_m)}\right|=\frac{1}{\mathrm{Ste}}$$
-
-$$\mathrm{Fo}=\mathrm{Ph}\left[\tfrac12 x^2\ln x-\tfrac14 x^2+\tfrac14\right]
-\qquad\Longleftrightarrow\qquad
-\tfrac12 x^2\ln x-\tfrac14 x^2+\tfrac14=\frac{k_m(T_{r_e}-T_m)\,t}{\rho_m h_m r_e^2}$$
-
-solved for $\delta$ by safeguarded Newton–bisection.
-
-**The algebra is exact** — it returns the right root to a residual of $10^{-15}$.
-Two *premises* fail:
-
-1. it is derived for a bare cylinder, but the fluid side uses $P_T$ (the 3.72);
-2. it assumes $T_{r_e}$ has been constant since $t=0$, whereas $T_{r_e}-T_m$
-   actually runs $0 \to 8.6$ K across the charging window, and the **current**
-   value is applied retroactively to the whole history.
-
-Those two errors act in *opposite* directions, which is why the energy balance
-appeared to close to 3 % at the design point.
-"""))
-cells.append(code(src('compute_delta2_fast')))
-
-cells.append(md(r"""
-### 5.2 Formulation B — the energy-balance front (v0.2)
-
-Of the two models — heat delivered, and front position — only one may be chosen
-freely. The other follows from conservation:
-
-$$\boxed{\rho_m h_m \frac{\mathrm{d}A_{\text{melt}}}{\mathrm{d}t} = q'(t)},
-\qquad \delta=\sqrt{r_e^2+\frac{A_{\text{melt}}}{\pi}}-r_e$$
-
-Integrated explicitly, with a projection onto the physical bounds:
-
-$$A^{n+1}=\mathcal{P}\!\left[A^{n}+\frac{q'\Delta t}{\rho_m h_m}\right],
-\qquad \mathcal{P}[A]=\min\left(\max(A,0),A_{\max}\right),
-\qquad q'_{\text{eff}}=\frac{\left(A^{n+1}-A^{n}\right)\rho_m h_m}{\Delta t}$$
-
-It is $q'_{\text{eff}}$, not $q'$, that is accumulated — otherwise the fluid gets
-credited with heat no PCM supplied.
-
-Three things follow that Formulation A cannot do: the fins enter the front
-automatically (because $q'$ comes from the finned network), $T_{r_e}$ need not be
-constant, and the melt state **carries across the cycle** so discharge starts
-from what charging left behind.
-
-> **Closure is now exact by construction** — but that is an arithmetic identity,
-> not evidence the model is right. `advance_front` and `closure_error` are
-> inverse operations, so a residual of $10^{-16}$ measures floating point.
-
-### 5.3 The fins are metal, not PCM
+### 5.1 The fins are metal, not PCM
 
 $A_{\text{melt}}$ is the quantity the latent balance conserves, so it must be
 **PCM and nothing else**. The annulus between $r_e$ and $r_e+\delta$ is not all
@@ -410,12 +333,11 @@ conduction resistance — by up to 34 %. Because it inflated
 $\varepsilon_{\text{PCM}}$, it also pushed $N_{\text{inventory}}$ slightly
 **up**; correcting it moves the design point from 12.79 to 12.74 wells.
 """))
-cells.append(code(src('delta_from_area', 'area_from_delta', 'advance_front',
-                      'closure_error')))
+cells.append(code(src('delta_from_area', 'area_from_delta')))
 
 # ---------------------------------------------------------------- 6. march
 cells.append(md(r"""
-### 5.4 Enthalpy state — sensible heat in both phases (v0.4)
+### 5.2 The enthalpy state
 
 Formulation B tracks $A_{\rm melt}$ and nothing else, so a segment that runs out
 of PCM has nowhere to put further heat: the march clips it and discards the
@@ -468,7 +390,7 @@ $$\mathrm{NTU}_j=\frac{2\pi r_i U_i \Delta z}{\dot m c_p},
 
 The march is sequential — each segment's outlet is the next one's inlet.
 """))
-cells.append(code(src('layer_map', 'march')))
+cells.append(code(src('layer_map')))
 
 # ---------------------------------------------------------------- 7. cycles
 cells.append(md(r"""
@@ -520,23 +442,6 @@ bends and an exit. Those three coefficients are hard-coded literals the source
 itself calls example values, and the tube is assumed smooth.
 """))
 cells.append(code(src('calculate_pressure_drop')))
-
-# ---------------------------------------------------------------- 9. legacy
-cells.append(md(r"""
-## 9. The v0.1 path, kept for verification
-
-These are the **original** functions, unmodified. They are here so §13 can prove
-the notebook still reproduces the published numbers exactly — which is what makes
-every difference in §12 attributable to the front reformulation and nothing else.
-
-You do not need to read them. Collapse this section.
-"""))
-cells.append(code(src('make_cp_state', 'get_props_state',
-                      'compute_h_i_from_state')))
-cells.append(code(src('temperature_profile_melt', 'time_profiles_melt')))
-cells.append(code(src('evaluate_Q_ratio_ch', 'evaluate_Q_ratio_dc',
-                      'find_N_wells_for_Q_ratio_ch_fast',
-                      'find_m_dot_d_well1_for_Q_ratio_dc_fast')))
 
 # ---------------------------------------------------------------- 10. sizing
 cells.append(md(r"""
@@ -685,25 +590,18 @@ $$\eta_{RTE}=\frac{\left(\dot W_{el,out}-\dot W_{\text{pump}}^{dc}\right)t_{dc}}
 $$\varepsilon_{\text{PCM}}=\frac{V_{\text{melt}}n_t}{V_{\text{well}}},\qquad
 \eta_{\text{storage}}=\frac{\Delta E_{\text{discharged}}}{\Delta E_{\text{stored}}}$$
 """))
-cells.append(code(src('run_cycle', '_find_N_wells_closed_form',
-                      '_find_discharge_closed_form')))
+cells.append(code(src('run_cycle')))
 
 # ---------------------------------------------------------------- 12. results
 cells.append(md(r"""
 ## 12. Results
 
-Three configurations: the published v0.1 model, the corrected front, and the
-corrected front with the steel conductivity also fixed.
+One configuration. The superseded formulations have been removed from the code
+(§5), so there is nothing left to compare against inside this notebook — the
+historical comparison lives in the project report.
 """))
 cells.append(code(r"""
-runs = {}
-for label, case in (
-    ('v0.1 published',      CASE_V01.with_(N_wells_bracket=(1., 400.))),
-    ('marched, old k_w',    CASE.with_(N_wells_bracket=(1., 400.),
-                                       charge_uses_wall_conductivity=False)),
-    ('v0.4 (default)',      CASE.with_(N_wells_bracket=(1., 400.))),
-):
-    runs[label] = run_cycle(case)
+runs = {'v0.4b': run_cycle(CASE)}
 
 rows = []
 for label, r in runs.items():
@@ -720,32 +618,30 @@ print(df.round(5).T.to_string())
 """))
 
 cells.append(md(r"""
-Three things to read from that table.
+Two things to read from that table.
 
-**The sizing moves a long way; the efficiency hardly at all.** `N_wells` falls
-from 24.1 to 12.7 — a 47 % reduction — while `eta_RTE` moves by about 2 %.
+**`eta_RTE_nopump` is a useful invariant.** It depends only on the two cycle
+efficiencies, the four electrical and mechanical efficiencies, and $\lambda$ —
+so no change to the storage model can move it. If you modify anything in §5–§11
+and this number shifts, the change has leaked into the cycles. It sits at
+$0.43484$.
 
-**`eta_RTE_nopump` is identical to twelve significant figures** across all three
-columns. The cycles are untouched by any of this. What the storage model
-determines is how much hardware the cycle needs, not how efficiently it runs.
-
-**The binding constraint flips.** With the old conductivity, heat transfer binds
-and the inventory constraint is slack. With the correct value the heat-transfer
-requirement collapses to about 8 wells — at which point the store would have to
-melt more PCM than it contains — so inventory takes over.
+**The rate criterion binds.** `N_capacity` is a lower bound and is slack here by
+about 15 %, so the well count is set by how fast the field can absorb the
+energy, not by how much it can hold. §10 explains why reading `N_capacity`
+alone across a sweep is a trap.
 """))
 cells.append(code(r"""
 for label, r in runs.items():
     d = r['detail']
-    if 'N_rate' in d:
-        sizing_report(CASE, d, label)
-        print()
+    sizing_report(CASE, d, label)
+    print()
 """))
 
 cells.append(code(r"""
 # The retired names fail loudly rather than returning a number that may mean
 # something other than you think.
-d = runs['v0.4 (default)']['detail']
+d = runs['v0.4b']['detail']
 print(f"N_rate     = {d['N_rate']:.3f}   <- rate:     absorb it in time?")
 print(f"N_capacity = {d['N_capacity']:.3f}   <- capacity: contain it at all?")
 print(f"N_wells    = {d['N_wells']:.3f}   <- max of the two")
@@ -770,49 +666,6 @@ print('The assumed storage loss lambda = 0.05 implies eta_storage = 0.952.')
 print('At the v0.3 design point the model computes about 0.91, so the field')
 print('banks ~10% more than the ORC withdraws. lambda should become an OUTPUT')
 print('of the model rather than an input. Not done yet -- see section 15.')
-"""))
-
-cells.append(md(r"""
-### Check against the v0.1 ideal well count
-
-The v0.1 notebook printed `Ideal number of wells: 12.215` from
-
-$$m_{\rm ideal}=\frac{\Delta E_{\rm out,HP}}{h_m+c_{p,l}(T_{3c}-T_m)},
-\qquad m_{\rm well}=V_{\rm well}\,\rho_l$$
-
-which is exactly the capacity criterion of §10 — but evaluated with $\rho_l$,
-whereas the model uses $\rho_s$ (see `Case.rho_latent`).
-
-> **A correction to what this notebook said at v0.3.** It previously reported
-> $N_{\rm inventory}/N_{\rm ideal}=1.0428$ as agreeing with $1+\mathrm{Ste}$, and
-> attributed the gap to omitted sensible heat. That compared **inconsistent
-> bases** and the agreement was a coincidence: two offsetting differences, a
-> factor 0.955 from the sensible credit and 0.936 from the density.
->
-> Under v0.4 the question dissolves — `N_capacity` *is* that formula on the
-> model's own conventions, so the comparison below is an identity, not a test.
-"""))
-
-cells.append(code(r"""
-d = runs['v0.4 (default)']['detail']
-dT = cycle_state_points(CASE)[2]['T_3c'] - CASE.T_m
-E = energy_budget(CASE, *[cycle_state_points(CASE)[k][n] for k, n in
-                          ((0,'rank_eff'), (1,'hp_cop'))], cycle_state_points(CASE)[2])
-D = E['D_E_out_HP'] * 1000.0          # J
-
-print(f"{'variant':52s} {'N':>9s}")
-for lbl, cap, rho in (
-    ("v0.1 as coded:  h_m + cp_l*dT,  rho_l",  CASE.h_m + CASE.cp_l*dT, CASE.rho_l),
-    ("latent only,                    rho_s",  CASE.h_m,                CASE.rho_s),
-    ("h_m + cp_l*dT,  rho_s  <- v0.4 convention", CASE.h_m + CASE.cp_l*dT, CASE.rho_s),
-):
-    print(f"  {lbl:50s} {D/(cap*rho*CASE.V_well):9.3f}")
-print(f"\n  model N_capacity (should equal the last row)  {d['N_capacity']:9.3f}")
-print(f"  sensible credit  cp_l*dT/h_m = {CASE.cp_l*dT/CASE.h_m:.4f}  (= Ste)")
-print(f"  density factor   rho_l/rho_s = {CASE.rho_l/CASE.rho_s:.4f}")
-
-ident = abs(d['N_capacity'] - D/((CASE.h_m+CASE.cp_l*dT)*CASE.rho_s*CASE.V_well))
-print('\nIDENTITY HOLDS' if ident < 1e-6 else f'MISMATCH {ident:.2e}')
 """))
 
 cells.append(md(r"""
@@ -892,7 +745,7 @@ because the discharge-flow bisection ceases to bracket beyond about 20 h — a
 solver limit, not a physical one.
 
 The quasi-steady Stefan solution says where this comes from. Putting
-$x = r_{\rm cell}/r_e$ in the closed form of §5.1, a **bare** tube at
+$x = r_{\rm cell}/r_e$ in the quasi-steady Stefan solution, a **bare** tube at
 $\Delta T = 10$ K reaches the cell boundary in
 
 $$t=\frac{\rho h_m r_e^2}{k_l\Delta T}
@@ -922,39 +775,57 @@ marginal at all.
 
 # ============================================================ 13. verification
 cells.append(md(r"""
-## 13. Verification against the published numbers
+## 13. Verification against the frozen v0.4b fixture
 
-The v0.1 path in this notebook must still reproduce the conference-paper values
-exactly. If it ever stops, a change has leaked into the legacy path and every
-comparison in §12 becomes unattributable.
+**What this replaces.** Until v0.4b this section ran the v0.1 closed-form path
+and checked it still reproduced the conference-paper numbers to $4\times10^{-11}$.
+That path has been deleted along with the rest of the superseded code, so that
+check is gone. It is recoverable from git history if it is ever needed again,
+but it is not coming back into this notebook.
 
-> This cell is the reason §9 keeps the original functions verbatim. It is the
-> only thing standing between "the model changed because we corrected it" and
-> "the model changed and we do not know why."
+**What replaces it.** A frozen fixture of the v0.4b outputs. This is a weaker
+guarantee and it is worth being clear about the difference:
+
+- the old check was an *external* one — it tied the code to a published result;
+- this one is *internal* — it only detects **drift**. It cannot tell you the
+  model is right, only that it still computes what it computed on the day the
+  fixture was frozen.
+
+That is still worth having. Most damage comes from a change leaking somewhere
+unintended, and this catches exactly that. It does not substitute for the
+external validation that §15 still lists as the largest gap.
 """))
 cells.append(code(r"""
-IHTC = {   # frozen v0.1 results, DT_3C_2C = 55 K, N_lay = 9
-    'cop_hp':         2.956330409531823,
-    'eta_orc':        0.23685132027873143,
-    'eta_rte_nopump': 0.4348350503020928,
-    'eta_rte':        0.43027101049765343,
-    'eps_pcm':        0.5200473147142692,
-    'N_wells':        24.123429921001843,
-    'E_well':         2.167417633092469,
-    'rho_E':          78.29462518690391,
-    'f_pump':         0.015081686346236986,
+FIXTURE_V04B = {   # frozen 2026-09, stripped model, bit-identical to pre-strip
+    'N_rate':            11.2551269531,
+    'N_capacity':         9.57383020656,
+    'N_wells':           11.2551269531,
+    'eps_pcm':            1.0,
+    'E_well_kJ':         20643709.4497,
+    'eta_storage':        0.953184801896,
+    'flow_ratio_dc_ch':   1.026171875,
+    'cop_hp':             2.95633040945,
+    'eta_orc':            0.236851320275,
+    'eta_rte':            0.414747170951,
+    'eta_rte_nopump':     0.434835050283,
+    'f_pump':             0.0643700540068,
+    'E_well':             4.64548712778,
+    'rho_E':            167.811070616,
 }
 
-got = runs['v0.1 published']['kpis']
-print(f"{'KPI':16s} {'published':>22s} {'this notebook':>22s}   rel. diff")
+res_v = runs['v0.4b']
+merged = dict(res_v['kpis']); merged.update(res_v['detail'])
+print(f"{'quantity':20s} {'frozen':>20s} {'now':>20s}   rel. diff")
 worst = 0.0
-for k, v in IHTC.items():
-    n = got[k]; d = abs(n - v) / abs(v); worst = max(worst, d)
-    print(f'{k:16s} {v:22.12g} {n:22.12g}   {d:.1e}')
+for k, v in FIXTURE_V04B.items():
+    now = float(merged[k])
+    d = abs(now - v)/abs(v) if v else abs(now)
+    worst = max(worst, d)
+    print(f'{k:20s} {v:20.12g} {now:20.12g}   {d:.1e}')
 print()
 print(f'worst relative difference: {worst:.1e}')
-print('PASS -- reproduces the published model' if worst < 1e-8 else
-      'FAIL -- the legacy path has changed')
+print('PASS -- no drift' if worst < 1e-9 else
+      'FAIL -- the model has moved since the fixture was frozen')
 """))
 
 # ============================================================ 14. diagnostics
@@ -1045,7 +916,7 @@ the multilayer cascade exists to reduce (§14.4).
 cells.append(code(r"""
 # --- run charge and discharge at the design point, recording history --------
 case = CASE
-res  = runs['v0.4 (default)']
+res  = runs['v0.4b']
 N    = res['kpis']['N_wells']
 
 rank, hp, T = cycle_state_points(case)
@@ -1372,14 +1243,17 @@ Read this before quoting any number above.
 | **Buoyancy head** (H7) | ±7.5 bar in the 1,524 m loop, asymmetric between charge and discharge |
 | **Isentropic efficiencies** | both cycles are idealised, so every efficiency here is an upper bound |
 | **Volume change on melting** | 6.9 %, neglected; the liquid layer is ~2.3 % thicker than modelled |
-| **Non-circular melt front** | the fins enhance heat transfer through $\eta_o$, but the front is still modelled as a circular annulus (H3). Their *metal* is excluded from $A_{\text{melt}}$ (§5.3); their effect on front *shape* is not modelled |
+| **Non-circular melt front** | the fins enhance heat transfer through $\eta_o$, but the front is still modelled as a circular annulus (H3). Their *metal* is excluded from $A_{\text{melt}}$ (§5.1); their effect on front *shape* is not modelled |
 | **Front interaction** (H3) | `delta_max = 0.5 m` against an 0.0889 m borehole radius — a factor of 5.62. Nothing in the solver enforces it |
 
 ### Two quantities the code defines twice
 
-- $h_e$: the cylindrical shell $k_m/(r_e\ln(1+\delta/r_e))$ in `compute_T_re`,
-  but the plane-slab $k_m/\delta$ in `compute_U_i`'s small-$\delta$ branch — and
-  the two are iterated against each other.
+- $h_e$: `compute_U_i` uses the cylindrical shell
+  $k_m/(r_e\ln(1+\delta/r_e))$ but falls back to the plane-slab $k_m/\delta$ in
+  its small-$\delta$ branch. The second definition, in `compute_T_re`, went
+  with the closed-form front when that was deleted, so the two forms are no
+  longer iterated against each other — but the branch inconsistency inside
+  `compute_U_i` remains.
 - The laminar Nusselt number: 3.66 here, 4.36 in some paths. Immaterial at the
   design point, where the flow is strongly turbulent.
 
@@ -1430,12 +1304,13 @@ consistency is not validation, and a reviewer will ask.
 
 | version | date | change |
 |---|---|---|
-| **0.4b** | this build | **`E_well^cap` corrected** (§10): the capacity bound now resolves the cascade, $\langle T_m\rangle = T_{m,\rm top}-\frac{N_{\rm lay}-1}{2N_{\rm lay}}\Delta T_{\rm glide}$, and includes the solid subcooling the discharge reaches. The old form used the top layer's $T_m$ for the whole store — the no-cascade limit — and was not a bound: the model exceeded it by 1.6 %. `N_capacity` 11.573 → **9.574**, so the **rate criterion now binds** and `N_wells` 11.573 → **11.255**. Two conclusions reverse: the fin optimum moves from 16 to about 20 and is shallow, and the melt-fraction spread quoted at $1.321\to0.078$ was not a like-for-like comparison (§14.4). |
+| **0.4c** | this build | **Superseded code removed.** Formulations A (closed-form Stefan) and B (energy-balance on melted area) deleted along with the v0.1 sizing chain, the `front` and `charge_uses_wall_conductivity` switches, and `CASE_V01` — 16 functions, about 1,050 lines. The model is now one formulation. Verified **bit-identical** to the pre-strip v0.4b on 20 reported quantities before the cut. §13 now checks a frozen v0.4b fixture instead of the published IHTC numbers: that is a *drift* check, not an external validation, and the difference matters — see §13. Notebook 69 → 57 cells, runtime 55 → 39 s. |
+| 0.4b | 2026-09 | **`E_well^cap` corrected** (§10): the capacity bound now resolves the cascade, $\langle T_m\rangle = T_{m,\rm top}-\frac{N_{\rm lay}-1}{2N_{\rm lay}}\Delta T_{\rm glide}$, and includes the solid subcooling the discharge reaches. The old form used the top layer's $T_m$ for the whole store — the no-cascade limit — and was not a bound: the model exceeded it by 1.6 %. `N_capacity` 11.573 → **9.574**, so the **rate criterion now binds** and `N_wells` 11.573 → **11.255**. Two conclusions reverse: the fin optimum moves from 16 to about 20 and is shallow, and the melt-fraction spread quoted at $1.321\to0.078$ was not a like-for-like comparison (§14.4). |
 | 0.4a | 2026-09 | Sizing report rewritten to lead with `N_wells` and name the binding criterion; `N_capacity` labelled a lower bound (§10). Melt-front limit moved from the borehole wall to the cell radius via `Case.r_cell` / `Case.delta_merge`, and H3 proximity reported (§12, §14). New §12.1: fin sweep, charging-window sweep, and why reading `N_capacity` alone inverts the answer. §13 (verification against the frozen IHTC fixture) restored — it had been dropped from the generator. **Build stamp repaired**: the `__STAMP__` placeholder was never substituted, so the notebook shipped reading `Last updated: __STAMP__`; the generator now asserts the substitution happened. §14 gains a **$U_i$ panel** beside NTU, and the plotted time levels are now chosen by target time rather than by index — on a logarithmic grid the old picks put three of six curves inside the first 12 seconds. |
 | 0.4 | 2026-09 | Melt front carries **enthalpy** rather than melted area (§5.4): PCM superheats when fully molten and subcools when fully solid, $\varepsilon_{\rm local}\in[0,1]$ by construction, branchwise-exact time integration. Sensible heat is self-levelling — melt-fraction spread falls $1.321\to0.078$. |
 | 0.3 | 2026-09 | Wall conductivity corrected: charging now uses steel, $k_w = 45$ W/m·K, by default (§2). Fin metal excluded from the melted PCM area (§5.3). `N_wells` 21.65 → **12.74**, binding constraint now inventory. Lower-bound check against the ideal well count added (§12). |
 | 0.2 | 2026-08 | Melt front reformulated by energy balance (§5.2); melt state carried across the cycle; two-constraint sizing (§10); latent inventory made density-consistent; segment latent limiting. Model moved into this notebook, every equation visible. |
-| 0.1 | — | IHTC paper. Closed-form Stefan front, single sizing criterion, wall conductivity error. Reproduced exactly by §13. |
+| 0.1 | — | IHTC paper. Closed-form Stefan front, single sizing criterion, wall conductivity error. Removed from the code in v0.4b; recoverable from git history. |
 """))
 
 nb = {"cells": cells,
