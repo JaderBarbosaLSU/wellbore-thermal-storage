@@ -108,7 +108,7 @@ used. Read it top to bottom and you have seen the whole thing.
 | 6 | the segment-by-segment march down the well |
 | 7–8 | the ORC and heat-pump cycles, pressure drop |
 | 9–11 | well-field sizing and the full cycle calculation |
-| 12 | results — and **12.1, do the fins earn their place?** |
+| 12 | results at the design point |
 | 13 | verification — reproduces the published IHTC numbers exactly |
 | 14 | **profiles along the well** — fluid temperature, melt fraction, $U_i$, NTU |
 | 15 | what the model still does **not** contain |
@@ -728,114 +728,9 @@ print('banks ~10% more than the ORC withdraws. lambda should become an OUTPUT')
 print('of the model rather than an input. Not done yet -- see section 15.')
 """))
 
-cells.append(md(r"""
-## 12.1 Do the fins earn their place?
-
-A worked example of the trap described in §10, and a real design result.
-
-Fins exist because the PCM conducts badly: $k_l = 0.45$ W/m·K against
-$45$ W/m·K for the steel they are made of. But fins are metal, and metal in the
-borehole is PCM *not* in the borehole. So they trade **capacity** for **rate**,
-and the two sizing criteria pull in opposite directions.
-
-Read the `N_wells` column. Reading either criterion alone gives the wrong sign.
-"""))
-
-cells.append(code(r"""
-def sweep(param_sets, bracket=(3., 400.)):
-    out = []
-    for label, kw in param_sets:
-        c = CASE.with_(N_wells_bracket=bracket, ratio_bracket=(0.05, 8.0), **kw)
-        r = run_cycle(c); d = r['detail']
-        out.append({'config': label, 'V_well_m3': c.V_well,
-                    'N_capacity': d['N_capacity'], 'N_rate': d['N_rate'],
-                    'N_wells': d['N_wells'], 'binding': d['binding'],
-                    'eps_PCM': d['eps_pcm'],
-                    'delta/delta_merge': d['merge_proximity_max']})
-    return pd.DataFrame(out).set_index('config')
-
-fins = sweep([(f'{nf:2d} fins x {1000*fL:.2f} mm', dict(num_fins=nf, fin_L=fL))
-              for nf, fL in ((24, 0.0075), (24, 0.00375), (24, 0.00075),
-                             (16, 0.0075), (12, 0.0075), (8, 0.0075),
-                             (0, 1e-9))])
-print(fins.round(4).to_string())
-print()
-print('N_capacity * V_well is CONSTANT -- that column is volume bookkeeping:')
-print((fins['N_capacity']*fins['V_well_m3']).round(6).to_string())
-"""))
-
-cells.append(md(r"""
-`N_capacity * V_well` is constant to machine precision — proof that the column
-carries no heat transfer whatsoever. But under the **v0.4b** capacity formula
-the rate criterion binds at every fin count tested, so `N_wells` now simply
-tracks `N_rate`:
-
-| n_fins | 0 | 8 | 12 | 16 | 20 | 24 | 32 | 40 |
-|---|---|---|---|---|---|---|---|---|
-| `N_wells` | 16.569 | 12.208 | 11.529 | 11.287 | **11.239** | 11.263 | 11.432 | 11.626 |
-
-**This reverses a conclusion.** Under v0.4a the optimum sat at 16 fins, *at the
-crossover between the two criteria*. That crossover was an artefact of a
-capacity bound that was too tight (§10). With the corrected bound the optimum is
-a genuine heat-transfer optimum at about **20 fins**, and it is shallow — 16,
-20 and 24 fins lie within 0.5 % of each other. Removing fin metal is no longer
-directionally right; the design point is very nearly optimal already.
-"""))
-
-cells.append(code(r"""
-tab = []
-for t in (4., 6., 8., 10., 14., 20.):
-    row = {'t_ch [h]': t}
-    for lbl, kw in (('bare', dict(num_fins=0, fin_L=1e-9)), ('24 fins', {})):
-        c = CASE.with_(t_ch=t, N_wells_bracket=(3., 400.),
-                       ratio_bracket=(0.05, 8.0), **kw)
-        row[lbl] = run_cycle(c)['detail']['N_wells']
-    row['fin gain'] = row['bare']/row['24 fins']
-    tab.append(row)
-print(pd.DataFrame(tab).set_index('t_ch [h]').round(3).to_string())
-"""))
-
-cells.append(md(r"""
-### Why the answer depends on the charging window
-
-Fins buy **rate**, so their value is set by how much rate you need. Break-even
-is just past 20 h, where the gain is 1.03: give the store long enough and a bare
-tube melts the same PCM with none of the volume penalty. The sweep stops there
-because the discharge-flow bisection ceases to bracket beyond about 20 h — a
-solver limit, not a physical one.
-
-The quasi-steady Stefan solution says where this comes from. Putting
-$x = r_{\rm cell}/r_e$ in the quasi-steady Stefan solution, a **bare** tube at
-$\Delta T = 10$ K reaches the cell boundary in
-
-$$t=\frac{\rho h_m r_e^2}{k_l\Delta T}
-\left[\tfrac12 x^2\ln x-\tfrac14 x^2+\tfrac14\right]\approx 6.4\ \text{h}$$
-
-comfortably inside the 10 h window — which is exactly why bare *nearly* works
-here, and why the fins look marginal. Halve the window and they are not
-marginal at all.
-
-> **Two reasons to distrust this result in the direction of more fins, not
-> fewer.** Both are limitations of the model, listed in §15.
->
-> 1. **H3 is being sat on.** §14 shows $\delta/\delta_{\rm merge}=1.000$ over
->    the whole well at the finned design point. The annular resistance
->    $\ln(1+\delta/r_e)/2\pi k$ assumes the full azimuth conducts; past merge it
->    does not, and the last solid sits in the corners between legs on a longer,
->    narrower path. Late-stage resistance is understated.
-> 2. **Fins enter $U_i$ only as added surface at the tube** — through $\eta_f$
->    and $P_T$. They are *not* represented as radial conduction paths reaching
->    into that corner PCM, which is the single thing a fin does best in this
->    regime. The model cannot credit it.
->
-> Neither is a reason to dismiss the sweep. Both are reasons to treat 16 fins as
-> a floor rather than an optimum, and to settle it with a 2-D conduction
-> calculation before committing to a tube design.
-"""))
-
 # ============================================================ 13. verification
 cells.append(md(r"""
-## 13. Verification against the frozen v0.4b fixture
+## 13. Verification against the frozen fixture
 
 **What this replaces.** Until v0.4b this section ran the v0.1 closed-form path
 and checked it still reproduced the conference-paper numbers to $4\times10^{-11}$.
@@ -856,21 +751,21 @@ unintended, and this catches exactly that. It does not substitute for the
 external validation that §15 still lists as the largest gap.
 """))
 cells.append(code(r"""
-FIXTURE_V04B = {   # frozen 2026-09, stripped model, bit-identical to pre-strip
-    'N_rate':            11.2551269531,
-    'N_capacity':         9.57383020656,
-    'N_wells':           11.2551269531,
-    'eps_pcm':            1.0,
-    'E_well_kJ':         20643709.4497,
-    'eta_storage':        0.953184801896,
-    'flow_ratio_dc_ch':   1.026171875,
-    'cop_hp':             2.95633040945,
-    'eta_orc':            0.236851320275,
-    'eta_rte':            0.414747170951,
-    'eta_rte_nopump':     0.434835050283,
-    'f_pump':             0.0643700540068,
-    'E_well':             4.64548712778,
-    'rho_E':            167.811070616,
+FIXTURE_V04B = {   # re-frozen 2026-09 after the flow-reversal fix (v0.5)
+    'N_rate':             11.2551269531,
+    'N_capacity':          9.57383020656,
+    'N_wells':            11.2551269531,
+    'eps_pcm':             1.0,
+    'E_well_kJ':          20643709.4497,
+    'eta_storage':         0.952664693039,
+    'flow_ratio_dc_ch':    1.047265625,
+    'cop_hp':              2.95633040945,
+    'eta_orc':             0.236851320275,
+    'eta_rte':             0.413905366992,
+    'eta_rte_nopump':      0.434835050283,
+    'f_pump':              0.0663321096418,
+    'E_well':              4.64548712778,
+    'rho_E':             167.811070616,
 }
 
 res_v = runs['v0.4b']
@@ -1366,11 +1261,272 @@ consistency is not validation, and a reviewer will ask.
 |---|---|---|
 | **0.4c** | this build | **Superseded code removed.** Formulations A (closed-form Stefan) and B (energy-balance on melted area) deleted along with the v0.1 sizing chain, the `front` and `charge_uses_wall_conductivity` switches, and `CASE_V01` — 16 functions, about 1,050 lines. The model is now one formulation. Verified **bit-identical** to the pre-strip v0.4b on 20 reported quantities before the cut. §13 now checks a frozen v0.4b fixture instead of the published IHTC numbers: that is a *drift* check, not an external validation, and the difference matters — see §13. Notebook 69 → 57 cells, runtime 55 → 39 s. |
 | 0.4b | 2026-09 | **`E_well^cap` corrected** (§10): the capacity bound now resolves the cascade, $\langle T_m\rangle = T_{m,\rm top}-\frac{N_{\rm lay}-1}{2N_{\rm lay}}\Delta T_{\rm glide}$, and includes the solid subcooling the discharge reaches. The old form used the top layer's $T_m$ for the whole store — the no-cascade limit — and was not a bound: the model exceeded it by 1.6 %. `N_capacity` 11.573 → **9.574**, so the **rate criterion now binds** and `N_wells` 11.573 → **11.255**. Two conclusions reverse: the fin optimum moves from 16 to about 20 and is shallow, and the melt-fraction spread quoted at $1.321\to0.078$ was not a like-for-like comparison (§14.4). |
-| 0.4a | 2026-09 | Sizing report rewritten to lead with `N_wells` and name the binding criterion; `N_capacity` labelled a lower bound (§10). Melt-front limit moved from the borehole wall to the cell radius via `Case.r_cell` / `Case.delta_merge`, and H3 proximity reported (§12, §14). New §12.1: fin sweep, charging-window sweep, and why reading `N_capacity` alone inverts the answer. §13 (verification against the frozen IHTC fixture) restored — it had been dropped from the generator. **Build stamp repaired**: the `__STAMP__` placeholder was never substituted, so the notebook shipped reading `Last updated: __STAMP__`; the generator now asserts the substitution happened. §14 gains a **$U_i$ panel** beside NTU, and the plotted time levels are now chosen by target time rather than by index — on a logarithmic grid the old picks put three of six curves inside the first 12 seconds. |
+| 0.4a | 2026-09 | Sizing report rewritten to lead with `N_wells` and name the binding criterion; `N_capacity` labelled a lower bound (§10). Melt-front limit moved from the borehole wall to the cell radius via `Case.r_cell` / `Case.delta_merge`, and H3 proximity reported (§12, §14). §12.1 (fin and charging-window sweeps) removed in v0.5: the geometry is fixed and the sweeps no longer bracket after the flow-reversal fix. §13 (verification against the frozen IHTC fixture) restored — it had been dropped from the generator. **Build stamp repaired**: the `__STAMP__` placeholder was never substituted, so the notebook shipped reading `Last updated: __STAMP__`; the generator now asserts the substitution happened. §14 gains a **$U_i$ panel** beside NTU, and the plotted time levels are now chosen by target time rather than by index — on a logarithmic grid the old picks put three of six curves inside the first 12 seconds. |
 | 0.4 | 2026-09 | Melt front carries **enthalpy** rather than melted area (§5.4): PCM superheats when fully molten and subcools when fully solid, $\varepsilon_{\rm local}\in[0,1]$ by construction, branchwise-exact time integration. Sensible heat is self-levelling — melt-fraction spread falls $1.321\to0.078$. |
 | 0.3 | 2026-09 | Wall conductivity corrected: charging now uses steel, $k_w = 45$ W/m·K, by default (§2). Fin metal excluded from the melted PCM area (§5.3). `N_wells` 21.65 → **12.74**, binding constraint now inventory. Lower-bound check against the ideal well count added (§12). |
 | 0.2 | 2026-08 | Melt front reformulated by energy balance (§5.2); melt state carried across the cycle; two-constraint sizing (§10); latent inventory made density-consistent; segment latent limiting. Model moved into this notebook, every equation visible. |
 | 0.1 | — | IHTC paper. Closed-form Stefan front, single sizing criterion, wall conductivity error. Removed from the code in v0.4b; recoverable from git history. |
+"""))
+
+# ============================================================ 16. cyclic steady state
+cells.append(md(r"""
+## 16. Cyclic operation and cyclic steady state
+
+Everything above is a **first-cycle** result: the store starts at $E'=0$ —
+fully solid at exactly $T_m$, no subcooling — and the cycle does not return
+there. A plant repeating a 24 h schedule never sees that state again after the
+first day.
+
+The intended duty is **10 h charge / 2 h rest / 10 h discharge / 2 h rest**.
+
+> **The rests are exact no-ops in this model.** With no flow,
+> $K=\dot m c_p(1-e^{-\rm NTU})/\Delta z \to 0$, and H2 (no axial conduction),
+> H6 (adiabatic wall) and H9 (no azimuthal exchange) leave no other heat path,
+> so $\mathrm{d}E'/\mathrm{d}t = 0$ identically. 10/2/10/2 is arithmetically
+> the same as 10/10 here.
+>
+> That is a statement about the assumptions, not about the store. In reality a
+> 2 h rest lets superheated liquid near the tube conduct outward into colder
+> PCM and the front relax; the lumped state of **H5** cannot represent that
+> either.
+
+### Why sizing cannot simply be moved to CSS
+
+At cyclic steady state the state returns to itself, so the enthalpy change over
+a cycle is zero. With no loss path anywhere in the model,
+
+$$\eta_{\rm storage}({\rm CSS}) \equiv 1 \qquad\text{exactly, for every } N
+\text{ and every flow.}$$
+
+Two consequences follow, and both are structural rather than numerical.
+
+**1. The loss surplus $\lambda$ is unattainable at CSS.** The budget requires
+$\Delta E_{\rm out,HP}=(1+\lambda)\Delta E_{\rm in,ORC}$, so the ratio of CSS
+charge to requirement pins at $1/(1+\lambda)$ for *every* $N$. There is no root.
+On the first cycle the surplus is not lost but **parked** in the store as
+residual melt — which is why the first cycle appears to work, and why
+$\eta_{\rm storage}$ came out at $1/(1+\lambda)$ there. At CSS there is nowhere
+left to park it.
+
+**2. Even with $\lambda=0$ the rate criterion goes degenerate.** Charge and
+discharge are then the same number, so one equation is left for two unknowns:
+it fixes the **flow ratio** and says nothing about $N$.
+
+### The reformulation
+
+Stop asking the energy balance to determine $N$. **Specify the hardware, march
+to CSS, report what comes out:**
+
+| quantity | how it is set |
+|---|---|
+| $N_{\rm wells}$ | $\Delta E_{\rm out,HP}/(\rho V_{\rm well} h_m)$ — latent heat alone |
+| $\dot m_{\rm ch}$ | pinned by the charging glide |
+| $\dot m_{\rm dc}$ | pinned by the discharging glide |
+
+Nothing is solved — there is **no root-find anywhere** in `simulate_css`, so
+the question of convergence does not arise. What was an unsatisfiable
+constraint becomes a reported output: the deviation of delivered energy, and
+hence of net electrical output, from target.
+
+Sizing on latent heat alone *overestimates* $N$, because it ignores the
+sensible capacity the store also has. That is deliberate and conservative.
+
+> This also dissolves an older objection. §10 argues the discharge flow cannot
+> be pinned to its glide because delivered energy then saturates below the
+> requirement for any well count, leaving no root. Under this framing that
+> saturation is not a failure — it *is* the answer.
+"""))
+cells.append(code(src('simulate_css', 'css_report')))
+
+cells.append(code(r"""
+css = simulate_css(CASE)
+css_report(CASE, css)
+"""))
+
+cells.append(md(r"""
+### 16.1 Convergence to the cyclic steady state
+"""))
+cells.append(code(r"""
+h = pd.DataFrame(css['history'])
+fig, ax = plt.subplots(1, 3, figsize=(15, 4.2))
+
+ax[0].plot(h['cycle'], h['Q_charge_kJ']/1e6, 'o-', label='charge')
+ax[0].plot(h['cycle'], h['Q_discharge_kJ']/1e6, 's-', label='discharge')
+ax[0].axhline(css['required_kJ']/1e6, color='crimson', ls='--', lw=1.2,
+              label='required')
+ax[0].set_xlabel('cycle'); ax[0].set_ylabel('energy [GJ per field]')
+ax[0].set_title('charge and discharge converge')
+ax[0].legend(fontsize=8)
+
+ax[1].semilogy(h['cycle'], h['drift'].clip(lower=1e-12), 'o-')
+ax[1].set_xlabel('cycle'); ax[1].set_ylabel(r"max $|\Delta E'|$ between cycles [J/m]")
+ax[1].set_title('state drift -> 0')
+
+ax[2].plot(h['cycle'], h['eps_end_charge'], 'o-', label='end of charge')
+ax[2].plot(h['cycle'], h['eps_end_discharge'], 's-', label='end of discharge')
+ax[2].set_xlabel('cycle'); ax[2].set_ylabel(r'mean $\varepsilon_{local}$')
+ax[2].set_title('melt fraction settles'); ax[2].legend(fontsize=8)
+for a in ax: a.grid(alpha=.3)
+plt.tight_layout(); plt.show()
+
+print(h.round(6).to_string(index=False))
+"""))
+
+cells.append(md(r"""
+The first cycle is the outlier: it starts from a cold, fully solid store and so
+absorbs more than any later cycle. The state settles within about ten cycles,
+after which charge and discharge are the same number to machine precision —
+which is what $\eta_{\rm storage}\equiv1$ means in practice.
+"""))
+
+cells.append(md(r"""
+### 16.2 Profiles at cyclic steady state
+
+Folded onto depth as in §14: **solid = down leg, dotted = return leg.**
+"""))
+cells.append(code(r"""
+cssr = simulate_css(CASE, record=True)
+chc, dcc = cssr['charge'], cssr['discharge']
+s_dev = chc['z']; half = len(s_dev)//2
+zd, zu = s_dev[:half], CASE.L_tube - s_dev[half:]
+def legs2(a):
+    a = np.asarray(a); return (zd, a[:half]), (zu, a[half:])
+
+picks = pick_times(chc['t'], targets)
+fig, ax = plt.subplots(2, 3, figsize=(15, 8.6))
+for row, (rr, Tm_, ttl) in enumerate(((chc, cssr['T_m_seg'], 'CHARGE at CSS'),
+                                      (dcc, cssr['T_m_seg_dc'], 'DISCHARGE at CSS'))):
+    hh = rr['history']
+    for c_, k in zip(cmap, picks):
+        for col, series in ((0, hh['T_fluid'][k][1:]-273.15),
+                            (1, hh['A_melt'][k]/A_avail),
+                            (2, hh['T_pcm'][k]-273.15)):
+            (a1,v1),(a2,v2) = legs2(series)
+            ax[row][col].plot(v1, a1, color=c_, lw=1.3, ls='-',
+                              label=(tlabel(rr['t'][k]) if col==0 else None))
+            ax[row][col].plot(v2, a2, color=c_, lw=1.3, ls=':')
+    (a1,v1),(a2,v2) = legs2(np.array(Tm_)-273.15)
+    ax[row][0].plot(v1, a1, 'k--', lw=1); ax[row][0].plot(v2, a2, 'k:', lw=1)
+    ax[row][2].plot(v1, a1, 'k--', lw=1); ax[row][2].plot(v2, a2, 'k:', lw=1)
+    ax[row][0].set_xlabel('secondary fluid [°C]'); ax[row][0].set_ylabel(f'{ttl}\ndepth [m]')
+    ax[row][1].set_xlabel(r'$\varepsilon_{local}$'); ax[row][1].set_xlim(-0.02,1.02)
+    ax[row][2].set_xlabel(r'$T_{pcm}$ [°C]   (dashed: $T_m$)')
+    ax[row][0].legend(fontsize=7)
+    for a in ax[row]: a.invert_yaxis(); a.grid(alpha=.3)
+plt.tight_layout(); plt.show()
+"""))
+
+cells.append(md(r"""
+The third column is the one the earlier sections could not draw: **$T_{\rm pcm}$
+against the cascade**. Where the solid curve sits above the dashed $T_m$ the PCM
+is superheated liquid; below it, subcooled solid. At CSS the charge leaves the
+whole store above its melting line, and the discharge fails to bring all of it
+back down.
+"""))
+
+cells.append(md(r"""
+### 16.3 The cycle as a map
+
+Melted fraction over depth and time, charge then discharge, at CSS.
+"""))
+cells.append(code(r"""
+fig, ax = plt.subplots(1, 2, figsize=(13, 4.6), sharey=True)
+for a, rr, ttl in ((ax[0], chc, 'charge'), (ax[1], dcc, 'discharge')):
+    F = rr['history']['A_melt']/A_avail
+    im = a.pcolormesh(rr['t']/3600, s_dev/2.0, F.T, shading='auto',
+                      cmap='inferno', vmin=0, vmax=1)
+    a.set_xlabel('time [h]'); a.set_title(ttl + ' (CSS)')
+    plt.colorbar(im, ax=a, label=r'$\varepsilon_{local}$')
+ax[0].set_ylabel('developed length / 2 [m]'); ax[0].invert_yaxis()
+plt.tight_layout(); plt.show()
+
+print(f"end of charge     mean eps {chc['eps_local'].mean():.4f}"
+      f"   min {chc['eps_local'].min():.4f}")
+print(f"end of discharge  mean eps {dcc['eps_local'].mean():.4f}"
+      f"   max {dcc['eps_local'].max():.4f}")
+print()
+print('The store melts completely and does not refreeze completely. The')
+print('residual is what limits delivery -- a DISCHARGE RATE limit.')
+"""))
+
+cells.append(md(r"""
+### 16.4 Design curve: deviation against well count
+
+With $N$ no longer solved for, the design question becomes a curve rather than
+a root. Each point is an independent march to CSS.
+"""))
+cells.append(code(r"""
+N_lat = css['N_wells']
+rows = []
+for N in (N_lat, 12.5, 14.0, 16.0, 20.0, 26.0):
+    rr = simulate_css(CASE, N=N)
+    rows.append({'N_wells': rr['N_wells'],
+                 'delivered/req': rr['Q_discharge_kJ']/rr['required_kJ'],
+                 'MWe': rr['W_el_out_implied']/1000.0,
+                 'deviation %': 100*rr['deviation'],
+                 'eps end ch': rr['charge']['eps_local'].mean(),
+                 'eps end dc': rr['discharge']['eps_local'].mean(),
+                 'cycles': rr['cycles']})
+dfc = pd.DataFrame(rows)
+print(dfc.round(5).to_string(index=False))
+
+fig, ax = plt.subplots(1, 2, figsize=(12, 4.2))
+ax[0].plot(dfc['N_wells'], dfc['MWe'], 'o-')
+ax[0].axhline(1.0, color='crimson', ls='--', lw=1.2, label='1 MWe target')
+ax[0].axvline(N_lat, color='k', ls=':', lw=1.2, label='latent-only sizing')
+ax[0].set_xlabel('$N_{wells}$'); ax[0].set_ylabel('net output [MWe]')
+ax[0].legend(fontsize=8)
+ax[1].plot(dfc['N_wells'], dfc['eps end dc'], 's-', color='darkorange')
+ax[1].set_xlabel('$N_{wells}$')
+ax[1].set_ylabel(r'residual $\varepsilon_{local}$ at end of discharge')
+for a in ax: a.grid(alpha=.3)
+plt.tight_layout(); plt.show()
+"""))
+
+cells.append(md(r"""
+Two things to read from the curve.
+
+**The target is met near $N\approx19$**, about $1.7\times$ the latent-only
+count. That is the honest cost of meeting 1 MWe over a repeating cycle in this
+model.
+
+**The residual melt fraction *rises* with $N$.** That is the signature of a
+rate-limited discharge: more wells means each is worked less hard, so
+proportionally less of each one refreezes. If the limit were inventory, the
+residual would fall. It tells you the lever is on the discharge side — flow,
+window, or conductance — not more PCM.
+
+> **How much of this to believe.** The $-3.3\,\%$ deviation is a model result
+> and inherits every assumption in §15. H9 is worth of order $25\,\%$ of the
+> duty at the wellhead; H3 is saturated over $99\,\%$ of the well; the time grid
+> carries a one-sided $-0.3\,\%$ bias. A $3\,\%$ deviation sits **inside** that
+> uncertainty band. Report it as *"the store is discharge-rate limited by
+> roughly 3 % at this sizing"*, not as a calibrated shortfall.
+"""))
+
+cells.append(md(r"""
+### 16.5 First-cycle sizing against CSS simulation
+
+The two framings answer different questions and both are kept.
+"""))
+cells.append(code(r"""
+fc = runs['v0.4b']
+comp = pd.DataFrame([
+    {'framing': 'first cycle (run_cycle)',
+     'question': 'how many wells for ONE charge from cold?',
+     'N_wells': fc['kpis']['N_wells'], 'lambda': CASE.loss_surplus,
+     'eta_storage': fc['detail']['eta_storage'],
+     'root-finds': 2},
+    {'framing': 'CSS (simulate_css)',
+     'question': 'what does a REPEATING cycle deliver?',
+     'N_wells': css['N_wells'], 'lambda': 0.0,
+     'eta_storage': css['eta_storage'],
+     'root-finds': 0},
+]).set_index('framing')
+print(comp.T.to_string())
+print()
+print(f"CSS delivers {100*css['deviation']:+.2f} % against the 1 MWe target,")
+print(f"i.e. {css['W_el_out_implied']/1000:.4f} MWe at N = {css['N_wells']:.4f}.")
 """))
 
 nb = {"cells": cells,

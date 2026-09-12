@@ -320,7 +320,13 @@ def run_cycle(case):
 
     n_seg = case.n_segments
     T_m_seg = layer_map(T_m_lay, n_seg, case.N_lay)
-    T_m_seg_dc = layer_map(T_m_lay_dc, n_seg, case.N_lay)
+    # THE DISCHARGE MARCHES FROM THE OTHER END. The PCM at a given physical
+    # position has ONE melting temperature; it is the march INDEX that mirrors,
+    # because the flow reverses between half-cycles. Building the discharge
+    # cascade as the exact reverse of the charge cascade also removes a
+    # one-layer (6.111 K) mismatch that layer_map introduces whenever
+    # n_segments is not a multiple of N_lay.
+    T_m_seg_dc = T_m_seg[::-1].copy()
 
     sz = size_well_field(case, T["T_4c"], T_m_seg, E["m_dot_w_ch"],
                          E["D_E_out_HP"], times_ch, k_charge, n_seg,
@@ -335,9 +341,13 @@ def run_cycle(case):
     E_stored = r_ch["Q_cum_J"] * case.num_tubes * N_wells / 1000.0
 
     def discharged(ratio):
+        # E' is measured from a datum of SOLID AT THE LOCAL T_m, so the state
+        # array mirrors along with the march index. Passing it unreversed shifts
+        # the datum by up to 48.9 K and reports PCM hotter than any fluid that
+        # ever touched it: 176.6 C against a 160.0 C charge inlet.
         r = march_h(case, T["T_3d"], T_m_seg_dc, ratio * m1_ch,
                     case.k_wall, times_dc, n_segments=n_seg,
-                    E0=r_ch["E"])
+                    E0=r_ch["E"][::-1])
         return abs(r["Q_cum_J"]) * case.num_tubes * N_wells / 1000.0, r
 
     ratio, _ = _bisect(lambda x: E["D_E_in_ORC"] / discharged(x)[0] - 1.0,
@@ -418,3 +428,154 @@ def run_cycle(case):
     return {"kpis": kpis, "detail": detail, "T": T}
 
 
+
+
+# ==========================================================================
+# cyclic steady state   (v0.5)
+# ==========================================================================
+# run_cycle() above answers "how many wells does one charge from a COLD START
+# need?". That is a first-cycle question, and the cycle does not return to the
+# state it started from, so the answer is not what a plant repeating a 24 h
+# schedule would see.
+#
+# WHY SIZING CANNOT SIMPLY BE MOVED TO CSS. At cyclic steady state the state
+# returns to itself, so the enthalpy change over a cycle is zero. This model has
+# no loss path -- H2 no axial conduction, H6 adiabatic wall, H9 no azimuthal
+# exchange -- so charge energy EQUALS discharge energy identically:
+#
+#       eta_storage(CSS) == 1     exactly, for every N and every flow.
+#
+# Two consequences follow, and both are structural rather than numerical.
+#
+#   1. The assumed loss surplus lambda is UNATTAINABLE at CSS. The budget
+#      requires D_E_out_HP = (1+lambda) D_E_in_ORC, so the ratio of CSS charge
+#      to requirement pins at 1/(1+lambda) for EVERY N. There is no root.
+#      On the first cycle the surplus is not lost but PARKED in the store as
+#      residual melt; at CSS there is nowhere left to park it.
+#
+#   2. Even with lambda = 0 the rate criterion goes DEGENERATE. Charge and
+#      discharge are then the same number, so one equation is left for two
+#      unknowns: it fixes the FLOW RATIO and says nothing about N.
+#
+# THE REFORMULATION. Stop asking the energy balance to determine N. Specify the
+# hardware, march to CSS, and report what comes out:
+#
+#       N        from latent heat alone, D_E_out_HP / (rho V_well h_m)
+#       m_ch     pinned by the charging glide
+#       m_dc     pinned by the discharging glide
+#
+# Nothing is solved -- there is no root-find anywhere in this routine -- so the
+# question of convergence does not arise. What was an unsatisfiable constraint
+# becomes a reported output: the deviation of the delivered energy, and hence of
+# the net electrical output, from its target.
+#
+# This also dissolves an older objection. size_well_field's docstring argues
+# that the discharge flow cannot be pinned to its glide because the delivered
+# energy then saturates below the requirement for any well count, leaving no
+# root. Under this framing that saturation is not a failure; it is the answer.
+
+
+def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False):
+    """March a specified well field to cyclic steady state.
+
+    No root-finding. `N` defaults to the latent-heat-only well count and both
+    flows are pinned by their glides, so the routine is a pure simulation.
+
+    `lambda` is forced to zero regardless of `case.loss_surplus`, because a
+    non-zero surplus cannot be absorbed at CSS in a model with no loss path
+    (see the note above). The override is reported in the returned dict as
+    `lambda_overridden` so it can never happen silently.
+
+    Returns the converged half-cycle states, the convergence history, and the
+    deviation of the delivered energy from the target.
+    """
+    lambda_overridden = case.loss_surplus != 0.0
+    case = case.with_(loss_surplus=0.0) if lambda_overridden else case
+
+    rank, hp, T = cycle_state_points(case)
+    Eb = energy_budget(case, rank["rank_eff"], hp["hp_cop"], T)
+    n = case.n_segments
+    T_m_lay, T_m_lay_dc = melting_temperatures(case)
+    T_m_seg = layer_map(T_m_lay, n, case.N_lay)
+    T_m_seg_dc = T_m_seg[::-1].copy()     # flow reverses; see run_cycle
+    times_ch = np.logspace(0.0, np.log10(case.t_ch * 3600.0), case.n_times)
+    times_dc = np.logspace(0.0, np.log10(case.t_dc * 3600.0), case.n_times)
+
+    # ---- hardware and flows: all SPECIFIED, none solved -------------------
+    if N is None:
+        N = Eb["D_E_out_HP"] * 1000.0 / (case.rho_latent * case.V_well * case.h_m)
+    cp_ch = CP.PropsSI("C", "T", 0.5 * (T["T_3c"] + T["T_2c"]), "P",
+                       case.P, case.fluid2) / 1000.0
+    cp_dc = CP.PropsSI("C", "T", 0.5 * (T["T_2d"] + T["T_3d"]), "P",
+                       case.P, case.fluid2) / 1000.0
+    m1_ch = Eb["Q_dot_out_HP"] / cp_ch / case.DT_3C_2C / (N * case.num_tubes)
+    m1_dc = Eb["Q_dot_in_ORC"] / cp_dc / case.DT_3C_2C / (N * case.num_tubes)
+
+    # ---- march until the state repeats -----------------------------------
+    E = np.zeros(n)
+    history = []
+    for k in range(n_cycles):
+        ch = march_h(case, T["T_4c"], T_m_seg, m1_ch, case.k_wall, times_ch,
+                     n_segments=n, E0=E, record=record)
+        dc = march_h(case, T["T_3d"], T_m_seg_dc, m1_dc, case.k_wall, times_dc,
+                     n_segments=n, E0=ch["E"][::-1], record=record)
+        Q_ch = ch["Q_cum_J"] * case.num_tubes * N / 1000.0          # kJ, field
+        Q_dc = abs(dc["Q_cum_J"]) * case.num_tubes * N / 1000.0
+        drift = float(np.max(np.abs(dc["E"][::-1] - E)))
+        history.append(dict(cycle=k + 1, Q_charge_kJ=Q_ch, Q_discharge_kJ=Q_dc,
+                            drift=drift,
+                            eps_end_charge=float(ch["eps_local"].mean()),
+                            eps_end_discharge=float(dc["eps_local"].mean())))
+        E = dc["E"][::-1]                 # back to charge-march indexing
+        if drift < tol:
+            break
+
+    req = Eb["D_E_in_ORC"]
+    deviation = Q_dc / req - 1.0
+    return dict(
+        N_wells=N, m1_ch=m1_ch, m1_dc=m1_dc, flow_ratio=m1_dc / m1_ch,
+        cycles=len(history), converged=history[-1]["drift"] < tol,
+        history=history, charge=ch, discharge=dc, E_css=E,
+        Q_charge_kJ=Q_ch, Q_discharge_kJ=Q_dc, required_kJ=req,
+        deviation=deviation,
+        W_el_out_implied=case.W_dot_el_out * (1.0 + deviation),
+        eta_storage=Q_dc / Q_ch, lambda_overridden=lambda_overridden,
+        T=T, budget=Eb, T_m_seg=T_m_seg, T_m_seg_dc=T_m_seg_dc)
+
+
+def css_report(case, r):
+    """Print the cyclic-steady-state result."""
+    print("CYCLIC STEADY STATE")
+    print("=" * 66)
+    if r["lambda_overridden"]:
+        print("  NOTE  lambda forced to 0. A non-zero loss surplus cannot be")
+        print("        absorbed at CSS: the state returns to itself and this")
+        print("        model has no loss path, so charge == discharge exactly.")
+        print()
+    print(f"  N_wells          {r['N_wells']:10.4f}   from latent heat alone, not solved")
+    print(f"  m_dot charge     {r['m1_ch']:10.4f} kg/s per leg-pair, pinned by the glide")
+    print(f"  m_dot discharge  {r['m1_dc']:10.4f} kg/s per leg-pair, pinned by the glide")
+    print(f"  flow ratio       {r['flow_ratio']:10.4f}   a consequence, not a solve")
+    print()
+    print(f"  converged in {r['cycles']} cycles"
+          f"   (drift {r['history'][-1]['drift']:.1e})")
+    print(f"  eta_storage      {r['eta_storage']:10.6f}   must be 1: adiabatic, closed cycle")
+    print()
+    print(f"  required   D_E_in_ORC  {r['required_kJ']:12.5e} kJ")
+    print(f"  delivered  at CSS      {r['Q_discharge_kJ']:12.5e} kJ")
+    print(f"  DEVIATION              {100*r['deviation']:+12.3f} %")
+    print()
+    print(f"  implied net output     {r['W_el_out_implied']/1000:10.4f} MWe"
+          f"   (target {case.W_dot_el_out/1000:.4f})")
+    ch, dc = r["charge"], r["discharge"]
+    print()
+    print("  melted fraction at CSS")
+    print(f"    end of charge     mean {ch['eps_local'].mean():.4f}"
+          f"   min {ch['eps_local'].min():.4f}   max {ch['eps_local'].max():.4f}")
+    print(f"    end of discharge  mean {dc['eps_local'].mean():.4f}"
+          f"   min {dc['eps_local'].min():.4f}   max {dc['eps_local'].max():.4f}")
+    if dc["eps_local"].mean() > 0.05 and ch["eps_local"].mean() > 0.99:
+        print()
+        print("    The store melts completely but does not refreeze completely,")
+        print("    so the shortfall is a DISCHARGE RATE limit, not an inventory")
+        print("    limit. More PCM per well is not the lever.")
