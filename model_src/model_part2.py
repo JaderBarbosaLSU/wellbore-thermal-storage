@@ -645,22 +645,70 @@ def march_h(case, T_inlet, T_m_seg, m_dot, k_wall, times,
     }
 
 
-def well_capacity_kJ(case, T_charge_in, T_discharge_in):
-    """Energy ONE well can hold, latent plus sensible -- the capacity criterion.
+def layer_mean_T_m(case):
+    """<T_m>, the volume-weighted mean melting temperature over the cascade.
 
-    This is the quantity the v0.1 notebook computed as `N_wells_ideal` and then
-    used only for costing. Written here as an energy per well so it can size the
-    field directly:
+    The layers are equal in developed length and each owns an equal share of
+    the PCM cross-section, so the volume weighting reduces to a plain mean over
+    the N_lay melting temperatures:
+
+        T_m,l = T_m_top - l * dT_glide / N_lay,        l = 0 .. N_lay-1
+
+        <T_m> = T_m_top - (N_lay - 1)/(2 N_lay) * dT_glide
+
+    For N_lay = 1 this returns T_m_top, which is what makes the old capacity
+    formula the NO-CASCADE limit of the corrected one below.
+    """
+    return case.T_m - 0.5 * (case.N_lay - 1) / case.N_lay * case.DT_3C_2C
+
+
+def well_capacity_kJ(case, T_charge_in, T_discharge_in):
+    """Energy ONE well can hold over a full cycle -- the capacity criterion.
+
+    CORRECTED 2026-09 (v0.4b). The previous form was
 
         E_well = rho V_well [ h_m + cp_l (T_charge_in - T_m) ]
 
-    The sensible term is the zero-resistance limit: with no thermal resistance
-    the liquid would reach the charging fluid inlet temperature. `cycle=True`
-    adds the solid subcooling the discharge can also reach, which is the full
-    swing between the charged and discharged states.
+    with `case.T_m` the melting temperature of the TOP layer, so the sensible
+    span was DT_4C_M = 10 K for the whole store. But DT_4C_M is the approach
+    that fixes the charging inlet relative to the FIRST layer only. Applying it
+    to all N_lay layers is the no-cascade limit of this function: set
+    N_lay = 1 and the two expressions agree identically.
+
+    It was also not a bound in either direction. At the design point the
+    model's own end-of-charge state held 4.822 MWh per well against a claimed
+    capacity of 4.744 -- mean superheat reached 13.81 K, not 10 K, because
+    segments early in a layer sit under fluid far hotter than their own T_m and
+    because a nearly saturated store barely cools the fluid at all.
+
+    The corrected form is a true CEILING on the cycle swing, resolved over the
+    cascade:
+
+        E_well = rho V_well [ h_m
+                            + cp_l <T_3c  - T_m,l>      liquid superheat
+                            + cp_s <T_m,l - T_3d> ]     solid subcooling
+
+    Both spans are physical limits rather than design choices: the PCM cannot
+    pass the temperature of the fluid entering the field on either half-cycle.
+    The solid term belongs here because the store begins each charge from
+    wherever the discharge left it, so the capacity that matters is the full
+    swing. That term is the one the previous docstring promised through a
+    `cycle=True` argument that was never implemented, alongside a
+    `T_discharge_in` parameter that was accepted and never used.
+
+    Consequence at the design point: N_capacity 11.573 -> 9.574, so the RATE
+    criterion binds instead and N_wells falls 11.573 -> 11.255. That is the
+    point of the change. A bound that binds should be suspect, because it
+    asserts the design sits at its thermodynamic ceiling. It does not: it sits
+    at 84 % of it, whereas the old formula put it at 102 %.
     """
     m_well = case.rho_latent * case.V_well
     E = case.h_m
     if case.sensible_heat:
-        E += case.cp_l * max(T_charge_in - case.T_m, 0.0)
+        T_m_bar = layer_mean_T_m(case)
+        # liquid superheat: ceiling is the charging inlet temperature
+        E += case.cp_l * max(T_charge_in - T_m_bar, 0.0)
+        # solid subcooling: ceiling is the discharging inlet temperature
+        if T_discharge_in is not None:
+            E += case.cp_s * max(T_m_bar - T_discharge_in, 0.0)
     return m_well * E / 1000.0                      # kJ

@@ -607,14 +607,31 @@ Neither failure implies the other, so the design must clear both.
 $N_{\rm rate}$ has no closed form — it comes from marching the whole well, so it
 carries *everything thermal*: fins, wall conductivity, melt-layer resistance,
 NTU, the cascade, the charging window. $N_{\rm capacity}$ contains **none** of
-that:
+that. Corrected in **v0.4b** to resolve the cascade and to include the solid
+subcooling the discharge reaches:
 
 $$N_{\rm capacity}=\frac{\Delta E_{\rm out,HP}}
-{\rho V_{\rm well}\left[h_m+c_{p,l}\Delta T\right]}$$
+{\rho V_{\rm well}\Big[h_m
+ + c_{p,l}\big\langle T_{3c}-T_{m,\ell}\big\rangle
+ + c_{p,s}\big\langle T_{m,\ell}-T_{3d}\big\rangle\Big]}$$
 
-No $U_i$, no $\delta$, no NTU, no $t_{\rm ch}$ — volume and material properties
-only. That makes it a **hard lower bound**: no design, however good thermally,
-and no window, however long, can beat it.
+where $\langle\cdot\rangle$ is the volume-weighted mean over the $N_{\rm lay}$
+layers — a plain mean here, since the layers are equal in length. No $U_i$, no
+$\delta$, no NTU, no $t_{\rm ch}$: volume and material properties only. That
+makes it a **hard lower bound**, no design and no window can beat it.
+
+> **What was wrong before.** The old form used
+> $c_{p,l}(T_{3c}-T_m)$ with $T_m$ the melting temperature of the **top layer**,
+> giving a 10 K sensible span for the whole store. But $\Delta T_{4C,M}=10$ K is
+> the approach that fixes the charging inlet relative to the *first* layer only.
+> Applying it to all nine layers is the **no-cascade limit**: set
+> $N_{\rm lay}=1$ and $\langle T_m\rangle = T_{m,\rm top}$ and the two agree
+> identically.
+>
+> It was also not a bound. The model's own end-of-charge state held 4.822 MWh
+> per well against a claimed capacity of 4.744 — mean superheat reached
+> **13.81 K**, not 10 K. A bound the model exceeds is not a bound, and it was
+> setting the well count.
 
 > **Two names have been retired**, because they were traps.
 > `N_inventory` was a silent *alias* for `N_capacity` in v0.4 — the two compared
@@ -650,8 +667,8 @@ sweep explicitly.
 `sizing_report` therefore leads with $N_{\rm wells}$, names the criterion that
 set it, and labels $N_{\rm capacity}$ as a bound.
 """))
-cells.append(code(src('SizingResult', '_bisect', 'well_capacity_kJ',
-                      'size_well_field', 'sizing_report')))
+cells.append(code(src('SizingResult', '_bisect', 'layer_mean_T_m',
+                      'well_capacity_kJ', 'size_well_field', 'sizing_report')))
 
 # ---------------------------------------------------------------- 11. run
 cells.append(md(r"""
@@ -835,15 +852,21 @@ print((fins['N_capacity']*fins['V_well_m3']).round(6).to_string())
 """))
 
 cells.append(md(r"""
-The `N_capacity` column falls monotonically as fin metal is removed, and
 `N_capacity * V_well` is constant to machine precision — proof that the column
-carries no heat transfer whatsoever. The `N_wells` column rises by 42 %.
+carries no heat transfer whatsoever. But under the **v0.4b** capacity formula
+the rate criterion binds at every fin count tested, so `N_wells` now simply
+tracks `N_rate`:
 
-**The optimum is where the two criteria cross**, because that is where neither
-resource is wasted: 16 fins × 7.5 mm gives 11.348, marginally better than the
-24 × 7.5 mm design point at 11.573. So the instinct to remove fin metal is
-directionally right — worth about 2 %, not the 5 % the bound suggests — and it
-reverses sharply past the crossing.
+| n_fins | 0 | 8 | 12 | 16 | 20 | 24 | 32 | 40 |
+|---|---|---|---|---|---|---|---|---|
+| `N_wells` | 16.569 | 12.208 | 11.529 | 11.287 | **11.239** | 11.263 | 11.432 | 11.626 |
+
+**This reverses a conclusion.** Under v0.4a the optimum sat at 16 fins, *at the
+crossover between the two criteria*. That crossover was an artefact of a
+capacity bound that was too tight (§10). With the corrected bound the optimum is
+a genuine heat-transfer optimum at about **20 fins**, and it is shallow — 16,
+20 and 24 fins lie within 0.5 % of each other. Removing fin metal is no longer
+directionally right; the design point is very nearly optimal already.
 """))
 
 cells.append(code(r"""
@@ -863,8 +886,10 @@ cells.append(md(r"""
 ### Why the answer depends on the charging window
 
 Fins buy **rate**, so their value is set by how much rate you need. Break-even
-is around 20 h: give the store long enough and a bare tube melts the same PCM
-with none of the volume penalty.
+is just past 20 h, where the gain is 1.03: give the store long enough and a bare
+tube melts the same PCM with none of the volume penalty. The sweep stops there
+because the discharge-flow bisection ceases to bracket beyond about 20 h — a
+solver limit, not a physical one.
 
 The quasi-steady Stefan solution says where this comes from. Putting
 $x = r_{\rm cell}/r_e$ in the closed form of §5.1, a **bare** tube at
@@ -997,6 +1022,24 @@ Two horizontal limits are drawn on those plots, and both matter:
 nothing to the round trip. PCM that over-melts is fictitious. Both show up as
 departures from a flat $\varepsilon_{\rm local}=1$ line, and the spread is what
 the multilayer cascade exists to reduce (§14.4).
+
+> **A correction to the headline figure quoted in v0.4 and v0.4a.** The spread
+> was reported as falling $1.321\to0.078$. That comparison is **not
+> like-for-like** in two ways: the $1.321$ came from the *unguarded*
+> Formulation B, a different code path that permits
+> $\varepsilon_{\rm local}>1$ and reached $1.78$, and the two figures were
+> taken at different well counts. Compared properly — same well count, melted
+> fraction capped in both — the spread falls
+>
+> | $N_{\rm wells}$ | area-based (capped) | enthalpy |
+> |---|---|---|
+> | 11.255 (v0.4b design point) | 0.405 | **0.000** |
+> | 11.573 (v0.4a design point) | 0.437 | **0.078** |
+>
+> The result survives, and at equal well count it is cleaner: the enthalpy
+> formulation removes essentially all of the non-uniformity. But $1.321$
+> conflated genuine non-uniformity with the over-melt artefact of an unguarded
+> scheme, and should not be quoted.
 """))
 
 cells.append(code(r"""
@@ -1387,7 +1430,8 @@ consistency is not validation, and a reviewer will ask.
 
 | version | date | change |
 |---|---|---|
-| **0.4a** | this build | Sizing report rewritten to lead with `N_wells` and name the binding criterion; `N_capacity` labelled a lower bound (§10). Melt-front limit moved from the borehole wall to the cell radius via `Case.r_cell` / `Case.delta_merge`, and H3 proximity reported (§12, §14). New §12.1: fin sweep, charging-window sweep, and why reading `N_capacity` alone inverts the answer. §13 (verification against the frozen IHTC fixture) restored — it had been dropped from the generator. **Build stamp repaired**: the `__STAMP__` placeholder was never substituted, so the notebook shipped reading `Last updated: __STAMP__`; the generator now asserts the substitution happened. §14 gains a **$U_i$ panel** beside NTU, and the plotted time levels are now chosen by target time rather than by index — on a logarithmic grid the old picks put three of six curves inside the first 12 seconds. |
+| **0.4b** | this build | **`E_well^cap` corrected** (§10): the capacity bound now resolves the cascade, $\langle T_m\rangle = T_{m,\rm top}-\frac{N_{\rm lay}-1}{2N_{\rm lay}}\Delta T_{\rm glide}$, and includes the solid subcooling the discharge reaches. The old form used the top layer's $T_m$ for the whole store — the no-cascade limit — and was not a bound: the model exceeded it by 1.6 %. `N_capacity` 11.573 → **9.574**, so the **rate criterion now binds** and `N_wells` 11.573 → **11.255**. Two conclusions reverse: the fin optimum moves from 16 to about 20 and is shallow, and the melt-fraction spread quoted at $1.321\to0.078$ was not a like-for-like comparison (§14.4). |
+| 0.4a | 2026-09 | Sizing report rewritten to lead with `N_wells` and name the binding criterion; `N_capacity` labelled a lower bound (§10). Melt-front limit moved from the borehole wall to the cell radius via `Case.r_cell` / `Case.delta_merge`, and H3 proximity reported (§12, §14). New §12.1: fin sweep, charging-window sweep, and why reading `N_capacity` alone inverts the answer. §13 (verification against the frozen IHTC fixture) restored — it had been dropped from the generator. **Build stamp repaired**: the `__STAMP__` placeholder was never substituted, so the notebook shipped reading `Last updated: __STAMP__`; the generator now asserts the substitution happened. §14 gains a **$U_i$ panel** beside NTU, and the plotted time levels are now chosen by target time rather than by index — on a logarithmic grid the old picks put three of six curves inside the first 12 seconds. |
 | 0.4 | 2026-09 | Melt front carries **enthalpy** rather than melted area (§5.4): PCM superheats when fully molten and subcools when fully solid, $\varepsilon_{\rm local}\in[0,1]$ by construction, branchwise-exact time integration. Sensible heat is self-levelling — melt-fraction spread falls $1.321\to0.078$. |
 | 0.3 | 2026-09 | Wall conductivity corrected: charging now uses steel, $k_w = 45$ W/m·K, by default (§2). Fin metal excluded from the melted PCM area (§5.3). `N_wells` 21.65 → **12.74**, binding constraint now inventory. Lower-bound check against the ideal well count added (§12). |
 | 0.2 | 2026-08 | Melt front reformulated by energy balance (§5.2); melt state carried across the cycle; two-constraint sizing (§10); latent inventory made density-consistent; segment latent limiting. Model moved into this notebook, every equation visible. |
