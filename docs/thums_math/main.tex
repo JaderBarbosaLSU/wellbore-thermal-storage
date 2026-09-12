@@ -89,11 +89,14 @@ places where the same physical quantity is given two different formulas, and the
 terms that are absent altogether. A reader reproducing these results needs that
 section as much as the equations.
 
-Two melt-front formulations are given. Section~\ref{sec:front:legacy} states the
-closed-form Stefan solve used through v0.1 and the conference paper;
-Section~\ref{sec:front:marched} states the energy-balance formulation that
-replaced it. Both remain in the code and are selected by \code{Case.front}, so
-the difference between them is measurable rather than arguable.
+Three melt-front formulations are described. Section~\ref{sec:front:legacy}
+states the closed-form Stefan solve used through v0.1 and the conference paper;
+Section~\ref{sec:front:marched} the energy-balance formulation that replaced it;
+Section~\ref{sec:front:enthalpy} the enthalpy state that supersedes both. Only
+the third remains \emph{in the code}: A and B were deleted in v0.4c, since
+neither is physically consistent. They are retained here because the reasoning
+that removed them is part of the specification, and they are recoverable from
+version control.
 
 \medskip
 \noindent\textbf{Changes in version 0.3.} Two corrections, both now the default.
@@ -116,8 +119,12 @@ than by the melted-volume constraint of v0.3.
 The consequence worth noting is not the headline number but the
 \emph{uniformity}: sensible heat is self-levelling, because a segment that
 finishes melting superheats, its driving temperature difference collapses, and
-the heat passes downstream. The spread in local melt fraction along the well
-falls from $1.321$ to $0.078$.
+the heat passes downstream. Compared at equal well count and with the melted
+fraction capped in both, the spread in local melt fraction falls from $0.405$ to
+$0.000$. \emph{The figure $1.321\to0.078$ quoted in earlier versions of this
+document was not like-for-like} --- the $1.321$ came from an unguarded
+Formulation~B permitting $\varepsilon_{\mathrm{local}}>1$, and the two values
+were taken at different well counts.
 
 \medskip
 \noindent\textbf{Changes in version 0.4a.} No physics. Two reporting
@@ -136,6 +143,15 @@ check was a factor $2.9$ too permissive in $\delta$ and could never fire. Under
 Formulation~C the corrected limit cannot be violated, but it is being
 \emph{saturated} over \SI{99}{\percent} of the well, which now bears on the fin
 count and is the leading open item.
+Section~\ref{sec:front:segeq} derives the segment equation in full --- the two
+control volumes, the quasi-steady fluid approximation and what it costs, and why
+the closing conductance is $\md c_{p}(1-e^{-\mathrm{NTU}})/\Delta z$ rather
+than $\Ui P_{i}$, a difference reaching \SI{33}{\percent} here.
+A ninth hypothesis, \textbf{H9}, is stated explicitly for the first time:
+perfect azimuthal insulation between the cascade layers of a hairpin's two legs,
+which at the wellhead are \SI{48.9}{\kelvin} apart. It is assumed perfect for
+now and quantified in \S\ref{sec:defects:h9}, where the neglected leak is of
+order \SI{25}{\percent} of the useful duty.
 
 \medskip
 \noindent\textbf{Changes in version 0.5.} Section~\ref{sec:cyclic} is new and
@@ -158,15 +174,6 @@ without being mirrored, although the flow reverses and the cascade is mirrored
 with it, moving the enthalpy datum by up to \SI{48.9}{\kelvin} and reporting
 PCM hotter than any fluid that had touched it. $\Nwells$ is unaffected; the
 discharge-side indices move by up to \SI{2}{\percent}.
-Section~\ref{sec:front:segeq} derives the segment equation in full --- the two
-control volumes, the quasi-steady fluid approximation and what it costs, and why
-the closing conductance is $\md c_{p}(1-e^{-\mathrm{NTU}})/\Delta z$ rather
-than $\Ui P_{i}$, a difference reaching \SI{33}{\percent} here.
-A ninth hypothesis, \textbf{H9}, is stated explicitly for the first time:
-perfect azimuthal insulation between the cascade layers of a hairpin's two legs,
-which at the wellhead are \SI{48.9}{\kelvin} apart. It is assumed perfect for
-now and quantified in \S\ref{sec:defects:h9}, where the neglected leak is of
-order \SI{25}{\percent} of the useful duty.
 \end{abstract}
 
 \tableofcontents

@@ -876,15 +876,9 @@ within the charging window and \emph{contain} it at all:
 \end{equation}
 $N_{\mathrm{rate}}$ follows from a root solve on the march and carries every
 thermal parameter; $N_{\mathrm{capacity}}$ is closed form and carries none, which
-makes it a hard lower bound no design can better. For the case of
-Table~\ref{tab:config}, $N_{\mathrm{rate}}=11.28$ and
-$N_{\mathrm{capacity}}=11.57$, so capacity binds.
-
-The two are within \SI{2.7}{\percent} here, which is worth stating explicitly:
-the design sits on the crossover, and a parametric sweep of any geometric
-variable will change which criterion binds partway through. Reporting either
-criterion alone across such a sweep produces a trend that is not the trend in
-$\Nwells$.
+makes it a hard lower bound no design can better. This applies to the
+\emph{first} cycle; \S\ref{sec:css} shows that the rate criterion does not
+survive the passage to cyclic steady state.
 
 %=======================================================================
 \section{Conclusions}
