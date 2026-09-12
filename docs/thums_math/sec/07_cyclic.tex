@@ -1,0 +1,270 @@
+%=====================================================================
+\section{Cyclic operation}
+\label{sec:cyclic}
+
+Everything in \S\ref{sec:hydraulics} is a \emph{first-cycle} result. The store
+begins at $E'=0$ --- fully solid at exactly $\Tm$, with no subcooling --- and
+the cycle does not return there. A plant repeating a daily schedule never sees
+that state again after the first day, so the well counts reported above are
+cold-start numbers.
+
+The intended duty is \textbf{\SI{10}{\hour} charge, \SI{2}{\hour} rest,
+\SI{10}{\hour} discharge, \SI{2}{\hour} rest}.
+
+%---------------------------------------------------------------------
+\subsection{The idle periods are exact no-ops}
+\label{sec:cyclic:rest}
+
+With no flow, $\mathrm{NTU}\to\infty$ but the conductance of
+Eq.~\eqref{eq:K-derived} carries $\md$ as a prefactor:
+\begin{equation}
+  K = \frac{\md c_{p}\left(1-e^{-\mathrm{NTU}}\right)}{\Delta z}
+  \;\xrightarrow[\;\md\to0\;]{}\; 0 ,
+\end{equation}
+so $\mathrm{d}E'/\mathrm{d}t = K(T_{j}-\Tpcm) = 0$ identically. Hypotheses H2
+(no axial conduction), H6 (adiabatic wall) and H9 (no azimuthal exchange) leave
+no other path by which a segment can exchange heat with anything. The
+\SI{2}{\hour} rests therefore change nothing: the 10/2/10/2 schedule is
+arithmetically identical to 10/10 in this model.
+
+That is worth reading as a diagnostic rather than a convenience. Physically, a
+\SI{2}{\hour} rest lets superheated liquid near the tube conduct outward into
+colder PCM and lets the front relax; the lumped state of H5 cannot represent
+that either. The rests doing nothing is a statement about the strength of four
+assumptions, not about the store.
+
+%---------------------------------------------------------------------
+\subsection{Why sizing cannot simply be moved to cyclic steady state}
+\label{sec:cyclic:degenerate}
+
+At cyclic steady state (CSS) the state returns to itself, so the enthalpy change
+over a complete cycle is zero. The model has no loss path, and therefore
+\begin{equation}
+  \boxed{\;\eta_{\mathrm{storage}}(\mathrm{CSS}) \;\equiv\; 1\;}
+  \label{eq:css-unity}
+\end{equation}
+exactly --- for every well count and every flow. Computed values agree to eight
+decimal places across $\Nwells$ from $11$ to $20$ and flow ratios from $0.92$ to
+$1.03$. Equation~\eqref{eq:css-unity} is not a result about the store; it is
+energy conservation applied to a closed cycle in an adiabatic model, and it is
+worth stating only because of the two consequences that follow.
+
+\subsubsection*{Consequence 1: the loss surplus is unattainable}
+
+The budget of Eq.~\eqref{eq:budget} requires
+$\Delta E_{\mathrm{out,HP}}=(1+\lambda)\Delta E_{\mathrm{in,ORC}}$. With
+Eq.~\eqref{eq:css-unity} the ratio of CSS charge to requirement pins at
+\begin{equation}
+  \frac{\Delta E_{\mathrm{charge}}^{\mathrm{CSS}}}
+       {\Delta E_{\mathrm{out,HP}}} \;=\; \frac{1}{1+\lambda}
+  \;=\; 0.95238
+\end{equation}
+for \emph{every} $\Nwells$. The sweep returns $0.95247$ at $\Nwells=12$ and
+$0.95231$ at $\Nwells=20$: flat. There is no root, and the CSS sizing problem as
+posed in \S\ref{sec:hydraulics:sizing} has no solution at any well count.
+
+It is worth being precise about where the surplus goes on the first cycle, since
+nothing in the model loses it. $\lambda$ enters in exactly one place --- the
+line $\Delta E_{\mathrm{out,HP}} = (1+\lambda)\Delta E_{\mathrm{in,ORC}}$ ---
+and propagates only to the charge target, the charging mass flow, and
+$\dot W_{\mathrm{el,in}}$. Nothing checks that the surplus is lost. It is a
+requirement to \emph{deposit} more, and on the first cycle the extra is simply
+\textbf{parked in the store} as residual melt:
+
+\begin{center}
+\begin{tabular}{@{}l r@{}}
+\toprule
+ & kJ, field total \\
+\midrule
+charged, actually delivered & \num{1.97546e8} \\
+discharged                  & \num{1.88298e8} \\
+\midrule
+difference                  & \num{9.24816e6} \\
+$\lambda\,\Delta E_{\mathrm{in,ORC}}$ & \num{9.41140e6} \\
+ratio                       & 0.983 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The first cycle gets away with it only because it starts from an empty store. At
+CSS there is nowhere left to park it.
+
+\medskip
+\noindent\textbf{A correction to \S\ref{sec:hydraulics:ideal} as written at
+v0.4b.} That section reported $\eta_{\mathrm{storage}}=0.9532$ against the
+assumed $1/(1+\lambda)=0.9524$ and offered the agreement as independent
+corroboration of the capacity correction. It is not independent. The discharge
+loop solves so that the delivered energy equals $\Delta E_{\mathrm{in,ORC}}$,
+and the charge is sized so the absorbed energy equals
+$(1+\lambda)\Delta E_{\mathrm{in,ORC}}$; therefore
+$\eta_{\mathrm{storage}}\equiv 1/(1+\lambda)$ identically whenever both loops
+converge. It is a tautology and should not have been offered as evidence.
+
+\subsubsection*{Consequence 2: with $\lambda=0$ the rate criterion goes degenerate}
+
+Setting $\lambda=0$ removes the contradiction --- the target becomes attainable
+--- but it does not restore the ability to size. By
+Eq.~\eqref{eq:css-unity} the CSS charge and the CSS discharge are then the
+\emph{same number}, so the two sizing equations collapse into one. It fixes the
+\emph{flow ratio} and says nothing whatever about $\Nwells$:
+
+\begin{center}
+\begin{tabular}{@{}r r r r@{}}
+\toprule
+$\Nwells$ & flow ratio & charge/req & discharge/req \\
+\midrule
+11.0 & 1.0740 & 1.00000 & 1.00000 \\
+14.0 & 1.0280 & 0.99994 & 0.99994 \\
+20.0 & 0.9965 & 0.99994 & 0.99994 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+This is the same structural failure that \S\ref{sec:hydraulics:sizing} records
+for the discharge side, now appearing on the charge side as well. Cycling is
+what exposes it. Note also that adding a loss mechanism --- relaxing H6 ---
+would remove the \emph{contradiction} of Consequence~1 but not this degeneracy:
+at CSS the charge would then exceed the discharge by exactly the loss, and the
+one remaining equation would still pin the flow ratio rather than $\Nwells$.
+
+%---------------------------------------------------------------------
+\subsection{The reformulation: specify, simulate, report}
+\label{sec:cyclic:reform}
+
+The resolution is to stop asking the energy balance to determine $\Nwells$.
+Specify the hardware, march to CSS, and report what comes out:
+
+\begin{center}
+\begin{tabular}{@{}l l@{}}
+\toprule
+quantity & how it is set \\
+\midrule
+$\Nwells$ & $\Delta E_{\mathrm{out,HP}}/(\rhom V_{\mathrm{well}}\hm)$, latent heat alone \\
+$\md^{\mathrm{ch}}$ & pinned by the charging glide \\
+$\md^{\mathrm{dc}}$ & pinned by the discharging glide \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Nothing is solved. There is no root-find anywhere in \code{simulate\_css}, so
+the question of convergence does not arise; what was an unsatisfiable constraint
+becomes a reported output --- the deviation of the delivered energy, and hence
+of the net electrical output, from its target. Sizing on latent heat alone
+\emph{overestimates} $\Nwells$, because it ignores the sensible capacity the
+store also has; that is deliberate and conservative.
+
+This framing also dissolves an older objection. \S\ref{sec:hydraulics:sizing}
+argues that the discharge flow cannot be pinned to its glide, because the
+delivered energy then saturates below the requirement for any well count and
+leaves no root. Under the reformulation that saturation is not a failure: it
+\emph{is} the answer.
+
+\subsubsection*{Result at the design point}
+
+\begin{center}
+\begin{tabular}{@{}l r l@{}}
+\toprule
+$\Nwells$ & 11.5441 & latent heat alone, not solved \\
+$\md^{\mathrm{ch}}$, $\md^{\mathrm{dc}}$ & 0.9655, 0.9698 & \si{\kilogram\per\second} per leg-pair \\
+flow ratio & 1.0044 & a consequence, not a solve \\
+cycles to CSS & 28 & \\
+$\eta_{\mathrm{storage}}$ & 1.000000 & Eq.~\eqref{eq:css-unity} \\
+\midrule
+required $\Delta E_{\mathrm{in,ORC}}$ & \num{1.88228e8} & kJ \\
+delivered at CSS & \num{1.77417e8} & kJ \\
+\textbf{deviation} & \textbf{-5.736} & \si{\percent} \\
+\midrule
+implied net output & 0.9426 & MWe against a target of 1.0000 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsubsection*{The shortfall is a rate limit, not an inventory limit}
+
+At CSS the store melts \emph{completely} --- $\varepsilon_{\mathrm{local}}=1.000$
+at every segment at end of charge --- but returns only to a mean of $0.154$. It
+never fully refreezes within the \SI{10}{\hour} discharge window, and that
+residual is what limits delivery. The design curve makes the diagnosis explicit:
+
+\begin{center}
+\begin{tabular}{@{}r r r r r@{}}
+\toprule
+$\Nwells$ & delivered/req & MWe & $\varepsilon$ end charge & $\varepsilon$ end discharge \\
+\midrule
+11.544 & 0.9426 & 0.9426 & 1.000 & 0.154 \\
+12.500 & 0.9540 & 0.9540 & 1.000 & 0.209 \\
+14.000 & 0.9662 & 0.9662 & 1.000 & 0.288 \\
+16.000 & 0.9777 & 0.9777 & 1.000 & 0.376 \\
+20.000 & 0.9931 & 0.9931 & 1.000 & 0.505 \\
+26.000 & 1.0082 & 1.0082 & 1.000 & 0.629 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The residual melt fraction \emph{rises} with $\Nwells$. That is the signature of
+a rate-limited discharge: more wells means each is worked less hard, so
+proportionally less of each one refreezes. Were the limit an inventory limit,
+the residual would fall. The lever is therefore on the discharge side --- flow,
+window, or conductance --- and not more PCM. The target is met near
+$\Nwells\approx25$, about $2.2\times$ the latent-only count.
+
+\subsubsection*{How much of this to believe}
+
+The \SI{-5.7}{\percent} deviation is a model result and inherits every
+assumption of \S\ref{sec:defects}. H9 is worth of order \SI{25}{\percent} of the
+useful duty at the wellhead (\S\ref{sec:defects:h9}); H3 is saturated over
+\SI{99}{\percent} of the well (\S\ref{sec:defects:h3}); the time grid carries a
+one-sided \SI{-0.3}{\percent} bias. A \SI{6}{\percent} deviation sits inside
+that band. It should be reported as \emph{``the store is discharge-rate limited
+by roughly \SI{6}{\percent} at this sizing''} and not as a calibrated shortfall.
+
+%---------------------------------------------------------------------
+\subsection{A defect that cycling exposed}
+\label{sec:cyclic:reversal}
+
+The discharge marches from the opposite end of the hairpin, because the flow
+reverses between half-cycles. The melting-temperature cascade is therefore
+mirrored with respect to the march index: $\Tm^{\mathrm{dc}}(i) =
+\Tm^{\mathrm{ch}}(n_{s}-1-i)$. But $E'$ is measured from a datum of \emph{solid
+at the local $\Tm$} (\S\ref{sec:front:enthalpy}), and until v0.5 the state array
+was handed to the discharge \textbf{without} being mirrored. The datum therefore
+moved by up to \SI{48.9}{\kelvin} across the half-cycle boundary.
+
+The symptom was invisible until $\Tpcm$ was plotted rather than
+$\varepsilon_{\mathrm{local}}$: at the start of the discharge the model reported
+PCM at \SI{176.6}{\celsius} against a charging inlet of
+\SI{160.0}{\celsius} --- hotter than any fluid that had ever touched it. Read
+against the charge cascade the same state tops out at exactly
+\SI{160.00}{\celsius}, which is correct, and that contrast is what identified
+the error.
+
+Two changes fix it. The discharge cascade is now built as the exact reverse of
+the charge cascade, which additionally removes a one-layer
+(\SI{6.111}{\kelvin}) mismatch that \code{layer\_map} introduces whenever
+$n_{s}$ is not a multiple of $N_{\mathrm{lay}}$; and the state array is mirrored
+at each half-cycle boundary.
+
+\begin{center}
+\begin{tabular}{@{}l r r r@{}}
+\toprule
+ & before & after & change \\
+\midrule
+$\Nwells$ (first cycle) & 11.2551 & 11.2551 & --- \\
+flow ratio & 1.0262 & 1.0473 & \SI{+2.06}{\percent} \\
+$\eta_{\mathrm{RTE}}$ & 0.41475 & 0.41391 & \SI{-0.20}{\percent} \\
+$\eta_{\mathrm{storage}}$ & 0.95318 & 0.95266 & \SI{-0.055}{\percent} \\
+\midrule
+CSS deviation & \SI{-3.34}{\percent} & \SI{-5.74}{\percent} & \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+$\Nwells$ is unchanged because the field is sized on the charge, which was never
+affected; everything downstream of the discharge moves. The effect on the CSS
+result is much larger than on the single cycle, which is what one would expect
+of an error that compounds across repeated half-cycle boundaries.

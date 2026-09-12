@@ -49,6 +49,7 @@
 \newcommand{\Nwells}{\ensuremath{N_{\mathrm{wells}}}}
 \newcommand{\etao}{\ensuremath{\eta_{o}}}
 \newcommand{\etaf}{\ensuremath{\eta_{f}}}
+\newcommand{\Tpcm}{\ensuremath{T_{\mathrm{pcm}}}}
 \newcommand{\code}[1]{\texttt{\small #1}}
 
 \title{\textbf{P2H2P PCM Wellbore Storage}\\[4pt]
@@ -56,7 +57,7 @@
 with Phase-Change Material in Repurposed Wells\\[6pt]
 \normalsize Thermodynamic Cycles, Borehole Resistance Network,\\
 Melt-Front Formulations, Sizing and Performance Indices\\[4pt]
-\normalsize Model version 0.4a \textperiodcentered\ last updated 2026-09-10 BRT}
+\normalsize Model version 0.5 \textperiodcentered\ last updated 2026-09-12 BRT}
 \author{Craft \& Hawkins Department of Petroleum Engineering\\
 Louisiana State University}
 \date{\today}
@@ -135,6 +136,28 @@ check was a factor $2.9$ too permissive in $\delta$ and could never fire. Under
 Formulation~C the corrected limit cannot be violated, but it is being
 \emph{saturated} over \SI{99}{\percent} of the well, which now bears on the fin
 count and is the leading open item.
+
+\medskip
+\noindent\textbf{Changes in version 0.5.} Section~\ref{sec:cyclic} is new and
+addresses cyclic operation. Everything before it is a \emph{first-cycle} result
+from a cold start, and the cycle does not return to that state. At cyclic steady
+state the model has $\eta_{\mathrm{storage}}\equiv1$ exactly, because the state
+returns to itself and there is no loss path; two consequences follow. The
+assumed loss surplus $\lambda$ becomes unattainable --- the CSS charge pins at
+$1/(1+\lambda)$ of the requirement for every well count --- and even at
+$\lambda=0$ the rate criterion goes degenerate, fixing the flow ratio rather
+than $\Nwells$. The resolution is to specify the hardware and \emph{simulate}
+rather than solve: $\Nwells$ from latent heat alone, both flows pinned by their
+glides, march to CSS, and report the deviation from target. At the design point
+the field delivers \SI{94.26}{\percent} of the \SI{1}{\mega\watt} target, and
+the shortfall is a \emph{discharge rate} limit rather than an inventory limit.
+
+Cycling also exposed a defect in the existing single-cycle path
+(\S\ref{sec:cyclic:reversal}): the melt state was handed to the discharge
+without being mirrored, although the flow reverses and the cascade is mirrored
+with it, moving the enthalpy datum by up to \SI{48.9}{\kelvin} and reporting
+PCM hotter than any fluid that had touched it. $\Nwells$ is unaffected; the
+discharge-side indices move by up to \SI{2}{\percent}.
 Section~\ref{sec:front:segeq} derives the segment equation in full --- the two
 control volumes, the quasi-steady fluid approximation and what it costs, and why
 the closing conductance is $\md c_{p}(1-e^{-\mathrm{NTU}})/\Delta z$ rather
@@ -155,6 +178,7 @@ order \SI{25}{\percent} of the useful duty.
 \input{sec/04_front}
 \input{sec/04b_enthalpy}
 \input{sec/05_hydraulics}
+\input{sec/07_cyclic}
 \input{sec/06_defects}
 
 \end{document}

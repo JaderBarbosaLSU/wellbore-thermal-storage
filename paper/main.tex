@@ -90,10 +90,19 @@ exposed the constraint.
 The formulation is demonstrated on a phase-change material packed into the
 annulus of a repurposed oil-and-gas well. Sensible capacity proves to be
 self-levelling: a control volume that finishes melting begins to superheat, its
-driving temperature difference collapses, and the heat passes downstream. The
-spread in local melt fraction along the exchanger falls from $1.321$ to
-$0.078$, and the fraction of phase-change material that never cycles --- dead
+driving temperature difference collapses, and the heat passes downstream.
+Compared at equal exchanger size, the spread in local melt fraction falls from
+$0.405$ to $0.000$, and the phase-change material that never cycles --- dead
 volume, carrying no energy through the round trip --- falls correspondingly.
+
+Finally, the formulation is carried through repeated cycles to a cyclic steady
+state. Because the state returns to itself and the store is adiabatic, the
+ratio of recovered to stored energy is identically unity at cyclic steady
+state, which removes the freedom that a single-cycle energy balance uses to
+size the exchanger. The sizing problem is therefore reformulated as a
+simulation: the hardware is specified, the cycle is marched to convergence, and
+the deviation of delivered energy from target is reported as a result rather
+than driven to zero.
 \end{abstract}
 
 \begin{keyword}
@@ -751,25 +760,106 @@ parameter was tuned.
 \caption{Local melted fraction at ten stations along the exchanger at end of
 charge, and its spread over all \num{100} segments.}
 \label{tab:levelling}
-\begin{tabular}{@{}l l r@{}}
+\begin{tabular}{@{}l r r r@{}}
 \toprule
-formulation & $\varepsilon_{\mathrm{local}}$ at ten stations & spread \\
+formulation & min & max & spread \\
 \midrule
-area-based & 1.78\; 0.73\; 0.69\; 0.71\; 0.77\; 0.85\; 0.94\; 1.03\; 1.12\; 1.23 & 1.321 \\
-enthalpy   & 1.00\; 1.00\; 1.00\; 1.00\; 1.00\; 1.00\; 1.00\; 1.00\; 1.00\; 1.00
-  & \textbf{0.078} \\
+area-based (melted fraction capped) & 0.595 & 1.000 & 0.405 \\
+enthalpy                            & 1.000 & 1.000 & \textbf{0.000} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Two distinct improvements appear in Table~\ref{tab:levelling}. Values above
-unity are gone, because Eq.~\eqref{eq:amelt} makes them impossible. Values well
-below unity are also gone, and this is the physical result: PCM that never melts
-is dead volume, occupying the store and carrying no energy through the round
-trip. The enthalpy formulation finds substantially less of it than the
-area-based formulation implied. At the design point
-$\varepsilon_{\mathrm{local}}$ spans $0.922$ to $1.000$ and the aggregate melted
-fraction is $0.9992$.
+The comparison in Table~\ref{tab:levelling} is made at \emph{equal exchanger
+size} and with the melted fraction capped in both formulations, so that only the
+sensible branches differ. This matters: an unguarded area-based formulation also
+produces $\varepsilon_{\mathrm{local}}$ above unity --- up to $1.78$ in this
+case --- and quoting the resulting spread would conflate genuine non-uniformity
+with that over-melt artefact. The figures above isolate the effect of the
+sensible branches alone.
+
+The physical reading is that PCM which never melts is dead volume, occupying the
+store and carrying no energy through the round trip. The enthalpy formulation
+finds substantially less of it.
+
+\subsection{Cyclic steady state}
+\label{sec:css}
+
+The results above are \emph{first-cycle} results: the store begins fully solid
+at $\Tm$ and the cycle does not return to that state. Repeating the
+charge--discharge schedule drives the store to a cyclic steady state (CSS) in
+which the end-of-cycle state reproduces the start-of-cycle state. Convergence
+takes of order thirty cycles here.
+
+At CSS the enthalpy change over a complete cycle is zero by definition, and the
+store is adiabatic, so
+\begin{equation}
+  \eta_{\mathrm{storage}}(\mathrm{CSS}) \;\equiv\; 1
+  \label{eq:css-unity}
+\end{equation}
+identically --- for every exchanger size and every flow rate; computed values
+agree to eight decimal places. Equation~\eqref{eq:css-unity} is energy
+conservation applied to a closed cycle rather than a result about the store, but
+it has a consequence for how such a model may be posed.
+
+\paragraph{Sizing cannot be closed on the energy balance at CSS.}
+A single-cycle model sizes the exchanger by requiring that it absorb a specified
+energy within the charging window. At CSS the absorbed and recovered energies
+are the \emph{same number}, so that requirement and the corresponding discharge
+requirement collapse into one equation. It fixes the ratio of the two flow rates
+and says nothing about the exchanger size:
+
+\begin{center}
+\begin{tabular}{@{}r r r r@{}}
+\toprule
+$\Nwells$ & flow ratio & charge/target & discharge/target \\
+\midrule
+11.0 & 1.0740 & 1.00000 & 1.00000 \\
+14.0 & 1.0280 & 0.99994 & 0.99994 \\
+20.0 & 0.9965 & 0.99994 & 0.99994 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Adding a loss mechanism would not remove this degeneracy: at CSS the charge
+would then exceed the discharge by exactly the loss, and the one remaining
+equation would still pin the flow ratio.
+
+\paragraph{Reformulation.}
+The resolution is to specify the hardware and \emph{simulate} rather than solve.
+The exchanger count is taken from the latent inventory alone,
+$\Delta E/(\rhom V_{\mathrm{well}}\hm)$ --- a deliberate overestimate, since it
+ignores the sensible capacity the store also has --- and both flows are pinned
+by their specified glides. No quantity is solved for, so no convergence question
+arises, and the deviation of delivered energy from target becomes a reported
+result.
+
+\begin{table}[htbp]
+\centering
+\caption{Cyclic steady state: deviation from target against exchanger count.
+Each row is an independent march to CSS.}
+\label{tab:css}
+\begin{tabular}{@{}r r r r@{}}
+\toprule
+$\Nwells$ & delivered/target & $\varepsilon$ end charge & $\varepsilon$ end discharge \\
+\midrule
+11.544 & 0.9426 & 1.000 & 0.154 \\
+14.000 & 0.9662 & 1.000 & 0.288 \\
+16.000 & 0.9777 & 1.000 & 0.376 \\
+20.000 & 0.9931 & 1.000 & 0.505 \\
+26.000 & 1.0082 & 1.000 & 0.629 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+At the latent-only size the field delivers \SI{94.26}{\percent} of target. The
+store melts \emph{completely} at end of charge --- $\varepsilon_{\mathrm{local}}
+= 1.000$ at every station --- but returns only to a mean of $0.154$, so the
+shortfall is a \textbf{discharge rate} limit rather than an inventory limit. The
+signature is in the last column: the residual melt fraction \emph{rises} with
+exchanger count, because each unit is then worked less hard and proportionally
+less of it refreezes. Were the limit an inventory limit it would fall.
 
 \subsection{Consequence for sizing}
 
@@ -824,10 +914,20 @@ the resulting equation.
   reference to $3\times10^{-13}$.
 \item Sensible capacity is self-levelling. Although it carries only about
   \SI{4.7}{\percent} of the energy in the case studied, it redistributes the
-  melting: the spread in local melted fraction falls from $1.321$ to $0.078$,
-  and dead volume falls correspondingly. The effect is first-order in the
-  distribution while being small in the energy, because it acts through the
-  driving temperature difference rather than through the energy stored.
+  melting: compared at equal exchanger size, the spread in local melted fraction
+  falls from $0.405$ to $0.000$ and dead volume falls correspondingly. The
+  effect is first-order in the distribution while being small in the energy,
+  because it acts through the driving temperature difference rather than through
+  the energy stored.
+\item At cyclic steady state the recovered-to-stored energy ratio is identically
+  unity in an adiabatic store (\S\ref{sec:css}), which collapses the charge and
+  discharge energy requirements into a single equation. That equation fixes the
+  ratio of the two flow rates and leaves the exchanger size undetermined, so a
+  single-cycle sizing procedure does not carry over. Posing the problem as a
+  simulation --- specify the hardware, march to CSS, report the deviation from
+  target --- removes the difficulty rather than working around it, and turns the
+  residual melt fraction into a diagnostic that distinguishes a rate limit from
+  an inventory limit.
 \end{enumerate}
 
 \paragraph{Limitations.}
@@ -848,7 +948,11 @@ questions about a cell's outer boundary and would be settled together by a
 two-dimensional conduction calculation on the real cross-section, which is the
 natural next step. None of the three affects the formulation or the integrator,
 which are the subject of this paper; all three affect the quantitative results
-of \S\ref{sec:demo}, which should accordingly be read as optimistic.
+of \S\ref{sec:demo}, which should accordingly be read as optimistic. In
+particular the \SI{-5.7}{\percent} cyclic-steady-state deviation of
+\S\ref{sec:css} sits inside the band those three assumptions span, and is
+better read as evidence that the store is discharge-rate limited than as a
+calibrated shortfall.
 
 %=======================================================================
 \section*{Nomenclature}
