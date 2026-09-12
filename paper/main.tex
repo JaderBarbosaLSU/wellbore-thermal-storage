@@ -1,0 +1,926 @@
+%=======================================================================
+%  An enthalpy formulation for latent heat storage in finned wellbore
+%  heat exchangers, with branchwise-exact time integration.
+%
+%  Manuscript draft. Elsevier elsarticle class (preprint layout).
+%  Companion project report: P2H2P_wellbore_TES (Overleaf).
+%=======================================================================
+\documentclass[preprint,12pt]{elsarticle}
+
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{mathtools}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{siunitx}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc}
+
+\sisetup{per-mode=symbol}
+\providecommand{\celsius}{\degreeCelsius}
+
+% ---------- symbols ----------
+\newcommand{\md}{\ensuremath{\dot m}}
+\newcommand{\Ui}{\ensuremath{U_{i}}}
+\newcommand{\hm}{\ensuremath{h_{m}}}
+\newcommand{\Tm}{\ensuremath{T_{m}}}
+\newcommand{\km}{\ensuremath{k_{m}}}
+\newcommand{\rhom}{\ensuremath{\rho_{m}}}
+\newcommand{\Amelt}{\ensuremath{A_{\mathrm{melt}}}}
+\newcommand{\Aav}{\ensuremath{A_{\mathrm{avail}}}}
+\newcommand{\Vmelt}{\ensuremath{V_{\mathrm{melt}}}}
+\newcommand{\Nwells}{\ensuremath{N_{\mathrm{wells}}}}
+\newcommand{\etao}{\ensuremath{\eta_{o}}}
+\newcommand{\etaf}{\ensuremath{\eta_{f}}}
+\newcommand{\Tpcm}{\ensuremath{T_{\mathrm{pcm}}}}
+\newcommand{\Elat}{\ensuremath{E'_{\mathrm{lat}}}}
+\newcommand{\Eeq}{\ensuremath{E'_{\mathrm{eq}}}}
+
+\journal{Preprint}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{An enthalpy formulation for latent heat storage in finned tube
+heat exchangers, with branchwise-exact time integration}
+
+\author[lsu]{J.~R.~Barbosa~Jr.\corref{cor1}}
+\ead{jrb@polo.ufsc.br}
+\cortext[cor1]{Corresponding author.}
+
+\address[lsu]{Craft \& Hawkins Department of Petroleum Engineering,
+Louisiana State University, Baton Rouge, LA, USA}
+
+\begin{abstract}
+Reduced-order models of latent heat thermal energy storage commonly advance the
+melt front as an \emph{area} or a \emph{thickness}, driven by the heat that a
+resistance network delivers. Such a state variable cannot represent a control
+volume whose phase change is complete: the model must either melt material that
+is not there, or discard the delivered heat and break its own energy balance. In
+a finned tube exchanger with an axially graded melting temperature the second
+failure is not marginal --- in the case examined here the discarded heat reaches
+\SI{148}{\percent} of the heat delivered during discharge.
+
+This paper formulates the segment state as an \emph{enthalpy} per unit tube
+length measured from a fully-solid datum, so that subcooled solid, two-phase and
+superheated liquid are three branches of one single-valued curve and the melted
+fraction is confined to $[0,1]$ by construction rather than by a guard. The
+segment equation is derived from energy balances on the phase-change material
+and on the fluid, and the closing conductance is shown to be
+$K=\md c_{p}(1-e^{-\mathrm{NTU}})/\Delta z$ rather than the overall coefficient
+times the perimeter; the two differ by up to \SI{33}{\percent} in the case
+studied, and only the former carries the capacity-rate limit that prevents heat
+flowing from cold to hot as the wall conductance improves.
+
+The resulting equation is nonlinear but affine within each branch. A
+branchwise-exact integrator is presented that solves each branch in closed form
+and splits the step at branch crossings. It is unconditionally stable, preserves
+energy closure to machine precision by construction, and agrees with a
+\num{200000}-substep explicit reference to $3\times10^{-13}$. Explicit stepping
+is shown to be inadmissible once sensible capacity is present, although it is
+exact on the latent plateau --- which is why area-based formulations never
+exposed the constraint.
+
+The formulation is demonstrated on a phase-change material packed into the
+annulus of a repurposed oil-and-gas well. Sensible capacity proves to be
+self-levelling: a control volume that finishes melting begins to superheat, its
+driving temperature difference collapses, and the heat passes downstream. The
+spread in local melt fraction along the exchanger falls from $1.321$ to
+$0.078$, and the fraction of phase-change material that never cycles --- dead
+volume, carrying no energy through the round trip --- falls correspondingly.
+\end{abstract}
+
+\begin{keyword}
+latent heat storage \sep phase change material \sep enthalpy method \sep
+finned tube heat exchanger \sep effectiveness--NTU \sep exponential integrator
+\end{keyword}
+
+\end{frontmatter}
+
+%=======================================================================
+\section{Introduction}
+\label{sec:intro}
+
+Latent heat thermal energy storage couples a heat transfer fluid to a
+phase-change material (PCM) through a wall, and the engineering problem is
+almost always the same: the PCM conducts poorly, so the exchanger is finned,
+staged, or otherwise elaborated until the phase change can be driven at the
+required rate. Designing such an exchanger requires a model that couples a
+\emph{heat transfer network} --- convection, wall, fins, and a growing melt
+layer --- to a \emph{moving phase boundary}, over a duty cycle, at a cost low
+enough to permit parametric study.
+
+Two families of reduced-order model are in common use. Closed-form Stefan
+solutions give the front position directly from a prescribed surface
+temperature, and are attractive because they are explicit. Energy-balance
+formulations instead advance the front from the heat that the network actually
+delivers, which enforces conservation between the two sides of the wall. This
+paper is concerned with a defect shared by both, and with what has to change to
+remove it.
+
+\subsection{The state variable, and what it cannot say}
+
+Both families carry the melt front as a geometric quantity: a layer thickness
+$\delta$, or equivalently a melted cross-sectional area $\Amelt$. Ask such a
+model for the temperature of the PCM in a given control volume and the only
+answer available is the melting temperature $\Tm$, because that is all the state
+encodes. While solid remains, the answer is correct, which is why the limitation
+is easy to miss.
+
+It stops being correct the moment a control volume completes its phase change.
+The network still reports a positive heat flow --- the fluid is still hotter
+than $\Tm$, and nothing in the resistance chain knows the PCM is exhausted ---
+and the model must do one of two things:
+
+\begin{enumerate}[leftmargin=1.8em,itemsep=2pt]
+\item \textbf{Continue melting.} $\Amelt$ grows past the PCM the control volume
+  contains. Latent heat is drawn from material that is not there, and local
+  melted fractions exceed unity.
+\item \textbf{Clip and discard.} Cap $\Amelt$ at the available inventory and
+  throw the surplus away. The melted fraction is then physical, but energy is
+  not conserved, and the fluid leaves at a temperature that reflects heat which
+  went nowhere.
+\end{enumerate}
+
+Neither is acceptable, and no refinement of the marching scheme repairs either,
+because the deficiency is in the state: a variable counting melted area has no
+slot for liquid above $\Tm$ or solid below it. The remedy adopted here is to
+integrate enthalpy and recover the melted area from it --- the classical
+enthalpy method \cite{Voller1987,Alexiades1993}, applied not to a discretised
+field but to the lumped state of a one-dimensional exchanger segment.
+
+\subsection{Contribution}
+
+This paper makes three contributions, all concerning the formulation and its
+numerics rather than the application:
+
+\begin{enumerate}[leftmargin=1.8em,itemsep=3pt]
+\item \textbf{A lumped enthalpy state for exchanger segments}
+  (\S\ref{sec:formulation}). One scalar per segment encodes subcooled solid,
+  two-phase and superheated liquid; the melted fraction is confined to $[0,1]$
+  by the constitutive relation rather than by a guard, and no heat is ever
+  discarded.
+\item \textbf{The correct closing conductance} (\S\ref{sec:closure}). Deriving
+  the segment equation from control-volume balances yields
+  $K=\md c_{p}(1-e^{-\mathrm{NTU}})/\Delta z$, not $\Ui P_{i}$. The two agree
+  only as $\mathrm{NTU}\to0$; the naive form lacks the capacity-rate limit and
+  therefore permits unphysical behaviour as the wall conductance improves.
+\item \textbf{A branchwise-exact integrator} (\S\ref{sec:integration}).
+  Explicit stepping is exact on the latent plateau and inadmissible off it. The
+  scheme presented solves each branch in closed form, splits steps at branch
+  crossings, is unconditionally stable, and makes energy closure structural.
+\end{enumerate}
+
+\noindent
+Section~\ref{sec:demo} demonstrates the formulation on a PCM-filled wellbore
+heat exchanger and reports the physical consequence that motivated the work: the
+self-levelling of the melt distribution.
+
+%=======================================================================
+\section{Enthalpy formulation}
+\label{sec:formulation}
+
+\subsection{Configuration and hypotheses}
+
+Consider a tube of developed length $L_{\mathrm{tube}}$ carrying a
+single-phase fluid at mass flow $\md$, surrounded by PCM. The tube is divided
+into $n_{s}$ segments of length $\Delta z$ along the developed coordinate $s$.
+Each segment owns a PCM cross-section $\Aav$, and the melting temperature may
+vary from segment to segment, permitting an axially graded (cascaded) store in
+which $\Tm$ follows the fluid glide.
+
+The following are assumed throughout.
+
+\begin{description}[leftmargin=1.9em,itemsep=2pt]
+\item[H1] Quasi-steady conduction in the melt layer: its temperature profile is
+  the steady cylindrical profile for the instantaneous front position. The
+  hypothesis is controlled by the Stefan number
+  $\mathrm{Ste}=c_{p}\Delta T/\hm$.
+\item[H2] No axial conduction in the wall or the PCM; segments couple only
+  through the fluid stream.
+\item[H3] The melt region is a concentric annulus of uniform thickness $\delta$
+  about each tube, and fronts about neighbouring tubes do not interact.
+\item[H4] Conduction only in the melt; no natural convection in the liquid PCM.
+\item[H5] One PCM temperature per segment: the state is lumped, with no radial
+  resolution of temperature \emph{within} a phase.
+\item[H6] Adiabatic outer boundary.
+\item[H7] Incompressible single-phase fluid, treated as quasi-steady.
+\end{description}
+
+\subsection{Why enthalpy rather than temperature}
+
+The natural repair for the deficiency of \S\ref{sec:intro} is to carry a PCM
+temperature alongside the melted area. It is the wrong repair, for a reason that
+recurs throughout phase-change modelling: at a phase change, temperature is not
+invertible. During melting the PCM remains at $\Tm$ while its energy content
+climbs by the entire latent heat, so $T$ carries no information whatever
+throughout the process that dominates the problem. A pair $(T,\Amelt)$ works,
+but obliges the code to decide at every step which member is active, keep the
+two consistent, and handle the instants at which the active member changes.
+
+Enthalpy is invertible. Every state of the PCM corresponds to exactly one value
+of the enthalpy, and the enthalpy increases monotonically as heat is added. A
+single scalar per segment therefore encodes all three regimes, and the regime is
+read from the value rather than tracked separately
+(Fig.~\ref{fig:enthalpy-curve}).
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[>=Stealth, scale=0.95]
+  \draw[->,thick] (0,0) -- (9.6,0) node[right] {$\Tpcm$};
+  \draw[->,thick] (0,0) -- (0,5.8) node[above] {$E'$};
+  \draw[dashed,gray] (4.9,0) -- (4.9,5.4);
+  \node[below] at (4.9,0) {$\Tm$};
+  \draw[dashed,gray] (0,1.5) -- (4.9,1.5) node[pos=0,left] {$0$};
+  \draw[dashed,gray] (0,3.5) -- (4.9,3.5) node[pos=0,left] {$\Elat$};
+  \draw[very thick] (1.2,0.05) -- (4.9,1.5);
+  \draw[very thick] (4.9,1.5) -- (4.9,3.5);
+  \draw[very thick] (4.9,3.5) -- (8.9,5.05);
+  \node[align=left,font=\small,anchor=west] at (0.85,2.65)
+    {solid, subcooled\\[1pt] slope $C_{s}$};
+  \node[align=center,font=\small] at (6.9,5.3)
+    {liquid, superheated\\[1pt] slope $C_{l}$};
+  \draw[<->,thick,black!60] (4.55,1.5) -- (4.55,3.5);
+  \node[font=\small,align=right,anchor=east,black!70] at (4.4,1.95)
+    {latent heat\\$\rhom\hm\Aav$};
+  \filldraw (4.9,2.6) circle (1.6pt);
+  \draw[->,black!60] (5.9,1.75) -- (4.99,2.53);
+  \node[font=\small,align=left,anchor=west,black!70] at (5.95,1.6)
+    {position here is\\$\Amelt = E'/(\rhom\hm)$};
+\end{tikzpicture}
+\caption{The constitutive curve, Eq.~\eqref{eq:enth-curve}. Read as $E'(T)$ it
+is multivalued at $\Tm$, which is why temperature cannot serve as the state.
+Read as $T(E')$ --- the direction used here --- it is single-valued everywhere,
+and position along the vertical segment is the melted fraction.}
+\label{fig:enthalpy-curve}
+\end{figure}
+
+\subsection{State and capacities}
+
+Let $E'$ be the enthalpy per unit tube length of the PCM belonging to one
+segment, measured from a datum of fully solid material at $\Tm$. The datum is
+arbitrary; this choice places the two branch boundaries at $0$ and $\Elat$,
+which shortens every test in the implementation. With
+\begin{equation}
+  \Elat = \rhom\hm\Aav,
+  \qquad
+  C_{s} = \rhom c_{p,s}\Aav,
+  \qquad
+  C_{l} = \rhom c_{p,l}\Aav,
+  \label{eq:caps}
+\end{equation}
+the latent capacity and the two sensible capacities per unit tube length, the
+constitutive curve and the melted area are
+\begin{equation}
+  \Tpcm =
+  \begin{dcases}
+    \Tm + E'/C_{s}, & E' < 0 \quad\text{(solid, subcooled)},\\[2pt]
+    \Tm, & 0 \le E' \le \Elat \quad\text{(two-phase)},\\[2pt]
+    \Tm + \bigl(E'-\Elat\bigr)/C_{l},
+      & E' > \Elat \quad\text{(liquid, superheated)},
+  \end{dcases}
+  \label{eq:enth-curve}
+\end{equation}
+\begin{equation}
+  \Amelt = \frac{\min\!\bigl(\max(E',0),\,\Elat\bigr)}{\rhom\hm},
+  \qquad
+  \varepsilon_{\mathrm{local}} = \frac{\Amelt}{\Aav} \in [0,1].
+  \label{eq:amelt}
+\end{equation}
+
+The saturation in Eq.~\eqref{eq:amelt} is not a guard added to suppress bad
+behaviour; it is the definition. Melted area saturates because a segment cannot
+melt PCM it does not own, and superheat is where the additional energy goes.
+Consequently $\varepsilon_{\mathrm{local}}\in[0,1]$ is \emph{structural}: no
+code path can violate it, and no test for it is required.
+
+\subsection{Recovering the layer thickness}
+
+The resistance network requires $\delta$, not $\Amelt$. For a tube of outer
+radius $r_{e}$ carrying $n_{f}$ longitudinal fins of thickness $t_{f}$ and
+radial length $L_{f}$, the fin metal occupies part of the annulus and must be
+excluded from the melted PCM area:
+\begin{equation}
+  \Amelt = \pi\left[(r_{e}+\delta)^{2}-r_{e}^{2}\right]
+           - n_{f}t_{f}\min\!\left(\delta,L_{f}\right),
+  \label{eq:area-fins}
+\end{equation}
+which inverts in closed form on each branch,
+\begin{align}
+  \delta \le L_{f}: &\quad
+    \pi\delta^{2}+\left(2\pi r_{e}-n_{f}t_{f}\right)\delta-\Amelt = 0,
+  \label{eq:delta-in}\\
+  \delta > L_{f}: &\quad
+    \pi\delta^{2}+2\pi r_{e}\delta-\left(\Amelt+n_{f}t_{f}L_{f}\right) = 0 .
+  \label{eq:delta-out}
+\end{align}
+For $n_{f}=0$ both reduce to
+$\delta=\sqrt{r_{e}^{2}+\Amelt/\pi}-r_{e}$.
+
+The melt layer then enters the network as a cylindrical conduction shell,
+\begin{equation}
+  h_{e} = \frac{\km}{r_{e}\ln\!\left(1+\delta/r_{e}\right)},
+  \label{eq:he}
+\end{equation}
+and the overall coefficient on the inner area, with fin efficiency $\etaf$,
+overall surface efficiency $\etao$ and finned perimeter $P_{T}$, is
+\begin{equation}
+  \Ui = \left[\frac{1}{h_{i}} + R''_{f,i}
+        + \frac{r_{i}}{k_{w}}\ln\frac{r_{e}}{r_{i}}
+        + \frac{2\pi r_{i}}{P_{T}\,\etao\,h_{e}}\right]^{-1}.
+  \label{eq:Ui}
+\end{equation}
+
+The single change relative to an area-based formulation is that the outer
+boundary of this chain sits at $\Tpcm$, not at $\Tm$. It coincides with $\Tm$
+only while solid remains. Section~\ref{sec:demo} shows that this one
+substitution is responsible for the principal physical result.
+
+%=======================================================================
+\section{The segment equation and its closure}
+\label{sec:closure}
+
+Equation~\eqref{eq:ode} below is short enough to look like a definition. It is
+not: it follows from energy balances on two control volumes and the elimination
+of the quantity they share. The derivation is given in full because the closing
+conductance is not the one a reader would write down unaided.
+
+\subsection{Two control volumes}
+
+Fix a segment $j$ spanning $s\in[s_{j},s_{j+1}]$, $\Delta z=s_{j+1}-s_{j}$. Two
+control volumes share the tube wall over that interval: \textbf{CV\,1}, the PCM
+belonging to the segment --- cross-section $\Aav$, stationary, closed --- and
+\textbf{CV\,2}, the fluid within the tube over the same interval, open, entering
+at $T_{j}$ and leaving at $T_{j+1}$. Write $q'_{j}$ for the heat per unit tube
+length crossing from CV\,2 into CV\,1.
+
+\subsection{The PCM balance}
+
+CV\,1 is closed and stationary, so the first law reduces to a statement about
+its enthalpy. With the axial (H2) and outer-boundary (H6) terms dropped,
+\begin{equation}
+  \boxed{\;\frac{\mathrm{d}E'_{j}}{\mathrm{d}t} = q'_{j}\;}
+  \label{eq:pcm-balance}
+\end{equation}
+
+\subsection{The fluid balance}
+
+For incompressible single-phase flow without viscous dissipation, the energy
+equation per unit tube length is
+\begin{equation}
+  \rho A_{\mathrm{flow}} c_{p}\frac{\partial T}{\partial t}
+  + \md c_{p}\frac{\partial T}{\partial s} = -q'(s).
+  \label{eq:fluid-pde}
+\end{equation}
+Hypothesis H7 drops the first term. The approximation is justified by the
+separation between the fluid transit time and the timescale of the PCM state,
+and its cost is an unresolved startup transient of one transit at the beginning
+of each half-cycle; \S\ref{sec:demo} quantifies both for the case studied.
+
+With CV\,1 presenting a single temperature to the whole segment (H5), the local
+flux closes on the network,
+\begin{equation}
+  q'(s) = \Ui\,(2\pi r_{i})\left[T(s)-\Tpcm\right].
+  \label{eq:local-flux}
+\end{equation}
+The inner perimeter $2\pi r_{i}$ appears rather than $P_{T}$ because $\Ui$ was
+referred to the inner area in Eq.~\eqref{eq:Ui}; the finned perimeter is already
+inside it. Using $P_{T}$ here would count the fins twice.
+
+\subsection{Integration across the segment}
+
+Substituting Eq.~\eqref{eq:local-flux} into the steady form of
+Eq.~\eqref{eq:fluid-pde}, with $\Tpcm$ and $\Ui$ held constant over the segment,
+gives a linear ordinary differential equation in $s$ whose solution is the
+single-stream heat exchanger result:
+\begin{equation}
+  T_{j+1} = \Tpcm + \left(T_{j}-\Tpcm\right)e^{-\mathrm{NTU}_{j}},
+  \qquad
+  \mathrm{NTU}_{j} = \frac{2\pi r_{i}\,\Ui\,\Delta z}{\md\,c_{p}}.
+  \label{eq:ntu}
+\end{equation}
+One stream carries a finite capacity rate $\md c_{p}$; the other is an
+isothermal reservoir of infinite capacity rate, with effectiveness
+$\varepsilon=1-e^{-\mathrm{NTU}}$. The reservoir idealisation is precisely what
+the lumped state of H5 licenses.
+
+\subsection{The closure, and why the conductance is not $\Ui P_{i}$}
+
+The heat the fluid gives up over the segment is the enthalpy it loses, so from
+Eq.~\eqref{eq:ntu},
+\begin{equation}
+  \boxed{\;
+  q'_{j} = K_{j}\left(T_{j}-\Tpcm\right),
+  \qquad
+  K_{j} = \frac{\md c_{p}\left(1-e^{-\mathrm{NTU}_{j}}\right)}{\Delta z}.
+  \;}
+  \label{eq:K}
+\end{equation}
+Combining Eqs.~\eqref{eq:pcm-balance}, \eqref{eq:K} and \eqref{eq:enth-curve}
+closes the system:
+\begin{equation}
+  \boxed{\;
+  \frac{\mathrm{d}E'}{\mathrm{d}t}
+  = K\left(T_{j}-\Tpcm(E')\right)
+  \;}
+  \label{eq:ode}
+\end{equation}
+with one unknown per segment; everything else is geometry, a property, or the
+upstream fluid temperature handed down by the preceding segment.
+
+The naive closure evaluates Eq.~\eqref{eq:local-flux} at $T(s)\approx T_{j}$,
+giving $q'_{j}\approx 2\pi r_{i}\Ui(T_{j}-\Tpcm)$. Comparing,
+\begin{equation}
+  \frac{K_{j}}{2\pi r_{i}\Ui}
+  = \frac{1-e^{-\mathrm{NTU}_{j}}}{\mathrm{NTU}_{j}} \le 1,
+  \label{eq:K-ratio}
+\end{equation}
+and the two limits say what the difference means. As $\mathrm{NTU}\to0$ the
+ratio tends to unity: the fluid barely cools across the segment and the naive
+closure is correct. As $\mathrm{NTU}\to\infty$, $K\to\md c_{p}/\Delta z$, a
+finite limit set by the \emph{fluid} rather than the wall --- a segment cannot
+absorb more than the stream delivers to it. The naive closure has no such limit:
+it permits $T_{j+1}$ to fall below $\Tpcm$, that is, heat flowing from cold to
+hot, at a rate growing without bound as $\Ui$ improves. The discrepancy is
+largest where the melt layer is thinnest and the exchanger best, which is where
+the model is most active.
+
+\subsection{Closure is structural}
+
+Equation~\eqref{eq:K} is not evaluated independently of
+Eq.~\eqref{eq:pcm-balance}. The implementation integrates
+Eq.~\eqref{eq:pcm-balance} over the step and \emph{reports}
+\begin{equation}
+  q'_{j} = \frac{E'^{\,n+1}-E'^{\,n}}{\Delta t},
+  \label{eq:qfromE}
+\end{equation}
+then drops the fluid temperature by exactly that amount,
+$T_{j+1}=T_{j}-q'_{j}\Delta z/(\md c_{p})$. Whatever the PCM gained, the fluid
+lost, to machine precision, with no possibility of drift. It should be stressed
+that this is a \emph{consistency} property and not evidence of correctness: the
+two operations are inverse, so a small residual measures floating-point
+arithmetic and nothing else.
+
+%=======================================================================
+\section{Branchwise-exact time integration}
+\label{sec:integration}
+
+\subsection{Why explicit stepping is inadmissible}
+
+Equation~\eqref{eq:ode} is nonlinear, because $\Tpcm(E')$ is piecewise, but
+affine within each branch of Eq.~\eqref{eq:enth-curve}. The distinction governs
+the choice of integrator.
+
+On the latent plateau $\Tpcm=\Tm$ is constant and does not respond to $E'$ at
+all. The segment behaves as though its heat capacity were infinite,
+Eq.~\eqref{eq:ode} reduces to $\mathrm{d}E'/\mathrm{d}t=\text{const}$, and an
+explicit Euler step is not merely stable but exact. This is the regime an
+area-based formulation occupies permanently, which explains why the constraint
+derived below has not previously been a concern: explicit stepping was safe for
+a structural reason, not a fortunate one.
+
+Introducing sensible capacity makes the capacity finite. Equation~\eqref{eq:ode}
+becomes a relaxation equation with time constant $C/K$, and explicit Euler
+requires $\Delta t < C/K$. Logarithmic time grids, which are the natural choice
+for a diffusion-limited process, violate this at late times by a wide margin;
+\S\ref{sec:demo} gives the figures for the case studied, where the final step
+exceeds the limit by a factor of $7.7$ and an explicit implementation diverges.
+
+\subsection{The scheme}
+
+Rather than reduce $\Delta t$ --- which for a logarithmic grid multiplies the
+cost by some three orders of magnitude --- the linearity within each branch is
+exploited and each branch integrated in closed form. Holding $T_{j}$ fixed
+across the step,
+\begin{equation}
+  E'(t+\Delta t) =
+  \begin{dcases}
+    E' + K\left(T_{j}-\Tm\right)\Delta t,
+      & \text{plateau,}\\[4pt]
+    \Eeq + \bigl(E'-\Eeq\bigr)e^{-K\Delta t/C},
+      & \text{sensible branches,}
+  \end{dcases}
+  \label{eq:exact}
+\end{equation}
+with the equilibrium enthalpy and relevant capacity
+\begin{equation}
+  \left(C,\Eeq\right) =
+  \begin{cases}
+    \left(C_{s},\;C_{s}\left(T_{j}-\Tm\right)\right), & E'<0,\\[3pt]
+    \left(C_{l},\;\Elat+C_{l}\left(T_{j}-\Tm\right)\right), & E'>\Elat.
+  \end{cases}
+  \label{eq:Eeq}
+\end{equation}
+$\Eeq$ is the enthalpy at which the PCM would sit in equilibrium with the fluid:
+the state the segment relaxes toward and never reaches. The exponential is
+unconditionally stable and monotone, so no step, however large, can overshoot
+it. That is precisely the property explicit Euler lacks.
+
+\subsection{Branch crossings}
+
+A step may begin in one branch and end in another, in which case it is split at
+the crossing. With $E'_{b}$ the boundary being approached ($0$ or $\Elat$), the
+crossing time is
+\begin{equation}
+  t^{*} =
+  \begin{dcases}
+    \frac{E'_{b}-E'}{K\left(T_{j}-\Tm\right)}, & \text{from the plateau},\\[8pt]
+    \frac{C}{K}\ln\!\left(\frac{E'-\Eeq}{E'_{b}-\Eeq}\right),
+      & \text{from a sensible branch}.
+  \end{dcases}
+  \label{eq:crossing}
+\end{equation}
+If $t^{*}<\Delta t$ the state is advanced to $E'_{b}$, the remaining
+$\Delta t-t^{*}$ is integrated in the adjacent branch, and the test repeated.
+Only a small number of crossings can occur within one step, so the loop is
+bounded.
+
+\begin{table}[htbp]
+\centering
+\caption{Algorithm: advance one segment over $\Delta t$.}
+\label{tab:algorithm}
+\begin{tabular}{@{}r l@{}}
+\toprule
+ & \\[-8pt]
+1 & $t_{\mathrm{left}} \leftarrow \Delta t$, \quad $E'_{0}\leftarrow E'$ \\
+2 & \textbf{while} $t_{\mathrm{left}}>0$: \\
+3 & \quad identify the branch containing $E'$ \\
+4 & \quad compute $t^{*}$ from Eq.~\eqref{eq:crossing} toward the branch boundary \\
+5 & \quad \textbf{if} $t^{*} \ge t_{\mathrm{left}}$: advance by Eq.~\eqref{eq:exact}
+        over $t_{\mathrm{left}}$; \textbf{break} \\
+6 & \quad \textbf{else}: set $E'\leftarrow E'_{b}\pm\epsilon$;\quad
+        $t_{\mathrm{left}} \leftarrow t_{\mathrm{left}}-t^{*}$ \\
+7 & \textbf{return} $E'$, \quad $q' = (E'-E'_{0})/\Delta t$ \\[2pt]
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{A note on the boundary test.}
+Step 6 of Table~\ref{tab:algorithm} displaces the state just past the boundary
+by $\epsilon=10^{-9}\max(\Elat,1)$ rather than placing it exactly on the
+boundary. This is necessary rather than cosmetic. If the branch test uses closed
+intervals, a state landing exactly on $\Elat$ is still classified as two-phase;
+the plateau branch then computes $t^{*}=0$, advances the state to where it
+already is, subtracts zero from the remaining time, and repeats indefinitely.
+The segment is pinned at the boundary and never enters the liquid branch. The
+symptom is not a failure but an apparent success --- every segment reporting a
+melted fraction of exactly unity and zero superheat. The general point is that
+where a solver switches on the sign of a quantity, the side of the boundary to
+which equality belongs must be chosen deliberately, and the state must not be
+able to come to rest there.
+
+\subsection{Verification}
+\label{sec:verification}
+
+The scheme was verified against a brute-force explicit integration of
+Eq.~\eqref{eq:ode} using \num{200000} substeps, over a complete charge and
+discharge, including steps crossing branch boundaries. Agreement is
+$3\times10^{-13}$ in relative terms, which is machine precision. The two
+calculations share no code path beyond Eq.~\eqref{eq:enth-curve}, so this is a
+genuine verification of the integrator rather than a consistency check.
+
+Energy closure, by contrast, is structural under Eq.~\eqref{eq:qfromE} and
+therefore proves nothing about correctness; it is reported here only to
+establish that no drift is present.
+
+%=======================================================================
+\section{Demonstration: a PCM-filled wellbore heat exchanger}
+\label{sec:demo}
+
+\subsection{Configuration}
+
+The formulation is demonstrated on latent heat storage in the annulus of a
+repurposed oil-and-gas well. A high-temperature heat pump melts the PCM during
+charging and an organic Rankine cycle recovers the energy during discharging,
+with pressurised water circulating through finned hairpin tubes in the borehole.
+Table~\ref{tab:config} gives the configuration.
+
+\begin{table}[htbp]
+\centering
+\caption{Configuration of the demonstration case.}
+\label{tab:config}
+\begin{tabular}{@{}l l r l@{}}
+\toprule
+ & quantity & value & unit \\
+\midrule
+\multirow{4}{*}{Borehole}
+ & depth $L_{\mathrm{well}}$ & 1524 & \si{\meter} \\
+ & diameter $D_{\mathrm{well}}$ & 177.8 & \si{\milli\meter} \\
+ & hairpin tubes $n_{t}$ & 2 & -- \\
+ & PCM volume $V_{\mathrm{well}}$ & 27.68 & \si{\meter\cubed} \\
+\midrule
+\multirow{4}{*}{Tube}
+ & inner radius $r_{i}$ & 16.23 & \si{\milli\meter} \\
+ & outer radius $r_{e}$ & 21.08 & \si{\milli\meter} \\
+ & fins per leg $n_{f}$ & 24 & -- \\
+ & fin $L_{f}\times t_{f}$ & $7.5\times1.5$ & \si{\milli\meter} \\
+\midrule
+\multirow{5}{*}{PCM}
+ & melting temperature $\Tm$ & 150 & \si{\celsius} \\
+ & latent heat $\hm$ & 380 & \si{\kilo\joule\per\kilogram} \\
+ & $c_{p,s}$ / $c_{p,l}$ & 1280 / 1800 & \si{\joule\per\kilogram\per\kelvin} \\
+ & $k_{s}$ / $k_{l}$ & 0.60 / 0.45 & \si{\watt\per\meter\per\kelvin} \\
+ & $\rho_{s}$ / $\rho_{l}$ & 1550 / 1450 & \si{\kilogram\per\meter\cubed} \\
+\midrule
+\multirow{4}{*}{Operation}
+ & fluid glide $\Delta T_{3C,2C}$ & 55 & \si{\kelvin} \\
+ & charging inlet & 160 & \si{\celsius} \\
+ & charge / discharge window & 10 / 10 & \si{\hour} \\
+ & PCM layers $N_{\mathrm{lay}}$ & 9 & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+The resulting capacities, Eq.~\eqref{eq:caps}, are
+$\Aav=\SI{4.5411e-3}{\meter\squared}$,
+$\Elat=\SI{2.675}{\mega\joule\per\meter}$,
+$C_{s}=\SI{9.010e3}{\joule\per\meter\per\kelvin}$ and
+$C_{l}=\SI{1.267e4}{\joule\per\meter\per\kelvin}$. The ratio
+$C_{l}/\Elat=\SI{4.74e-3}{\per\kelvin}$ is the Stefan number in disguise: one
+kelvin of superheat is worth \SI{0.47}{\percent} of the latent capacity, so with
+the \SI{10}{\kelvin} approach available here the sensible branches carry at most
+about \SI{4.7}{\percent} of the energy. A reader might reasonably conclude that
+the formulation is a small correction. Section~\ref{sec:levelling} shows why it
+is not.
+
+\subsection{Quasi-steady fluid: the cost of H7}
+
+Table~\ref{tab:h7} collects the comparisons that justify dropping
+$\partial T/\partial t$ from Eq.~\eqref{eq:fluid-pde}.
+
+\begin{table}[htbp]
+\centering
+\caption{Justification and cost of the quasi-steady fluid approximation.}
+\label{tab:h7}
+\begin{tabular}{@{}l r l@{}}
+\toprule
+quantity & value & \\
+\midrule
+fluid transit time over $L_{\mathrm{tube}}$ & \SI{2264}{\second}
+  & ($u=\SI{1.35}{\meter\per\second}$) \\
+charging window $t_{\mathrm{ch}}$ & \SI{36000}{\second} & \\
+ratio & \num{0.063} & \\
+$\rho A_{\mathrm{flow}}c_{p}/C_{l}$ & \num{0.257}
+  & fluid vs.\ PCM sensible capacity \\
+$\rho A_{\mathrm{flow}}c_{p}\Delta T/\Elat$ & \num{0.0122}
+  & fluid swing vs.\ latent, $\Delta T=\SI{10}{\kelvin}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+The fluid re-establishes its profile in one transit while the PCM state evolves
+over ten hours, a separation of about sixteen. The approximation is therefore
+reasonable but not asymptotic: the first \SI{38}{\minute} of each half-cycle is
+a startup transient the model does not resolve, some \SI{6}{\percent} of the
+window. What renders this tolerable is the last row --- the energy held in the
+fluid is only \SI{1.2}{\percent} of the latent inventory it is charging, so the
+transient misplaces very little energy even though it occupies a noticeable
+fraction of the run.
+
+\subsection{The closure discrepancy in practice}
+
+Over the charge, $\mathrm{NTU}$ ranges from \num{0.083} to \num{0.602}, so
+Eq.~\eqref{eq:K-ratio} lies between \num{0.96} and \num{0.75}. Using
+$\Ui P_{i}$ in place of Eq.~\eqref{eq:K} would therefore overstate the segment
+conductance by between \SI{4}{\percent} and \SI{33}{\percent} in this case, with
+the largest error at early times when the melt layer is thin and the exchanger
+at its best.
+
+\subsection{Stability of the time integration}
+
+Table~\ref{tab:stability} gives the stability figures for the logarithmic time
+grid used here.
+
+\begin{table}[htbp]
+\centering
+\caption{Explicit-Euler stability limit against the time grid actually used,
+for the first segment.}
+\label{tab:stability}
+\begin{tabular}{@{}l r r@{}}
+\toprule
+ & early ($t=\SI{1}{\second}$) & late ($t\to t_{\mathrm{ch}}$) \\
+\midrule
+$\mathrm{NTU}$ & \num{0.592} & \num{0.083} \\
+$K$ [\si{\watt\per\meter\per\kelvin}] & \num{64.3} & \num{11.5} \\
+$C_{l}/K$ [\si{\second}] & \num{197} & \num{1106} \\
+grid step $\Delta t$ [\si{\second}] & \num{0.31} & \num{8491} \\
+\midrule
+$\Delta t\,K/C_{l}$ & \num{0.002} & \textbf{\num{7.7}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+The grid is comfortable at the start and violates the limit by almost an order
+of magnitude at the end. An explicit implementation duly diverged, the
+oscillation feeding back through the fluid temperature and driving the secondary
+fluid to \SI{261}{\kelvin} --- some \SI{170}{\kelvin} below anything physical.
+That failure was loud and immediately diagnosable; the dangerous case is a step
+ratio nearer $1.5$, unstable in principle but slowly enough to resemble a
+plausible answer.
+
+\subsection{Sensible capacity is self-levelling}
+\label{sec:levelling}
+
+The principal physical result is not the magnitude of the sensible energy but
+its effect on the \emph{distribution} of melting.
+
+Consider the segment nearest the inlet, which sees the hottest fluid and
+therefore melts first. Under an area-based formulation it finishes melting and
+then continues to absorb heat at the full driving difference $T_{j}-\Tm$,
+because its boundary temperature remains pinned at $\Tm$ regardless of state: it
+monopolises the fluid's heat, and segments downstream receive what is left.
+
+Under Eq.~\eqref{eq:ode} the same segment begins to superheat the instant its
+solid is exhausted. $\Tpcm$ rises, the driving difference $T_{j}-\Tpcm$
+collapses, its demand falls away, and the heat continues downstream to segments
+that still have solid to melt. The mechanism is a negative feedback and it is
+automatic --- nothing in the implementation distributes the heat, and no
+parameter was tuned.
+
+\begin{table}[htbp]
+\centering
+\caption{Local melted fraction at ten stations along the exchanger at end of
+charge, and its spread over all \num{100} segments.}
+\label{tab:levelling}
+\begin{tabular}{@{}l l r@{}}
+\toprule
+formulation & $\varepsilon_{\mathrm{local}}$ at ten stations & spread \\
+\midrule
+area-based & 1.78\; 0.73\; 0.69\; 0.71\; 0.77\; 0.85\; 0.94\; 1.03\; 1.12\; 1.23 & 1.321 \\
+enthalpy   & 1.00\; 1.00\; 1.00\; 1.00\; 1.00\; 1.00\; 1.00\; 1.00\; 1.00\; 1.00
+  & \textbf{0.078} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two distinct improvements appear in Table~\ref{tab:levelling}. Values above
+unity are gone, because Eq.~\eqref{eq:amelt} makes them impossible. Values well
+below unity are also gone, and this is the physical result: PCM that never melts
+is dead volume, occupying the store and carrying no energy through the round
+trip. The enthalpy formulation finds substantially less of it than the
+area-based formulation implied. At the design point
+$\varepsilon_{\mathrm{local}}$ spans $0.922$ to $1.000$ and the aggregate melted
+fraction is $0.9992$.
+
+\subsection{Consequence for sizing}
+
+Because the formulation conserves energy and bounds the melted fraction, the
+store may be sized against two independent requirements rather than one. Writing
+$\Delta E$ for the energy to be stored, the field must both \emph{absorb} it
+within the charging window and \emph{contain} it at all:
+\begin{equation}
+  \Nwells = \max\bigl(N_{\mathrm{rate}},\,N_{\mathrm{capacity}}\bigr),
+  \qquad
+  N_{\mathrm{capacity}} = \frac{\Delta E}
+  {\rhom V_{\mathrm{well}}\left[\hm+c_{p,l}\Delta T\right]}.
+  \label{eq:sizing}
+\end{equation}
+$N_{\mathrm{rate}}$ follows from a root solve on the march and carries every
+thermal parameter; $N_{\mathrm{capacity}}$ is closed form and carries none, which
+makes it a hard lower bound no design can better. For the case of
+Table~\ref{tab:config}, $N_{\mathrm{rate}}=11.28$ and
+$N_{\mathrm{capacity}}=11.57$, so capacity binds.
+
+The two are within \SI{2.7}{\percent} here, which is worth stating explicitly:
+the design sits on the crossover, and a parametric sweep of any geometric
+variable will change which criterion binds partway through. Reporting either
+criterion alone across such a sweep produces a trend that is not the trend in
+$\Nwells$.
+
+%=======================================================================
+\section{Conclusions}
+\label{sec:conclusions}
+
+A lumped enthalpy state has been formulated for phase-change material in the
+segments of a one-dimensional heat exchanger model, together with the closure
+that couples it to an effectiveness--NTU march and an exact time integrator for
+the resulting equation.
+
+\begin{enumerate}[leftmargin=1.8em,itemsep=3pt]
+\item Carrying enthalpy rather than melted area removes a structural defect in
+  reduced-order latent storage models. A segment whose phase change is complete
+  has somewhere to put further heat, so none is discarded and the melted
+  fraction is confined to $[0,1]$ by the constitutive relation rather than by a
+  guard. In the case examined, an area-based formulation discarded up to
+  \SI{148}{\percent} of the delivered heat during discharge.
+\item The conductance closing the segment equation is
+  $K=\md c_{p}(1-e^{-\mathrm{NTU}})/\Delta z$ and not $\Ui P_{i}$. The two agree
+  only as $\mathrm{NTU}\to0$, differ by \SI{4}{\percent} to \SI{33}{\percent}
+  over the case studied, and only the former carries the capacity-rate limit
+  that prevents heat flowing from cold to hot as the wall conductance improves.
+\item Explicit time stepping is exact on the latent plateau and inadmissible off
+  it, which is why area-based formulations never encountered the constraint. The
+  branchwise-exact scheme of \S\ref{sec:integration} is unconditionally stable,
+  makes energy closure structural, and agrees with a \num{200000}-substep
+  reference to $3\times10^{-13}$.
+\item Sensible capacity is self-levelling. Although it carries only about
+  \SI{4.7}{\percent} of the energy in the case studied, it redistributes the
+  melting: the spread in local melted fraction falls from $1.321$ to $0.078$,
+  and dead volume falls correspondingly. The effect is first-order in the
+  distribution while being small in the energy, because it acts through the
+  driving temperature difference rather than through the energy stored.
+\end{enumerate}
+
+\paragraph{Limitations.}
+Three assumptions bound the results above and are stated here rather than left
+implicit. Hypothesis H3 is \emph{saturated} at the design point: the melt fronts
+of neighbouring tubes are in contact over \SI{99}{\percent} of the exchanger, so
+the annular conduction resistance is evaluated at the limit of its validity and
+the residual solid --- which occupies the corners between tubes, on a longer and
+narrower conduction path than an annulus represents --- has its resistance
+understated. Hypothesis H6 assumes the cell boundary adiabatic, which for an
+axially graded store requires a physical partition between layers that are, at
+the inlet end of the case studied, \SI{48.9}{\kelvin} apart; a slab estimate
+places the neglected cross-boundary leak at some \SI{25}{\percent} of the useful
+duty, and it flows in the direction that erodes the grading. Finally, the time
+grid is not converged: $\varepsilon_{\mathrm{PCM}}$ moves $-0.3\,\%$ between
+\num{40} and \num{320} time levels, one-sided. The first two are geometric
+questions about a cell's outer boundary and would be settled together by a
+two-dimensional conduction calculation on the real cross-section, which is the
+natural next step. None of the three affects the formulation or the integrator,
+which are the subject of this paper; all three affect the quantitative results
+of \S\ref{sec:demo}, which should accordingly be read as optimistic.
+
+%=======================================================================
+\section*{Nomenclature}
+
+\noindent
+\begin{tabular}{@{}l l l@{}}
+$\Amelt$ & melted cross-section per unit tube length & \si{\meter\squared} \\
+$\Aav$ & PCM cross-section owned by one segment & \si{\meter\squared} \\
+$A_{\mathrm{flow}}$ & tube flow area & \si{\meter\squared} \\
+$c_{p}$ & specific heat capacity & \si{\joule\per\kilogram\per\kelvin} \\
+$C_{s},C_{l}$ & sensible capacity per unit tube length & \si{\joule\per\meter\per\kelvin} \\
+$E'$ & PCM enthalpy per unit tube length & \si{\joule\per\meter} \\
+$\Elat$ & latent capacity per unit tube length & \si{\joule\per\meter} \\
+$\Eeq$ & equilibrium enthalpy & \si{\joule\per\meter} \\
+$\hm$ & latent heat of fusion & \si{\joule\per\kilogram} \\
+$h_{e},h_{i}$ & outer, inner heat transfer coefficient & \si{\watt\per\meter\squared\per\kelvin} \\
+$K$ & segment conductance per unit tube length & \si{\watt\per\meter\per\kelvin} \\
+$\km,k_{w}$ & PCM, wall thermal conductivity & \si{\watt\per\meter\per\kelvin} \\
+$L_{f},t_{f},n_{f}$ & fin length, thickness, count & \si{\meter},\si{\meter},-- \\
+$\md$ & mass flow rate & \si{\kilogram\per\second} \\
+$\mathrm{NTU}$ & number of transfer units per segment & -- \\
+$P_{T}$ & finned outer perimeter & \si{\meter} \\
+$q'$ & heat rate per unit tube length & \si{\watt\per\meter} \\
+$r_{i},r_{e}$ & tube inner, outer radius & \si{\meter} \\
+$s$ & developed tube coordinate & \si{\meter} \\
+$\mathrm{Ste}$ & Stefan number, $c_{p}\Delta T/\hm$ & -- \\
+$T$ & fluid temperature & \si{\kelvin} \\
+$\Tm,\Tpcm$ & melting, PCM temperature & \si{\kelvin} \\
+$\Ui$ & overall coefficient on inner area & \si{\watt\per\meter\squared\per\kelvin} \\
+$\Delta z$ & segment length & \si{\meter} \\
+$\delta$ & melt-layer thickness & \si{\meter} \\
+$\varepsilon_{\mathrm{local}}$ & melted fraction of one segment & -- \\
+$\etaf,\etao$ & fin, overall surface efficiency & -- \\
+$\rhom$ & PCM density & \si{\kilogram\per\meter\cubed} \\
+\end{tabular}
+
+%=======================================================================
+% NOTE. This bibliography is a STUB. The five entries below are canonical
+% works that the text genuinely leans on. The application-specific
+% literature -- prior wellbore-storage work, the PCM property source, and
+% the author's own earlier conference paper -- still has to be added, and
+% every entry should be checked against the publisher record before
+% submission.
+%=======================================================================
+\begin{thebibliography}{9}
+
+\bibitem{Voller1987}
+V.~R. Voller, C.~Prakash,
+A fixed grid numerical modelling methodology for convection-diffusion mushy
+region phase-change problems,
+\emph{International Journal of Heat and Mass Transfer} 30 (1987) 1709--1719.
+
+\bibitem{Alexiades1993}
+V.~Alexiades, A.~D. Solomon,
+\emph{Mathematical Modeling of Melting and Freezing Processes},
+Hemisphere, Washington, DC, 1993.
+
+\bibitem{Gnielinski1976}
+V.~Gnielinski,
+New equations for heat and mass transfer in turbulent pipe and channel flow,
+\emph{International Chemical Engineering} 16 (1976) 359--368.
+
+\bibitem{Bell2014}
+I.~H. Bell, J.~Wronski, S.~Quoilin, V.~Lemort,
+Pure and pseudo-pure fluid thermophysical property evaluation and the
+open-source thermophysical property library CoolProp,
+\emph{Industrial \& Engineering Chemistry Research} 53 (2014) 2498--2508.
+
+\bibitem{Incropera}
+F.~P. Incropera, D.~P. DeWitt, T.~L. Bergman, A.~S. Lavine,
+\emph{Fundamentals of Heat and Mass Transfer}, Wiley.
+
+\end{thebibliography}
+
+\end{document}
