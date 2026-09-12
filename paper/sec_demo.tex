@@ -68,8 +68,8 @@ measure: Section~\ref{sec:levelling} shows that the sensible branches act on the
 \subsection{The solution procedure end to end}
 \label{sec:procedure}
 
-Before the individual results, Figure~\ref{fig:procedure} places the formulation
-in the calculation that uses it. The structure is worth stating plainly because
+Before the individual results, Figures~\ref{fig:proc1} and~\ref{fig:proc2}
+place the formulation in the calculation that uses it. The structure is worth stating plainly because
 it is unusual in one respect: \emph{nothing is solved for}. The thermodynamic
 cycles, the energy budget and the exchanger size are all evaluated in sequence,
 the two flow rates follow from their prescribed glides, and the only iteration
@@ -96,18 +96,16 @@ integrator would need the time grid refined by some three orders of magnitude to
 remain stable at the late steps (\S\ref{sec:integration}), and the outer loop
 multiplies that cost by thirty.
 
-\begin{figure}[p]
+\begin{figure}[tbp]
 \centering
 \begin{tikzpicture}[
-  font=\small,
+  font=\footnotesize,
   node distance=3mm,
   blk/.style   ={draw, rounded corners=2pt, inner sep=5pt, align=left,
                  text width=0.76\linewidth},
   inp/.style   ={blk, fill=black!4},
-  march/.style ={blk, line width=0.9pt, fill=black!2},
-  test/.style  ={draw, dashed, rounded corners=2pt, inner sep=5pt, align=center,
-                 text width=0.60\linewidth},
-  fin/.style   ={blk, fill=black!4},
+  link/.style  ={draw, dashed, rounded corners=2pt, inner sep=4pt, align=center,
+                 text width=0.60\linewidth, font=\footnotesize\itshape},
   fl/.style    ={-{Latex[length=2mm]}, thick},
   lab/.style   ={font=\scriptsize, inner sep=1.5pt}]
 
@@ -154,8 +152,44 @@ multiplies that cost by thirty.
   --- latent heat alone, $\lambda=0$\\
   $\md_{\mathrm{ch}}$ and $\md_{\mathrm{dc}}$ each pinned by their own glide};
 
+%------------------------------------------------------------------ hand-off
+\node[link, below=of hw] (go) {%
+  continued in Figure~\ref{fig:proc2}};
+
+\foreach \a/\b in {in/cyc, cyc/bud, bud/hw, hw/go}
+  \draw[fl] (\a) -- (\b);
+\end{tikzpicture}
+\caption{The solution procedure, part~1: the plant and field levels. These
+blocks are evaluated once, in sequence, and nothing in them is iterated. Their
+entire output into the rest of the calculation is five secondary-fluid state
+points, two flow rates and a well count --- that is, a fully specified piece of
+hardware. The borehole model that operates it is Figure~\ref{fig:proc2}.}
+\label{fig:proc1}
+\end{figure}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[
+  font=\footnotesize,
+  node distance=3mm,
+  blk/.style   ={draw, rounded corners=2pt, inner sep=5pt, align=left,
+                 text width=0.76\linewidth},
+  march/.style ={blk, line width=0.9pt, fill=black!2},
+  fin/.style   ={blk, fill=black!4},
+  test/.style  ={draw, dashed, rounded corners=2pt, inner sep=5pt, align=center,
+                 text width=0.60\linewidth},
+  link/.style  ={draw, dashed, rounded corners=2pt, inner sep=4pt, align=center,
+                 text width=0.60\linewidth, font=\footnotesize\itshape},
+  fl/.style    ={-{Latex[length=2mm]}, thick},
+  lab/.style   ={font=\scriptsize, inner sep=1.5pt}]
+
+%------------------------------------------------------------------ hand-off
+\node[link] (from) {%
+  from Figure~\ref{fig:proc1}: $\Nwells$, $\md_{\mathrm{ch}}$,
+  $\md_{\mathrm{dc}}$, state points};
+
 %------------------------------------------------------------------ march
-\node[march, below=7mm of hw] (mar) {%
+\node[march, below=of from] (mar) {%
   \textbf{4.\ Half-cycle segment march} \hfill \emph{borehole level}\\[2pt]
   charge: inlet $T_{4c}$, flow $\md_{\mathrm{ch}}$\\[3pt]
   \textbf{for} each time level $t_{k}$, $k=1\ldots n_{t}$
@@ -185,7 +219,7 @@ multiplies that cost by thirty.
    -E'_{i}\big|_{\mathrm{start}}\bigr|<\varepsilon_{\mathrm{tol}}$ ?};
 
 %------------------------------------------------------------------ outputs
-\node[fin, below=of tst] (outp) {%
+\node[fin, below=6mm of tst] (outp) {%
   \textbf{6.\ Results at cyclic steady state}\\[3pt]
   profiles of $T_{f}$, $\Tpcm$, $\varepsilon_{\mathrm{local}}$, $\Ui$ and NTU;
   melt maps over depth and time\\
@@ -195,7 +229,7 @@ multiplies that cost by thirty.
   capacity};
 
 %------------------------------------------------------------------ arrows
-\foreach \a/\b in {in/cyc, cyc/bud, bud/hw, hw/mar, mar/rev, rev/tst}
+\foreach \a/\b in {from/mar, mar/rev, rev/tst}
   \draw[fl] (\a) -- (\b);
 \draw[fl] (tst) -- node[lab, left] {yes} (outp);
 
@@ -206,14 +240,14 @@ multiplies that cost by thirty.
   -- (Lx) -- (mar.west);
 
 \end{tikzpicture}
-\caption{The solution procedure, as implemented. Blocks~1--3 are evaluated once
-and produce a fully specified piece of hardware; blocks~4 and~5 are the segment
-march of \S\ref{sec:formulation}--\S\ref{sec:integration}, executed twice per
-cycle and repeated until the store reproduces its own initial state. The outer
-loop is the only iteration: nothing here is obtained by root finding, which is a
-consequence of Eq.~\eqref{eq:css-unity} rather than a choice
+\caption{The solution procedure, part~2: the borehole level. Blocks~4 and~5 are
+the segment march of \S\ref{sec:formulation}--\S\ref{sec:integration}, executed
+twice per cycle and repeated until the store reproduces its own initial state.
+This loop is the only iteration in the entire procedure: no quantity anywhere in
+Figures~\ref{fig:proc1} and~\ref{fig:proc2} is obtained by root finding, which
+is a consequence of Eq.~\eqref{eq:css-unity} rather than a choice
 (\S\ref{sec:css}).}
-\label{fig:procedure}
+\label{fig:proc2}
 \end{figure}
 
 \subsection{Quasi-steady fluid: the cost of H7}
