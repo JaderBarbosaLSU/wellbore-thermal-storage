@@ -19,6 +19,8 @@
 \usepackage{xcolor}
 \usepackage{enumitem}
 \usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
 \usetikzlibrary{arrows.meta,positioning,calc}
 
 \sisetup{per-mode=symbol}
@@ -584,6 +586,77 @@ where a solver switches on the sign of a quantity, the side of the boundary to
 which equality belongs must be chosen deliberately, and the state must not be
 able to come to rest there.
 
+%---------------------------------------------------------------------
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[width=0.48\linewidth,height=5.2cm,
+  xlabel={step number}, ylabel={superheat $\Tpcm-\Tm$ [K]},
+  title={\small (a) $\Delta t/\tau=1.9$}, ymin=-2, ymax=26,
+  legend style={font=\scriptsize,at={(0.5,0.97)},anchor=north},
+  legend columns=2,
+  grid=both, grid style={gray!20}]
+\addplot[thick,mark=*,mark size=1.2pt,red!70!black] coordinates {(1,19.0) (2,1.9) (3,17.29) (4,3.439) (5,15.9049) (6,4.6856) (7,14.783) (8,5.6953) (9,13.8742) (10,6.5132) (11,13.1381) (12,7.1757)};
+\addlegendentry{explicit Euler}
+\addplot[thick,mark=square*,mark size=1.2pt,blue!70!black] coordinates {(1,8.5043) (2,9.7763) (3,9.9665) (4,9.995) (5,9.9993) (6,9.9999) (7,10.0) (8,10.0) (9,10.0) (10,10.0) (11,10.0) (12,10.0)};
+\addlegendentry{branchwise-exact}
+\addplot[dashed,gray,domain=1:12,forget plot] {10};
+\end{axis}
+\begin{axis}[width=0.48\linewidth,height=5.2cm,at={(0.52\linewidth,0)},
+  xlabel={step number}, ylabel={$|\Tpcm-\Tm|$ [K]}, ymode=log,
+  title={\small (b) $\Delta t/\tau=7.7$, the grid actually used},
+  ymin=1, ymax=1e12, legend style={font=\scriptsize,at={(0.03,0.97)},anchor=north west},
+  grid=both, grid style={gray!20}]
+\addplot[thick,mark=*,mark size=1.2pt,red!70!black] coordinates {
+  (1,77) (2,438.9) (3,3017.6) (4,20141) (5,135023) (6,904574)
+  (7,6.0607e6) (8,4.0607e7) (9,2.7207e8) (10,1.8228e9) (11,1.2213e10) (12,8.1827e10)};
+\addlegendentry{explicit Euler (sign alternating)}
+\addplot[thick,mark=square*,mark size=1.2pt,blue!70!black] coordinates {
+  (1,9.9955) (2,10) (3,10) (4,10) (5,10) (6,10) (7,10) (8,10) (9,10) (10,10) (11,10) (12,10)};
+\addlegendentry{branchwise-exact}
+\end{axis}
+\end{tikzpicture}
+\caption{Response of a single segment on the liquid branch, driven by fluid
+\SI{10}{\kelvin} above $\Tm$ with $\tau=C_{l}/K=\SI{1102}{\second}$.
+(a) At $\Delta t/\tau=1.9$ explicit Euler oscillates about the equilibrium
+while remaining bounded. (b) At $\Delta t/\tau=7.7$ --- the ratio the
+logarithmic grid of Table~\ref{tab:stability} actually reaches at the end of a
+charge --- it diverges, alternating in sign and passing
+\SI{8e10}{\kelvin} within twelve steps. The branchwise-exact scheme is
+monotone and correct at every step size, because Eq.~\eqref{eq:exact} cannot
+overshoot $\Eeq$.}
+\label{fig:stability}
+\end{figure}
+
+
+%---------------------------------------------------------------------
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[width=0.62\linewidth,height=5.6cm,
+  xlabel={substeps per \SI{8491}{\second} step}, ylabel={relative error in $E'$},
+  xmode=log, ymode=log, ymin=1e-18, ymax=1e-2,
+  legend style={font=\scriptsize,at={(0.03,0.03)},anchor=south west},
+  grid=both, grid style={gray!20}]
+\addplot[thick,mark=*,mark size=1.3pt,red!70!black] coordinates {(8,4.4986e-4) (16,4.2272e-4) (32,3.0168e-4) (64,1.7837e-4) (128,9.6617e-5) (256,5.0229e-5) (512,2.5602e-5) (1024,1.2924e-5) (4096,3.2541e-6) (16384,8.1497e-7) (65536,2.0383e-7)};
+\addlegendentry{explicit Euler}
+\addplot[thick,blue!70!black,domain=8:65536,samples=2] {1e-16};
+\addlegendentry{branchwise-exact, one step}
+\addplot[dashed,gray,domain=128:65536,samples=2,forget plot] {1.24e-2/x};
+\node[font=\scriptsize,gray] at (axis cs:6000,4e-6) {slope $-1$};
+\end{axis}
+\end{tikzpicture}
+\caption{Error after advancing one segment through a single \SI{8491}{\second}
+grid step, against the number of explicit substeps used. Explicit Euler is
+first order once it is stable ($\ge 8$ substeps; below that it is not), and
+needs of order $10^{4}$ substeps to reach $10^{-6}$. The branchwise-exact
+scheme returns the closed-form solution of the branch, so its error is zero to
+machine precision in a \emph{single} step --- plotted at $10^{-16}$ for
+visibility.}
+\label{fig:convergence}
+\end{figure}
+
+
 \subsection{Verification}
 \label{sec:verification}
 
@@ -782,6 +855,44 @@ The physical reading is that PCM which never melts is dead volume, occupying the
 store and carrying no energy through the round trip. The enthalpy formulation
 finds substantially less of it.
 
+Figure~\ref{fig:levelling} shows why the summary statistics understate the
+effect. The area-based curve is not uniformly depressed; it is a \emph{sawtooth}
+locked to the cascade. Each layer melts completely at its inlet end, where the
+fluid is \SI{10}{\kelvin} above that layer's $\Tm$, and incompletely at its
+outlet end, because segments upstream that have already finished continue to
+draw heat at the full driving difference and leave less for those behind. The
+enthalpy formulation removes the sawtooth rather than merely shifting its mean:
+a segment that finishes melting superheats, its own driving difference
+collapses, and the heat is passed along.
+%---------------------------------------------------------------------
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[width=0.86\linewidth,height=5.6cm,
+  xlabel={fractional developed length $s/L_{\mathrm{tube}}$},
+  ylabel={$\varepsilon_{\mathrm{local}}$ at end of charge},
+  ymin=0.5, ymax=1.05, xmin=0, xmax=1,
+  legend style={font=\scriptsize,at={(0.5,0.03)},anchor=south},
+  legend columns=2, grid=both, grid style={gray!20}]
+\addplot[thick,red!70!black] coordinates {(0,1.0000) (0.0202,1.0000) (0.0404,1.0000) (0.06061,1.0000) (0.08081,0.9811) (0.101,0.8229) (0.1212,1.0000) (0.1414,1.0000) (0.1616,1.0000) (0.1818,0.9734) (0.202,0.8149) (0.2222,1.0000) (0.2424,1.0000) (0.2626,1.0000) (0.2828,1.0000) (0.303,0.8509) (0.3232,0.7034) (0.3434,1.0000) (0.3636,1.0000) (0.3838,1.0000) (0.404,0.9102) (0.4242,0.7567) (0.4444,1.0000) (0.4646,1.0000) (0.4848,1.0000) (0.5051,0.9826) (0.5253,0.8220) (0.5455,0.6768) (0.5657,1.0000) (0.5859,1.0000) (0.6061,1.0000) (0.6263,0.8945) (0.6465,0.7419) (0.6667,1.0000) (0.6869,1.0000) (0.7071,1.0000) (0.7273,0.9728) (0.7475,0.8124) (0.7677,0.6675) (0.7879,1.0000) (0.8081,1.0000) (0.8283,1.0000) (0.8485,0.8875) (0.8687,0.7349) (0.8889,1.0000) (0.9091,1.0000) (0.9293,1.0000) (0.9495,0.9671) (0.9697,0.8068) (0.9899,0.6619)};
+\addlegendentry{area-based (capped)}
+\addplot[very thick,blue!70!black] coordinates {(0,1.0000) (0.0202,1.0000) (0.0404,1.0000) (0.06061,1.0000) (0.08081,1.0000) (0.101,1.0000) (0.1212,1.0000) (0.1414,1.0000) (0.1616,1.0000) (0.1818,1.0000) (0.202,1.0000) (0.2222,1.0000) (0.2424,1.0000) (0.2626,1.0000) (0.2828,1.0000) (0.303,1.0000) (0.3232,1.0000) (0.3434,1.0000) (0.3636,1.0000) (0.3838,1.0000) (0.404,1.0000) (0.4242,1.0000) (0.4444,1.0000) (0.4646,1.0000) (0.4848,1.0000) (0.5051,1.0000) (0.5253,1.0000) (0.5455,1.0000) (0.5657,1.0000) (0.5859,1.0000) (0.6061,1.0000) (0.6263,1.0000) (0.6465,1.0000) (0.6667,1.0000) (0.6869,1.0000) (0.7071,1.0000) (0.7273,1.0000) (0.7475,1.0000) (0.7677,1.0000) (0.7879,1.0000) (0.8081,1.0000) (0.8283,1.0000) (0.8485,1.0000) (0.8687,1.0000) (0.8889,1.0000) (0.9091,1.0000) (0.9293,1.0000) (0.9495,1.0000) (0.9697,1.0000) (0.9899,1.0000)};
+\addlegendentry{enthalpy}
+\end{axis}
+\end{tikzpicture}
+\caption{Local melted fraction along the exchanger at end of charge, compared
+at \emph{equal} exchanger size with the melted fraction capped in both
+formulations. The sawtooth in the area-based curve is the cascade: each layer
+melts fully at its inlet end and incompletely at its outlet end, because a
+segment that has finished melting continues to draw heat at the full driving
+difference. Under the enthalpy formulation that segment superheats instead, its
+demand collapses, and the heat passes downstream --- the curve is flat at
+unity. Spread falls from $0.405$ to $0.000$ (Table~\ref{tab:levelling}).}
+\label{fig:levelling}
+\end{figure}
+
+
+
 \subsection{Cyclic steady state}
 \label{sec:css}
 
@@ -853,13 +964,91 @@ $\Nwells$ & delivered/target & $\varepsilon$ end charge & $\varepsilon$ end disc
 \end{tabular}
 \end{table}
 
+%---------------------------------------------------------------------
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[width=0.48\linewidth,height=5.4cm,
+  xlabel={cycle}, ylabel={energy / target}, xmin=0.5, xmax=16,
+  title={\small (a) approach to CSS},
+  legend style={font=\scriptsize,at={(0.97,0.97)},anchor=north east},
+  grid=both, grid style={gray!20}]
+\addplot[thick,mark=*,mark size=1.1pt,red!70!black] coordinates {(1,1.03215) (2,0.97343) (3,0.94932) (4,0.94440) (5,0.94312) (6,0.94277) (7,0.94267) (8,0.94265) (9,0.94264) (10,0.94264) (11,0.94264) (12,0.94264) (13,0.94264) (14,0.94264) (15,0.94264) (16,0.94264) (17,0.94264) (18,0.94264) (19,0.94264) (20,0.94264) (21,0.94264) (22,0.94264) (23,0.94264) (24,0.94264) (25,0.94264) (26,0.94264) (27,0.94264) (28,0.94264)};
+\addlegendentry{charge}
+\addplot[thick,mark=square*,mark size=1.1pt,blue!70!black] coordinates {(1,0.93665) (2,0.94052) (3,0.94201) (4,0.94246) (5,0.94259) (6,0.94262) (7,0.94263) (8,0.94264) (9,0.94264) (10,0.94264) (11,0.94264) (12,0.94264) (13,0.94264) (14,0.94264) (15,0.94264) (16,0.94264) (17,0.94264) (18,0.94264) (19,0.94264) (20,0.94264) (21,0.94264) (22,0.94264) (23,0.94264) (24,0.94264) (25,0.94264) (26,0.94264) (27,0.94264) (28,0.94264)};
+\addlegendentry{discharge}
+\addplot[dashed,gray,domain=0.5:16,samples=2,forget plot] {1};
+\end{axis}
+\begin{axis}[width=0.48\linewidth,height=5.4cm,at={(0.52\linewidth,0)},
+  xlabel={cycle}, ylabel={$\max|\Delta E'|$ between cycles [\si{\joule\per\meter}]},
+  ymode=log, title={\small (b) state drift}, xmin=0.5, xmax=28,
+  grid=both, grid style={gray!20}]
+\addplot[thick,mark=*,mark size=1.1pt,black] coordinates {(1,1.8176e+06) (2,4.4441e+05) (3,7.3527e+04) (4,2.0698e+04) (5,5.5899e+03) (6,1.5284e+03) (7,4.1826e+02) (8,1.1346e+02) (9,3.1015e+01) (10,8.4881e+00) (11,2.0663e+00) (12,5.4292e-01) (13,1.4715e-01) (14,4.0183e-02) (15,1.0989e-02) (16,3.0059e-03) (17,8.2231e-04) (18,2.2496e-04) (19,6.1545e-05) (20,1.6842e-05) (21,4.5870e-06) (22,1.2470e-06) (23,3.6345e-07) (24,1.0675e-07) (25,4.3190e-08) (26,1.1758e-08) (27,2.2817e-08) (28,4.6566e-10)};
+\end{axis}
+\end{tikzpicture}
+\caption{Convergence to cyclic steady state at the latent-only exchanger count.
+(a) The first cycle is the outlier: it starts from a cold, fully solid store and
+absorbs more than any later cycle. Charge and discharge converge to the
+\emph{same} value, which is Eq.~\eqref{eq:css-unity} in practice --- the two
+curves become indistinguishable, not merely close. (b) The state drift falls
+geometrically; the run is stopped at $10^{-9}$.}
+\label{fig:cssconv}
+\end{figure}
+
+
+Figure~\ref{fig:cssconv}(a) is worth dwelling on. The charge curve starts
+\emph{above} target and falls; the discharge curve starts below and rises; they
+meet. That meeting is not a numerical coincidence but
+Eq.~\eqref{eq:css-unity} asserting itself: once the state repeats, the two
+energies are the same number. The first cycle absorbs more than any later one
+because it alone begins from a cold, fully solid store --- which is precisely
+why a first-cycle result cannot be quoted for a repeating duty.
+
 At the latent-only size the field delivers \SI{94.26}{\percent} of target. The
 store melts \emph{completely} at end of charge --- $\varepsilon_{\mathrm{local}}
 = 1.000$ at every station --- but returns only to a mean of $0.154$, so the
 shortfall is a \textbf{discharge rate} limit rather than an inventory limit. The
-signature is in the last column: the residual melt fraction \emph{rises} with
-exchanger count, because each unit is then worked less hard and proportionally
-less of it refreezes. Were the limit an inventory limit it would fall.
+signature is in the last column, drawn in Fig.~\ref{fig:cssdesign}: the residual
+melt fraction \emph{rises} with exchanger count, because each unit is then
+worked less hard and proportionally less of it refreezes. Were the limit an
+inventory limit it would fall, since a larger store would be proportionally
+emptier at the end of a fixed discharge. The two curves therefore separate the
+two failure modes without any additional calculation, and they place the lever
+on the discharge side --- flow rate, window length, or conductance --- rather
+than on more phase-change material.
+%---------------------------------------------------------------------
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[width=0.48\linewidth,height=5.4cm,
+  xlabel={$\Nwells$}, ylabel={delivered / target},
+  title={\small (a) energy delivered}, ymin=0.93, ymax=1.02, xmin=11, xmax=27,
+  grid=both, grid style={gray!20}]
+\addplot[thick,mark=*,mark size=1.3pt,blue!70!black] coordinates {(11.54,0.94264) (12.5,0.95396) (14,0.96624) (16,0.97774) (18,0.98621) (20,0.99311) (23,1.00125) (26,1.00816)};
+\addplot[dashed,gray,domain=11:27,samples=2,forget plot] {1};
+\node[font=\scriptsize,gray] at (axis cs:24.2,1.006) {target};
+\end{axis}
+\begin{axis}[width=0.48\linewidth,height=5.4cm,at={(0.52\linewidth,0)},
+  xlabel={$\Nwells$},
+  ylabel={residual $\varepsilon_{\mathrm{local}}$},
+  title={\small (b) unfrozen fraction at end of discharge},
+  ymin=0.10, ymax=0.70, xmin=11, xmax=27,
+  grid=both, grid style={gray!20}]
+\addplot[thick,mark=triangle*,mark size=1.6pt,orange!85!black] coordinates {(11.54,0.1545) (12.5,0.2093) (14,0.2883) (16,0.3762) (18,0.4469) (20,0.5046) (23,0.5747) (26,0.6290)};
+\end{axis}
+\end{tikzpicture}
+\caption{Cyclic steady state against exchanger count; each point is an
+independent march to convergence. (a) Delivered energy crosses target near
+$\Nwells\approx23$, about twice the latent-only count. (b) The diagnostic: the
+residual melted fraction at end of discharge \emph{rises} with exchanger count,
+because each unit is then worked less hard and proportionally less of it
+refreezes. An inventory-limited store would show the opposite, since a larger
+store would be proportionally emptier after a fixed discharge. Note that the two
+panels carry different quantities on similar-looking curves; they are plotted
+separately for that reason.}
+\label{fig:cssdesign}
+\end{figure}
+
 
 \subsection{Consequence for sizing}
 
