@@ -382,6 +382,37 @@ def run_cycle(case):
         "f_pump": (pumping_ch + pumping_dc) / case.W_dot_el_out,
         "c_pcm": case.cost_per_kWh,
     }
+
+    # ---- DoE-study indicators -------------------------------------------
+    # Restored from the earlier factorial study. Three are new; eps_m, RTE and
+    # dE_therm were already present as eps_pcm, eta_rte and E_well.
+    #
+    #   eta_T      thermal -> net electric conversion of the discharge side,
+    #              W_el_out / Q_in_ORC. Identically rank_eff * Turb_eff * ElG_eff.
+    #   eta_T_eff  the same after the discharge pumping parasitic is charged
+    #              against it: eta_T - N W_f,dc / Q_in_ORC.
+    #   eps_rte    RTE weighted by the melted fraction, RTE * eps_m.
+    #   dE_therm   thermal energy stored per well  [kWh]
+    #   dE_elec    net electric energy stored per well, dE_therm * eta_T_eff
+    #
+    # CAVEAT on eps_rte, which matters for reading a DoE table. eps_m saturates:
+    # under the enthalpy formulation, once a segment has melted all its PCM the
+    # further energy goes into SUPERHEAT, which eps_m cannot see. At this design
+    # point eps_m = 1.0000 exactly, so eps_rte == RTE and carries no information.
+    # It only discriminates across designs that do NOT saturate. `util_enthalpy`
+    # below is the non-saturating companion: energy actually banked per well as a
+    # fraction of the capacity ceiling of well_capacity_kJ.
+    eta_T = case.W_dot_el_out / E["Q_dot_in_ORC"]
+    eta_T_eff = eta_T - pumping_dc / E["Q_dot_in_ORC"]
+    dE_therm = E["D_E_in_ORC"] / 3600.0 / N_wells                   # kWh/well
+    kpis.update({
+        "eta_T": eta_T,
+        "eta_T_eff": eta_T_eff,
+        "eps_rte": kpis["eta_rte"] * eps_pcm,
+        "dE_therm_kWh": dE_therm,
+        "dE_elec_kWh": dE_therm * eta_T_eff,
+        "util_enthalpy": (detail["E_stored_kJ"] / N_wells) / detail["E_well_kJ"],
+    })
     detail.update(flow_ratio_dc_ch=ratio, m_dot_d_well1=m_dot_d_well1,
                   pumping_ch_kW=pumping_ch, pumping_dc_kW=pumping_dc)
     return {"kpis": kpis, "detail": detail, "T": T}

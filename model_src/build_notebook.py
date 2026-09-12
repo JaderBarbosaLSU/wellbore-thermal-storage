@@ -580,15 +580,51 @@ cells.append(md(r"""
 ## 11. The full cycle
 
 Charge, size the field, discharge, and collect the indices.
-`case.front` selects the formulation.
 
-$$\eta_{RTE}=\frac{\left(\dot W_{el,out}-\dot W_{\text{pump}}^{dc}\right)t_{dc}}
-{\left(\dot W_{el,in}+\dot W_{\text{pump}}^{ch}\right)t_{ch}},
+$$\eta_{RTE}=\frac{\left(\dot W_{el,out}-N_{\rm well}\dot W_{f,dc}\right)t_{dc}}
+{\left(\dot W_{el,in}+N_{\rm well}\dot W_{f,ch}\right)t_{ch}},
 \qquad
 \eta_{RTE}^{0}=\frac{\dot W_{el,out}t_{dc}}{\dot W_{el,in}t_{ch}}$$
 
-$$\varepsilon_{\text{PCM}}=\frac{V_{\text{melt}}n_t}{V_{\text{well}}},\qquad
+$$\varepsilon_{m}=\frac{V_{m,l}(t_{ch})}{V_{m}},\qquad
 \eta_{\text{storage}}=\frac{\Delta E_{\text{discharged}}}{\Delta E_{\text{stored}}}$$
+
+### The factorial-study indicators
+
+Restored from the earlier DoE work. Three of them already existed under other
+names — $\varepsilon_m$ is `eps_pcm`, RTE is `eta_rte`, and
+$\Delta E_{\rm therm}$ is `E_well` in MWh rather than kWh.
+
+$$\eta_{T}=\frac{\dot W_{el,out}}{\dot Q_{in,ORC}},
+\qquad
+\eta_{T,\rm eff}=\eta_{T}-\frac{N_{\rm well}\dot W_{f,dc}}{\dot Q_{in,ORC}}
+\quad\text{(effective discharge efficiency)}$$
+
+$$\epsilon\mathrm{RTE}=\mathrm{RTE}\cdot\varepsilon_{m}
+\quad\text{(effectiveness-weighted RTE)}$$
+
+$$\Delta E_{\rm therm}=\frac{\dot Q_{in,ORC}\,t_{dc}}{N_{\rm well}},
+\qquad
+\Delta E_{\rm elec}=\Delta E_{\rm therm}\cdot\eta_{T,\rm eff}
+\quad\text{(kWh per well)}$$
+
+$\eta_T$ is identically $\eta_{ORC}\,\eta_T^{\rm turb}\,\eta_G$ — the model
+computes it both ways and they agree to machine precision.
+
+> **Read $\epsilon$RTE with care under the enthalpy formulation.**
+> $\varepsilon_m$ **saturates**. Once a segment has melted all the PCM it owns,
+> further energy goes into *superheat*, which $\varepsilon_m$ cannot see. At
+> this design point $\varepsilon_m = 1.0000$ exactly, so
+> $\epsilon\mathrm{RTE} = \mathrm{RTE}$ identically and the weighting carries
+> no information. It discriminates only across designs that do **not** saturate,
+> which in a factorial study is precisely the corner you are least interested
+> in.
+>
+> `util_enthalpy` is added as the non-saturating companion: energy actually
+> banked per well as a fraction of the capacity ceiling of §10,
+> $\Delta E_{\rm stored}/N_{\rm well}$ divided by $E_{\rm well}^{\rm cap}$.
+> It reads **0.850** here — the store uses 85 % of its ceiling — and it keeps
+> moving after $\varepsilon_m$ has pinned at 1.
 """))
 cells.append(code(src('run_cycle')))
 
@@ -636,6 +672,30 @@ for label, r in runs.items():
     d = r['detail']
     sizing_report(CASE, d, label)
     print()
+"""))
+
+cells.append(code(r"""
+# --- the factorial-study indicators -----------------------------------------
+k = runs['v0.4b']['kpis']
+print(f"{'indicator':30s} {'value':>14s}   unit")
+for name, key, unit in (
+    ('eps_m   melted fraction',      'eps_pcm',      '--'),
+    ('RTE     round-trip',           'eta_rte',      '--'),
+    ('epsRTE  effectiveness-wtd',    'eps_rte',      '--'),
+    ('eta_T   thermal -> electric',  'eta_T',        '--'),
+    ('eta_T,eff  after dc pumping',  'eta_T_eff',    '--'),
+    ('dE_therm   per well',          'dE_therm_kWh', 'kWh'),
+    ('dE_elec    per well',          'dE_elec_kWh',  'kWh'),
+    ('util_enthalpy  vs ceiling',    'util_enthalpy','--'),
+):
+    print(f'{name:30s} {k[key]:14.5f}   {unit}')
+print()
+print('eta_T identity check:  W_el_out/Q_in_ORC  vs  eta_ORC * eta_turb * eta_gen')
+rank, hp, T_ = cycle_state_points(CASE)
+print(f'   {k["eta_T"]:.12f}   vs   {rank["rank_eff"]*CASE.Turb_eff*CASE.ElG_eff:.12f}')
+print()
+print(f'epsRTE == RTE here because eps_m = {k["eps_pcm"]:.4f} exactly.')
+print('That is saturation, not perfection -- see the note above.')
 """))
 
 cells.append(code(r"""
