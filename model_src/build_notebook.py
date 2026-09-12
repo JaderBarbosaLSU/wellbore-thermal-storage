@@ -375,7 +375,7 @@ now $T_{\rm pcm}$ rather than $T_m$.
 """))
 
 cells.append(code(src('pcm_capacities', 'pcm_state', 'advance_segment')))
-cells.append(code(src('march_h')))
+cells.append(code(src('segment_profile', 'unmirror_march', 'march_h')))
 
 cells.append(md(r"""
 ## 6. The segment march
@@ -879,7 +879,12 @@ E = energy_budget(case, rank['rank_eff'], hp['hp_cop'], T)
 T_m_lay, T_m_lay_dc = melting_temperatures(case)
 n = case.n_segments
 T_m_seg    = layer_map(T_m_lay,    n, case.N_lay)
-T_m_seg_dc = layer_map(T_m_lay_dc, n, case.N_lay)
+# The discharge marches from the far end: the cascade and the state both mirror
+# with the march index. Building it as layer_map(T_m_lay_dc, ...) instead --
+# which is what this cell did until v0.5a -- left the state unmirrored and
+# introduced a further 6.111 K layer offset, because n_segments is not a
+# multiple of N_lay. Same defect as the one fixed in run_cycle; same fix.
+T_m_seg_dc = T_m_seg[::-1].copy()
 t_ch = np.logspace(0, np.log10(case.t_ch*3600), case.n_times)
 t_dc = np.logspace(0, np.log10(case.t_dc*3600), case.n_times)
 m1   = E['m_dot_w_ch']/(N*case.num_tubes)
@@ -887,7 +892,10 @@ m1   = E['m_dot_w_ch']/(N*case.num_tubes)
 ch = march_h(case, T['T_4c'], T_m_seg, m1, case.k_wall, t_ch, record=True)
 ratio = res['detail']['flow_ratio_dc_ch']
 dc = march_h(case, T['T_3d'], T_m_seg_dc, ratio*m1, case.k_wall, t_dc,
-             E0=ch['E'], record=True)
+             E0=ch['E'][::-1], record=True)
+# ...and comes back into depth indexing before anything is plotted, so both
+# half-cycles share ONE cascade, T_m_seg, and one depth axis.
+dc = unmirror_march(dc)
 
 # --- geometric limits ------------------------------------------------------
 # r_cell and delta_merge are now Case properties, so the plots, the diagnostics
@@ -934,6 +942,19 @@ def legs(arr):
     a = np.asarray(arr)
     return (z_dn, a[:half]), (z_up, a[half:])
 
+def Tf_seg(a):
+    '''Segment-mean fluid temperature from the n+1 face temperatures.
+
+    The faces are what the march computes: F_0 is the inlet, F_{j+1} the outlet
+    of segment j. Taking the mean of adjacent faces gives one value per segment
+    and -- the reason it is done this way -- commutes with the reversal in
+    `unmirror_march`, so the same expression is right for both half-cycles.
+    Slicing `[1:]` instead does not: after un-mirroring, the inlet node sits at
+    the END of the array, and `[1:]` would silently drop the wrong face.
+    '''
+    a = np.asarray(a)
+    return 0.5*(a[:-1] + a[1:])
+
 z = s_dev/2.0                      # kept only for the time-depth maps below
 h = ch['history']
 
@@ -949,14 +970,18 @@ def tlabel(t_s):
            f'{t_s/60:.0f} min' if t_s < 3600 else f'{t_s/3600:.2f} h')
 
 targets = [0.01, 0.1, 0.5, 1.0, 3.0, 10.0]      # hours
-picks = pick_times(ch['t'], targets)
+# INDEX THE HISTORY WITH ITS OWN CLOCK. `t` stamps the marched intervals;
+# `t_hist` stamps the instants at which the recorded states are exact, and
+# carries one more entry (t = 0 at the front, the end state at the back).
+# Using `t` here is what put the frame labelled "10 h" at 7.64 h.
+picks = pick_times(ch['t_hist'], targets)
 cmap = plt.cm.viridis(np.linspace(0.15, 0.95, len(picks)))
 
 fig, ax = plt.subplots(1, 4, figsize=(19, 4.6))
 
 for c_, k in zip(cmap, picks):
-    lab = tlabel(ch['t'][k])
-    for col, series in ((0, h['T_fluid'][k][1:]-273.15),
+    lab = tlabel(ch['t_hist'][k])
+    for col, series in ((0, Tf_seg(h['T_fluid'][k])-273.15),
                         (1, h['A_melt'][k]/A_avail),
                         (2, h['U_i'][k]),
                         (3, h['NTU'][k])):
@@ -1006,16 +1031,24 @@ questions:
   difference a segment actually uses. It is **not** comparable across cases with
   different flow.
 
-The cell after the discharge figure makes that concrete. Here the discharge flow
-ratio is only $1.023$, so the two comparisons very nearly agree — mid-well at
-end of run, $U_i$ rises by $1.401$ from charge to discharge while NTU rises by
-$1.386$, and $1.401/1.023 = 1.370$ recovers the NTU ratio to within the
-variation of $c_p$. The distinction is small at this design point but is not
-guaranteed to stay small, which is the reason to plot the quantity that does not
-depend on the flow.
+The cell after the discharge figure makes that concrete. Mid-well at the end of
+each half-cycle, $U_i$ rises by a factor $7.115$ from charge to discharge while
+NTU rises by $6.907$; the discharge flow ratio is $1.0473$, and
+$7.115/1.0473 = 6.794$ recovers the NTU ratio to within the variation of $c_p$.
+The factor of seven is not a flow effect at all — it is the melt layer. The
+charge ends with a full annulus of liquid PCM between tube and front; the
+discharge ends with that annulus refrozen, and solid PCM conducts better than
+liquid. NTU carries the flow ratio on top of that, which is the whole reason to
+plot the quantity that does not depend on flow.
 
-$U_i$ is drawn on a log axis, though it spans only about a factor of seven
-($117$ to $835$ W m⁻² K⁻¹ over both half-cycles): the log scale keeps
+> These figures moved in v0.5a. This section used to march the discharge with
+> the melt state unmirrored and the cascade built by `layer_map(T_m_lay_dc, …)`
+> — the flow-reversal defect corrected in `run_cycle` in v0.5, which had been
+> left in place here. The ratios read $1.401$ and $1.386$ against a flow ratio
+> misquoted as $1.023$.
+
+$U_i$ is drawn on a log axis, and it spans about a factor of seven
+($117$ to $833$ W m⁻² K⁻¹ over both half-cycles): the log scale keeps
 the late-time curves, which bunch at the low end, readable against the $t\to0$
 curve. That $t\to0$ value is worth noting — the melt layer is absent, $h_e$
 saturates at its cap, and the borehole is limited by the tube alone. It is the
@@ -1035,11 +1068,11 @@ desuperheating and subcooling is the energy Formulation B discarded.
 
 cells.append(code(r"""
 hd = dc['history']
-picks = pick_times(dc['t'], targets)          # dc grid, same target times
+picks = pick_times(dc['t_hist'], targets)     # dc grid, same target times
 fig, ax = plt.subplots(1, 4, figsize=(19, 4.6))
 for c_, k in zip(cmap, picks):
-    lab = tlabel(dc['t'][k])
-    for col, series in ((0, hd['T_fluid'][k][1:]-273.15),
+    lab = tlabel(dc['t_hist'][k])
+    for col, series in ((0, Tf_seg(hd['T_fluid'][k])-273.15),
                         (1, hd['A_melt'][k]/A_avail),
                         (2, hd['U_i'][k]),
                         (3, hd['NTU'][k])):
@@ -1047,7 +1080,8 @@ for c_, k in zip(cmap, picks):
         ax[col].plot(vd, zd, color=c_, lw=1.4, ls='-',
                      label=(lab if col == 0 else None))
         ax[col].plot(vu, zu, color=c_, lw=1.4, ls=':')
-(zd, vd), (zu, vu) = legs(np.array(T_m_seg_dc)-273.15)
+# same cascade as on charge: `dc` is now in depth indexing
+(zd, vd), (zu, vu) = legs(np.array(T_m_seg)-273.15)
 ax[0].plot(vd, zd, 'k--', lw=1, label='$T_m$ down leg')
 ax[0].plot(vu, zu, 'k:',  lw=1, label='$T_m$ return leg')
 ax[0].set_xlabel('secondary-fluid temperature [°C]')
@@ -1090,8 +1124,8 @@ but does not have.
 
 cells.append(code(r"""
 fig, ax = plt.subplots(1, 2, figsize=(13, 4.6), sharey=True)
-for a, hh, tt, ttl in ((ax[0], h, ch['t'], 'charging'),
-                       (ax[1], hd, dc['t'], 'discharging')):
+for a, hh, tt, ttl in ((ax[0], h, ch['t_hist'], 'charging'),
+                       (ax[1], hd, dc['t_hist'], 'discharging')):
     F = hh['A_melt']/A_avail
     im = a.pcolormesh(tt/3600, z, F.T, shading='auto', cmap='inferno',
                       vmin=0, vmax=max(1.8, F.max()))
@@ -1171,9 +1205,19 @@ plt.tight_layout(); plt.show()
 cells.append(md(r"""
 ### 14.5 Recording does not perturb the solution
 
-The history arrays are written from inside the segment loop. This confirms the
-recorded run and the plain run agree exactly, so nothing in §14 is an artefact
-of instrumenting the march.
+The history arrays are written from inside the segment loop, and the closing
+frame costs one extra read-only sweep (`segment_profile`) after the march has
+finished. This confirms the recorded run and the plain run agree exactly, so
+nothing in §14 is an artefact of instrumenting the march.
+
+Worth being precise about what the record *means*, since getting it wrong cost
+two figures (see §16.3). Each frame is stamped in `t_hist` at the instant where
+its **state** — `E`, `A_melt`, `T_pcm`, `delta` — is exact. The **profile**
+arrays in the same frame — `T_fluid`, `NTU`, `U_i`, `q_prime` — are the ones
+evaluated *from* that state, i.e. the profile that drives the step beginning
+there. There are `len(t)+1` frames: one at $t=0$ and one at the end of every
+accepted step. `t` itself stamps the marched intervals and is one shorter; it
+is the right clock for `Q`, and the wrong one for the history.
 """))
 
 cells.append(code(r"""
@@ -1259,7 +1303,9 @@ consistency is not validation, and a reviewer will ask.
 
 | version | date | change |
 |---|---|---|
-| **0.4c** | this build | **Superseded code removed.** Formulations A (closed-form Stefan) and B (energy-balance on melted area) deleted along with the v0.1 sizing chain, the `front` and `charge_uses_wall_conductivity` switches, and `CASE_V01` — 16 functions, about 1,050 lines. The model is now one formulation. Verified **bit-identical** to the pre-strip v0.4b on 20 reported quantities before the cut. §13 now checks a frozen v0.4b fixture instead of the published IHTC numbers: that is a *drift* check, not an external validation, and the difference matters — see §13. Notebook 69 → 57 cells, runtime 55 → 39 s. |
+| **0.5a** | this build | **Two recording defects, no physics.** (i) `march_h` recorded the state at the *start* of a step but stamped it with the time at the *end*, and appended `E` after the update while the other state arrays came from before it. On a logarithmic grid the last step is 2.36 h, so every recorded profile was up to a quarter of a half-cycle stale and the true end state was never recorded: the map read $\varepsilon=0.356$ at the end of discharge against $0.1545$ from the march. Frames are now stamped in **`t_hist`** at the instants where the state is exact, start at $t=0$, and include the end state; `segment_profile` evaluates the closing frame's fluid profile from that end state. (ii) The **discharge was plotted mirrored** in §14.2 and §16 — the discharge marches from the far end, and only the sizing loops were un-mirroring it. `unmirror_march` now returns every discharge result in depth indexing, so both half-cycles share one cascade and one depth axis, and §16.3 prints the map-closure residual (zero). §14 also carried the *flow-reversal* bug fixed in `run_cycle` in v0.5 — it built the discharge cascade with `layer_map(T_m_lay_dc, ...)` and passed the state unmirrored. `N_wells`, the CSS deviation, energy closure and every reported index are unchanged. |
+| 0.5 | 2026-09 | **Cyclic steady state** (§16). At CSS $\eta_{\rm storage}\equiv1$ exactly, so $\lambda$ is unattainable and the rate criterion is degenerate even at $\lambda=0$; sizing is replaced by simulation — $N$ from latent heat alone, both flows pinned by their glides, march to CSS, report the deviation. The field delivers **94.26 %** of the 1 MWe target, and the shortfall is a *discharge rate* limit. Flow-reversal defect fixed in `run_cycle`: the melt state was handed to the discharge unmirrored while the cascade was mirrored, shifting the enthalpy datum by up to 48.9 K. §12.1 removed. |
+| 0.4c | 2026-09 | **Superseded code removed.** Formulations A (closed-form Stefan) and B (energy-balance on melted area) deleted along with the v0.1 sizing chain, the `front` and `charge_uses_wall_conductivity` switches, and `CASE_V01` — 16 functions, about 1,050 lines. The model is now one formulation. Verified **bit-identical** to the pre-strip v0.4b on 20 reported quantities before the cut. §13 now checks a frozen v0.4b fixture instead of the published IHTC numbers: that is a *drift* check, not an external validation, and the difference matters — see §13. Notebook 69 → 57 cells, runtime 55 → 39 s. |
 | 0.4b | 2026-09 | **`E_well^cap` corrected** (§10): the capacity bound now resolves the cascade, $\langle T_m\rangle = T_{m,\rm top}-\frac{N_{\rm lay}-1}{2N_{\rm lay}}\Delta T_{\rm glide}$, and includes the solid subcooling the discharge reaches. The old form used the top layer's $T_m$ for the whole store — the no-cascade limit — and was not a bound: the model exceeded it by 1.6 %. `N_capacity` 11.573 → **9.574**, so the **rate criterion now binds** and `N_wells` 11.573 → **11.255**. Two conclusions reverse: the fin optimum moves from 16 to about 20 and is shallow, and the melt-fraction spread quoted at $1.321\to0.078$ was not a like-for-like comparison (§14.4). |
 | 0.4a | 2026-09 | Sizing report rewritten to lead with `N_wells` and name the binding criterion; `N_capacity` labelled a lower bound (§10). Melt-front limit moved from the borehole wall to the cell radius via `Case.r_cell` / `Case.delta_merge`, and H3 proximity reported (§12, §14). §12.1 (fin and charging-window sweeps) removed in v0.5: the geometry is fixed and the sweeps no longer bracket after the flow-reversal fix. §13 (verification against the frozen IHTC fixture) restored — it had been dropped from the generator. **Build stamp repaired**: the `__STAMP__` placeholder was never substituted, so the notebook shipped reading `Last updated: __STAMP__`; the generator now asserts the substitution happened. §14 gains a **$U_i$ panel** beside NTU, and the plotted time levels are now chosen by target time rather than by index — on a logarithmic grid the old picks put three of six curves inside the first 12 seconds. |
 | 0.4 | 2026-09 | Melt front carries **enthalpy** rather than melted area (§5.4): PCM superheats when fully molten and subcools when fully solid, $\varepsilon_{\rm local}\in[0,1]$ by construction, branchwise-exact time integration. Sensible heat is self-levelling — melt-fraction spread falls $1.321\to0.078$. |
@@ -1369,7 +1415,15 @@ ax[2].set_title('melt fraction settles'); ax[2].legend(fontsize=8)
 for a in ax: a.grid(alpha=.3)
 plt.tight_layout(); plt.show()
 
-print(h.round(6).to_string(index=False))
+# `.round(6)` flattens the drift column to 0.000000e+00 for everything below
+# 5e-7 and makes the last third of the table look converged six cycles early.
+# Format each column for what it is instead.
+print(h.to_string(index=False, formatters={
+    'Q_charge_kJ':     '{:.6e}'.format,
+    'Q_discharge_kJ':  '{:.6e}'.format,
+    'drift':           '{:.3e}'.format,
+    'eps_end_charge':  '{:.6f}'.format,
+    'eps_end_discharge': '{:.6f}'.format}))
 """))
 
 cells.append(md(r"""
@@ -1392,18 +1446,20 @@ zd, zu = s_dev[:half], CASE.L_tube - s_dev[half:]
 def legs2(a):
     a = np.asarray(a); return (zd, a[:half]), (zu, a[half:])
 
-picks = pick_times(chc['t'], targets)
+picks = pick_times(chc['t_hist'], targets)
+# ONE cascade for both rows: `simulate_css` returns the discharge in depth
+# indexing, so `T_m_seg_dc` no longer exists and is no longer needed.
 fig, ax = plt.subplots(2, 3, figsize=(15, 8.6))
 for row, (rr, Tm_, ttl) in enumerate(((chc, cssr['T_m_seg'], 'CHARGE at CSS'),
-                                      (dcc, cssr['T_m_seg_dc'], 'DISCHARGE at CSS'))):
+                                      (dcc, cssr['T_m_seg'], 'DISCHARGE at CSS'))):
     hh = rr['history']
     for c_, k in zip(cmap, picks):
-        for col, series in ((0, hh['T_fluid'][k][1:]-273.15),
+        for col, series in ((0, Tf_seg(hh['T_fluid'][k])-273.15),
                             (1, hh['A_melt'][k]/A_avail),
                             (2, hh['T_pcm'][k]-273.15)):
             (a1,v1),(a2,v2) = legs2(series)
             ax[row][col].plot(v1, a1, color=c_, lw=1.3, ls='-',
-                              label=(tlabel(rr['t'][k]) if col==0 else None))
+                              label=(tlabel(rr['t_hist'][k]) if col==0 else None))
             ax[row][col].plot(v2, a2, color=c_, lw=1.3, ls=':')
     (a1,v1),(a2,v2) = legs2(np.array(Tm_)-273.15)
     ax[row][0].plot(v1, a1, 'k--', lw=1); ax[row][0].plot(v2, a2, 'k:', lw=1)
@@ -1428,12 +1484,46 @@ cells.append(md(r"""
 ### 16.3 The cycle as a map
 
 Melted fraction over depth and time, charge then discharge, at CSS.
+
+**The two panels join up.** At cyclic steady state the state returns to itself,
+so the *right* edge of the discharge panel and the *left* edge of the charge
+panel are the same distribution, segment by segment. That is the definition of
+CSS, drawn rather than asserted, and the cell prints the residual: it is zero.
+
+It did not join up before v0.5a, for two reasons that had nothing to do with
+the physics and everything to do with the bookkeeping:
+
+1. **The history lagged one step.** `march_h` recorded the state at the
+   *start* of each step but stamped it with the time at the *end*. On a
+   logarithmic grid the last step is $8491\,$s — $2.36\,$h, a quarter of the
+   charge — so the right-hand edge of each panel showed the store as it was
+   two and a third hours earlier, and the true final state was never recorded
+   at all. Mean $\varepsilon$ at the end of discharge read $0.356$ from the map
+   against $0.1545$ from the printout below it, which is how the discrepancy
+   announced itself.
+2. **The discharge panel was drawn mirrored.** The discharge marches from the
+   opposite end, so its segment index runs backwards; `simulate_css` un-mirrors
+   when it closes the loop, but the figure did not. The panel was upside down
+   in depth. Compared without un-mirroring, the two edges differ by $0.677$ in
+   $\varepsilon$; compared correctly, by nothing.
+
+Neither affected a single marched or reported quantity — $N$, the deviation,
+the energy closure and `eps_local` all come from the march, not from the
+record — but every plotted profile in §14 and §16 was one step stale. The
+recording convention is now explicit: `t_hist` stamps the instants at which
+the state arrays are exact, it starts at $t=0$, and it ends at the end of the
+half-cycle.
 """))
 cells.append(code(r"""
 fig, ax = plt.subplots(1, 2, figsize=(13, 4.6), sharey=True)
 for a, rr, ttl in ((ax[0], chc, 'charge'), (ax[1], dcc, 'discharge')):
     F = rr['history']['A_melt']/A_avail
-    im = a.pcolormesh(rr['t']/3600, s_dev/2.0, F.T, shading='auto',
+    # t_hist, not t: the frames are stamped where the state is exact, they
+    # start at t = 0, and the last one is the end of the half-cycle. Both
+    # panels are in depth indexing, so the right edge of the discharge panel
+    # and the left edge of the charge panel are the same state -- which is
+    # what cyclic steady state MEANS, and is checked below.
+    im = a.pcolormesh(rr['t_hist']/3600, s_dev/2.0, F.T, shading='auto',
                       cmap='inferno', vmin=0, vmax=1)
     a.set_xlabel('time [h]'); a.set_title(ttl + ' (CSS)')
     plt.colorbar(im, ax=a, label=r'$\varepsilon_{local}$')
@@ -1447,6 +1537,18 @@ print(f"end of discharge  mean eps {dcc['eps_local'].mean():.4f}"
 print()
 print('The store melts completely and does not refreeze completely. The')
 print('residual is what limits delivery -- a DISCHARGE RATE limit.')
+print()
+# --- the map must close on itself -----------------------------------------
+# Right edge of the DISCHARGE panel == left edge of the CHARGE panel, segment
+# by segment. This is the periodicity condition drawn rather than asserted; it
+# is also the check that the two defects fixed in v0.5a stay fixed, since
+# either one alone breaks it (by 0.677 in eps for the mirror, by 0.202 in mean
+# eps for the one-step lag).
+gap = np.max(np.abs(dcc['history']['A_melt'][-1] - chc['history']['A_melt'][0]))
+print(f'map closure   max|eps(end of discharge) - eps(start of charge)|'
+      f' = {gap/A_avail:.3e}')
+print(f'first/last frames at t = {chc["t_hist"][0]:.1f} s and'
+      f' {chc["t_hist"][-1]:.0f} s  ({chc["t_hist"][-1]/3600:.2f} h)')
 """))
 
 cells.append(md(r"""

@@ -268,3 +268,76 @@ $\Nwells$ is unchanged because the field is sized on the charge, which was never
 affected; everything downstream of the discharge moves. The effect on the CSS
 result is much larger than on the single cycle, which is what one would expect
 of an error that compounds across repeated half-cycle boundaries.
+
+\subsection{Reading the cycle map: two defects in the record}
+\label{sec:cyclic:record}
+
+At cyclic steady state the state returns to itself, so on a map of
+$\varepsilon_{\mathrm{local}}$ over depth and time the \emph{end} of the
+discharge and the \emph{start} of the charge are the same distribution, segment
+by segment. That is not an approximation to be checked against a tolerance; it
+is what convergence of the outer loop already guarantees, and the map is simply
+a drawing of it. Until v0.5a the drawing did not agree with itself, and the two
+reasons are both worth recording, because neither is a physics error and both
+are of a kind that is easy to repeat.
+
+\paragraph{The record lagged one step.}
+The march computed the state at the beginning of a step, used it to evaluate the
+network and advance the segment, and then appended that \emph{pre-step} state to
+the history --- stamped with the time at the \emph{end} of the step. On a
+uniform grid this is a half-step cosmetic offset. On the logarithmic grid used
+here it is not: with $n_{t}=40$ levels over \SI{10}{\hour} the final step spans
+\SI{8491}{\second}, so the last frame of the record was the store as it stood
+\SI{2.36}{\hour} --- almost a quarter of the charge --- before its label, and
+the true end state was never written to the record at all. The discrepancy
+announced itself as a contradiction between a figure and the text beneath it:
+mean $\varepsilon_{\mathrm{local}}$ at the end of the discharge read $0.356$
+from the map and $0.1545$ from the march.
+
+A second, subtler inconsistency sat inside each frame. The enthalpy array was
+appended \emph{after} the update while $\varepsilon_{\mathrm{local}}$,
+$\Tpcm$ and $\delta$ in the same frame came from before it, so a single frame
+did not describe a single instant.
+
+The convention is now stated rather than implied. Frames are stamped in
+\code{t\_hist} at the instants where the \emph{state} arrays are exact; the
+profile arrays ($T_{f}$, NTU, $\Ui$, $q'$) in the same frame are those evaluated
+\emph{from} that state, i.e.\ the profile that drives the step beginning there.
+There are $n_{t}+1$ frames: one at $t=0$ and one at the end of every accepted
+step, the last of them closed by a single extra read-only sweep of the segment
+loop (\code{segment\_profile}). The separate array \code{t} continues to stamp
+the marched \emph{intervals}, and remains the right clock for the duty $Q(t)$.
+
+\paragraph{The discharge was drawn mirrored.}
+Section~\ref{sec:cyclic:reversal} establishes that the discharge march index
+runs backwards relative to the charge. The sizing and CSS loops un-mirror it
+when they close the cycle, which is why $\Nwells$ and the deviation were right;
+nothing un-mirrored it before plotting, so every discharge figure was reflected
+in depth. Compared without un-mirroring, the two edges of the cycle map differ
+by $0.677$ in $\varepsilon_{\mathrm{local}}$; compared correctly, by nothing.
+Discharge results are now returned in depth indexing, and the consequence worth
+stating is conceptual rather than cosmetic: \emph{there is one cascade, not
+two}. $\Tm$ belongs to the PCM at a physical position and does not care which
+way the fluid is flowing. The mirrored copy is an implementation detail of the
+march and no longer leaves the routine that needs it.
+
+\medskip
+Neither defect touched a marched or reported quantity, for the structural
+reason that nothing in the model reads the history: $\Nwells$, the deviation,
+$\eta_{\mathrm{storage}}$, the energy closure and $\varepsilon_{\mathrm{local}}$
+are all returned by the march itself. The frozen-fixture check
+(\S\ref{sec:defects}) is unchanged at a worst relative difference of
+$2.2\times10^{-12}$. What changed is that the figures now show what the model
+computed, and the map closes with a residual of exactly zero.
+
+\paragraph{A note on the convergence trace.}
+The drift $\max_{i}|E'_{i}\!\mid_{\text{end}} - E'_{i}\!\mid_{\text{start}}|$
+falls geometrically by roughly a factor of $3.5$ per cycle and crosses the
+tolerance $10^{-9}$ after 27 or 28 cycles depending on the order in which the
+property library has been exercised beforehand --- the last few cycles are
+differencing quantities of order \SI{e8}{\kilo\joule} down to
+\SI{e-8}{}, so the trace is floating-point noise by then. $\Nwells$ and the
+deviation agree to six significant figures regardless. The convergence table is
+printed with an explicit format for that reason: rounding the drift column to
+six decimals displays everything below \num{5e-7} as zero and makes the run look
+converged six cycles early.

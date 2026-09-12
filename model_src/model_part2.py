@@ -399,6 +399,81 @@ def advance_segment(E, T_m, T0, K, dt, E_lat, C_s, C_l, sensible):
     return E, (E - E0) / dt
 
 
+def segment_profile(case, T_inlet, T_m_seg, m_dot, k_wall, E, n_segments=None):
+    """Instantaneous fluid and conductance profile for a frozen PCM state.
+
+    The inner loop of `march_h` without the time advance: it evaluates the
+    resistance network, the segment conductance and the fluid temperature
+    profile for the state `E` as it stands, and returns the instantaneous
+    q' = K (T_f - T_pcm).
+
+    It exists so that the last recorded frame of a march can carry a fluid
+    profile belonging to the *end* state rather than to the state one step
+    earlier. Everything it computes is already computed inside `march_h`;
+    this is one extra sweep per recorded march, not one per time level.
+    """
+    n_segments = n_segments or len(E)
+    dz = case.L_tube / n_segments
+    A, T_pcm = pcm_state(E, T_m_seg, case)
+    delta = delta_from_area(A, case.r_e, case.num_fins, case.fin_t, case.fin_L)
+
+    T_prof = np.empty(n_segments + 1)
+    T_prof[0] = T_inlet
+    NTU_prof = np.empty(n_segments)
+    U_prof = np.empty(n_segments)
+    q_prime = np.empty(n_segments)
+
+    T0 = T_inlet
+    for i in range(n_segments):
+        k_m = case.k_l if E[i] > 0.0 else case.k_s
+        h_i, cp_d, _, _ = h_internal(case.fluid2, T0, case.P, case.r_i, m_dot)
+        U_i = compute_U_i(h_i, case.r_i, case.r_e, k_wall, case.Rf_i, k_m,
+                          float(delta[i]), case.L_tube, case.fin_t,
+                          case.fin_L, case.num_fins)
+        NTU = float(np.clip((2 * np.pi * case.r_i * U_i * dz) / (m_dot * cp_d),
+                            -50.0, 50.0))
+        K = m_dot * cp_d * (1.0 - np.exp(-NTU)) / dz
+        q_prime[i] = K * (T0 - T_pcm[i])
+        T0 = T0 - q_prime[i] * dz / (m_dot * cp_d)
+        T_prof[i + 1] = T0
+        NTU_prof[i] = NTU
+        U_prof[i] = U_i
+
+    return dict(T_fluid=T_prof, NTU=NTU_prof, U_i=U_prof, q_prime=q_prime,
+                A_melt=A, T_pcm=T_pcm, delta=delta, E=np.array(E, float))
+
+
+def unmirror_march(res):
+    """Re-index a reversed-flow march result into charge (depth) coordinates.
+
+    Discharge marches from the opposite end of the tube, so its segment index
+    runs backwards relative to the charge. `run_cycle` and `simulate_css` hand
+    it a mirrored cascade and a mirrored initial state and un-mirror the result
+    when they close the loop; anything that *plots* a discharge result has to
+    do the same or it draws the well upside down.
+
+    Returns a shallow copy with every per-segment array reversed, including the
+    recorded history. `z`, `t` and `t_hist` are coordinates, not fields, and
+    are left alone. Scalars are left alone. The cascade in depth coordinates is
+    the same for both half-cycles, which is the point: after this call a
+    discharge result is plotted against `T_m_seg`, not against `T_m_seg[::-1]`.
+    """
+    n = len(res["E"])
+    out = dict(res)
+    for k in ("E", "A_melt", "T_pcm", "delta", "eps_local", "merge_proximity"):
+        if k in out and out[k] is not None:
+            out[k] = np.asarray(out[k])[::-1].copy()
+    h = res.get("history")
+    if h:
+        hh = {}
+        for k, v in h.items():
+            v = np.asarray(v)
+            # T_fluid has n+1 nodes (inlet plus one per segment); the rest have n
+            hh[k] = v[:, ::-1].copy() if v.ndim == 2 and v.shape[1] in (n, n + 1) else v
+        out["history"] = hh
+    return out
+
+
 def march_h(case, T_inlet, T_m_seg, m_dot, k_wall, times,
             n_segments=None, E0=None, record=False):
     """Segment march on the ENTHALPY state. Replaces `march` from v0.4.
@@ -406,6 +481,20 @@ def march_h(case, T_inlet, T_m_seg, m_dot, k_wall, times,
     Identical to `march` in every respect except what is integrated: the state
     is E' [J per m of tube] rather than A_melt [m2], so no heat is ever clipped
     and the PCM temperature is free to leave T_m.
+
+    Recording convention. Every history frame is stamped, in `t_hist`, with the
+    instant at which its state arrays (`E`, `A_melt`, `T_pcm`, `delta`) are
+    exact. The profile arrays (`T_fluid`, `NTU`, `U_i`, `q_prime`) in the same
+    frame are the ones evaluated from that state, i.e. the profile that drives
+    the step *beginning* there. There are `len(t)+1` frames: one at t = 0 and
+    one at the end of each accepted step, so the final state is in the record.
+
+    Earlier builds recorded the pre-step state but stamped it with the
+    post-step time, which on a logarithmic grid put the last frame a quarter of
+    a charge behind its label, and appended `E` after the update while the
+    other state arrays were from before it. Neither affected any marched or
+    reported quantity -- `Q_cum`, `closure`, `eps_local` and the returned state
+    all come from the march itself -- but every recorded plot was lagged.
     """
     n_segments = n_segments or case.n_segments
     dz = case.L_tube / n_segments
@@ -418,6 +507,7 @@ def march_h(case, T_inlet, T_m_seg, m_dot, k_wall, times,
     ts, Qs, T_outs = [], [], []
     hist = {k: [] for k in ("T_fluid", "T_pcm", "A_melt", "delta", "NTU",
                             "U_i", "q_prime", "E")} if record else None
+    t_hist = []
 
     for t in np.asarray(times, float):
         dt = t - t_prev
@@ -430,6 +520,7 @@ def march_h(case, T_inlet, T_m_seg, m_dot, k_wall, times,
         T0 = T_inlet
         q_prime = np.zeros(n_segments)
         if record:
+            E_before = E.copy()          # the state this frame is stamped at
             T_prof = np.empty(n_segments + 1); T_prof[0] = T_inlet
             NTU_prof = np.empty(n_segments); U_prof = np.empty(n_segments)
 
@@ -454,14 +545,24 @@ def march_h(case, T_inlet, T_m_seg, m_dot, k_wall, times,
                 T_prof[i + 1] = T0; NTU_prof[i] = NTU; U_prof[i] = U_i
 
         if record:
+            # stamped at t_prev, where E_before / A / T_pcm / delta are exact
+            t_hist.append(t_prev)
             hist["T_fluid"].append(T_prof.copy()); hist["T_pcm"].append(T_pcm.copy())
             hist["A_melt"].append(A.copy());       hist["delta"].append(delta.copy())
             hist["NTU"].append(NTU_prof.copy());   hist["U_i"].append(U_prof.copy())
-            hist["q_prime"].append(q_prime.copy()); hist["E"].append(E.copy())
+            hist["q_prime"].append(q_prime.copy()); hist["E"].append(E_before)
 
         Q_cum += float(np.sum(q_prime) * dz) * dt
         ts.append(t); Qs.append(float(np.sum(q_prime) * dz)); T_outs.append(T0)
         t_prev = t
+
+    if record:
+        # the end state, which the loop above never gets to record
+        end = segment_profile(case, T_inlet, T_m_seg, m_dot, k_wall, E,
+                              n_segments=n_segments)
+        t_hist.append(t_prev)
+        for k in hist:
+            hist[k].append(end[k])
 
     A, T_pcm = pcm_state(E, T_m_seg, case)
     dE = float(np.sum(E - E_start) * dz)
@@ -491,6 +592,7 @@ def march_h(case, T_inlet, T_m_seg, m_dot, k_wall, times,
                                               np.where(E < 0, E, 0.0))) * dz),
         "z": np.linspace(0.0, case.L_tube, n_segments),
         "history": {k: np.array(v) for k, v in hist.items()} if record else None,
+        "t_hist": np.array(t_hist) if record else None,
     }
 
 

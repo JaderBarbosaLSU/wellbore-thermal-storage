@@ -57,7 +57,7 @@
 with Phase-Change Material in Repurposed Wells\\[6pt]
 \normalsize Thermodynamic Cycles, Borehole Resistance Network,\\
 Melt-Front Formulations, Sizing and Performance Indices\\[4pt]
-\normalsize Model version 0.5 \textperiodcentered\ last updated 2026-09-12 BRT}
+\normalsize Model version 0.5a \textperiodcentered\ last updated 2026-09-12 BRT}
 \author{Craft \& Hawkins Department of Petroleum Engineering\\
 Louisiana State University}
 \date{\today}
@@ -167,6 +167,22 @@ rather than solve: $\Nwells$ from latent heat alone, both flows pinned by their
 glides, march to CSS, and report the deviation from target. At the design point
 the field delivers \SI{94.26}{\percent} of the \SI{1}{\mega\watt} target, and
 the shortfall is a \emph{discharge rate} limit rather than an inventory limit.
+
+\medskip
+\noindent\textbf{Changes in version 0.5a.} No physics; two defects in how
+results are \emph{recorded and drawn}, both found by asking why the melt map of
+a converged cycle did not close on itself (\S\ref{sec:cyclic:record}). The march
+recorded the state at the start of a step and stamped it with the time at the
+end, which on a logarithmic grid put the last frame \SI{2.36}{\hour} behind its
+label and left the true end state out of the record entirely; and the discharge
+was plotted in its own march indexing, which is mirrored, so the well was drawn
+upside down for half the cycle. Every marched and reported quantity is
+unaffected --- $\Nwells$, the deviation, the energy closure and the melted
+fractions all come from the march rather than from the record --- but the
+plotted profiles were stale and the two halves of the cycle map did not join.
+They now do, exactly. The same flow-reversal defect corrected in the sizing path
+in v0.5 was also still present in the profile section of the notebook, where it
+moved the charge-to-discharge $\Ui$ ratio from an apparent $1.401$ to $7.115$.
 
 Cycling also exposed a defect in the existing single-cycle path
 (\S\ref{sec:cyclic:reversal}): the melt state was handed to the discharge

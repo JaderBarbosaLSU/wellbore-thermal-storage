@@ -512,13 +512,17 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False):
     m1_dc = Eb["Q_dot_in_ORC"] / cp_dc / case.DT_3C_2C / (N * case.num_tubes)
 
     # ---- march until the state repeats -----------------------------------
+    def cycle(E0, rec=False):
+        ch = march_h(case, T["T_4c"], T_m_seg, m1_ch, case.k_wall, times_ch,
+                     n_segments=n, E0=E0, record=rec)
+        dc = march_h(case, T["T_3d"], T_m_seg_dc, m1_dc, case.k_wall, times_dc,
+                     n_segments=n, E0=ch["E"][::-1], record=rec)
+        return ch, dc
+
     E = np.zeros(n)
     history = []
     for k in range(n_cycles):
-        ch = march_h(case, T["T_4c"], T_m_seg, m1_ch, case.k_wall, times_ch,
-                     n_segments=n, E0=E, record=record)
-        dc = march_h(case, T["T_3d"], T_m_seg_dc, m1_dc, case.k_wall, times_dc,
-                     n_segments=n, E0=ch["E"][::-1], record=record)
+        ch, dc = cycle(E)
         Q_ch = ch["Q_cum_J"] * case.num_tubes * N / 1000.0          # kJ, field
         Q_dc = abs(dc["Q_cum_J"]) * case.num_tubes * N / 1000.0
         drift = float(np.max(np.abs(dc["E"][::-1] - E)))
@@ -530,6 +534,18 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False):
         if drift < tol:
             break
 
+    if record:
+        # One extra cycle from the converged state, this time recording. The
+        # state repeats to `tol`, so this reproduces the last cycle; doing it
+        # here rather than inside the loop means the profile sweep that closes
+        # each recorded march is paid once instead of `cycles` times.
+        ch, dc = cycle(E, rec=True)
+
+    # The discharge marches from the far end, so its segment index runs
+    # backwards. Everything returned to the caller is in CHARGE (depth)
+    # indexing, which is why there is one cascade, `T_m_seg`, and not two.
+    dc = unmirror_march(dc)
+
     req = Eb["D_E_in_ORC"]
     deviation = Q_dc / req - 1.0
     return dict(
@@ -540,7 +556,10 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False):
         deviation=deviation,
         W_el_out_implied=case.W_dot_el_out * (1.0 + deviation),
         eta_storage=Q_dc / Q_ch, lambda_overridden=lambda_overridden,
-        T=T, budget=Eb, T_m_seg=T_m_seg, T_m_seg_dc=T_m_seg_dc)
+        T=T, budget=Eb, T_m_seg=T_m_seg)
+        # no `T_m_seg_dc`: the discharge is returned in depth indexing, where
+        # the cascade is the same physical object as on charge. The mirrored
+        # copy is an internal detail of the march and does not leave here.
 
 
 def css_report(case, r):
