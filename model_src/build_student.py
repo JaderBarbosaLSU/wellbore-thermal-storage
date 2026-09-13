@@ -78,9 +78,15 @@ One cell, written to disk and imported. **You do not need to read it.** The
 equations it implements are in §2 and the function that evaluates each one is
 named there.
 
-If you want to change the *physics* rather than the parameters, edit
-`thums.py` after this cell has run — but note that the verification notebook
-checks the version in the repository, not your copy.
+**To change a parameter, go to §3.1 — not here.** Editing a default in this
+cell is the one thing that looks like it works and does not: the file on disk
+changes, the run does not, and the old answer comes back with no warning.
+(The import cell below now reloads, so it *would* work — but §3.1 is one line,
+needs no reload, and shows the units.)
+
+Edit this cell only to change the **physics**: a new correlation, a different
+resistance network, an extra term. Note that the verification notebook checks
+the version in the repository, not your copy.
 """))
 
 cells.append(code('%%writefile thums.py\n' + MODEL.read_text()))
