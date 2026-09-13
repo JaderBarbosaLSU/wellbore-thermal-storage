@@ -1,20 +1,36 @@
-"""THUMS model -- flat, self-contained.
+"""THUMS -- latent heat storage in a repurposed wellbore.
 
-Assembled from the repository source by docs/assemble.py. The functions in the
-`cycles`, `network`, `front_closed_form`, `march_legacy` and `hydraulics`
-sections are the ORIGINAL v0.1 notebook functions, extracted verbatim; only
-warning prints and duplicated imports were removed. Nothing was rewritten, so
-this module reproduces the conference-paper numbers exactly.
+The live model, v0.6. One formulation (enthalpy, "Formulation C"), one sizing
+framing (specify the hardware and march to cyclic steady state), no root
+finding anywhere.
 
-The `front_energy_balance`, `march`, `sizing` and `run` sections are the v0.2
-corrections and are new code.
+    plant      cycle_state_points   ->  state points and the two efficiencies
+               energy_budget        ->  how much energy must move per cycle
+
+    borehole   pcm_capacities       ->  E'_lat, C_s, C_l  per unit tube length
+               pcm_state            ->  E'  ->  (A_melt, T_pcm)
+               advance_segment      ->  branchwise-exact step of E'
+               march_h              ->  one half-cycle over the whole exchanger
+
+    cycle      simulate_css         ->  repeat until the state returns to itself
+               simulate_css_corrected  ->  ... with one ORC correction pass
+               css_report           ->  print it
+
+Everything is driven by one frozen dataclass, `Case`. To study a parameter,
+copy `CASE` with the field changed -- `CASE.with_(N_lay=12)` -- and re-run.
+`validate_case` checks a case for the inconsistencies that are easy to create
+and hard to see.
+
+Superseded material is not here. The first-cycle sizing chain, the closed-form
+Stefan front and the area-based melt front were removed; the reasoning that
+removed them is in DESIGN_NOTES.md and in the project report, and the code is
+in version control.
 """
 import numpy as np
 import CoolProp.CoolProp as CP
 from CoolProp.CoolProp import PropsSI
 from math import log, pi
 import pandas as pd
-
 
 
 # ==========================================================================
@@ -25,7 +41,6 @@ import pandas as pd
 ########################################
 ########################################
 ########################################
-
 
 
 # ==========================================================================
@@ -444,7 +459,6 @@ def two_stage_htheatpump_2regs(refrig, T_13h, T_2h, DT_sub):
 #import matplotlib.pyplot as plt
 
 
-
 # ==========================================================================
 # network
 # ==========================================================================
@@ -551,7 +565,6 @@ def compute_U_i(h_i, r_i, r_e, k_w, Rf_i_prime, k_m, delta, L_tube, fin_t, fin_L
 ########################################
 
 
-
 # ==========================================================================
 # front_closed_form
 # ==========================================================================
@@ -560,7 +573,6 @@ def compute_U_i(h_i, r_i, r_e, k_w, Rf_i_prime, k_m, delta, L_tube, fin_t, fin_L
 #####################################
 #####################################
 #####################################
-
 
 
 # ==========================================================================
@@ -720,7 +732,6 @@ def calculate_pressure_drop(geom_par_vector, m_dot_well_tube, fluid, T_inlet, T_
 # @title
 
 # Function to evaluate the energy ratio for a given value of N_wells (Charging)
-
 
 
 # ==========================================================================
@@ -928,28 +939,9 @@ class Case:
 CASE = Case()          # the design point
 
 
-
 # ==========================================================================
 # front_energy_balance   (the v0.2 correction)
 # ==========================================================================
-
-def area_from_delta(delta, r_e, n_f=0, t_f=0.0, L_f=0.0):
-    """Melted PCM cross-section for a melt layer of thickness `delta`.
-
-    The annulus between r_e and r_e+delta is not all PCM: the fins occupy metal
-    inside it. Their cross-section within the front is
-
-        n_f * t_f * min(delta, L_f)
-
-    which saturates once the front passes the fin tips. Excluding it matters
-    because A_melt is the quantity the latent-heat balance conserves, so it must
-    be PCM and nothing else. At the design point the fins are 6 % of the melted
-    area, rising to 11 % when the layer is thin.
-    """
-    d = np.maximum(delta, 0.0)
-    A_annulus = np.pi * ((r_e + d) ** 2 - r_e ** 2)
-    A_fin = n_f * t_f * np.minimum(d, L_f)
-    return np.maximum(A_annulus - A_fin, 0.0)
 
 
 def delta_from_area(A_melt, r_e, n_f=0, t_f=0.0, L_f=0.0):
@@ -1079,7 +1071,6 @@ def pcm_state(E, T_m_seg, case):
     T = np.where(E < 0.0, T_m_seg + E / C_s,
                  np.where(E > E_lat, T_m_seg + (E - E_lat) / C_l, T_m_seg))
     return A, T
-
 
 
 def advance_segment(E, T_m, T0, K, dt, E_lat, C_s, C_l, sensible):
@@ -1365,75 +1356,6 @@ def march_h(case, T_inlet, T_m_seg, m_dot, k_wall, times,
     }
 
 
-def layer_mean_T_m(case):
-    """<T_m>, the volume-weighted mean melting temperature over the cascade.
-
-    The layers are equal in developed length and each owns an equal share of
-    the PCM cross-section, so the volume weighting reduces to a plain mean over
-    the N_lay melting temperatures:
-
-        T_m,l = T_m_top - l * dT_glide / N_lay,        l = 0 .. N_lay-1
-
-        <T_m> = T_m_top - (N_lay - 1)/(2 N_lay) * dT_glide
-
-    For N_lay = 1 this returns T_m_top, which is what makes the old capacity
-    formula the NO-CASCADE limit of the corrected one below.
-    """
-    return case.T_m - 0.5 * (case.N_lay - 1) / case.N_lay * case.DT_3C_2C
-
-
-def well_capacity_kJ(case, T_charge_in, T_discharge_in):
-    """Energy ONE well can hold over a full cycle -- the capacity criterion.
-
-    CORRECTED 2026-09 (v0.4b). The previous form was
-
-        E_well = rho V_well [ h_m + cp_l (T_charge_in - T_m) ]
-
-    with `case.T_m` the melting temperature of the TOP layer, so the sensible
-    span was DT_4C_M = 10 K for the whole store. But DT_4C_M is the approach
-    that fixes the charging inlet relative to the FIRST layer only. Applying it
-    to all N_lay layers is the no-cascade limit of this function: set
-    N_lay = 1 and the two expressions agree identically.
-
-    It was also not a bound in either direction. At the design point the
-    model's own end-of-charge state held 4.822 MWh per well against a claimed
-    capacity of 4.744 -- mean superheat reached 13.81 K, not 10 K, because
-    segments early in a layer sit under fluid far hotter than their own T_m and
-    because a nearly saturated store barely cools the fluid at all.
-
-    The corrected form is a true CEILING on the cycle swing, resolved over the
-    cascade:
-
-        E_well = rho V_well [ h_m
-                            + cp_l <T_3c  - T_m,l>      liquid superheat
-                            + cp_s <T_m,l - T_3d> ]     solid subcooling
-
-    Both spans are physical limits rather than design choices: the PCM cannot
-    pass the temperature of the fluid entering the field on either half-cycle.
-    The solid term belongs here because the store begins each charge from
-    wherever the discharge left it, so the capacity that matters is the full
-    swing. That term is the one the previous docstring promised through a
-    `cycle=True` argument that was never implemented, alongside a
-    `T_discharge_in` parameter that was accepted and never used.
-
-    Consequence at the design point: N_capacity 11.573 -> 9.574, so the RATE
-    criterion binds instead and N_wells falls 11.573 -> 11.255. That is the
-    point of the change. A bound that binds should be suspect, because it
-    asserts the design sits at its thermodynamic ceiling. It does not: it sits
-    at 84 % of it, whereas the old formula put it at 102 %.
-    """
-    m_well = case.rho_latent * case.V_well
-    E = case.h_m
-    if case.sensible_heat:
-        T_m_bar = layer_mean_T_m(case)
-        # liquid superheat: ceiling is the charging inlet temperature
-        E += case.cp_l * max(T_charge_in - T_m_bar, 0.0)
-        # solid subcooling: ceiling is the discharging inlet temperature
-        if T_discharge_in is not None:
-            E += case.cp_s * max(T_m_bar - T_discharge_in, 0.0)
-    return m_well * E / 1000.0                      # kJ
-
-
 # ==========================================================================
 # cycles + energy budget
 # ==========================================================================
@@ -1543,369 +1465,10 @@ def melting_temperatures(case):
 # sizing
 # ==========================================================================
 
-class SizingResult(dict):
-    """The sizing dict, with retired key names that fail loudly.
-
-    THERE ARE ONLY TWO INDEPENDENT NUMBERS. The model once exposed four names
-    for them, and two of those names were traps:
-
-      N_inventory  was an ALIAS for N_capacity, so `N_inventory == N_capacity`
-                   returned True and nobody could tell them apart -- but in
-                   v0.3 the same name meant something ELSE entirely (the well
-                   count at which eps_PCM(N) = 1, a marched quantity needing a
-                   root solve). Same name, two meanings, no warning. Anyone
-                   comparing a v0.3 printout with a v0.4 one was comparing
-                   different quantities.
-
-      N_heat       was the dict key, while the report said "charge-rate
-                   criterion" and the sweep column said N_rate. Three labels,
-                   one quantity, and `d['N_rate']` raised KeyError.
-
-    Both are now retired. Reading either raises with an explanation rather
-    than returning a number that may mean something other than you think.
-    """
-
-    _RETIRED = {
-        'N_inventory':
-            "'N_inventory' is retired. In v0.4 it was a silent alias for "
-            "'N_capacity'; in v0.3 it meant the well count at which "
-            "eps_PCM(N) = 1, which is NOT the same quantity. Use "
-            "'N_capacity' if you want the closed-form capacity bound, and "
-            "do not compare v0.3 printouts of N_inventory with it.",
-        'N_heat':
-            "'N_heat' is retired; the rate criterion is now 'N_rate' "
-            "everywhere -- dict key, report text and sweep column.",
-    }
-
-    def __missing__(self, key):
-        if key in self._RETIRED:
-            raise KeyError(self._RETIRED[key])
-        raise KeyError(key)
-
-    def get(self, key, default=None):
-        # .get() must not silently return None for a retired name: that is the
-        # exact failure this class exists to prevent.
-        if key in self._RETIRED and key not in self:
-            raise KeyError(self._RETIRED[key])
-        return super().get(key, default)
-
-
-def _bisect(f, lo, hi, tol, max_iter, what):
-    flo, fhi = f(lo), f(hi)
-    if flo * fhi > 0:
-        raise RuntimeError(f"{what}: root outside bracket [{lo}, {hi}]")
-    for it in range(1, max_iter + 1):
-        mid = 0.5 * (lo + hi)
-        fm = f(mid)
-        if abs(fm) < tol or (hi - lo) < 1e-3:
-            return mid, it
-        if flo * fm < 0:
-            hi, fhi = mid, fm
-        else:
-            lo, flo = mid, fm
-    raise RuntimeError(f"{what}: no convergence in {max_iter} iterations")
-
-
-def size_well_field(case, T_inlet, T_m_seg, m_dot_total, D_E_required_kJ,
-                    times, k_wall, n_segments=60, T_discharge_in=None):
-    """N_wells = max(N_charge_rate, N_capacity).
-
-    TWO CRITERIA, and they answer different questions.
-
-    N_charge_rate -- can the field ABSORB D_E_required within t_ch? A rate
-    question. This is the loop v0.1 actually solved
-    (`find_N_wells_for_Q_ratio_ch_fast`), and it is the only one it used.
-
-    N_capacity -- can the field CONTAIN D_E_required at all? A capacity
-    question, and the one the v0.1 notebook computed as `N_wells_ideal` and then
-    spent only on costing:
-
-        N_capacity = D_E_required / E_well,
-        E_well = rho V_well [ h_m + cp_l (T_charge_in - T_m) ]
-
-    It is a hard lower bound: no thermal resistance, no losses, so no design can
-    do better. Because it is a closed form it costs nothing to evaluate, unlike
-    the version this replaces.
-
-    WHY NOT SIZE ON THE DISCHARGE. Sizing must act on whichever variable is
-    free. During charging the flow is pinned by the specified glide
-    (m_dot = Q_out_HP / cp / DT_3C_2C), so N is the only freedom and the charge
-    can size it. During discharging N is already fixed, so the flow is the
-    freedom and the discharge sizes that instead. Pinning the discharge flow to
-    its glide as well leaves the delivered energy saturating at 0.996 of the
-    requirement for ANY well count -- there is no root -- because the fluid
-    leaves slightly short of the nominal outlet temperature. The v0.1
-    arrangement is correct, and this is why.
-    """
-    def evaluate(N):
-        m1 = m_dot_total / (N * case.num_tubes)
-        r = march_h(case, T_inlet, T_m_seg, m1, k_wall, times,
-                    n_segments=n_segments)
-        Q_total = r["Q_cum_J"] * case.num_tubes * N / 1000.0        # kJ
-        return r, Q_total
-
-    lo, hi = case.N_wells_bracket
-
-    # ---- capacity: closed form, no march needed ---------------------------
-    E_well = well_capacity_kJ(case, T_inlet, T_discharge_in)
-    N_cap = D_E_required_kJ / E_well
-
-    # ---- charge rate ------------------------------------------------------
-    try:
-        N_rate, _ = _bisect(lambda N: D_E_required_kJ / evaluate(N)[1] - 1.0,
-                            lo, hi, case.tol_Q_ratio, case.max_iterations,
-                            "charge-rate sizing")
-    except RuntimeError:
-        if D_E_required_kJ / evaluate(lo)[1] <= 1.0:
-            N_rate = lo
-        else:
-            raise
-
-    N = max(N_rate, N_cap)
-    r, Q_total = evaluate(N)
-    A_avail, E_lat, _, _ = pcm_capacities(case)
-    dz = case.L_tube / n_segments
-    eps = float(np.sum(r["A_melt"] * dz)) * case.num_tubes / case.V_well
-
-    # Which criterion actually set N, and by how much did it win? A margin of a
-    # few percent means the design sits on the crossover: a parameter sweep will
-    # switch criterion partway through, and reading either criterion ALONE
-    # across such a sweep gives a trend that is not the trend in N_wells.
-    binding = "capacity" if N_cap >= N_rate else "rate"
-    margin = abs(N_cap - N_rate) / N
-
-    return SizingResult(N_wells=N, N_rate=N_rate, N_capacity=N_cap,
-                binding=binding, binding_margin=margin,
-                near_crossover=bool(margin < 0.05),
-                eps_pcm=eps, E_well_kJ=E_well,
-                eps_local_max=float(r["eps_local"].max()),
-                eps_local_min=float(r["eps_local"].min()),
-                merge_proximity_max=r["merge_proximity_max"],
-                f_near_merge=r["f_near_merge"],
-                delta_merge=r["delta_merge"])
-
-
-def sizing_report(case, detail, label=""):
-    """Print the well count with the criterion that SET it named first.
-
-    THERE ARE ONLY TWO INDEPENDENT NUMBERS, and one derived from them:
-
-        N_rate      can the field ABSORB the energy within t_ch?   RATE
-        N_capacity  can the field CONTAIN the energy at all?       CAPACITY
-        N_wells     = max(N_rate, N_capacity)                      THE ANSWER
-
-    N_capacity is the seductive one: it is a closed form, it is smooth, it
-    responds to every geometric parameter, and it is wrong to read on its own.
-    It is a LOWER BOUND -- the best any design could do with no thermal
-    resistance and infinite time. Because N_wells is a MAXIMUM, whenever the
-    rate criterion binds N_capacity moves while the answer does not, and it
-    can move the opposite way.
-
-    The failure this guards against is real and was made by a careful reader.
-    Sweeping fin radial length, N_capacity fell monotonically (11.573, 11.239,
-    10.985 for 7.5, 3.75, 0.75 mm) which reads as "fins make things worse".
-    N_capacity = D_E / (rho V_well [h_m + cp dT]) contains no heat transfer at
-    all: shrinking a fin returns its metal volume to the PCM, so the bound
-    falls by pure volume bookkeeping. Over the same sweep the real answer rose
-    11.573 -> 11.569 -> 14.654, because the rate criterion took over. Removing
-    the fins entirely costs 42 % more wells.
-
-    So: lead with N_wells, name the binding criterion, and label N_capacity as
-    a bound rather than a result.
-    """
-    d = detail
-    N = d["N_wells"]
-    name = {"capacity": "CAPACITY (can the field CONTAIN the energy at all?)",
-            "rate":     "RATE     (can the field ABSORB it within t_ch?)"}
-    slack = "capacity" if d["binding"] == "rate" else "rate"
-
-    head = f"WELL FIELD SIZING{('  --  ' + label) if label else ''}"
-    print(head)
-    print("=" * max(len(head), 66))
-    print(f"  N_wells = {N:8.3f}        set by {name[d['binding']]}")
-    print()
-    print(f"    rate criterion          N_rate     = {d['N_rate']:8.3f}"
-          f"   {'<-- BINDING' if d['binding'] == 'rate' else ''}")
-    print(f"    capacity criterion      N_capacity = {d['N_capacity']:8.3f}"
-          f"   {'<-- BINDING' if d['binding'] == 'capacity' else ''}")
-    print(f"    N_wells = max(the two);  {slack} criterion is slack by "
-          f"{100*d['binding_margin']:.1f} %")
-    print()
-    print("    N_capacity is a LOWER BOUND, not a result. It is the closed form")
-    print("    D_E / (rho V_well [h_m + cp_l dT]) and contains no heat transfer.")
-    print("    Do not read it across a parameter sweep on its own.")
-
-    if d.get("near_crossover"):
-        print()
-        print(f"  ** the two criteria are within {100*d['binding_margin']:.1f} % "
-              f"-- this design sits ON the crossover.")
-        print("     A sweep of any geometric parameter will switch the binding")
-        print("     criterion partway through. Plot N_wells, not either criterion.")
-
-    # ---- H3: how close is the melt front to its neighbour? ---------------
-    if "merge_proximity_max" in d:
-        p, f = d["merge_proximity_max"], d["f_near_merge"]
-        print()
-        print(f"  H3 (concentric annulus, fronts do not interact):")
-        print(f"    fronts merge at delta = {1000*d['delta_merge']:.2f} mm"
-              f"   (the CELL radius, not the borehole wall)")
-        print(f"    max delta / delta_merge          = {p:.3f}")
-        print(f"    fraction of well above 0.90      = {100*f:.0f} %")
-        if p >= 0.999:
-            print("    -> the front SITS ON the merge line. Under Formulation C")
-            print("       delta cannot EXCEED it: the enthalpy cap enforces")
-            print("       A_melt <= A_avail, and A(delta_merge) = A_avail")
-            print("       identically. So this is not a violation. It is the")
-            print("       solution running at the exact limit of H3's validity.")
-        elif f > 0.5:
-            print("    -> most of the well runs near the merge line.")
-        else:
-            print("    -> comfortably inside H3.")
-        if p > 0.90:
-            print()
-            print("       Two consequences, both biasing the model AGAINST fins:")
-            print("       (a) the annular resistance ln(1+delta/r_e)/(2 pi k)")
-            print("           assumes the full azimuth 2 pi (r_e+delta) conducts.")
-            print("           Past merge it does not -- the neighbouring front")
-            print("           has taken part of it, and the last solid sits in")
-            print("           the corners between legs, on a longer and narrower")
-            print("           path. Late-stage resistance is UNDERSTATED, which")
-            print("           flatters whichever design is struggling to finish.")
-            print("       (b) fins enter U_i only as added SURFACE at the tube")
-            print("           (eta_f, P_T). They are not represented as radial")
-            print("           conduction paths reaching into that corner PCM --")
-            print("           which is the single thing fins do best in exactly")
-            print("           this regime. The model cannot credit it.")
-
 
 # ==========================================================================
 # run   (charge, size, discharge, KPIs)
 # ==========================================================================
-
-def run_cycle(case):
-    """The whole calculation: cycles, budget, sizing, charge, discharge, KPIs."""
-    rank, hp, T = cycle_state_points(case)
-    rank_eff, hp_cop = rank["rank_eff"], hp["hp_cop"]
-    E = energy_budget(case, rank_eff, hp_cop, T)
-    T_m_lay, T_m_lay_dc = melting_temperatures(case)
-
-    times_ch = np.logspace(0.0, np.log10(case.t_ch * 3600.0), case.n_times)
-    times_dc = np.logspace(0.0, np.log10(case.t_dc * 3600.0), case.n_times)
-    gv = case.geom_vector()
-    k_charge = case.k_wall
-
-    detail = SizingResult()
-
-    n_seg = case.n_segments
-    T_m_seg = layer_map(T_m_lay, n_seg, case.N_lay)
-    # THE DISCHARGE MARCHES FROM THE OTHER END. The PCM at a given physical
-    # position has ONE melting temperature; it is the march INDEX that mirrors,
-    # because the flow reverses between half-cycles. Building the discharge
-    # cascade as the exact reverse of the charge cascade also removes a
-    # one-layer (6.111 K) mismatch that layer_map introduces whenever
-    # n_segments is not a multiple of N_lay.
-    T_m_seg_dc = T_m_seg[::-1].copy()
-
-    sz = size_well_field(case, T["T_4c"], T_m_seg, E["m_dot_w_ch"],
-                         E["D_E_out_HP"], times_ch, k_charge, n_seg,
-                         T_discharge_in=T["T_3d"])
-    N_wells = sz["N_wells"]
-    eps_pcm = sz["eps_pcm"]
-    detail.update(sz)
-
-    m1_ch = E["m_dot_w_ch"] / (N_wells * case.num_tubes)
-    r_ch = march_h(case, T["T_4c"], T_m_seg, m1_ch, k_charge, times_ch,
-                   n_segments=n_seg)
-    E_stored = r_ch["Q_cum_J"] * case.num_tubes * N_wells / 1000.0
-
-    def discharged(ratio):
-        # E' is measured from a datum of SOLID AT THE LOCAL T_m, so the state
-        # array mirrors along with the march index. Passing it unreversed shifts
-        # the datum by up to 48.9 K and reports PCM hotter than any fluid that
-        # ever touched it: 176.6 C against a 160.0 C charge inlet.
-        r = march_h(case, T["T_3d"], T_m_seg_dc, ratio * m1_ch,
-                    case.k_wall, times_dc, n_segments=n_seg,
-                    E0=r_ch["E"][::-1])
-        return abs(r["Q_cum_J"]) * case.num_tubes * N_wells / 1000.0, r
-
-    ratio, _ = _bisect(lambda x: E["D_E_in_ORC"] / discharged(x)[0] - 1.0,
-                       *case.ratio_bracket, case.tol_Q_ratio,
-                       case.max_iterations, "discharge flow")
-    Q_dc, r_dc = discharged(ratio)
-    m_dot_d_well1 = ratio * m1_ch
-    dz = case.L_tube / n_seg
-    detail.update(
-        closure_charge=r_ch["closure"], closure_discharge=r_dc["closure"],
-        E_stored_kJ=E_stored, E_discharged_kJ=Q_dc,
-        eta_storage=Q_dc / E_stored,
-        eps_end_of_discharge=float(np.sum(r_dc["A_melt"] * dz))
-        * case.num_tubes / case.V_well,
-        E_sensible_charge_J=r_ch["E_sensible_J"],
-        E_sensible_discharge_J=r_dc["E_sensible_J"])
-
-    # ---- parasitics ----
-    _, pp_dc = calculate_pressure_drop(gv, m_dot_d_well1, case.fluid2,
-                                       T["T_2d"], T["T_3d"], case.P)
-    pumping_dc = pp_dc * case.num_tubes * N_wells / 1000.0
-    m1_ch = E["m_dot_w_ch"] / (N_wells * case.num_tubes)
-    _, pp_ch = calculate_pressure_drop(gv, m1_ch, case.fluid2,
-                                       T["T_4c"], T["T_4a"], case.P)
-    pumping_ch = pp_ch * case.num_tubes * N_wells / 1000.0
-
-    # ---- KPIs ----
-    D_E_in_ORC_kWh = E["D_E_in_ORC"] / 3600.0
-    E_well = D_E_in_ORC_kWh / N_wells / 1000.0                     # MWh
-    kpis = {
-        "eta_rte": ((case.W_dot_el_out - pumping_dc) * case.t_dc
-                    / ((E["W_dot_el_in"] + pumping_ch) * case.t_ch)),
-        "eta_rte_nopump": (case.W_dot_el_out * case.t_dc
-                           / (E["W_dot_el_in"] * case.t_ch)),
-        "cop_hp": hp_cop,
-        "eta_orc": rank_eff,
-        "eps_pcm": eps_pcm,
-        "E_well": E_well,
-        "rho_E": E_well * 1000.0 / case.V_well,
-        "N_wells": N_wells,
-        "wells_per_MW": N_wells / (case.W_dot_el_out / 1000.0),
-        "f_pump": (pumping_ch + pumping_dc) / case.W_dot_el_out,
-        "c_pcm": case.cost_per_kWh,
-    }
-
-    # ---- DoE-study indicators -------------------------------------------
-    # Restored from the earlier factorial study. Three are new; eps_m, RTE and
-    # dE_therm were already present as eps_pcm, eta_rte and E_well.
-    #
-    #   eta_T      thermal -> net electric conversion of the discharge side,
-    #              W_el_out / Q_in_ORC. Identically rank_eff * Turb_eff * ElG_eff.
-    #   eta_T_eff  the same after the discharge pumping parasitic is charged
-    #              against it: eta_T - N W_f,dc / Q_in_ORC.
-    #   eps_rte    RTE weighted by the melted fraction, RTE * eps_m.
-    #   dE_therm   thermal energy stored per well  [kWh]
-    #   dE_elec    net electric energy stored per well, dE_therm * eta_T_eff
-    #
-    # CAVEAT on eps_rte, which matters for reading a DoE table. eps_m saturates:
-    # under the enthalpy formulation, once a segment has melted all its PCM the
-    # further energy goes into SUPERHEAT, which eps_m cannot see. At this design
-    # point eps_m = 1.0000 exactly, so eps_rte == RTE and carries no information.
-    # It only discriminates across designs that do NOT saturate. `util_enthalpy`
-    # below is the non-saturating companion: energy actually banked per well as a
-    # fraction of the capacity ceiling of well_capacity_kJ.
-    eta_T = case.W_dot_el_out / E["Q_dot_in_ORC"]
-    eta_T_eff = eta_T - pumping_dc / E["Q_dot_in_ORC"]
-    dE_therm = E["D_E_in_ORC"] / 3600.0 / N_wells                   # kWh/well
-    kpis.update({
-        "eta_T": eta_T,
-        "eta_T_eff": eta_T_eff,
-        "eps_rte": kpis["eta_rte"] * eps_pcm,
-        "dE_therm_kWh": dE_therm,
-        "dE_elec_kWh": dE_therm * eta_T_eff,
-        "util_enthalpy": (detail["E_stored_kJ"] / N_wells) / detail["E_well_kJ"],
-    })
-    detail.update(flow_ratio_dc_ch=ratio, m_dot_d_well1=m_dot_d_well1,
-                  pumping_ch_kW=pumping_ch, pumping_dc_kW=pumping_dc)
-    return {"kpis": kpis, "detail": detail, "T": T}
-
-
 
 
 # ==========================================================================
@@ -2141,3 +1704,90 @@ def css_report(case, r):
         print("    The store melts completely but does not refreeze completely,")
         print("    so the shortfall is a DISCHARGE RATE limit, not an inventory")
         print("    limit. More PCM per well is not the lever.")
+
+
+def validate_case(case, verbose=True):
+    """Check a Case for the inconsistencies that are easy to create.
+
+    This is not a check that the model is right -- that lives in the
+    verification notebook. It is a check that YOUR PARAMETERS are consistent,
+    and it fires on the traps that have actually caught people:
+
+      * `n_segments` not a multiple of `N_lay`, which makes `layer_map` place
+        a layer boundary mid-segment;
+      * a discharge inlet that is not below the coldest layer, or a charge
+        inlet not above the hottest, so the half-cycle cannot run;
+      * a glide so large that the coldest layer falls below the sink, or so
+        small that the cascade collapses;
+      * a time grid too coarse for the fastest segment time constant.
+
+    Returns a list of (level, message). `level` is 'error' for a case that
+    cannot be run and 'warn' for one that can but probably should not be.
+    """
+    msgs = []
+    def err(m): msgs.append(('error', m))
+    def warn(m): msgs.append(('warn', m))
+
+    # --- the cascade -----------------------------------------------------
+    if case.N_lay < 1:
+        err(f'N_lay = {case.N_lay}; must be at least 1')
+    if case.n_segments % case.N_lay:
+        warn(f'n_segments = {case.n_segments} is not a multiple of '
+             f'N_lay = {case.N_lay}: layer_map puts a layer boundary inside a '
+             f'segment, so one segment carries the wrong melting temperature '
+             f'by up to {case.DT_3C_2C / case.N_lay:.3f} K. '
+             f'Nearest clean values: '
+             f'{case.N_lay * (case.n_segments // case.N_lay)} or '
+             f'{case.N_lay * (case.n_segments // case.N_lay + 1)}')
+
+    T_bot = T_m_bottom(case) - 273.15
+    spacing = case.DT_3C_2C / case.N_lay
+
+    # --- the two inlets --------------------------------------------------
+    T_in_ch = case.T_m_C + case.DT_4C_M
+    T_in_dc = T_bot - case.DT_M_1D
+    if case.DT_4C_M <= 0:
+        err(f'DT_4C_M = {case.DT_4C_M} K; the charge inlet must be ABOVE the '
+            f'hottest layer or nothing melts')
+    if case.DT_M_1D <= 0:
+        err(f'DT_M_1D = {case.DT_M_1D} K; the discharge inlet must be BELOW '
+            f'the coldest layer or nothing freezes')
+    if 0 < case.DT_4C_M < spacing:
+        warn(f'DT_4C_M = {case.DT_4C_M:.3f} K is less than one layer width '
+             f'({spacing:.3f} K), so the charging fluid drops below a layer\'s '
+             f'melting point before leaving it')
+    if 0 < case.DT_M_1D < spacing:
+        warn(f'DT_M_1D = {case.DT_M_1D:.3f} K is less than one layer width '
+             f'({spacing:.3f} K); the discharge pinches at each layer exit')
+
+    # --- glide and the sink ----------------------------------------------
+    if case.DT_3C_2C <= 0:
+        err(f'DT_3C_2C = {case.DT_3C_2C} K; the glide sets both mass flows')
+    if T_in_dc <= case.T_sink_C:
+        err(f'discharge inlet {T_in_dc:.1f} C is at or below the sink '
+            f'{case.T_sink_C:.1f} C')
+    if T_in_ch <= T_bot:
+        err(f'charge inlet {T_in_ch:.1f} C is below the coldest layer '
+            f'{T_bot:.1f} C')
+
+    # --- properties ------------------------------------------------------
+    for f in ('h_m', 'cp_s', 'cp_l', 'k_s', 'k_l', 'rho_s', 'rho_l'):
+        v = getattr(case, f, None)
+        if v is not None and v <= 0:
+            err(f'{f} = {v}; must be positive')
+
+    # --- the time grid ---------------------------------------------------
+    if case.n_times < 8:
+        warn(f'n_times = {case.n_times}; the logarithmic grid needs enough '
+             f'levels that the last step does not span most of the window')
+
+    if verbose:
+        if not msgs:
+            print('validate_case: OK')
+            print(f'  cascade   {case.T_m_C:.3f} C down to {T_bot:.3f} C '
+                  f'in {case.N_lay} layers of {spacing:.3f} K')
+            print(f'  inlets    charge {T_in_ch:.3f} C, '
+                  f'discharge {T_in_dc:.3f} C')
+        for level, m in msgs:
+            print(f'{level.upper():5s} {m}')
+    return msgs

@@ -52,11 +52,7 @@ class Case:
     DT_E_sink: float = 5.0
     DT_2D_3E: float = 12.0
     # Discharge-inlet subcooling below the COLDEST cascade layer, state 1d in
-    # the plant diagram. The symmetric partner of DT_4C_M, and the parameter
-    # that closes the discharge side; see `cycle_state_points`. It replaced
-    # DT_m_2D in v0.6, which prescribed the exchanger OUTLET -- a quantity the
-    # model computes and, at CSS, contradicts. DT_M_1D = DT_3C_2C / N_lay
-    # (6.111 K here) reproduces the retired closure exactly.
+    # the plant diagram; the symmetric partner of DT_4C_M. See DN-8.
     DT_M_1D: float = 10.0
     T_source_C: float = 60.0
     DT_4C_M: float = 10.0
