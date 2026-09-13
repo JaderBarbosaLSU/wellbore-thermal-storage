@@ -85,6 +85,18 @@ checks the version in the repository, not your copy.
 
 cells.append(code('%%writefile thums.py\n' + MODEL.read_text()))
 
+cells.append(md("""
+### 0.1 Dependencies
+
+`CoolProp` supplies the water and working-fluid properties and is not in a
+stock Colab image, so it is installed here. This is the only cell that needs
+the network.
+"""))
+
+cells.append(code(r"""
+!pip install -q CoolProp
+"""))
+
 cells.append(code(r"""
 import numpy as np, pandas as pd, matplotlib.pyplot as plt
 import thums
@@ -136,20 +148,20 @@ Each segment carries **one scalar**: $E'$, the enthalpy per unit tube length of
 the PCM belonging to that segment, measured from a datum of *fully solid
 material at its own melting temperature*. Everything else is recovered from it.
 
-With $\Aav$ the PCM cross-section per tube,
+With $A_{\rm avail}$ the PCM cross-section per tube,
 
-$$\Elat=\rho\,h_m\Aav,\qquad C_s=\rho c_{p,s}\Aav,\qquad C_l=\rho c_{p,l}\Aav$$
+$$E'_{\rm lat}=\rho\,h_mA_{\rm avail},\qquad C_s=\rho c_{p,s}A_{\rm avail},\qquad C_l=\rho c_{p,l}A_{\rm avail}$$
 
 the constitutive curve is single-valued in $E'$:
 
 $$T_{\rm pcm}=\begin{cases}
 T_m+E'/C_s, & E'<0 &\text{(subcooled solid)}\\
-T_m, & 0\le E'\le \Elat &\text{(two-phase)}\\
-T_m+(E'-\Elat)/C_l, & E'>\Elat &\text{(superheated liquid)}
+T_m, & 0\le E'\le E'_{\rm lat} &\text{(two-phase)}\\
+T_m+(E'-E'_{\rm lat})/C_l, & E'>E'_{\rm lat} &\text{(superheated liquid)}
 \end{cases}$$
 
-$$A_{\rm melt}=\frac{\min\bigl(\max(E',0),\,\Elat\bigr)}{\rho h_m},
-\qquad \varepsilon_{\rm local}=\frac{A_{\rm melt}}{\Aav}\in[0,1]$$
+$$A_{\rm melt}=\frac{\min\bigl(\max(E',0),\,E'_{\rm lat}\bigr)}{\rho h_m},
+\qquad \varepsilon_{\rm local}=\frac{A_{\rm melt}}{A_{\rm avail}}\in[0,1]$$
 
 The saturation is **the definition, not a guard**: a segment cannot melt PCM it
 does not own, and the extra energy goes into superheat. So
@@ -620,6 +632,46 @@ it as a comparison between cases, not as an absolute.
 | project report | the full model statement, every equation with the function that evaluates it |
 | manuscript | the formulation and its numerics, written for publication |
 """))
+
+# --- guard -------------------------------------------------------------------
+# The paper defines macros like \\Aav and \\Elat in its preamble. A notebook has
+# no preamble: MathJax renders an unknown macro as a red error, and it is easy
+# to paste an equation across from the manuscript without noticing. Fail the
+# build rather than ship it.
+import re as _re
+_MATHJAX_OK = set("""
+frac dfrac tfrac begin end cases dcases align aligned text textbf emph mathrm
+mathbf mathcal boxed left right bigl bigr Bigl Bigr big Big quad qquad
+rho eta varepsilon epsilon delta Delta lambda mu pi sigma tau theta phi omega
+alpha beta gamma Gamma Omega Phi Psi Sigma Lambda
+dot ddot hat bar tilde vec overline underline sqrt sum prod int oint lim
+max min inf sup log ln exp sin cos tan
+approx equiv propto sim simeq cong neq ne le leq ge geq ll gg
+to rightarrow leftarrow Rightarrow leftrightarrow mapsto
+in notin subset supset cup cap emptyset forall exists
+infty partial nabla cdot cdots ldots dots vdots times pm mp
+hline midrule toprule bottomrule
+rm it bf sf tt scriptstyle displaystyle limits nolimits
+""".split())
+
+
+def _check_math(cells):
+    bad = {}
+    for i, c in enumerate(cells):
+        if c['cell_type'] != 'markdown':
+            continue
+        src = ''.join(c['source'])
+        for m in _re.findall(r'\\([A-Za-z]+)', src):
+            if m not in _MATHJAX_OK:
+                bad.setdefault(m, []).append(i)
+    if bad:
+        for m, where in sorted(bad.items()):
+            print(f'  UNKNOWN MACRO \\{m} in cells {where}')
+        raise SystemExit('markdown uses macros MathJax will not know; '
+                         'write them out or add them to _MATHJAX_OK')
+
+
+_check_math(cells)
 
 nb = {'cells': cells,
       'metadata': {'kernelspec': {'display_name': 'Python 3',
