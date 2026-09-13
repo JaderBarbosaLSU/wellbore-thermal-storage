@@ -99,6 +99,14 @@ cells.append(code(r"""
 
 cells.append(code(r"""
 import numpy as np, pandas as pd, matplotlib.pyplot as plt
+import importlib, sys
+
+# RELOAD, do not just import. `%%writefile` above rewrites thums.py on disk,
+# but `import` returns the module Python already has in memory: edit the model
+# cell, re-run it, re-run this one, and you would silently keep running the OLD
+# code. This makes that sequence work.
+if 'thums' in sys.modules:
+    importlib.reload(sys.modules['thums'])
 import thums
 from thums import (CASE, validate_case, cycle_state_points, energy_budget,
                    melting_temperatures, T_m_bottom, layer_map,
@@ -309,31 +317,54 @@ cells.append(md(r"""
 ---
 ### 3.1 The case
 
-This is the only cell you need to edit. `Case` is frozen, so make variants with
-`CASE.with_(field=value)` rather than assigning to fields.
+**This is the only cell you need to edit.** `Case` is frozen, so variants are
+made with `CASE.with_(field=value)` rather than by assigning to fields.
+
+> **Do not edit the model cell to change a parameter.** It will look as though
+> nothing happened. `%%writefile` rewrites `thums.py` on disk, but Python keeps
+> the module it already imported, so the run continues with the old values and
+> reports them without complaint. The import cell above now reloads, so the
+> sequence *edit model cell → re-run it → re-run the import cell* does work —
+> but the parameters below are the intended place, and need no reload at all.
+>
+> **Watch the units.** `h_m` is in **J/kg**, so a PCM with a latent heat of
+> 180 kJ/kg is `180_000.0`. Several fields are in SI base units where the
+> literature quotes kJ or mm; the comment after each one is authoritative.
 """))
 
 cells.append(code(r"""
-# ---- the design point -------------------------------------------------------
-# Edit here. Anything not named keeps the default in thums.py.
+# =============================================================================
+#  THE DESIGN POINT.  Edit the numbers here -- NOT in the model cell.
+#  They are written out rather than left as defaults so that changing one is a
+#  one-line edit with the units in front of you.
+# =============================================================================
 case = CASE.with_(
-    # --- PCM ---------------------------------------------------------------
-    # T_m_C   = 150.0,     # melting temperature of the TOP layer      [C]
-    # h_m     = 380.0,     # latent heat                               [kJ/kg]
-    # N_lay   = 9,         # number of cascade layers                  [-]
+    # --- PCM -----------------------------------------------------------------
+    T_m_C    = 150.0,        # melting temperature of the TOP layer      [C]
+    h_m      = 380_000.0,    # latent heat of fusion             [J/kg]  <- J!
+    rho_s    = 1550.0,       # solid density                            [kg/m3]
+    rho_l    = 1450.0,       # liquid density                           [kg/m3]
+    cp_s     = 1280.0,       # solid specific heat                    [J/kg/K]
+    cp_l     = 1800.0,       # liquid specific heat                   [J/kg/K]
+    k_s      = 0.60,         # solid conductivity                      [W/m/K]
+    k_l      = 0.45,         # liquid conductivity                     [W/m/K]
+    N_lay    = 9,            # cascade layers along the well               [-]
 
-    # --- operation ---------------------------------------------------------
-    # DT_3C_2C = 55.0,     # water glide: sets BOTH flows and the cascade [K]
-    # DT_4C_M  = 10.0,     # charge inlet above the hottest layer      [K]
-    # DT_M_1D  = 10.0,     # discharge inlet below the coldest layer   [K]
-    # t_ch = 10.0, t_dc = 10.0,                                      # [h]
+    # --- operation -----------------------------------------------------------
+    DT_3C_2C = 55.0,         # water glide: sets BOTH flows AND the cascade [K]
+    DT_4C_M  = 10.0,         # charge inlet above the hottest layer         [K]
+    DT_M_1D  = 10.0,         # discharge inlet below the coldest layer      [K]
+    t_ch     = 10.0,         # charging window                              [h]
+    t_dc     = 10.0,         # discharging window                           [h]
 
-    # --- geometry ----------------------------------------------------------
-    # num_fins = 24, fin_L = 0.0075, fin_t = 0.0015,                 # [m]
+    # --- geometry ------------------------------------------------------------
+    num_fins = 24,           # fins per leg                                 [-]
+    fin_L    = 0.0075,       # fin radial length                            [m]
+    fin_t    = 0.0015,       # fin thickness                                [m]
 
-    # --- numerics ----------------------------------------------------------
-    # n_segments = 100,    # segments along the developed tube
-    # n_times    = 40,     # logarithmic time levels per half-cycle
+    # --- numerics (not design variables) -------------------------------------
+    n_segments = 100,        # segments along the developed tube
+    n_times    = 40,         # logarithmic time levels per half-cycle
 )
 
 validate_case(case)
