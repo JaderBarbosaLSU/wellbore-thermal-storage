@@ -37,9 +37,11 @@ Table~\ref{tab:config} gives the configuration.
  & $k_{s}$ / $k_{l}$ & 0.60 / 0.45 & \si{\watt\per\meter\per\kelvin} \\
  & $\rho_{s}$ / $\rho_{l}$ & 1550 / 1450 & \si{\kilogram\per\meter\cubed} \\
 \midrule
-\multirow{4}{*}{Operation}
+\multirow{6}{*}{Operation}
  & fluid glide $\Delta T_{3C,2C}$ & 55 & \si{\kelvin} \\
- & charging inlet & 160 & \si{\celsius} \\
+ & charge superheat $\Delta T_{4C,M}$ & 10 & \si{\kelvin} \\
+ & discharge subcooling $\Delta T_{M,1D}$ & 10 & \si{\kelvin} \\
+ & charge / discharge inlet & 160.0 / 91.1 & \si{\celsius} \\
  & charge / discharge window & 10 / 10 & \si{\hour} \\
  & PCM layers $N_{\mathrm{lay}}$ & 9 & -- \\
 \bottomrule
@@ -59,8 +61,8 @@ appear to carry about \SI{4.7}{\percent} of the energy. A reader might
 reasonably conclude that the formulation is a small correction. It is not, for
 two separate reasons. The estimate itself is low --- the \SI{10}{\kelvin}
 approach is the approach of the \emph{first} layer of the cascade, and a segment
-that saturates goes on superheating past it, reaching \SI{22.8}{\kelvin} here,
-so the measured figure is \SI{10.3}{\percent} rather than \SI{4.7}{\percent}
+that saturates goes on superheating past it, reaching \SI{18.5}{\kelvin} here,
+so the measured figure is \SI{9.3}{\percent} rather than \SI{4.7}{\percent}
 (Table~\ref{tab:branches}). More importantly, the energy is the wrong thing to
 measure: Section~\ref{sec:levelling} shows that the sensible branches act on the
 \emph{distribution} of melting, where the effect is first-order.
@@ -79,9 +81,12 @@ usual arrangement --- close an energy balance on the exchanger size by root
 finding --- is not available once the cycle is required to repeat.
 
 Three levels are nested. At the plant level the high-temperature heat pump and
-the organic Rankine cycle are evaluated once; they never see the store, and
-their only outputs into the rest of the calculation are two efficiencies and the
-five secondary-fluid state points that bracket each half-cycle. At the field
+the organic Rankine cycle are evaluated once, and their only outputs into the
+rest of the calculation are two efficiencies and the secondary-fluid states that
+bracket each half-cycle. They are not quite independent of the store --- the ORC
+evaporating temperature follows an exchanger outlet, which is a result and not
+an input (\S\ref{sec:prescribe}) --- but the dependence is weak enough to be
+settled by a single correction pass rather than an outer loop. At the field
 level those state points and the target duty fix how much energy must move each
 cycle, and hence the number of wells. At the borehole level the segment march of
 \S\ref{sec:formulation}--\S\ref{sec:integration} is executed, twice per cycle,
@@ -114,7 +119,7 @@ multiplies that cost by thirty.
   \textbf{Input specification}\\[2pt]
   \emph{duty and schedule}\ \ $\dot W_{\mathrm{el}}=\SI{1}{\mega\watt}$,
     $t_{\mathrm{ch}}=t_{\mathrm{dc}}=\SI{10}{\hour}$, two \SI{2}{\hour} rests\\
-  \emph{approaches}\ \ $\Delta T_{4C,M}=\SI{10}{\kelvin}$,
+  \emph{approaches}\ \ $\Delta T_{4C,M}=\Delta T_{M,1D}=\SI{10}{\kelvin}$,
     glide $\Delta T_{3C,2C}=\SI{55}{\kelvin}$, sink/source temperatures\\
   \emph{PCM}\ \ $\Tm$, $\hm$, $c_{p,s}$, $c_{p,l}$, $k_{s}$, $k_{l}$,
     $\rho_{s}$, $\rho_{l}$, layers $N_{\mathrm{lay}}$\\
@@ -133,10 +138,12 @@ multiplies that cost by thirty.
   \begin{minipage}[t]{0.46\linewidth}
     \raggedright
     organic Rankine cycle\\ double-stage\\
-    $\Rightarrow\ \eta_{\mathrm{ORC}}=0.2369$
+    $\Rightarrow\ \eta_{\mathrm{ORC}}=0.2328$
   \end{minipage}\\[4pt]
-  secondary-fluid state points\ \
-  $T_{4c},T_{3c},T_{2c}$ (charge)\ \ and\ \ $T_{2d},T_{3d}$ (discharge)};
+  inlets from Eq.~\eqref{eq:inlets}: $T_{4c}=\SI{160.0}{\celsius}$,
+  $T_{3d}=\SI{91.1}{\celsius}$\\
+  outlets are \emph{results}; $T_{2d}$ enters here only as a provisional
+  estimate, corrected once below};
 
 %------------------------------------------------------------------ budget
 \node[blk, below=of cyc] (bud) {%
@@ -191,7 +198,8 @@ hardware. The borehole model that operates it is Figure~\ref{fig:proc2}.}
 %------------------------------------------------------------------ march
 \node[march, below=of from] (mar) {%
   \textbf{4.\ Half-cycle segment march} \hfill \emph{borehole level}\\[2pt]
-  charge: inlet $T_{4c}$, flow $\md_{\mathrm{ch}}$\\[3pt]
+  charge: inlet $T_{4c}=\Tm^{\mathrm{top}}+\Delta T_{4C,M}$,
+  flow $\md_{\mathrm{ch}}$\\[3pt]
   \textbf{for} each time level $t_{k}$, $k=1\ldots n_{t}$
   \ (logarithmic grid)\\
   \hspace*{3mm}\textbf{for} each segment $i=1\ldots n_{s}$, marching with the
@@ -210,17 +218,25 @@ hardware. The borehole model that operates it is Figure~\ref{fig:proc2}.}
 \node[blk, below=of mar] (rev) {%
   \textbf{5.\ Reverse the flow and discharge}\\[3pt]
   mirror the cascade \emph{and} the state, then march again with inlet
-  $T_{3d}$ and flow $\md_{\mathrm{dc}}$. The two \SI{2}{\hour} rests are exact
-  no-ops: the store is adiabatic and carries no axial conduction};
+  $T_{3d}=\Tm^{\mathrm{bot}}-\Delta T_{M,1D}$ and flow $\md_{\mathrm{dc}}$.
+  The two \SI{2}{\hour} rests are exact no-ops: the store is adiabatic and
+  carries no axial conduction};
 
 %------------------------------------------------------------------ test
 \node[test, below=of rev] (tst) {%
   $\displaystyle\max_{i}\bigl|E'_{i}\big|_{\mathrm{end}}
    -E'_{i}\big|_{\mathrm{start}}\bigr|<\varepsilon_{\mathrm{tol}}$ ?};
 
+%------------------------------------------------------------------ correction
+\node[blk, below=6mm of tst] (corr) {%
+  \textbf{6.\ Correct the ORC, once} \hfill \emph{not an outer loop}\\[3pt]
+  re-evaluate $\eta_{\mathrm{ORC}}$, the budget, $\Nwells$ and both flows at the
+  outlet the first pass produced, and repeat. The shift it causes is reported:
+  \SI{0.002}{\kelvin} here (\S\ref{sec:prescribe})};
+
 %------------------------------------------------------------------ outputs
-\node[fin, below=6mm of tst] (outp) {%
-  \textbf{6.\ Results at cyclic steady state}\\[3pt]
+\node[fin, below=of corr] (outp) {%
+  \textbf{7.\ Results at cyclic steady state}\\[3pt]
   profiles of $T_{f}$, $\Tpcm$, $\varepsilon_{\mathrm{local}}$, $\Ui$ and NTU;
   melt maps over depth and time\\
   delivered $\Delta E_{\mathrm{in,ORC}}$ $\Rightarrow$ \textbf{deviation from
@@ -231,7 +247,8 @@ hardware. The borehole model that operates it is Figure~\ref{fig:proc2}.}
 %------------------------------------------------------------------ arrows
 \foreach \a/\b in {from/mar, mar/rev, rev/tst}
   \draw[fl] (\a) -- (\b);
-\draw[fl] (tst) -- node[lab, left] {yes} (outp);
+\draw[fl] (tst) -- node[lab, left] {yes} (corr);
+\draw[fl] (corr) -- (outp);
 
 % CSS loop: back from the test to the march, routed clear of the blocks
 \coordinate (Lx) at ($(mar.west)+(-9mm,0)$);
@@ -243,7 +260,8 @@ hardware. The borehole model that operates it is Figure~\ref{fig:proc2}.}
 \caption{The solution procedure, part~2: the borehole level. Blocks~4 and~5 are
 the segment march of \S\ref{sec:formulation}--\S\ref{sec:integration}, executed
 twice per cycle and repeated until the store reproduces its own initial state.
-This loop is the only iteration in the entire procedure: no quantity anywhere in
+That loop is the only iteration in the procedure --- block~6 runs once, and is a
+second evaluation rather than a loop --- and no quantity anywhere in
 Figures~\ref{fig:proc1} and~\ref{fig:proc2} is obtained by root finding, which
 is a consequence of Eq.~\eqref{eq:css-unity} rather than a choice
 (\S\ref{sec:css}).}
@@ -440,9 +458,9 @@ within the two-phase plateau, $0\le E'\le\Elat$, and the parts traversed outside
 it gives Table~\ref{tab:branches}. Just over a tenth of the energy passing
 through the store is carried by the sensible branches, and it is not optional:
 at the end of the charge \emph{all} \num{100} segments stand at
-$\varepsilon_{\mathrm{local}}=1$, with a peak superheat of \SI{22.8}{\kelvin},
+$\varepsilon_{\mathrm{local}}=1$, with a peak superheat of \SI{18.5}{\kelvin},
 so a formulation whose state stops at $\Tm$ has nowhere to put the last
-\SI{8.6}{\percent} of the charge and nothing to draw the corresponding part of
+\SI{7.1}{\percent} of the charge and nothing to draw the corresponding part of
 the discharge from.
 
 \begin{table}[htbp]
@@ -455,11 +473,11 @@ Charge and discharge agree exactly, as Eq.~\eqref{eq:css-unity} requires.}
 \toprule
 branch & \% of half-cycle energy & peak departure from $\Tm$ \\
 \midrule
-two-phase plateau, $0\le E'\le\Elat$ & 89.70 & --- \\
-superheated liquid, $E'>\Elat$       &  8.60 & \SI{22.8}{\kelvin} \\
-subcooled solid, $E'<0$              &  1.71 & \SI{11.2}{\kelvin} \\
+two-phase plateau, $0\le E'\le\Elat$ & 90.66 & --- \\
+superheated liquid, $E'>\Elat$       &  7.09 & \SI{18.5}{\kelvin} \\
+subcooled solid, $E'<0$              &  2.25 & \SI{11.5}{\kelvin} \\
 \midrule
-outside the plateau                  & \textbf{10.30} & \\
+outside the plateau                  & \textbf{9.34} & \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -555,10 +573,10 @@ energies are the same number. The first cycle absorbs more than any later one
 because it alone begins from a cold, fully solid store --- which is precisely
 why a first-cycle result cannot be quoted for a repeating duty.
 
-At the latent-only size the field delivers \SI{94.26}{\percent} of target. The
+At the latent-only size the field delivers \SI{101.23}{\percent} of target. The
 store melts \emph{completely} at end of charge --- $\varepsilon_{\mathrm{local}}
-= 1.000$ at every station --- but returns only to a mean of $0.154$, so the
-shortfall is a \textbf{discharge rate} limit rather than an inventory limit. The
+= 1.000$ at every station --- but returns only to a mean of $0.082$, so what
+limits it is the \textbf{discharge rate} rather than the inventory. The
 signature is in the last column, drawn in Fig.~\ref{fig:cssdesign}: the residual
 melt fraction \emph{rises} with exchanger count, because each unit is then
 worked less hard and proportionally less of it refreezes. Were the limit an
@@ -573,24 +591,25 @@ than on more phase-change material.
 \begin{tikzpicture}
 \begin{axis}[width=0.48\linewidth,height=5.4cm,
   xlabel={$\Nwells$}, ylabel={delivered / target},
-  title={\small (a) energy delivered}, ymin=0.93, ymax=1.02, xmin=11, xmax=27,
+  title={\small (a) energy delivered}, ymin=0.89, ymax=1.07, xmin=8.5, xmax=18.5,
   grid=both, grid style={gray!20}]
-\addplot[thick,mark=*,mark size=1.3pt,blue!70!black] coordinates {(11.54,0.94264) (12.5,0.95396) (14,0.96624) (16,0.97774) (18,0.98621) (20,0.99311) (23,1.00125) (26,1.00816)};
-\addplot[dashed,gray,domain=11:27,samples=2,forget plot] {1};
-\node[font=\scriptsize,gray] at (axis cs:24.2,1.006) {target};
+\addplot[thick,mark=*,mark size=1.3pt,blue!70!black] coordinates {(9.00,0.90481) (10.00,0.96284) (11.00,0.99845) (11.74,1.01228) (13.00,1.02708) (14.00,1.03531) (16.00,1.04723) (18.00,1.05599)};
+\addplot[dashed,gray,domain=8.5:18.5,samples=2,forget plot] {1};
+\node[font=\scriptsize,gray] at (axis cs:16.6,0.995) {target};
 \end{axis}
 \begin{axis}[width=0.48\linewidth,height=5.4cm,at={(0.52\linewidth,0)},
   xlabel={$\Nwells$},
   ylabel={residual $\varepsilon_{\mathrm{local}}$},
   title={\small (b) unfrozen fraction at end of discharge},
-  ymin=0.10, ymax=0.70, xmin=11, xmax=27,
+  ymin=-0.02, ymax=0.42, xmin=8.5, xmax=18.5,
   grid=both, grid style={gray!20}]
-\addplot[thick,mark=triangle*,mark size=1.6pt,orange!85!black] coordinates {(11.54,0.1545) (12.5,0.2093) (14,0.2883) (16,0.3762) (18,0.4469) (20,0.5046) (23,0.5747) (26,0.6290)};
+\addplot[thick,mark=triangle*,mark size=1.6pt,orange!85!black] coordinates {(9.00,0.0025) (10.00,0.0077) (11.00,0.0395) (11.74,0.0823) (13.00,0.1536) (14.00,0.2057) (16.00,0.2955) (18.00,0.3672)};
 \end{axis}
 \end{tikzpicture}
 \caption{Cyclic steady state against exchanger count; each point is an
 independent march to convergence. (a) Delivered energy crosses target near
-$\Nwells\approx23$, about twice the latent-only count. (b) The diagnostic: the
+$\Nwells\approx11.0$, slightly \emph{below} the latent-only count of $11.74$.
+(b) The diagnostic: the
 residual melted fraction at end of discharge \emph{rises} with exchanger count,
 because each unit is then worked less hard and proportionally less of it
 refreezes. An inventory-limited store would show the opposite, since a larger
@@ -600,6 +619,74 @@ separately for that reason.}
 \label{fig:cssdesign}
 \end{figure}
 
+
+\subsection{What the formulation forbids you to prescribe}
+\label{sec:prescribe}
+
+A formulation that lets the phase-change material leave $\Tm$ also takes away a
+boundary condition that area-based models could get away with, and the point
+generalises beyond this case.
+
+Only the two exchanger \emph{inlets} are boundary conditions on the march. Both
+outlets are results of the heat transfer. An area-based model can blur this,
+because a saturated control volume holds its surface at $\Tm$ and the outlet
+temperature is then bounded by the cascade whatever happens. Under
+Eq.~\eqref{eq:enth-curve} it is not: the store finishes each charge superheated,
+so at the start of the following discharge the water leaves the exchanger at
+\SI{157.93}{\celsius}, nearly \SI{8}{\kelvin} \emph{above} the melting
+temperature of the hottest layer. Any prescribed value for that outlet is
+contradicted by the solution.
+
+The demonstration case originally carried exactly this defect. The discharge was
+closed by pinning the outlet at the top layer's melting temperature and deriving
+the inlet from it by subtracting the glide, which made the inlet approach
+\begin{equation}
+  \Delta T_{\mathrm{implied}}
+  =\frac{\Delta T_{3C,2C}}{N_{\mathrm{lay}}}=\SI{6.111}{\kelvin},
+  \label{eq:implied}
+\end{equation}
+one layer width --- a number nobody chose, and one that moves silently with the
+number of layers. The repair is to prescribe the two inlets symmetrically, as
+the approaches they are:
+\begin{equation}
+  T_{\mathrm{in}}^{\mathrm{ch}}=\Tm^{\mathrm{top}}+\Delta T_{4C,M},
+  \qquad
+  T_{\mathrm{in}}^{\mathrm{dc}}=\Tm^{\mathrm{bot}}-\Delta T_{M,1D},
+  \label{eq:inlets}
+\end{equation}
+with $\Tm^{\mathrm{bot}}=\Tm^{\mathrm{top}}
+-\Delta T_{3C,2C}(N_{\mathrm{lay}}-1)/N_{\mathrm{lay}}$ the coldest layer, which
+is the end the discharge enters. The outlet becomes a reported result.
+
+This matters quantitatively. Taking $\Delta T_{M,1D}=\SI{10}{\kelvin}$, the
+symmetric partner of the charging superheat rather than an accident of
+Eq.~\eqref{eq:implied}, moves the deviation of delivered energy from
+\SI{-5.69}{\percent} to \SI{+1.23}{\percent}: most of what looked like a
+shortfall of the store was a property of the closure. Setting
+$\Delta T_{M,1D}=\Delta T_{3C,2C}/N_{\mathrm{lay}}$ reproduces the earlier
+results to the last bit, so the change is a reparameterisation and the
+difference above is entirely the choice of approach.
+
+\paragraph{The cost, and why it is small.}
+The ORC evaporating temperature is tied to the exchanger outlet, so demoting
+that outlet to a result couples the plant to the store --- the decoupling that
+Figure~\ref{fig:proc1} relies on. The coupling is weak in a specific and
+checkable sense: the outlet is set by the store, not by the plant. Over a sweep
+of $\Delta T_{M,1D}$ from \SI{6}{\kelvin} to \SI{15}{\kelvin}, which moves the
+inlet by \SI{9}{\kelvin} and the deviation by twelve percentage points, the
+realised outlet moves by less than \SI{0.3}{\kelvin}. One correction pass ---
+evaluate the ORC at the outlet the first pass produced, then repeat --- shifts
+it by at most \SI{0.03}{\kelvin}, so no outer iteration is needed and the
+procedure of Figures~\ref{fig:proc1} and~\ref{fig:proc2} keeps its single loop.
+The shift is reported rather than assumed; if it were ever large, the remedy
+would be to iterate.
+
+\paragraph{A caution on what to do with the freedom.}
+The deviation crosses zero at $\Delta T_{M,1D}\approx\SI{9.30}{\kelvin}$. That
+value is deliberately \emph{not} adopted. Choosing an approach because it zeroes
+the deviation converts the one honestly reported output of the procedure back
+into a satisfied constraint, which is precisely the move \S\ref{sec:css} argues
+against. \SI{10}{\kelvin} is adopted because it is symmetric with the charge.
 
 \subsection{Consequence for sizing}
 
@@ -636,9 +723,9 @@ the resulting equation.
   fraction is confined to $[0,1]$ by the constitutive relation rather than by a
   guard. The amount at stake is not small: at cyclic steady state the store
   finishes each charge fully molten in all \num{100} segments, with a peak
-  superheat of \SI{22.8}{\kelvin}, and \SI{10.3}{\percent} of the energy
+  superheat of \SI{18.5}{\kelvin}, and \SI{9.3}{\percent} of the energy
   passing through the store each cycle traverses the sensible branches ---
-  \SI{8.6}{\percent} as superheat and \SI{1.7}{\percent} as subcooling. That is
+  \SI{7.1}{\percent} as superheat and \SI{2.3}{\percent} as subcooling. That is
   the energy an area-based state must either discard or fabricate.
 \item The conductance closing the segment equation is
   $K=\md c_{p}(1-e^{-\mathrm{NTU}})/\Delta z$ and not $\Ui P_{i}$. The two agree

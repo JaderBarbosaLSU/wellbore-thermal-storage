@@ -4,19 +4,63 @@
 # cycles + energy budget
 # ==========================================================================
 
-def cycle_state_points(case):
+def T_m_bottom(case):
+    """Melting temperature of the COLDEST cascade layer [K].
+
+    The cascade is graded so that each layer sits DT_4C_M below the charging
+    fluid at its own leading face, under a linear glide. The layers are spaced
+    DT_3C_2C / N_lay apart, so the span of the melting temperatures is one
+    layer width SHORT of the glide:
+
+        T_m,bottom = T_m,top - DT_3C_2C * (N_lay - 1) / N_lay
+
+    For the default case that is 150 - 55*8/9 = 101.111 C against a 55 K glide.
+    The discharge enters the exchanger at this end, which is why this is the
+    reference for DT_M_1D and not T_m,top.
+    """
+    return case.T_m - case.DT_3C_2C * (case.N_lay - 1) / case.N_lay
+
+
+def cycle_state_points(case, T_2d=None):
     """ORC and heat-pump state points, and the two cycle efficiencies.
 
-    Every state point is fixed by a prescribed approach temperature. Note the
-    expansions and compressions carry no isentropic efficiency, so eta_ORC and
-    COP are idealised -- only the electrical and mechanical efficiencies appear.
+    Note the expansions and compressions carry no isentropic efficiency, so
+    eta_ORC and COP are idealised -- only the electrical and mechanical
+    efficiencies appear.
+
+    THE DISCHARGE CLOSURE (changed in v0.6). Only the two exchanger INLETS are
+    boundary conditions on the march; both outlets are results of the heat
+    transfer and cannot be prescribed. Until v0.5a the discharge was closed the
+    other way round -- the outlet was pinned at T_2d = T_m,top - DT_m_2D with
+    DT_m_2D = 0, and the inlet derived by subtracting the glide. That is not
+    merely arbitrary, it is contradicted by the model's own solution: at the
+    start of a discharge at CSS the water leaves at 157.93 C, nearly 8 K above
+    the top layer's melting point, because the PCM is
+    superheated. It is also silently tied to N_lay -- the implied inlet
+    approach was DT_3C_2C / N_lay, one layer width, chosen by nobody.
+
+    The inlets are now prescribed symmetrically:
+
+        charge:    T_4c = T_m,top    + DT_4C_M     (superheat, drives melting)
+        discharge: T_3d = T_m,bottom - DT_M_1D     (subcooling, drives freezing)
+
+    and T_2d is DEMOTED to a provisional estimate, the value it would take if
+    the water achieved the full glide. It is provisional because the ORC needs
+    an evaporating temperature before the store has been marched: T_3e is tied
+    to T_2d. Pass the realised outlet back in as `T_2d` for the correction pass
+    (see `simulate_css`); the estimate is good enough that one pass suffices.
+
+    Setting DT_M_1D = DT_3C_2C / N_lay recovers the retired closure exactly,
+    which is how the change is verified to be a no-op.
     """
-    T_2d_C = case.T_m_C - case.DT_m_2D
+    T_3d_C = T_m_bottom(case) - 273.15 - case.DT_M_1D
+    # provisional unless the caller supplies the realised value
+    T_2d_C = (T_3d_C + case.DT_3C_2C) if T_2d is None else (T_2d - 273.15)
     T = dict(
         T_1e=case.T_sink_C + case.DT_E_sink + 273.15,
         T_3e=T_2d_C - case.DT_2D_3E + 273.15,
         T_2d=T_2d_C + 273.15,
-        T_3d=T_2d_C - case.DT_3C_2C + 273.15,     # DT_2D_3D is tied to the glide
+        T_3d=T_3d_C + 273.15,                     # the borehole inlet, state 1d
         T_4c=case.T_m_C + case.DT_4C_M + 273.15,
         T_4a=case.T_source_C - case.DT_3A_4A + 273.15,
         T_13h=case.T_source_C - case.DT_3A_13H + 273.15,
@@ -475,8 +519,13 @@ def run_cycle(case):
 # root. Under this framing that saturation is not a failure; it is the answer.
 
 
-def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False):
+def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False, T_2d=None):
     """March a specified well field to cyclic steady state.
+
+    One pass. `T_2d` overrides the provisional exchanger outlet used to set the
+    ORC evaporating temperature; `simulate_css_corrected` is the wrapper that
+    supplies the realised value. Called directly, this is the uncorrected
+    result.
 
     No root-finding. `N` defaults to the latent-heat-only well count and both
     flows are pinned by their glides, so the routine is a pure simulation.
@@ -492,7 +541,7 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False):
     lambda_overridden = case.loss_surplus != 0.0
     case = case.with_(loss_surplus=0.0) if lambda_overridden else case
 
-    rank, hp, T = cycle_state_points(case)
+    rank, hp, T = cycle_state_points(case, T_2d=T_2d)
     Eb = energy_budget(case, rank["rank_eff"], hp["hp_cop"], T)
     n = case.n_segments
     T_m_lay, T_m_lay_dc = melting_temperatures(case)
@@ -548,6 +597,12 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False):
 
     req = Eb["D_E_in_ORC"]
     deviation = Q_dc / req - 1.0
+
+    # ---- the outlet temperatures, which are results and not inputs ---------
+    T_2d_realised = mixed_mean_outlet(dc)      # what the ORC evaporator sees
+    T_2c_realised = mixed_mean_outlet(ch)      # what returns to the HP condenser
+    glide_dc = T_2d_realised - T["T_3d"]
+    glide_ch = T["T_4c"] - T_2c_realised
     return dict(
         N_wells=N, m1_ch=m1_ch, m1_dc=m1_dc, flow_ratio=m1_dc / m1_ch,
         cycles=len(history), converged=history[-1]["drift"] < tol,
@@ -556,10 +611,45 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False):
         deviation=deviation,
         W_el_out_implied=case.W_dot_el_out * (1.0 + deviation),
         eta_storage=Q_dc / Q_ch, lambda_overridden=lambda_overridden,
+        T_2d_assumed=T["T_2d"], T_2d_realised=T_2d_realised,
+        T_2c_assumed=T["T_2c"], T_2c_realised=T_2c_realised,
+        glide_dc=glide_dc, glide_ch=glide_ch,
+        glide_ratio_dc=glide_dc / case.DT_3C_2C,
+        T_2d_was_provisional=T_2d is None,
         T=T, budget=Eb, T_m_seg=T_m_seg)
         # no `T_m_seg_dc`: the discharge is returned in depth indexing, where
         # the cascade is the same physical object as on charge. The mirrored
         # copy is an internal detail of the march and does not leave here.
+
+
+def simulate_css_corrected(case, N=None, record=False, **kw):
+    """CSS with a single ORC correction pass. The v0.6 default path.
+
+    The ORC needs an evaporating temperature before the store has been marched,
+    because T_3e is tied to T_2d. Since v0.6 T_2d is a result, so the first pass
+    uses the provisional estimate -- the outlet the water would reach if it
+    achieved the full glide -- and the second re-evaluates the ORC, the energy
+    budget, the well count and both flows at the outlet the first pass actually
+    produced.
+
+    ONE pass is enough, and that is a property of the problem rather than a
+    hopeful choice: the outlet is pinned by the store, not by the plant. Over a
+    sweep of the discharge subcooling from 6 to 15 K -- which moves the inlet by
+    9 K and the deviation by twelve percentage points -- the realised outlet
+    moves by less than 0.3 K. `dT_2d_pass` is returned so the assumption is
+    visible rather than assumed; if it is ever large, iterate.
+
+    This keeps the plant level decoupled from the store in the sense that
+    matters for Figure "procedure": there is no outer loop, only a second
+    evaluation.
+    """
+    first = simulate_css(case, N=N, record=False, **kw)
+    second = simulate_css(case, N=N, record=record,
+                          T_2d=first["T_2d_realised"], **kw)
+    second["pass1"] = first
+    second["dT_2d_pass"] = second["T_2d_realised"] - first["T_2d_realised"]
+    second["corrected"] = True
+    return second
 
 
 def css_report(case, r):
@@ -586,6 +676,25 @@ def css_report(case, r):
     print()
     print(f"  implied net output     {r['W_el_out_implied']/1000:10.4f} MWe"
           f"   (target {case.W_dot_el_out/1000:.4f})")
+    print()
+    print("  the deviation IS the glide shortfall")
+    print(f"    realised discharge glide / assumed   {r['glide_ratio_dc']:10.6f}")
+    print(f"    delivered energy / required          "
+          f"{r['Q_discharge_kJ']/r['required_kJ']:10.6f}")
+    print("    The flow is pinned by the ASSUMED glide, so the energy")
+    print("    delivered is just the ratio of realised to assumed glide.")
+    print()
+    print("  exchanger outlets are RESULTS, not inputs (v0.6)")
+    print(f"    discharge, to the ORC       assumed {r['T_2d_assumed']-273.15:8.3f} C"
+          f"   realised {r['T_2d_realised']-273.15:8.3f} C")
+    print(f"    charge, to the HP condenser assumed {r['T_2c_assumed']-273.15:8.3f} C"
+          f"   realised {r['T_2c_realised']-273.15:8.3f} C")
+    if r.get("corrected"):
+        print(f"    ORC corrected at the realised outlet; second pass moved it"
+              f" {r['dT_2d_pass']:+.4f} K")
+    elif r["T_2d_was_provisional"]:
+        print("    UNCORRECTED: the ORC still runs on the provisional outlet.")
+        print("    Use simulate_css_corrected for the reported result.")
     ch, dc = r["charge"], r["discharge"]
     print()
     print("  melted fraction at CSS")

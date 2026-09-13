@@ -57,7 +57,7 @@
 with Phase-Change Material in Repurposed Wells\\[6pt]
 \normalsize Thermodynamic Cycles, Borehole Resistance Network,\\
 Melt-Front Formulations, Sizing and Performance Indices\\[4pt]
-\normalsize Model version 0.5a \textperiodcentered\ last updated 2026-09-12 BRT}
+\normalsize Model version 0.6 \textperiodcentered\ last updated 2026-09-12 BRT}
 \author{Craft \& Hawkins Department of Petroleum Engineering\\
 Louisiana State University}
 \date{\today}
@@ -165,8 +165,42 @@ $\lambda=0$ the rate criterion goes degenerate, fixing the flow ratio rather
 than $\Nwells$. The resolution is to specify the hardware and \emph{simulate}
 rather than solve: $\Nwells$ from latent heat alone, both flows pinned by their
 glides, march to CSS, and report the deviation from target. At the design point
-the field delivers \SI{94.26}{\percent} of the \SI{1}{\mega\watt} target, and
-the shortfall is a \emph{discharge rate} limit rather than an inventory limit.
+the field delivers \SI{101.23}{\percent} of the \SI{1}{\mega\watt} target under
+the v0.6 closure (\SI{94.26}{\percent} under the retired one), and what governs
+it is the \emph{discharge rate} rather than the inventory.
+
+\medskip
+\noindent\textbf{Changes in version 0.6.} The discharge side was closed on the
+wrong end. Only the two exchanger \emph{inlets} are boundary conditions on the
+march; both outlets are results. The discharge was closed the other way round
+--- the outlet pinned at $T_{2d}=\Tm-\Delta T_{m,2D}$ with $\Delta T_{m,2D}=0$,
+the inlet derived by subtracting the glide --- and the model's own solution
+contradicts it: under Formulation~C the store finishes each charge superheated,
+so at the start of the following discharge the water leaves the field at
+\SI{157.93}{\celsius}, nearly \SI{8}{\kelvin} above the melting temperature it
+had been pinned to. The implied inlet approach was also
+$\Delta T_{3C,2C}/N_{\mathrm{lay}}=\SI{6.111}{\kelvin}$, one layer width, chosen
+by nobody and moving silently with the number of layers --- against the
+\SI{10}{\kelvin} the charge receives.
+
+$\Delta T_{m,2D}$ is replaced by $\Delta T_{M,1D}$, a subcooling of the
+\emph{inlet} below the coldest cascade layer and the symmetric partner of
+$\Delta T_{4C,M}$ (\S\ref{sec:cycles:closure}); $T_{2d}$ is demoted to a
+provisional estimate and reported against the realised value. Because
+$\eta_{\mathrm{ORC}}$ follows $T_{2d}$, a single correction pass re-evaluates
+the plant at the realised outlet --- enough because the outlet is set by the
+store and moves less than \SI{0.3}{\kelvin} while the inlet moves
+\SI{9}{\kelvin}.
+
+The change is a reparameterisation, verified bit-identical against the v0.5a
+sources out of version control at $\Delta T_{M,1D}=\SI{6.111}{\kelvin}$. At the
+symmetric \SI{10}{\kelvin} the field moves from \SI{5.7}{\percent} below the
+\SI{1}{\mega\watt} target to \SI{1.2}{\percent} above it
+(\S\ref{sec:cyclic:closure}): \textbf{most of what had been reported as a
+shortfall of the store was a property of the closure.} A second result of the
+same section is the identity $\Delta E_{\mathrm{delivered}}/
+\Delta E_{\mathrm{required}}=$ (realised glide)$/\Delta T_{3C,2C}$, which says
+the deviation is simply the glide the water fails to achieve.
 
 \medskip
 \noindent\textbf{Changes in version 0.5a.} No physics; two defects in how

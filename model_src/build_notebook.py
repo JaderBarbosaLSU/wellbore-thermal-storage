@@ -375,7 +375,8 @@ now $T_{\rm pcm}$ rather than $T_m$.
 """))
 
 cells.append(code(src('pcm_capacities', 'pcm_state', 'advance_segment')))
-cells.append(code(src('segment_profile', 'unmirror_march', 'march_h')))
+cells.append(code(src('segment_profile', 'unmirror_march', 'mixed_mean_outlet',
+                      'march_h')))
 
 cells.append(md(r"""
 ## 6. The segment march
@@ -423,7 +424,7 @@ $$\dot m_w^{ch}=\frac{\dot Q_{out,HP}}{c_{p,w}\Delta T_{3C,2C}}$$
 $\lambda$ is the assumed storage loss, fixed at 5 %. §12 shows what the model
 now says it actually is.
 """))
-cells.append(code(src('cycle_state_points', 'energy_budget',
+cells.append(code(src('T_m_bottom', 'cycle_state_points', 'energy_budget',
                       'melting_temperatures')))
 
 # ---------------------------------------------------------------- 8. dp
@@ -749,30 +750,54 @@ guarantee and it is worth being clear about the difference:
 That is still worth having. Most damage comes from a change leaking somewhere
 unintended, and this catches exactly that. It does not substitute for the
 external validation that §15 still lists as the largest gap.
+
+**A fixture that is re-frozen is not a fixture that failed.** The values below
+were re-frozen for v0.6, when the discharge closure changed
+(§16.5): the inlet moved from \SI{95.000}{\celsius} to
+\SI{91.111}{\celsius}, so every discharge-side index had to move with it. A
+drift check is only meaningful if re-freezing is *deliberate and explained*,
+never a response to a red line. The retired values are kept beside the new ones
+so the size of the step is on the record, and the equivalence test that
+guarantees nothing else changed is in §16.5: setting
+$\Delta T_{M,1D}=\Delta T_{3C,2C}/N_{\rm lay}$ reproduces every v0.5a number
+exactly.
 """))
 cells.append(code(r"""
-FIXTURE_V04B = {   # re-frozen 2026-09 after the flow-reversal fix (v0.5)
-    'N_rate':             11.2551269531,
-    'N_capacity':          9.57383020656,
-    'N_wells':            11.2551269531,
+FIXTURE_V06 = {   # re-frozen 2026-09 for the v0.6 discharge closure -- see below
+    'N_rate':             11.5122070312,
+    'N_capacity':          9.67244314511,
+    'N_wells':            11.5122070312,
     'eps_pcm':             1.0,
-    'E_well_kJ':          20643709.4497,
-    'eta_storage':         0.952664693039,
-    'flow_ratio_dc_ch':    1.047265625,
+    'E_well_kJ':          20857297.9447,
+    'eta_storage':         0.952163601583,
+    'flow_ratio_dc_ch':    0.948828125,
     'cop_hp':              2.95633040945,
+    'eta_orc':             0.232035822617,
+    'eta_rte':             0.408915233697,
+    'eta_rte_nopump':      0.425994284001,
+    'f_pump':             0.0587585434779,
+    'E_well':              4.63600440156,
+    'rho_E':             167.46852173,
+}
+# Superseded by the line above, kept so the size of the v0.6 step is on the
+# record. These are the v0.5a values, frozen under the RETIRED closure in which
+# the discharge OUTLET was pinned at T_m,top and the inlet derived from it. The
+# discharge inlet moved 95.000 -> 91.111 C, so these had to move; nothing else
+# about the model changed. The two differences worth noting are eta_ORC
+# (0.2369 -> 0.2320, because the provisional T_2d fell from 150 to 146.1 C and
+# the ORC evaporating temperature follows it) and the flow ratio
+# (1.0473 -> 0.9488, because a colder inlet needs less flow for the same duty).
+FIXTURE_V05A_RETIRED = {
+    'N_wells':            11.2551269531,
     'eta_orc':             0.236851320275,
-    'eta_rte':             0.413905366992,
-    'eta_rte_nopump':      0.434835050283,
-    'f_pump':              0.0663321096418,
-    'E_well':              4.64548712778,
-    'rho_E':             167.811070616,
+    'flow_ratio_dc_ch':    1.047265625,
 }
 
 res_v = runs['v0.4b']
 merged = dict(res_v['kpis']); merged.update(res_v['detail'])
 print(f"{'quantity':20s} {'frozen':>20s} {'now':>20s}   rel. diff")
 worst = 0.0
-for k, v in FIXTURE_V04B.items():
+for k, v in FIXTURE_V06.items():
     now = float(merged[k])
     d = abs(now - v)/abs(v) if v else abs(now)
     worst = max(worst, d)
@@ -1303,6 +1328,7 @@ consistency is not validation, and a reviewer will ask.
 
 | version | date | change |
 |---|---|---|
+| **0.6** | this build | **The discharge closure was solving for the wrong end.** Only the two exchanger *inlets* are boundary conditions on the march; both outlets are results. The discharge was closed the other way round — the outlet pinned at $T_{2d}=T_{m,\rm top}-\Delta T_{m,2D}$ with $\Delta T_{m,2D}=0$, the inlet derived from it — and the model's own solution contradicts that: at the start of a discharge at CSS the water leaves at $157.93$ °C, nearly 8 K above the top layer's melting point, because the PCM is superheated. The implied inlet approach was also silently $\Delta T_{3C,2C}/N_{\rm lay}=6.111$ K, one layer width, chosen by nobody. `DT_m_2D` is replaced by **`DT_M_1D`**, a subcooling of the inlet (state **1d**) below the *coldest* layer, the symmetric partner of `DT_4C_M`; $T_{2d}$ is demoted to a provisional estimate and reported against the realised value. `simulate_css_corrected` adds **one** ORC correction pass at the realised outlet — enough because the outlet is pinned by the store, not the plant (it moves $<0.3$ K while the inlet moves 9 K). Verified a pure reparameterisation: at $\Delta T_{M,1D}=6.111$ K every v0.5a number returns exactly (§16.5). At the symmetric 10 K the deviation goes $-5.69\,\%\to+1.23\,\%$ — **most of the shortfall was the closure, not the store**. §13 re-frozen for the new closure. |
 | **0.5a** | this build | **Two recording defects, no physics.** (i) `march_h` recorded the state at the *start* of a step but stamped it with the time at the *end*, and appended `E` after the update while the other state arrays came from before it. On a logarithmic grid the last step is 2.36 h, so every recorded profile was up to a quarter of a half-cycle stale and the true end state was never recorded: the map read $\varepsilon=0.356$ at the end of discharge against $0.1545$ from the march. Frames are now stamped in **`t_hist`** at the instants where the state is exact, start at $t=0$, and include the end state; `segment_profile` evaluates the closing frame's fluid profile from that end state. (ii) The **discharge was plotted mirrored** in §14.2 and §16 — the discharge marches from the far end, and only the sizing loops were un-mirroring it. `unmirror_march` now returns every discharge result in depth indexing, so both half-cycles share one cascade and one depth axis, and §16.3 prints the map-closure residual (zero). §14 also carried the *flow-reversal* bug fixed in `run_cycle` in v0.5 — it built the discharge cascade with `layer_map(T_m_lay_dc, ...)` and passed the state unmirrored. `N_wells`, the CSS deviation, energy closure and every reported index are unchanged. |
 | 0.5 | 2026-09 | **Cyclic steady state** (§16). At CSS $\eta_{\rm storage}\equiv1$ exactly, so $\lambda$ is unattainable and the rate criterion is degenerate even at $\lambda=0$; sizing is replaced by simulation — $N$ from latent heat alone, both flows pinned by their glides, march to CSS, report the deviation. The field delivers **94.26 %** of the 1 MWe target, and the shortfall is a *discharge rate* limit. Flow-reversal defect fixed in `run_cycle`: the melt state was handed to the discharge unmirrored while the cascade was mirrored, shifting the enthalpy datum by up to 48.9 K. §12.1 removed. |
 | 0.4c | 2026-09 | **Superseded code removed.** Formulations A (closed-form Stefan) and B (energy-balance on melted area) deleted along with the v0.1 sizing chain, the `front` and `charge_uses_wall_conductivity` switches, and `CASE_V01` — 16 functions, about 1,050 lines. The model is now one formulation. Verified **bit-identical** to the pre-strip v0.4b on 20 reported quantities before the cut. §13 now checks a frozen v0.4b fixture instead of the published IHTC numbers: that is a *drift* check, not an external validation, and the difference matters — see §13. Notebook 69 → 57 cells, runtime 55 → 39 s. |
@@ -1370,7 +1396,9 @@ to CSS, report what comes out:**
 | $\dot m_{\rm dc}$ | pinned by the discharging glide |
 
 Nothing is solved — there is **no root-find anywhere** in `simulate_css`, so
-the question of convergence does not arise. What was an unsatisfiable
+the question of convergence does not arise. The ORC correction pass of v0.6
+(§16.5) is a second *evaluation*, not an iteration: it runs once, and the shift
+it produces is reported so the reader can see it is negligible. What was an unsatisfiable
 constraint becomes a reported output: the deviation of delivered energy, and
 hence of net electrical output, from target.
 
@@ -1382,10 +1410,10 @@ sensible capacity the store also has. That is deliberate and conservative.
 > requirement for any well count, leaving no root. Under this framing that
 > saturation is not a failure — it *is* the answer.
 """))
-cells.append(code(src('simulate_css', 'css_report')))
+cells.append(code(src('simulate_css', 'simulate_css_corrected', 'css_report')))
 
 cells.append(code(r"""
-css = simulate_css(CASE)
+css = simulate_css_corrected(CASE)
 css_report(CASE, css)
 """))
 
@@ -1439,7 +1467,7 @@ cells.append(md(r"""
 Folded onto depth as in §14: **solid = down leg, dotted = return leg.**
 """))
 cells.append(code(r"""
-cssr = simulate_css(CASE, record=True)
+cssr = simulate_css_corrected(CASE, record=True)
 chc, dcc = cssr['charge'], cssr['discharge']
 s_dev = chc['z']; half = len(s_dev)//2
 zd, zu = s_dev[:half], CASE.L_tube - s_dev[half:]
@@ -1556,12 +1584,25 @@ cells.append(md(r"""
 
 With $N$ no longer solved for, the design question becomes a curve rather than
 a root. Each point is an independent march to CSS.
+
+Note the range: under the v0.6 closure the latent-only sizing slightly
+*overshoots* the target, so the crossing sits **below** $N_{\rm lat}$ rather
+than well above it. Under the retired closure the same curve crossed near
+$N\approx19$ — the closure moved the answer by more than the well count does
+over half this range.
 """))
 cells.append(code(r"""
 N_lat = css['N_wells']
 rows = []
-for N in (N_lat, 12.5, 14.0, 16.0, 20.0, 26.0):
-    rr = simulate_css(CASE, N=N)
+# The ORC correction is done ONCE, at the design point, and the resulting
+# evaporating temperature is held across the sweep. Two reasons: it is a
+# fairer comparison -- the well counts are then compared at a common plant
+# operating point rather than each with its own ORC -- and it halves the cost,
+# since every point would otherwise be marched to CSS twice. The realised
+# outlet moves by less than 0.3 K over this range, so the two agree anyway.
+T_2d_fixed = css['T_2d_realised']
+for N in (9.0, 10.0, 11.0, N_lat, 13.0, 16.0):
+    rr = simulate_css(CASE, N=N, T_2d=T_2d_fixed)
     rows.append({'N_wells': rr['N_wells'],
                  'delivered/req': rr['Q_discharge_kJ']/rr['required_kJ'],
                  'MWe': rr['W_el_out_implied']/1000.0,
@@ -1588,9 +1629,10 @@ plt.tight_layout(); plt.show()
 cells.append(md(r"""
 Two things to read from the curve.
 
-**The target is met near $N\approx19$**, about $1.7\times$ the latent-only
-count. That is the honest cost of meeting 1 MWe over a repeating cycle in this
-model.
+**Where the target is met.** With the v0.6 closure the latent-only sizing
+already slightly overshoots, so the curve crosses 1 MWe close to the design
+point rather than well above it. Read the crossing, not a single number: it
+moves with $\Delta T_{M,1D}$ (§16.5).
 
 **The residual melt fraction *rises* with $N$.** That is the signature of a
 rate-limited discharge: more wells means each is worked less hard, so
@@ -1598,16 +1640,213 @@ proportionally less of each one refreezes. If the limit were inventory, the
 residual would fall. It tells you the lever is on the discharge side — flow,
 window, or conductance — not more PCM.
 
-> **How much of this to believe.** The $-3.3\,\%$ deviation is a model result
-> and inherits every assumption in §15. H9 is worth of order $25\,\%$ of the
-> duty at the wellhead; H3 is saturated over $99\,\%$ of the well; the time grid
-> carries a one-sided $-0.3\,\%$ bias. A $3\,\%$ deviation sits **inside** that
-> uncertainty band. Report it as *"the store is discharge-rate limited by
-> roughly 3 % at this sizing"*, not as a calibrated shortfall.
+> **How much of this to believe.** The deviation is a model result and
+> inherits every assumption in §15. H9 is worth of order $25\,\%$ of the duty at
+> the wellhead; H3 is saturated over $99\,\%$ of the well; the time grid carries
+> a one-sided $-0.3\,\%$ bias. A deviation of a few per cent sits **inside**
+> that uncertainty band, and §16.5 shows it also moves by seven percentage
+> points under a modelling choice that was never deliberately made. Report it as
+> *"the field is within a few per cent of target at this sizing, and which side
+> depends on the discharge approach"*, not as a calibrated shortfall.
 """))
 
 cells.append(md(r"""
-### 16.5 First-cycle sizing against CSS simulation
+### 16.5 Closing the discharge side: $\Delta T_{M,1D}$ instead of $\Delta T_{m,2D}$
+
+**The defect.** Only the two exchanger *inlets* are boundary conditions on the
+march. Both outlets are results of the heat transfer. Until v0.5a the discharge
+was closed the wrong way round: the **outlet** was pinned at
+$T_{2d}=T_{m,\rm top}-\Delta T_{m,2D}$ with $\Delta T_{m,2D}=0$, and the inlet
+derived from it by subtracting the glide.
+
+That is not merely arbitrary — *the model's own solution contradicts it*. At the
+start of a discharge at CSS the water leaves at $157.93\,$°C, nearly 8 K above
+the top layer's melting point, because the PCM there is superheated liquid. A
+prescribed outlet cannot survive a formulation that lets the PCM leave $T_m$.
+
+It was also tied to $N_{\rm lay}$ without anyone choosing it. With
+$T_{2d}=T_{m,\rm top}$ and a glide of $\Delta T_{3C,2C}$, the implied inlet
+approach was
+
+$$\Delta T_{\rm implied}=\frac{\Delta T_{3C,2C}}{N_{\rm lay}}=\frac{55}{9}
+=6.111\ \text{K},$$
+
+exactly one layer width. Change the number of layers and the discharge approach
+changes silently with it.
+
+**The fix.** Prescribe the inlets symmetrically, which is what they are:
+
+| half-cycle | inlet | prescribed as | value |
+|---|---|---|---|
+| charge | $T_{4c}$ | $T_{m,\rm top}+\Delta T_{4C,M}$ | $150+10=160$ °C |
+| discharge | $T_{3d}$ (state **1d**) | $T_{m,\rm bottom}-\Delta T_{M,1D}$ | $101.111-10=91.111$ °C |
+
+$T_{m,\rm bottom}=T_{m,\rm top}-\Delta T_{3C,2C}(N_{\rm lay}-1)/N_{\rm lay}$ is
+the coldest layer, which is the end the discharge enters. $T_{2d}$ is demoted to
+a *provisional estimate* — the outlet the water would reach if it achieved the
+full glide — used only to give the ORC an evaporating temperature on the first
+pass.
+
+**The glide now sets flow and nothing else.** Previously it also moved the
+discharge inlet, so a glide sweep confounded two effects.
+"""))
+
+cells.append(md(r"""
+#### The change is a no-op at the old setting
+
+Setting $\Delta T_{M,1D}=\Delta T_{3C,2C}/N_{\rm lay}$ must reproduce the
+retired closure *exactly*. This is the check that separates "we changed a
+modelling choice" from "we changed the model". The reference values were taken
+by importing the v0.5a sources out of git (commit `b383a48`) alongside this
+build in a single process, where every line agrees to the last bit.
+"""))
+cells.append(code(r"""
+# Full float precision, taken by running the v0.5a sources out of git
+# (commit b383a48) side by side with this build in one process. Quoting these
+# to eight figures would make the test resolve only to 1e-8 and hide exactly
+# the kind of small leak it exists to catch.
+V05A = {
+    'N_wells':           11.544050346532758,
+    'deviation':         -0.057363007443116842,
+    'eta_storage':        1.0,
+    'm1_ch':              0.96552625772561806,
+    'm1_dc':              0.96979993412108878,
+    'flow_ratio':         1.004426266361246,
+    'Q_discharge_kJ':     177430648.09917957,
+    'required_kJ':        188227970.57635373,
+    'W_el_out_implied':   942.63699255688311,
+    'T_3d':             368.14999999999998,     # K, the discharge inlet
+    'T_2d':             423.14999999999998,     # K, the (then prescribed) outlet
+}
+
+legacy = CASE.with_(DT_M_1D=CASE.DT_3C_2C/CASE.N_lay)
+_, _, T_leg = cycle_state_points(legacy)
+r_leg = simulate_css(legacy)          # uncorrected, exactly as v0.5a ran it
+now = dict(r_leg); now['T_3d'] = T_leg['T_3d']; now['T_2d'] = T_leg['T_2d']
+
+# Two classes of quantity, two tolerances, and the reason is worth stating.
+#
+# EXACT: state points, flow rates, the well count, the requirement. These are
+# closed-form functions of the inputs, so anything but bit-identical means the
+# reparameterisation leaked.
+#
+# ITERATION-TERMINATED: the delivered energy and everything derived from it.
+# These depend on WHICH CYCLE the drift test stops at, and that is decided on
+# a 1e-9 tolerance against differences of order 1e8 kJ -- the last few cycles
+# are floating-point noise. CoolProp's AbstractState carries state between
+# calls, so the noise depends on how many property evaluations preceded this
+# cell: run standalone, this check is bit-identical on every line; run here,
+# after thirteen sections of the notebook, the CSS loop stops one cycle
+# earlier or later and the delivered energy moves in the seventh figure. That
+# is a property of the library, not of the closure, and loosening the
+# tolerance for these three is the honest response rather than a fudge --
+# provided the first group stays exact, which is what actually rules out a
+# leak.
+EXACT = ('N_wells', 'm1_ch', 'm1_dc', 'flow_ratio', 'required_kJ',
+         'eta_storage', 'T_3d', 'T_2d')
+print(f"{'quantity':18s} {'v0.5a (git b383a48)':>24s} {'v0.6 at legacy':>24s}"
+      f"   rel. diff   class")
+worst_exact = worst_iter = 0.0
+for k, v in V05A.items():
+    d = abs(float(now[k]) - v)/abs(v) if v else abs(float(now[k]))
+    kind = 'exact' if k in EXACT else 'iterated'
+    if k in EXACT:
+        worst_exact = max(worst_exact, d)
+    else:
+        worst_iter = max(worst_iter, d)
+    print(f'{k:18s} {v:24.17g} {float(now[k]):24.17g}   {d:.1e}   {kind}')
+print()
+print(f'worst, closed-form quantities:       {worst_exact:.1e}   (must be 0)')
+print(f'worst, iteration-terminated:         {worst_iter:.1e}   (tol 1e-4)')
+ok = (worst_exact == 0.0) and (worst_iter < 1e-4)
+print()
+print('PASS -- the v0.6 closure is a reparameterisation, not a new model.'
+      if ok else 'FAIL -- something other than the closure changed')
+"""))
+
+cells.append(md(r"""
+#### The deviation *is* the glide shortfall
+
+The discharge flow is pinned by the **assumed** glide,
+$\dot m_{\rm dc}=\dot Q_{\rm in,ORC}/(c_p\,\Delta T_{3C,2C})$, so over a fixed
+window the delivered energy is just
+
+$$\frac{\Delta E_{\rm delivered}}{\Delta E_{\rm required}}
+ =\frac{\text{glide the water actually achieves}}{\Delta T_{3C,2C}}.$$
+
+The two agree to $2\times10^{-5}$ (the residue is $c_p(T)$). This is a more
+useful statement of the result than "discharge-rate limited": under the retired
+closure the water gained $51.84$ K of the $55$ K the pump was sized for, and
+that $94.26\,\%$ **is** the $-5.74\,\%$ deviation.
+"""))
+
+cells.append(md(r"""
+#### Sweep: how much of the shortfall was the closure?
+
+Each point is an independent march to CSS with the ORC correction pass.
+"""))
+cells.append(code(r"""
+Tmb = T_m_bottom(CASE) - 273.15
+rows = []
+for sub in (CASE.DT_3C_2C/CASE.N_lay, 8.0, 10.0, 12.0, 15.0):
+    rr = simulate_css_corrected(CASE.with_(DT_M_1D=sub))
+    rows.append({'DT_M_1D': sub, 'T_3d [C]': Tmb - sub,
+                 'N_wells': rr['N_wells'],
+                 'deviation %': 100*rr['deviation'],
+                 'MWe': rr['W_el_out_implied']/1000,
+                 'T_2d realised': rr['T_2d_realised']-273.15,
+                 'glide dc [K]': rr['glide_dc'],
+                 'eps end dc': rr['discharge']['eps_local'].mean(),
+                 'dT_2d pass [K]': rr['dT_2d_pass']})
+dfs = pd.DataFrame(rows)
+print(dfs.round(4).to_string(index=False))
+
+fig, ax = plt.subplots(1, 3, figsize=(15, 4.0))
+ax[0].plot(dfs['DT_M_1D'], dfs['deviation %'], 'o-')
+ax[0].axhline(0, color='crimson', ls='--', lw=1.2, label='1 MWe target')
+ax[0].axvline(CASE.DT_3C_2C/CASE.N_lay, color='gray', ls=':', lw=1.2,
+              label='retired closure (6.111 K)')
+ax[0].axvline(CASE.DT_4C_M, color='k', ls='-.', lw=1.2,
+              label='symmetric with charge (10 K)')
+ax[0].set_xlabel(r'$\Delta T_{M,1D}$ [K]'); ax[0].set_ylabel('deviation [%]')
+ax[0].legend(fontsize=7)
+ax[1].plot(dfs['DT_M_1D'], dfs['eps end dc'], 's-', color='darkorange')
+ax[1].set_xlabel(r'$\Delta T_{M,1D}$ [K]')
+ax[1].set_ylabel(r'residual $\varepsilon_{local}$')
+ax[2].plot(dfs['DT_M_1D'], dfs['T_2d realised'], '^-', color='seagreen',
+           label='realised outlet')
+ax[2].plot(dfs['DT_M_1D'], dfs['dT_2d pass [K]'].abs()*100, 'v--', color='gray',
+           label=r'$100\times|$pass-2 shift$|$')
+ax[2].set_xlabel(r'$\Delta T_{M,1D}$ [K]'); ax[2].set_ylabel('[°C] / [K]')
+ax[2].legend(fontsize=7)
+for a in ax: a.grid(alpha=.3)
+plt.tight_layout(); plt.show()
+"""))
+
+cells.append(md(r"""
+**The shortfall was mostly self-inflicted.** Giving the discharge the same
+10 K approach the charge gets moves the deviation from $-5.69\,\%$ to
+$+1.23\,\%$ — the field now *exceeds* the target. The curve crosses zero at
+$\Delta T_{M,1D}\approx9.30$ K and saturates near $+6.3\,\%$ at 15 K, where the
+store refreezes completely ($\varepsilon\to0$) and the limit stops being a rate
+limit and becomes an inventory limit.
+
+**$\Delta T_{M,1D}=10$ K is a principle, not a tuning.** It is chosen because it
+is the symmetric partner of $\Delta T_{4C,M}$, not because it happens to land
+near the target. Choosing $9.30$ K instead would zero the deviation — and
+destroy the only thing the deviation is good for, which is being a *reported
+result* rather than a satisfied constraint.
+
+**One correction pass is enough, and that is a property of the problem.** Across
+this sweep the inlet moves 9 K and the deviation moves twelve percentage points,
+while the realised outlet moves less than $0.3$ K and the second pass shifts it
+by at most $0.03$ K. The outlet is pinned by the store, not by the plant, which
+is why the plant level can still be evaluated without an outer loop
+(§16).
+"""))
+
+cells.append(md(r"""
+### 16.6 First-cycle sizing against CSS simulation
 
 The two framings answer different questions and both are kept.
 """))

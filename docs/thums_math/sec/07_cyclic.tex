@@ -167,39 +167,52 @@ leaves no root. Under the reformulation that saturation is not a failure: it
 \begin{center}
 \begin{tabular}{@{}l r l@{}}
 \toprule
-$\Nwells$ & 11.5441 & latent heat alone, not solved \\
-$\md^{\mathrm{ch}}$, $\md^{\mathrm{dc}}$ & 0.9655, 0.9698 & \si{\kilogram\per\second} per leg-pair \\
-flow ratio & 1.0044 & a consequence, not a solve \\
-cycles to CSS & 28 & \\
+$\Nwells$ & 11.7434 & latent heat alone, not solved \\
+$\md^{\mathrm{ch}}$, $\md^{\mathrm{dc}}$ & 0.9655, 0.9712 & \si{\kilogram\per\second} per leg-pair \\
+flow ratio & 1.0058 & a consequence, not a solve \\
+cycles to CSS & 32 & \\
 $\eta_{\mathrm{storage}}$ & 1.000000 & Eq.~\eqref{eq:css-unity} \\
 \midrule
-required $\Delta E_{\mathrm{in,ORC}}$ & \num{1.88228e8} & kJ \\
-delivered at CSS & \num{1.77417e8} & kJ \\
-\textbf{deviation} & \textbf{-5.736} & \si{\percent} \\
+required $\Delta E_{\mathrm{in,ORC}}$ & \num{1.91479e8} & kJ \\
+delivered at CSS & \num{1.93830e8} & kJ \\
+\textbf{deviation} & \textbf{+1.228} & \si{\percent} \\
 \midrule
-implied net output & 0.9426 & MWe against a target of 1.0000 \\
+implied net output & 1.0123 & MWe against a target of 1.0000 \\
 \bottomrule
 \end{tabular}
+\end{center}
+
+\noindent
+These are v0.6 figures, with the discharge inlet prescribed by
+Eq.~\eqref{eq:inlets} and the ORC corrected once at the realised outlet. Under
+the retired closure of \S\ref{sec:cycles:closure} the same hardware delivered
+\SI{94.26}{\percent} of target rather than \SI{101.23}{\percent}
+(\S\ref{sec:cyclic:closure}).
+
+\begin{center}
 \end{center}
 
 \subsubsection*{The shortfall is a rate limit, not an inventory limit}
 
 At CSS the store melts \emph{completely} --- $\varepsilon_{\mathrm{local}}=1.000$
-at every segment at end of charge --- but returns only to a mean of $0.154$. It
+at every segment at end of charge --- but returns only to a mean of $0.082$. It
 never fully refreezes within the \SI{10}{\hour} discharge window, and that
-residual is what limits delivery. The design curve makes the diagnosis explicit:
+residual is what governs delivery. The design curve makes the diagnosis
+explicit:
 
 \begin{center}
 \begin{tabular}{@{}r r r r r@{}}
 \toprule
 $\Nwells$ & delivered/req & MWe & $\varepsilon$ end charge & $\varepsilon$ end discharge \\
 \midrule
-11.544 & 0.9426 & 0.9426 & 1.000 & 0.154 \\
-12.500 & 0.9540 & 0.9540 & 1.000 & 0.209 \\
-14.000 & 0.9662 & 0.9662 & 1.000 & 0.288 \\
-16.000 & 0.9777 & 0.9777 & 1.000 & 0.376 \\
-20.000 & 0.9931 & 0.9931 & 1.000 & 0.505 \\
-26.000 & 1.0082 & 1.0082 & 1.000 & 0.629 \\
+ 9.000 & 0.9048 & 0.9048 & 1.000 & 0.002 \\
+10.000 & 0.9628 & 0.9628 & 1.000 & 0.008 \\
+11.000 & 0.9985 & 0.9985 & 1.000 & 0.040 \\
+11.743 & 1.0123 & 1.0123 & 1.000 & 0.082 \\
+13.000 & 1.0271 & 1.0271 & 0.998 & 0.154 \\
+14.000 & 1.0353 & 1.0353 & 0.997 & 0.206 \\
+16.000 & 1.0472 & 1.0472 & 0.989 & 0.295 \\
+18.000 & 1.0560 & 1.0560 & 0.983 & 0.367 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -221,6 +234,96 @@ useful duty at the wellhead (\S\ref{sec:defects:h9}); H3 is saturated over
 one-sided \SI{-0.3}{\percent} bias. A \SI{6}{\percent} deviation sits inside
 that band. It should be reported as \emph{``the store is discharge-rate limited
 by roughly \SI{6}{\percent} at this sizing''} and not as a calibrated shortfall.
+
+%---------------------------------------------------------------------
+\subsection{The discharge closure, and what it was worth}
+\label{sec:cyclic:closure}
+
+\S\ref{sec:cycles:closure} replaces the retired closure --- outlet pinned, inlet
+derived --- with a prescribed inlet subcooling $\Delta T_{M,1D}$. This section
+records what that was worth, because it turns out to be worth more than any
+other single change in the model's history.
+
+\subsubsection*{It is a reparameterisation, and that was checked}
+
+Setting $\Delta T_{M,1D}=\Delta T_{3C,2C}/N_{\mathrm{lay}}$ must reproduce the
+retired closure. The v0.5a sources were taken out of version control
+(commit \code{b383a48}) and run beside the v0.6 build in one process: $\Nwells$,
+both flow rates, the flow ratio, the requirement, the delivered energy and every
+state point agree \emph{to the last bit}. Nothing was changed except which
+temperature is prescribed.
+
+\subsubsection*{The deviation is the glide shortfall}
+
+The discharge flow is pinned by the \emph{assumed} glide,
+$\md^{\mathrm{dc}}=\dot Q_{\mathrm{in,ORC}}/(c_{p}\Delta T_{3C,2C})$, so over a
+fixed window the delivered energy is nothing more than
+\begin{equation}
+  \frac{\Delta E_{\mathrm{delivered}}}{\Delta E_{\mathrm{required}}}
+  \;=\;
+  \frac{\text{glide the water actually achieves}}{\Delta T_{3C,2C}} .
+  \label{eq:glide-identity}
+\end{equation}
+The two sides agree to $2\times10^{-5}$, the residue being $c_{p}(T)$. Under the
+retired closure the water gained \SI{51.84}{\kelvin} of the \SI{55}{\kelvin} the
+pump was sized for, and that \SI{94.26}{\percent} \emph{is} the
+\SI{-5.74}{\percent} deviation. Equation~\eqref{eq:glide-identity} is a more
+useful statement of the result than ``discharge-rate limited'', because it is
+directly testable against a pair of thermometers.
+
+\subsubsection*{Most of the shortfall was the closure}
+
+Each row is an independent march to CSS with the ORC correction pass.
+
+\begin{center}
+\begin{tabular}{@{}r r r r r r@{}}
+\toprule
+$\Delta T_{M,1D}$ & $T_{3d}$ & $\Nwells$ & deviation & realised $T_{2d}$
+ & $\varepsilon$ end dc \\
+\si{\kelvin} & \si{\celsius} & & \si{\percent} & \si{\celsius} & \\
+\midrule
+6.111 & 95.000 & 11.7371 & $-5.693$ & 146.835 & 0.154 \\
+8.000 & 93.111 & 11.7395 & $-2.313$ & 146.801 & 0.119 \\
+\textbf{10.000} & \textbf{91.111} & \textbf{11.7434} & $\mathbf{+1.228}$
+ & \textbf{146.745} & \textbf{0.082} \\
+12.000 & 89.111 & 11.7585 & $+4.461$ & 146.519 & 0.028 \\
+15.000 & 86.111 & 11.8887 & $+6.303$ & 144.527 & 0.000 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Giving the discharge the same \SI{10}{\kelvin} approach the charge already had
+moves the field from \SI{5.7}{\percent} below target to \SI{1.2}{\percent} above
+it. \textbf{What was reported as a property of the store was mostly a property
+of the closure.} The curve saturates near \SI{+6.3}{\percent} at
+\SI{15}{\kelvin}, where the store refreezes completely and the constraint stops
+being a rate limit and becomes an inventory limit.
+
+\medskip
+\noindent\textbf{$\Delta T_{M,1D}=\SI{10}{\kelvin}$ is a principle, not a
+tuning.} The deviation crosses zero at \SI{9.30}{\kelvin}. That value is
+deliberately not adopted: choosing an approach because it zeroes the deviation
+converts the one honestly reported output of \S\ref{sec:cyclic:reform} back into
+a satisfied constraint, which is exactly what the reformulation exists to avoid.
+\SI{10}{\kelvin} is adopted because it is the symmetric partner of
+$\Delta T_{4C,M}$.
+
+\subsubsection*{One correction pass, and why it suffices}
+
+$T_{3e}$ follows $T_{2d}$, so $\eta_{\mathrm{ORC}}$ depends on a quantity the
+store now computes. \code{simulate\_css\_corrected} therefore runs the cycle
+twice: the first pass uses the provisional outlet, the second re-evaluates the
+ORC, the budget, $\Nwells$ and both flows at the outlet the first pass produced.
+
+That this converges in one pass is a property of the problem, not an optimistic
+choice. The outlet is set by the store, not by the plant: across the sweep above
+the inlet moves \SI{9}{\kelvin} and the deviation moves twelve percentage
+points, while the realised outlet moves less than \SI{0.3}{\kelvin} and the
+second pass shifts it by at most \SI{0.03}{\kelvin} --- \SI{0.002}{\kelvin} at
+the design point. The shift is returned as \code{dT\_2d\_pass} so it is reported
+rather than assumed. Were it ever large, the remedy would be to iterate, at the
+cost of the single-loop structure the procedure currently enjoys.
 
 %---------------------------------------------------------------------
 \subsection{A defect that cycling exposed}

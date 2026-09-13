@@ -16,26 +16,94 @@ Every state point is fixed by a specified approach temperature rather than by a
 component model. Writing $\Tm$ for the PCM melting point,
 \begin{align}
   T_{1e} &= T_{\mathrm{sink}} + \Delta T_{E,\mathrm{sink}}, &
-  T_{2d} &= \Tm - \Delta T_{m,2D}, \\
-  T_{3e} &= T_{2d} - \Delta T_{2D,3E}, &
-  T_{3d} &= T_{2d} - \Delta T_{2D,3D}, \\
+  T_{3d} &= \Tm^{\mathrm{bot}} - \Delta T_{M,1D}, \\
+  T_{2d} &= T_{3d} + \Delta T_{3C,2C}\ \text{(provisional)}, &
+  T_{3e} &= T_{2d} - \Delta T_{2D,3E}, \\
   T_{4c} &= \Tm + \Delta T_{4C,M}, &
   T_{4a} &= T_{\mathrm{source}} - \Delta T_{3A,4A}, \\
   T_{13h} &= T_{\mathrm{source}} - \Delta T_{3A,13H}, &
   T_{3c} &= T_{4c}, \\
   T_{2c} &= T_{3c} - \Delta T_{3C,2C}, &
-  T_{2h} &= T_{3c} + \Delta T_{2H,3C}.
+  T_{2h} &= T_{3c} + \Delta T_{2H,3C},
 \end{align}
+with
+\begin{equation}
+  \Tm^{\mathrm{bot}} \;=\; \Tm - \Delta T_{3C,2C}\,
+  \frac{N_{\mathrm{lay}}-1}{N_{\mathrm{lay}}}
+  \label{eq:Tmbot}
+\end{equation}
+the melting temperature of the coldest cascade layer, \SI{101.111}{\celsius} for
+the default case. Function: \code{T\_m\_bottom}, \code{cycle\_state\_points}.
 
 The secondary-fluid glide across the borehole field, $\Delta T_{3C,2C}$, is the
-principal design variable of the study. The discharge-side glide is tied to it,
+principal design variable of the study, and since v0.6 its only job is to set
+the two mass flow rates. The discharge-side glide is equal to it by
+construction,
 \begin{equation}
   \Delta T_{2D,3D} \;=\; \Delta T_{3C,2C},
   \label{eq:glide-tied}
 \end{equation}
-by construction. In v0.1 these were two independent variables carrying a comment
-that they must be equal; a comment is not a constraint, and
-Eq.~\eqref{eq:glide-tied} now enforces it.
+which in v0.1 was two independent variables carrying a comment that they must be
+equal; a comment is not a constraint.
+
+\subsection{Which temperatures may be prescribed}
+\label{sec:cycles:closure}
+
+The arrangement above changed in v0.6, and the reason is worth stating because
+it is easy to get wrong in either direction.
+
+\emph{Only the two exchanger inlets are boundary conditions.} $T_{4c}$ and
+$T_{3d}$ are what the marches of \S\ref{sec:front:enthalpy} are given. Both
+outlets --- $T_{2c}$ back to the heat-pump condenser, $T_{2d}$ on to the ORC
+evaporator --- are computed by the model, and cannot also be specified.
+
+Until v0.5a the discharge was closed the other way round: the \emph{outlet} was
+pinned at $T_{2d}=\Tm-\Delta T_{m,2D}$ with $\Delta T_{m,2D}=0$, and the inlet
+obtained by subtracting the glide. Two objections, the second fatal.
+
+First, it is contradicted by the solution. Under Formulation~C the PCM leaves
+$\Tm$, and at cyclic steady state the store finishes each charge superheated, so
+at the start of the following discharge the water leaves the field at
+\SI{157.93}{\celsius} --- nearly \SI{8}{\kelvin} above the melting temperature of
+the top layer, the very quantity the closure had pinned it to. The same applies
+on charge: $T_{2c}$ was prescribed at \SI{105.00}{\celsius} and the model
+returns a flow-mixed mean of \SI{104.38}{\celsius}, ranging over more than
+\SI{20}{\kelvin} within the window.
+
+Second, the implied inlet approach was set by nobody. With $T_{2d}=\Tm$ and a
+glide of $\Delta T_{3C,2C}$ across $N_{\mathrm{lay}}$ equal layers, the
+discharge entered the coldest layer at
+\begin{equation}
+  \Delta T_{\mathrm{implied}}
+  = \frac{\Delta T_{3C,2C}}{N_{\mathrm{lay}}}
+  = \SI{6.111}{\kelvin},
+  \label{eq:implied-approach}
+\end{equation}
+exactly one layer width --- and therefore changing silently with the number of
+layers. Against the \SI{10}{\kelvin} the charge receives, the discharge was
+being given \SI{61}{\percent} of the driving difference at every layer, and in
+the linear-glide idealisation the fluid arrives at each layer's exit face
+\emph{at} that layer's melting temperature, pinching to zero $N_{\mathrm{lay}}$
+times over. The charge never comes closer than \SI{3.889}{\kelvin}.
+
+The replacement is symmetric and says what it means:
+\begin{equation}
+  \underbrace{T_{4c}=\Tm+\Delta T_{4C,M}}_{\text{superheat, drives melting}},
+  \qquad
+  \underbrace{T_{3d}=\Tm^{\mathrm{bot}}-\Delta T_{M,1D}}
+    _{\text{subcooling, drives freezing}},
+  \label{eq:inlets}
+\end{equation}
+with $\Delta T_{M,1D}=\Delta T_{4C,M}=\SI{10}{\kelvin}$ by default. State 1d is
+the borehole inlet on discharge in the plant diagram. Setting
+$\Delta T_{M,1D}=\Delta T_{3C,2C}/N_{\mathrm{lay}}$ recovers the retired closure
+to the last bit, which is how the change was verified to be a reparameterisation
+rather than a new model.
+
+\emph{What it costs.} $T_{3e}$, and hence $\eta_{\mathrm{ORC}}$, follows
+$T_{2d}$. Demoting $T_{2d}$ to a result therefore couples the plant to the
+store. It is handled by one correction pass rather than an outer loop, for a
+reason that is checked rather than assumed --- see \S\ref{sec:cyclic:closure}.
 
 Given the state points, the cycle efficiencies
 \begin{equation}

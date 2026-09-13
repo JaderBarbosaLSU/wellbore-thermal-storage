@@ -51,7 +51,13 @@ class Case:
     T_sink_C: float = 20.0
     DT_E_sink: float = 5.0
     DT_2D_3E: float = 12.0
-    DT_m_2D: float = 0.0
+    # Discharge-inlet subcooling below the COLDEST cascade layer, state 1d in
+    # the plant diagram. The symmetric partner of DT_4C_M, and the parameter
+    # that closes the discharge side; see `cycle_state_points`. It replaced
+    # DT_m_2D in v0.6, which prescribed the exchanger OUTLET -- a quantity the
+    # model computes and, at CSS, contradicts. DT_M_1D = DT_3C_2C / N_lay
+    # (6.111 K here) reproduces the retired closure exactly.
+    DT_M_1D: float = 10.0
     T_source_C: float = 60.0
     DT_4C_M: float = 10.0
     DT_3A_4A: float = 10.0
@@ -441,6 +447,23 @@ def segment_profile(case, T_inlet, T_m_seg, m_dot, k_wall, E, n_segments=None):
 
     return dict(T_fluid=T_prof, NTU=NTU_prof, U_i=U_prof, q_prime=q_prime,
                 A_melt=A, T_pcm=T_pcm, delta=delta, E=np.array(E, float))
+
+
+def mixed_mean_outlet(res):
+    """Flow-mixed mean outlet temperature of a march [K].
+
+    The temperature at which the stream returns to the plant, averaged over the
+    half-cycle. At constant mass flow and c_p the mixing average reduces to the
+    time average, which on a logarithmic grid still has to be weighted by the
+    step -- the plain mean of `T_out` is dominated by the early levels and is
+    wrong by several kelvin.
+
+    This is the quantity the ORC actually sees, and since v0.6 it is a RESULT
+    rather than a prescribed state point (`cycle_state_points`).
+    """
+    t = np.asarray(res["t"], float)
+    dt = np.diff(np.concatenate(([0.0], t)))
+    return float(np.sum(np.asarray(res["T_out"], float) * dt) / np.sum(dt))
 
 
 def unmirror_march(res):
