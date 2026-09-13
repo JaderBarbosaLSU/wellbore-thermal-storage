@@ -25,6 +25,7 @@ OUT = pathlib.Path('/tmp/build/thums.py')
 # entry point in its own right because the parasitic power is reported but is
 # not called by the CSS march.
 ENTRY = ('Case', 'simulate_css_corrected', 'simulate_css', 'css_report',
+         'performance_indices', 'kpi_report',
          'cycle_state_points', 'energy_budget', 'melting_temperatures',
          'T_m_bottom', 'layer_map', 'march_h', 'pcm_state', 'pcm_capacities',
          'segment_profile', 'unmirror_march', 'mixed_mean_outlet',

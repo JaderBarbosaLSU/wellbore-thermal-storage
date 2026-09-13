@@ -1,5 +1,5 @@
 %=======================================================================
-%  THUMS -- a primer.
+%  P2H2P wellbore primer.
 %
 %  Companion to notebooks/P2H2P_model.ipynb. Self-contained: one file,
 %  standard packages, no external figures.
@@ -38,9 +38,9 @@
 \newcommand{\epsloc}{\ensuremath{\varepsilon_{\mathrm{local}}}}
 \newcommand{\code}[1]{\texttt{\small #1}}
 
-\title{\textbf{Thermal storage in a repurposed wellbore}\\[4pt]
-\large How the model works\\[8pt]
-\normalsize A primer for \code{P2H2P\_model.ipynb}, model version 0.6}
+\title{\textbf{P2H2P wellbore storage}\\[4pt]
+\large A primer: how the model works\\[8pt]
+\normalsize Companion to \code{P2H2P\_model.ipynb}, model version 0.6}
 \author{Craft \& Hawkins Department of Petroleum Engineering\\
 Louisiana State University}
 \date{\today}
@@ -647,6 +647,67 @@ $\epsloc$ at end of discharge & 0.0823 & it does not refreeze completely \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\subsection*{Performance indicators}
+
+Table~\ref{tab:kpi} is the set carried over from the factorial study. These are
+the numbers to collect across a parametric run, and each answers a different
+question.
+
+\begin{table}[htbp]
+\centering
+\caption{Performance indicators at the design point, per cycle.}
+\label{tab:kpi}
+\begin{tabular}{@{}l l r l@{}}
+\toprule
+ & meaning & value & what moves it \\
+\midrule
+$\eta_T$ & discharge thermal $\to$ net electric & 0.1880 &
+  the power block alone \\
+$\eta_{T,\mathrm{eff}}$ & the same, less discharge pumping & 0.1831 &
+  tube bore, flow, well depth \\
+$\eta_{\mathrm{RTE}}$ & round trip, both parasitics & 0.4320 &
+  COP, $\eta_{\mathrm{ORC}}$, parasitics \\
+$\varepsilon_{\mathrm{RTE}}$ & $\eta_{\mathrm{RTE}}\times$ cycled fraction &
+  0.3964 & anything leaving PCM unused \\
+\midrule
+$\Delta E_{\mathrm{therm}}$ & thermal energy per well & \SI{4585}{\kilo\watt\hour} &
+  $\hm$, $\rho$, $V_{\mathrm{well}}$ \\
+$\Delta E_{\mathrm{elec}}$ & net electric energy per well &
+  \SI{839}{\kilo\watt\hour} & the above $\times\ \eta_{T,\mathrm{eff}}$ \\
+$\rho_E$ & thermal energy density &
+  \SI{165.6}{\kilo\watt\hour\per\meter\cubed} & $\hm$, $\rho$ \\
+\midrule
+cycled fraction & $\varepsilon_{\mathrm{ch}}-\varepsilon_{\mathrm{dc}}$ & 0.9177 &
+  \\
+pumping & charge / discharge & 26.3 / \SI{26.7}{\kilo\watt} &
+  \SI{5.23}{\percent} of gross \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+Two things about reading these across a factorial table, both of which are easy
+to get wrong.
+
+\textbf{$\eta_{\mathrm{RTE}}$ does not move with the deviation, at all.} It is
+the point made at the end of \S\ref{sec:css}: a field delivering
+\SI{1}{\percent} above target also drew \SI{1}{\percent} more in, because both
+flows are pinned by their glides. If a sweep changes the deviation and leaves
+$\eta_{\mathrm{RTE}}$ where it was, it changed the \emph{size} of the plant and
+nothing else. Do not report the two as though they were independent findings.
+
+\textbf{$\varepsilon_{\mathrm{RTE}}$ is weighted by the \emph{cycled} fraction},
+$\varepsilon$ at end of charge minus $\varepsilon$ at end of discharge --- not by
+the melted fraction, as in the earlier first-cycle study. The melted fraction
+\emph{saturates} under this formulation: once a segment has melted all its PCM
+the further energy goes into superheat, where $\varepsilon$ cannot see it. At
+this design point it is exactly $1.0000$, which would make
+$\varepsilon_{\mathrm{RTE}}$ identical to $\eta_{\mathrm{RTE}}$ and carry no
+information whatever. The cycled fraction does not saturate: a store that fills
+completely and half empties returns $0.5$, which is the statement you want.
+
+\subsection*{Profiles}
 
 Figure~\ref{fig:profiles} is the picture to carry in your head. Three things
 are visible in it.

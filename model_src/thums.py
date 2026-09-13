@@ -1619,6 +1619,113 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False, T_2d=None):
         # copy is an internal detail of the march and does not leave here.
 
 
+def performance_indices(case, r):
+    """The performance indicators of the factorial study, evaluated at CSS.
+
+    These were defined for the first-cycle framing, where the field delivered
+    the target energy by construction. At cyclic steady state it delivers
+    whatever it delivers, so every one of them is computed from the ENERGY THE
+    FIELD ACTUALLY MOVES rather than from the target. That matters: charging
+    with the target input while crediting the realised output would flatter the
+    round-trip efficiency by exactly the deviation.
+
+        eta_T       thermal -> net electric conversion on the discharge side,
+                    W_el_out / Q_in_ORC. Identically eta_ORC * eta_turb * eta_gen,
+                    so it is a property of the power block alone.
+        eta_T_eff   the same with the discharge pumping parasitic charged
+                    against it. This is the "effective discharge efficiency".
+        eta_RTE     round-trip: net electricity out over electricity in, both
+                    including their pumping parasitics.
+        eps_RTE     eta_RTE weighted by the fraction of the store that actually
+                    CYCLES, eps(end of charge) - eps(end of discharge).
+        dE_therm    thermal energy delivered per well per cycle   [kWh]
+        dE_elec     net electric energy delivered per well,
+                    dE_therm * eta_T_eff                          [kWh]
+
+    A note on eps_RTE, because it changed meaning and the change matters when
+    reading a factorial table. The first-cycle version weighted by eps_m, the
+    melted fraction at end of charge. Under the enthalpy formulation that
+    SATURATES -- once a segment has melted all its PCM the further energy goes
+    into superheat, which eps_m cannot see -- and at this design point it is
+    1.0000 exactly, so eps_RTE was identical to eta_RTE and carried no
+    information at all. The cycled fraction does not saturate: a store that
+    fills completely but only half empties returns 0.5, which is the useful
+    statement.
+
+    Note also that eta_RTE is INDEPENDENT of the deviation, exactly. A field
+    that delivers 1 % more than target also drew 1 % more in, because the charge
+    flow is pinned by its glide in the same way. The deviation is a statement
+    about plant size, not about efficiency.
+    """
+    T, Eb = r["T"], r["budget"]
+    N = r["N_wells"]
+    t_ch_s, t_dc_s = case.t_ch * 3600.0, case.t_dc * 3600.0
+
+    # ---- what the field actually moved, per cycle ------------------------
+    Q_dot_in_ORC = r["Q_discharge_kJ"] / t_dc_s          # kW, field
+    Q_dot_out_HP = r["Q_charge_kJ"] / t_ch_s             # kW, field
+    rank_eff = Eb["Q_dot_in_ORC"] and (case.W_dot_el_out / case.Turb_eff
+                                       / case.ElG_eff / Eb["Q_dot_in_ORC"])
+    W_el_out = Q_dot_in_ORC * rank_eff * case.Turb_eff * case.ElG_eff
+    cop = Eb["Q_dot_out_HP"] / (Eb["W_dot_el_in"] * case.Comp_eff
+                                * case.ElH_eff)
+    W_el_in = Q_dot_out_HP / cop / case.Comp_eff / case.ElH_eff
+
+    # ---- parasitics, at the realised temperatures ------------------------
+    gv = case.geom_vector()
+    _, pp_dc = calculate_pressure_drop(gv, r["m1_dc"], case.fluid2,
+                                       r["T_2d_realised"], T["T_3d"], case.P)
+    _, pp_ch = calculate_pressure_drop(gv, r["m1_ch"], case.fluid2,
+                                       T["T_4c"], r["T_2c_realised"], case.P)
+    pumping_dc = pp_dc * case.num_tubes * N / 1000.0     # kW, field
+    pumping_ch = pp_ch * case.num_tubes * N / 1000.0
+
+    # ---- the indicators --------------------------------------------------
+    eta_T = W_el_out / Q_dot_in_ORC
+    eta_T_eff = eta_T - pumping_dc / Q_dot_in_ORC
+    eta_RTE = ((W_el_out - pumping_dc) * case.t_dc
+               / ((W_el_in + pumping_ch) * case.t_ch))
+    eps_cycled = float(r["charge"]["eps_local"].mean()
+                       - r["discharge"]["eps_local"].mean())
+    dE_therm = r["Q_discharge_kJ"] / 3600.0 / N          # kWh per well
+    return dict(
+        eta_T=eta_T, eta_T_eff=eta_T_eff,
+        eta_RTE=eta_RTE, eps_RTE=eta_RTE * eps_cycled,
+        eps_cycled=eps_cycled,
+        dE_therm_kWh=dE_therm, dE_elec_kWh=dE_therm * eta_T_eff,
+        pumping_ch_kW=pumping_ch, pumping_dc_kW=pumping_dc,
+        f_pump=(pumping_ch + pumping_dc) / W_el_out,
+        W_el_out_kW=W_el_out, W_el_in_kW=W_el_in,
+        rho_E_kWh_m3=dE_therm / case.V_well)
+
+
+def kpi_report(case, r, k=None):
+    """Print the factorial-study indicators."""
+    k = k or performance_indices(case, r)
+    print("PERFORMANCE INDICATORS   (at cyclic steady state, per cycle)")
+    print("=" * 66)
+    print(f"  eta_T       discharge thermal -> electric   {k['eta_T']:9.4f}")
+    print(f"  eta_T,eff   the same, less discharge pumping{k['eta_T_eff']:9.4f}"
+          f"   <- effective")
+    print(f"  eta_RTE     round trip, both parasitics     {k['eta_RTE']:9.4f}")
+    print(f"  eps_RTE     eta_RTE x cycled fraction       {k['eps_RTE']:9.4f}")
+    print()
+    print(f"  dE_therm    thermal energy per well      {k['dE_therm_kWh']:12.1f} kWh")
+    print(f"  dE_elec     net electric energy per well {k['dE_elec_kWh']:12.1f} kWh")
+    print(f"  rho_E       thermal energy density       {k['rho_E_kWh_m3']:12.2f} kWh/m3")
+    print()
+    print(f"  cycled fraction of the store   {k['eps_cycled']:8.4f}"
+          f"   (melted {r['charge']['eps_local'].mean():.4f},"
+          f" residual {r['discharge']['eps_local'].mean():.4f})")
+    print(f"  pumping, charge / discharge    {k['pumping_ch_kW']:8.2f}"
+          f" / {k['pumping_dc_kW']:.2f} kW"
+          f"   = {100*k['f_pump']:.2f} % of gross output")
+    print()
+    print("  eta_RTE is independent of the deviation: a field that delivers")
+    print("  1 % above target also drew 1 % more in. The deviation is a")
+    print("  statement about plant SIZE, not about efficiency.")
+
+
 def simulate_css_corrected(case, N=None, record=False, **kw):
     """CSS with a single ORC correction pass. The v0.6 default path.
 

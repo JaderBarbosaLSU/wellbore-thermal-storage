@@ -118,7 +118,7 @@ from thums import (CASE, validate_case, cycle_state_points, energy_budget,
                    melting_temperatures, T_m_bottom, layer_map,
                    simulate_css, simulate_css_corrected, css_report,
                    march_h, pcm_capacities, pcm_state, unmirror_march,
-                   calculate_pressure_drop)
+                   performance_indices, kpi_report, calculate_pressure_drop)
 plt.rcParams.update({'figure.dpi': 110, 'font.size': 9})
 pd.set_option('display.width', 200, 'display.max_columns', 30)
 print('thums loaded ·', len(open('thums.py').read().splitlines()), 'lines')
@@ -429,6 +429,46 @@ Steps 3–7. This is the whole calculation.
 cells.append(code(r"""
 css = simulate_css_corrected(case, record=True)
 css_report(case, css)
+"""))
+
+cells.append(md(r"""
+### 4.2.1 Performance indicators
+
+The indicators of the factorial study, evaluated at cyclic steady state.
+These are the numbers to collect across a parametric run.
+"""))
+
+cells.append(code(r"""
+kpi = performance_indices(case, css)
+kpi_report(case, css, kpi)
+"""))
+
+cells.append(md(r"""
+| indicator | meaning | what moves it |
+|---|---|---|
+| $\eta_T$ | discharge thermal $\to$ net electric | the power block only: $\eta_{\rm ORC}\eta_{\rm turb}\eta_{\rm gen}$. The store cannot change it |
+| $\eta_{T,\rm eff}$ | the same, less the discharge pumping | tube diameter, flow rate, well depth |
+| $\eta_{\rm RTE}$ | round trip, both parasitics charged | $\mathrm{COP}$, $\eta_{\rm ORC}$ and the parasitics. **Not** the deviation |
+| $\varepsilon_{\rm RTE}$ | $\eta_{\rm RTE}\times$ the fraction of the store that cycles | anything that leaves PCM unused |
+| $\Delta E_{\rm therm}$ | thermal energy per well per cycle [kWh] | $h_m$, $\rho$, $V_{\rm well}$ |
+| $\Delta E_{\rm elec}$ | net electric energy per well [kWh] | the above, times $\eta_{T,\rm eff}$ |
+
+Two warnings about reading these across a factorial table.
+
+**$\eta_{\rm RTE}$ does not move with the deviation, at all.** A field that
+delivers 1 % above target also drew 1 % more in, because both flows are pinned
+by their glides. If a sweep changes the deviation and leaves $\eta_{\rm RTE}$
+alone, it changed the *size* of the plant and nothing else.
+
+**$\varepsilon_{\rm RTE}$ is weighted by the CYCLED fraction**, $\varepsilon$
+at end of charge minus $\varepsilon$ at end of discharge — not by the melted
+fraction as in the first-cycle study. The melted fraction saturates at $1$ under
+this formulation, because a segment that has melted everything puts further
+energy into superheat where $\varepsilon$ cannot see it; at this design point it
+is exactly $1.0000$, which would make $\varepsilon_{\rm RTE}$ identical to
+$\eta_{\rm RTE}$ and useless. The cycled fraction does not saturate: a store
+that fills completely and half empties returns $0.5$, which is the statement you
+want.
 """))
 
 cells.append(md(r"""
