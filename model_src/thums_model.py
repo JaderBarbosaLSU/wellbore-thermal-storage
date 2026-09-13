@@ -2039,7 +2039,7 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False, T_2d=None):
     glide_ch = T["T_4c"] - T_2c_realised
     return dict(
         N_wells=N, m1_ch=m1_ch, m1_dc=m1_dc, flow_ratio=m1_dc / m1_ch,
-        cycles=len(history), converged=history[-1]["drift"] < tol,
+        cycles=len(history), converged=history[-1]["drift"] < tol, tol=tol,
         history=history, charge=ch, discharge=dc, E_css=E,
         Q_charge_kJ=Q_ch, Q_discharge_kJ=Q_dc, required_kJ=req,
         deviation=deviation,
@@ -2100,8 +2100,20 @@ def css_report(case, r):
     print(f"  m_dot discharge  {r['m1_dc']:10.4f} kg/s per leg-pair, pinned by the glide")
     print(f"  flow ratio       {r['flow_ratio']:10.4f}   a consequence, not a solve")
     print()
-    print(f"  converged in {r['cycles']} cycles"
-          f"   (drift {r['history'][-1]['drift']:.1e})")
+    if r["converged"]:
+        print(f"  converged in {r['cycles']} cycles"
+              f"   (drift {r['history'][-1]['drift']:.1e})")
+    else:
+        # Loud, because the result is still printed and looks perfectly normal.
+        # Slow convergence is not rare: it scales with the well count, and a
+        # case with low latent heat or many wells can need three times the
+        # default. Re-run with a larger n_cycles before believing anything
+        # below this line.
+        print(f"  *** NOT CONVERGED *** stopped at the n_cycles limit of"
+              f" {r['cycles']} with drift {r['history'][-1]['drift']:.2e},"
+              f" tolerance {r['tol']:.0e}")
+        print("      Re-run with a larger n_cycles. Everything below assumes")
+        print("      the state has returned to itself, and it has not.")
     print(f"  eta_storage      {r['eta_storage']:10.6f}   must be 1: adiabatic, closed cycle")
     print()
     print(f"  required   D_E_in_ORC  {r['required_kJ']:12.5e} kJ")
