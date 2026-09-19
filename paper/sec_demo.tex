@@ -61,8 +61,8 @@ appear to carry about \SI{4.7}{\percent} of the energy. A reader might
 reasonably conclude that the formulation is a small correction. It is not, for
 two separate reasons. The estimate itself is low --- the \SI{10}{\kelvin}
 approach is the approach of the \emph{first} layer of the cascade, and a segment
-that saturates goes on superheating past it, reaching \SI{18.5}{\kelvin} here,
-so the measured figure is \SI{9.3}{\percent} rather than \SI{4.7}{\percent}
+that saturates goes on superheating past it, reaching \SI{15.6}{\kelvin} here,
+so the measured figure is \SI{8.2}{\percent} rather than \SI{4.7}{\percent}
 (Table~\ref{tab:branches}). More importantly, the energy is the wrong thing to
 measure: Section~\ref{sec:levelling} shows that the sensible branches act on the
 \emph{distribution} of melting, where the effect is first-order.
@@ -373,7 +373,7 @@ charge, and its spread over all \num{100} segments.}
 \toprule
 formulation & min & max & spread \\
 \midrule
-area-based (melted fraction capped) & 0.595 & 1.000 & 0.405 \\
+area-based (melted fraction capped) & 0.593 & 1.000 & 0.407 \\
 enthalpy                            & 1.000 & 1.000 & \textbf{0.000} \\
 \bottomrule
 \end{tabular}
@@ -458,10 +458,10 @@ within the two-phase plateau, $0\le E'\le\Elat$, and the parts traversed outside
 it gives Table~\ref{tab:branches}. Just over a tenth of the energy passing
 through the store is carried by the sensible branches, and it is not optional:
 at the end of the charge \emph{all} \num{100} segments stand at
-$\varepsilon_{\mathrm{local}}=1$, with a peak superheat of \SI{18.5}{\kelvin},
-so a formulation whose state stops at $\Tm$ has nowhere to put the last
-\SI{7.1}{\percent} of the charge and nothing to draw the corresponding part of
-the discharge from.
+$\varepsilon_{\mathrm{local}}=1$ --- \num{82} of the \num{100} segments, mean
+$0.9706$ --- with a peak superheat of \SI{15.6}{\kelvin}, so a formulation whose
+state stops at $\Tm$ has nowhere to put the last \SI{4.3}{\percent} of the
+charge and nothing to draw the corresponding part of the discharge from.
 
 \begin{table}[htbp]
 \centering
@@ -473,11 +473,11 @@ Charge and discharge agree exactly, as Eq.~\eqref{eq:css-unity} requires.}
 \toprule
 branch & \% of half-cycle energy & peak departure from $\Tm$ \\
 \midrule
-two-phase plateau, $0\le E'\le\Elat$ & 90.66 & --- \\
-superheated liquid, $E'>\Elat$       &  7.09 & \SI{18.5}{\kelvin} \\
-subcooled solid, $E'<0$              &  2.25 & \SI{11.5}{\kelvin} \\
+two-phase plateau, $0\le E'\le\Elat$ & 91.78 & --- \\
+superheated liquid, $E'>\Elat$       &  4.31 & \SI{15.6}{\kelvin} \\
+subcooled solid, $E'<0$              &  3.91 & \SI{17.1}{\kelvin} \\
 \midrule
-outside the plateau                  & \textbf{9.34} & \\
+outside the plateau                  & \textbf{8.22} & \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -573,10 +573,13 @@ energies are the same number. The first cycle absorbs more than any later one
 because it alone begins from a cold, fully solid store --- which is precisely
 why a first-cycle result cannot be quoted for a repeating duty.
 
-At the latent-only size the field delivers \SI{101.23}{\percent} of target. The
-store melts \emph{completely} at end of charge --- $\varepsilon_{\mathrm{local}}
-= 1.000$ at every station --- but returns only to a mean of $0.082$, so what
-limits it is the \textbf{discharge rate} rather than the inventory. The
+At the latent-only size the field delivers \SI{104.73}{\percent} of target. The
+store comes close to melting completely at end of charge ---
+$\varepsilon_{\mathrm{local}}=1$ at \num{82} of \num{100} stations, mean
+$0.9706$ --- and returns to a mean of $0.0094$, so it very nearly refreezes. The
+binding constraint at this design point is therefore closer to inventory than to
+rate, and it is the design curve rather than any single number that separates
+them. The
 signature is in the last column, drawn in Fig.~\ref{fig:cssdesign}: the residual
 melt fraction \emph{rises} with exchanger count, because each unit is then
 worked less hard and proportionally less of it refreezes. Were the limit an
@@ -591,24 +594,24 @@ than on more phase-change material.
 \begin{tikzpicture}
 \begin{axis}[width=0.48\linewidth,height=5.4cm,
   xlabel={$\Nwells$}, ylabel={delivered / target},
-  title={\small (a) energy delivered}, ymin=0.89, ymax=1.07, xmin=8.5, xmax=18.5,
+  title={\small (a) energy delivered}, ymin=0.91, ymax=1.09, xmin=8.5, xmax=16.5,
   grid=both, grid style={gray!20}]
-\addplot[thick,mark=*,mark size=1.3pt,blue!70!black] coordinates {(9.00,0.90481) (10.00,0.96284) (11.00,0.99845) (11.74,1.01228) (13.00,1.02708) (14.00,1.03531) (16.00,1.04723) (18.00,1.05599)};
-\addplot[dashed,gray,domain=8.5:18.5,samples=2,forget plot] {1};
-\node[font=\scriptsize,gray] at (axis cs:16.6,0.995) {target};
+\addplot[thick,mark=*,mark size=1.3pt,blue!70!black] coordinates {(9.00,0.92826) (10.00,0.98936) (11.63,1.04733) (12.50,1.05763) (14.00,1.06836) (16.00,1.07659)};
+\addplot[dashed,gray,domain=8.5:16.5,samples=2,forget plot] {1};
+\node[font=\scriptsize,gray] at (axis cs:15.0,0.985) {target};
 \end{axis}
 \begin{axis}[width=0.48\linewidth,height=5.4cm,at={(0.52\linewidth,0)},
   xlabel={$\Nwells$},
   ylabel={residual $\varepsilon_{\mathrm{local}}$},
   title={\small (b) unfrozen fraction at end of discharge},
-  ymin=-0.02, ymax=0.42, xmin=8.5, xmax=18.5,
+  ymin=-0.005, ymax=0.095, xmin=8.5, xmax=16.5,
   grid=both, grid style={gray!20}]
-\addplot[thick,mark=triangle*,mark size=1.6pt,orange!85!black] coordinates {(9.00,0.0025) (10.00,0.0077) (11.00,0.0395) (11.74,0.0823) (13.00,0.1536) (14.00,0.2057) (16.00,0.2955) (18.00,0.3672)};
+\addplot[thick,mark=triangle*,mark size=1.6pt,orange!85!black] coordinates {(9.00,0.0000) (10.00,0.0000) (11.63,0.0094) (12.50,0.0255) (14.00,0.0529) (16.00,0.0826)};
 \end{axis}
 \end{tikzpicture}
 \caption{Cyclic steady state against exchanger count; each point is an
 independent march to convergence. (a) Delivered energy crosses target near
-$\Nwells\approx11.0$, slightly \emph{below} the latent-only count of $11.74$.
+$\Nwells\approx10.1$, \emph{below} the latent-only count of $11.63$.
 (b) The diagnostic: the
 residual melted fraction at end of discharge \emph{rises} with exchanger count,
 because each unit is then worked less hard and proportionally less of it
@@ -723,9 +726,9 @@ the resulting equation.
   fraction is confined to $[0,1]$ by the constitutive relation rather than by a
   guard. The amount at stake is not small: at cyclic steady state the store
   finishes each charge fully molten in all \num{100} segments, with a peak
-  superheat of \SI{18.5}{\kelvin}, and \SI{9.3}{\percent} of the energy
+  superheat of \SI{15.6}{\kelvin}, and \SI{8.2}{\percent} of the energy
   passing through the store each cycle traverses the sensible branches ---
-  \SI{7.1}{\percent} as superheat and \SI{2.3}{\percent} as subcooling. That is
+  \SI{4.3}{\percent} as superheat and \SI{3.9}{\percent} as subcooling. That is
   the energy an area-based state must either discard or fabricate.
 \item The conductance closing the segment equation is
   $K=\md c_{p}(1-e^{-\mathrm{NTU}})/\Delta z$ and not $\Ui P_{i}$. The two agree

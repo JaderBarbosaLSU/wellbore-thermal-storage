@@ -835,6 +835,16 @@ class Case:
     # the sensible branches do, at a fixed well count.
     sensible_heat: bool = True
 
+    # Which material lies between the tube and the phase front, and therefore
+    # which shell the heat has to cross. See `conduction_shell` and DN-13.
+    #   'directional'  melting -> liquid shell (k_l); freezing -> frozen
+    #                  shell (k_s). The physical arrangement in both directions.
+    #   'melt_side'    the melted thickness always, with k_l whenever any melt
+    #                  exists. Correct while melting, INVERTED while freezing.
+    #                  Retained only to reproduce results published before the
+    #                  correction; it is not a model.
+    front_geometry: str = "directional"
+
     # ---- derived ----
     @property
     def T_m(self):
@@ -1168,6 +1178,9 @@ def segment_profile(case, T_inlet, T_m_seg, m_dot, k_wall, E, n_segments=None):
     dz = case.L_tube / n_segments
     A, T_pcm = pcm_state(E, T_m_seg, case)
     delta = delta_from_area(A, case.r_e, case.num_fins, case.fin_t, case.fin_L)
+    A_avail = pcm_capacities(case)[0]
+    d_melt, k_melt = conduction_shell(case, A, A_avail, True)
+    d_froz, k_froz = conduction_shell(case, A, A_avail, False)
 
     T_prof = np.empty(n_segments + 1)
     T_prof[0] = T_inlet
@@ -1177,10 +1190,12 @@ def segment_profile(case, T_inlet, T_m_seg, m_dot, k_wall, E, n_segments=None):
 
     T0 = T_inlet
     for i in range(n_segments):
-        k_m = case.k_l if E[i] > 0.0 else case.k_s
+        melting = T0 > T_pcm[i]
+        d_path = float(d_melt[i] if melting else d_froz[i])
+        k_m = k_melt if melting else k_froz
         h_i, cp_d, _, _ = h_internal(case.fluid2, T0, case.P, case.r_i, m_dot)
         U_i = compute_U_i(h_i, case.r_i, case.r_e, k_wall, case.Rf_i, k_m,
-                          float(delta[i]), case.L_tube, case.fin_t,
+                          d_path, case.L_tube, case.fin_t,
                           case.fin_L, case.num_fins)
         NTU = float(np.clip((2 * np.pi * case.r_i * U_i * dz) / (m_dot * cp_d),
                             -50.0, 50.0))
@@ -1193,6 +1208,65 @@ def segment_profile(case, T_inlet, T_m_seg, m_dot, k_wall, E, n_segments=None):
 
     return dict(T_fluid=T_prof, NTU=NTU_prof, U_i=U_prof, q_prime=q_prime,
                 A_melt=A, T_pcm=T_pcm, delta=delta, E=np.array(E, float))
+
+
+def conduction_shell(case, A_melt, A_avail, melting):
+    """Thickness and conductivity of the shell between the tube and the front.
+
+    The PCM-side resistance in `compute_U_i` is that of an annulus growing
+    OUTWARD FROM THE TUBE WALL,
+
+        R' = ln(1 + delta/r_e) / (2 pi k),
+
+    so the question this function answers is: which material is that annulus
+    made of, and how thick is it?
+
+    It depends on the direction of the phase change, because the front always
+    grows away from the tube -- the tube is the driven boundary in both
+    half-cycles.
+
+      MELTING (fluid hotter than the PCM). Melting begins at the tube wall and
+      the front moves outward, so the shell is LIQUID and its thickness is that
+      of the melted area. Heat crosses the melt to reach the remaining solid.
+
+      FREEZING (fluid colder). Solidification also begins at the tube wall, so
+      the shell is the FROZEN material and its thickness is that of the solid
+      area, A_avail - A_melt. The liquid is displaced outward, beyond the front,
+      and is no longer in the conduction path at all.
+
+    All four limits come out right without special-casing:
+
+      fully solid, melting     A_melt = 0            -> delta = 0, no resistance
+      fully melted, melting    A_melt = A_avail      -> the full liquid annulus
+      fully melted, freezing   A_avail - A_melt = 0  -> delta = 0, no resistance
+      fully solid, freezing    A_avail - A_melt = A  -> the full frozen annulus
+
+    The last of those is the one that matters. Until v0.7 the melted thickness
+    was used in BOTH directions, which put the conduction path on the wrong
+    side of the front during discharge: a segment that had frozen solid was
+    given ZERO PCM-side resistance, exactly where the physical resistance is
+    largest. The consequence was that the modelled exchanger IMPROVED as it
+    froze, when it should degrade. See DN-13 for what that was worth.
+
+    LIMIT OF ANY LUMPED FRONT. One thickness can describe one front. After the
+    first half-cycle from a fully solid store the geometry is generally
+    three-region -- at cyclic steady state the charge begins with residual
+    liquid left in the OUTER part of the cell, so melting produces liquid at the
+    tube, solid in the middle and liquid outside. Neither this function nor the
+    retired one can represent that; this one is the better approximation, not a
+    correct treatment. It is hypothesis H5, stated honestly.
+    """
+    A_path = A_melt if melting else (A_avail - A_melt)
+    k_path = case.k_l if melting else case.k_s
+    if case.front_geometry == "melt_side":          # retired, see above
+        A_path = A_melt
+        k_path = case.k_l
+    elif case.front_geometry != "directional":
+        raise ValueError(f"front_geometry must be 'directional' or "
+                         f"'melt_side', not {case.front_geometry!r}")
+    delta = delta_from_area(A_path, case.r_e, case.num_fins, case.fin_t,
+                            case.fin_L)
+    return delta, k_path
 
 
 def mixed_mean_outlet(res):
@@ -1285,7 +1359,12 @@ def march_h(case, T_inlet, T_m_seg, m_dot, k_wall, times,
             continue
 
         A, T_pcm = pcm_state(E, T_m_seg, case)
+        # `delta` stays the MELT thickness: it is what the H3 merge diagnostic
+        # is about. The conduction path is a separate question -- which side of
+        # the front the heat has to cross -- and depends on the direction.
         delta = delta_from_area(A, r_e, case.num_fins, case.fin_t, case.fin_L)
+        d_melt, k_melt = conduction_shell(case, A, A_avail, True)
+        d_froz, k_froz = conduction_shell(case, A, A_avail, False)
         T0 = T_inlet
         q_prime = np.zeros(n_segments)
         if record:
@@ -1294,11 +1373,15 @@ def march_h(case, T_inlet, T_m_seg, m_dot, k_wall, times,
             NTU_prof = np.empty(n_segments); U_prof = np.empty(n_segments)
 
         for i in range(n_segments):
-            # the layer next to the tube is liquid wherever any melt exists
-            k_m = case.k_l if E[i] > 0.0 else case.k_s
+            # Which shell the heat crosses depends on which way the front is
+            # moving; the sign of the driving difference settles it before K is
+            # known, and it has the same sign as q'.
+            melting = T0 > T_pcm[i]
+            d_path = float(d_melt[i] if melting else d_froz[i])
+            k_m = k_melt if melting else k_froz
             h_i, cp_d, _, _ = h_internal(case.fluid2, T0, case.P, r_i, m_dot)
             U_i = compute_U_i(h_i, r_i, r_e, k_wall, case.Rf_i, k_m,
-                              float(delta[i]), case.L_tube, case.fin_t,
+                              d_path, case.L_tube, case.fin_t,
                               case.fin_L, case.num_fins)
             NTU = float(np.clip((2 * np.pi * r_i * U_i * dz) / (m_dot * cp_d),
                                 -50.0, 50.0))

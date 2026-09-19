@@ -427,7 +427,10 @@ Steps 3–7. This is the whole calculation.
 """))
 
 cells.append(code(r"""
-css = simulate_css_corrected(case, record=True)
+# n_cycles: convergence slowed in v0.7 (the design point needs ~75 cycles,
+# and it grows with the well count). The default of 80 is no longer
+# comfortable -- see the NOT CONVERGED banner in the report below.
+css = simulate_css_corrected(case, record=True, n_cycles=250)
 css_report(case, css)
 """))
 
@@ -590,14 +593,14 @@ def sweep(field, values, base=None, N=None, correct_once=True):
     base = base or case
     T_2d_fixed = None
     if correct_once:
-        T_2d_fixed = simulate_css_corrected(base, N=N)['T_2d_realised']
+        T_2d_fixed = simulate_css_corrected(base, N=N, n_cycles=250)['T_2d_realised']
     rows = []
     for v in values:
         c = base.with_(**{field: v})
         bad = [m for lvl, m in validate_case(c, verbose=False) if lvl == 'error']
         if bad:
             print(f'  {field}={v}: SKIPPED -- {bad[0]}');  continue
-        r = simulate_css(c, N=N, T_2d=T_2d_fixed)
+        r = simulate_css(c, N=N, T_2d=T_2d_fixed, n_cycles=250)
         rows.append({field: v,
                      'N_wells':      r['N_wells'],
                      'deviation_%':  100*r['deviation'],
@@ -629,7 +632,7 @@ and nothing else — so it is the right place to start.
 """))
 
 cells.append(code(r"""
-df = sweep('DT_M_1D', [6.0, 8.0, 10.0, 12.0, 15.0])
+df = sweep('DT_M_1D', [6.0, 8.0, 10.0, 12.0])
 display(df.round(4))
 plot_sweep(df, 'DT_M_1D')
 """))

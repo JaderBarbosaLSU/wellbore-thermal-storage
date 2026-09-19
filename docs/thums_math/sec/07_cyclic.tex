@@ -167,27 +167,27 @@ leaves no root. Under the reformulation that saturation is not a failure: it
 \begin{center}
 \begin{tabular}{@{}l r l@{}}
 \toprule
-$\Nwells$ & 11.7434 & latent heat alone, not solved \\
-$\md^{\mathrm{ch}}$, $\md^{\mathrm{dc}}$ & 0.9655, 0.9712 & \si{\kilogram\per\second} per leg-pair \\
-flow ratio & 1.0058 & a consequence, not a solve \\
-cycles to CSS & 32 & \\
+$\Nwells$ & 11.6255 & latent heat alone, not solved \\
+$\md^{\mathrm{ch}}$, $\md^{\mathrm{dc}}$ & 0.9655, 0.9708 & \si{\kilogram\per\second} per leg-pair \\
+flow ratio & 1.0055 & a consequence, not a solve \\
+cycles to CSS & 73 & \\
 $\eta_{\mathrm{storage}}$ & 1.000000 & Eq.~\eqref{eq:css-unity} \\
 \midrule
-required $\Delta E_{\mathrm{in,ORC}}$ & \num{1.91479e8} & kJ \\
-delivered at CSS & \num{1.93830e8} & kJ \\
-\textbf{deviation} & \textbf{+1.228} & \si{\percent} \\
+required $\Delta E_{\mathrm{in,ORC}}$ & \num{1.89556e8} & kJ \\
+delivered at CSS & \num{1.98524e8} & kJ \\
+\textbf{deviation} & \textbf{+4.731} & \si{\percent} \\
 \midrule
-implied net output & 1.0123 & MWe against a target of 1.0000 \\
+implied net output & 1.0473 & MWe against a target of 1.0000 \\
 \bottomrule
 \end{tabular}
 \end{center}
 
 \noindent
-These are v0.6 figures, with the discharge inlet prescribed by
-Eq.~\eqref{eq:inlets} and the ORC corrected once at the realised outlet. Under
-the retired closure of \S\ref{sec:cycles:closure} the same hardware delivered
-\SI{94.26}{\percent} of target rather than \SI{101.23}{\percent}
-(\S\ref{sec:cyclic:closure}).
+These are v0.7 figures: the discharge inlet prescribed by
+Eq.~\eqref{eq:inlets}, the conduction shell taken on the correct side of the
+front (\S\ref{sec:network:shell}), and the ORC corrected once at the realised
+outlet. Under the two retired treatments together the same hardware delivered
+\SI{94.26}{\percent} of target rather than \SI{104.73}{\percent}.
 
 \begin{center}
 \end{center}
@@ -195,24 +195,23 @@ the retired closure of \S\ref{sec:cycles:closure} the same hardware delivered
 \subsubsection*{The shortfall is a rate limit, not an inventory limit}
 
 At CSS the store melts \emph{completely} --- $\varepsilon_{\mathrm{local}}=1.000$
-at every segment at end of charge --- but returns only to a mean of $0.082$. It
-never fully refreezes within the \SI{10}{\hour} discharge window, and that
-residual is what governs delivery. The design curve makes the diagnosis
-explicit:
+at $82$ of the $100$ segments at end of charge, mean $0.9706$ --- and returns to
+a mean of $0.0094$. It very nearly refreezes within the \SI{10}{\hour} window,
+so at this design point the store is closer to inventory-limited than to
+rate-limited. The design curve is what separates the two, and the rate-limit
+signature survives in it:
 
 \begin{center}
 \begin{tabular}{@{}r r r r r@{}}
 \toprule
 $\Nwells$ & delivered/req & MWe & $\varepsilon$ end charge & $\varepsilon$ end discharge \\
 \midrule
- 9.000 & 0.9048 & 0.9048 & 1.000 & 0.002 \\
-10.000 & 0.9628 & 0.9628 & 1.000 & 0.008 \\
-11.000 & 0.9985 & 0.9985 & 1.000 & 0.040 \\
-11.743 & 1.0123 & 1.0123 & 1.000 & 0.082 \\
-13.000 & 1.0271 & 1.0271 & 0.998 & 0.154 \\
-14.000 & 1.0353 & 1.0353 & 0.997 & 0.206 \\
-16.000 & 1.0472 & 1.0472 & 0.989 & 0.295 \\
-18.000 & 1.0560 & 1.0560 & 0.983 & 0.367 \\
+ 9.000 & 0.9283 & 0.9283 & 1.000 & 0.000 \\
+10.000 & 0.9894 & 0.9894 & 1.000 & 0.000 \\
+11.626 & 1.0473 & 1.0473 & 0.971 & 0.009 \\
+12.500 & 1.0576 & 1.0576 & 0.934 & 0.026 \\
+14.000 & 1.0684 & 1.0684 & 0.874 & 0.053 \\
+16.000 & 1.0766 & 1.0766 & 0.803 & 0.083 \\
 \bottomrule
 \end{tabular}
 \end{center}

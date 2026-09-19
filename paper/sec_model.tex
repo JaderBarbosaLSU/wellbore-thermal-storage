@@ -195,6 +195,64 @@ melt PCM it does not own, and superheat is where the additional energy goes.
 Consequently $\varepsilon_{\mathrm{local}}\in[0,1]$ is \emph{structural}: no
 code path can violate it, and no test for it is required.
 
+\subsection{Which shell the heat crosses}
+\label{sec:shell}
+
+Recovering a thickness from $\Amelt$ raises a question that the choice of state
+variable makes unavoidable, and that an area-based formulation can leave
+ambiguous. The PCM-side resistance is a shell growing \emph{outward from the
+tube wall},
+\begin{equation}
+  R' = \frac{\ln\left(1+\delta/r_{e}\right)}{2\pi k},
+  \label{eq:shell}
+\end{equation}
+so the model must state which material that shell is made of.
+
+The front grows away from the tube in both directions, because the tube is the
+driven boundary in both. While \emph{melting}, the shell is liquid and its
+thickness follows $\Amelt$: heat crosses the melt to reach the remaining solid.
+While \emph{freezing}, solidification also nucleates at the wall, so the shell
+is the \emph{frozen} material, of thickness following $\Aav-\Amelt$, and the
+liquid is displaced outward beyond the front where it takes no part in the
+conduction path:
+\begin{equation}
+  \left(\delta,\,k\right) =
+  \begin{cases}
+    \left(\delta(\Amelt),\; k_{l}\right), & T_{j} > \Tpcm \quad\text{(melting)},\\[3pt]
+    \left(\delta(\Aav-\Amelt),\; k_{s}\right), & T_{j} < \Tpcm \quad\text{(freezing)}.
+  \end{cases}
+  \label{eq:shell-choice}
+\end{equation}
+The direction is taken from the sign of the driving difference, which is known
+before the conductance is formed and carries the sign of $q'$.
+
+Equation~\eqref{eq:shell-choice} needs no special handling at the four limiting
+states. A fully solid segment that is melting, and a fully melted segment that
+is freezing, both have $\delta=0$ and therefore no PCM-side resistance --- the
+front is at the tube and nothing has yet grown. A fully melted segment that is
+melting, and a fully solid one that is freezing, both present the full annulus,
+with $k_{l}$ and $k_{s}$ respectively.
+
+Taking the melted thickness in both directions --- the arrangement one arrives at
+by writing the melting case first and not revisiting it --- inverts the
+freezing half-cycle, and the two thicknesses are complementary, so the error is
+a \emph{reversal in time} rather than a scale factor. A segment frozen solid is
+then assigned zero resistance where the physical resistance is greatest, and the
+modelled exchanger improves as it freezes. In the case studied here that
+produced an overall coefficient at the end of the discharge seven times its
+value at the end of the charge, against $k_{s}/k_{l}=1.33$; with
+Eq.~\eqref{eq:shell-choice} the two half-cycles become near mirror images,
+agreeing to \SI{0.5}{\percent} at $t\to0$ and differing by $1.265$ at the end.
+
+\paragraph{What a single thickness cannot do.}
+One $\delta$ describes one front. After the first half-cycle from a uniformly
+solid store the geometry is in general three-region: at cyclic steady state the
+charge begins with residual liquid in the \emph{outer} part of the cell, so
+melting produces liquid at the tube, solid in the middle and liquid outside.
+Equation~\eqref{eq:shell-choice} is the better of the two single-front
+approximations, not a resolution of that. It is the substance of hypothesis H5,
+and it is the leading structural limitation of the treatment given here.
+
 \subsection{Recovering the layer thickness}
 
 The resistance network requires $\delta$, not $\Amelt$. For a tube of outer

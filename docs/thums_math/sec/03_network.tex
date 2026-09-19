@@ -76,6 +76,137 @@ $2\pi(r_{e}+\delta)$ is available for conduction at every radius. That holds
 only while the melt front is free of its neighbours.
 
 %---------------------------------------------------------------------
+\subsection{Which shell does the heat cross?}
+\label{sec:network:shell}
+
+Equation~\eqref{eq:he} is a shell between $r_{e}$ and $r_{e}+\delta$, so it
+poses a question that is easy to pass over: \emph{which material is that shell
+made of, and how thick is it?} The answer is not the same in the two
+half-cycles, and getting it wrong is invisible in every melting result.
+
+The front always grows \emph{away from the tube}, because the tube is the driven
+boundary in both directions.
+
+\begin{center}
+\begin{tabular}{@{}l l l l@{}}
+\toprule
+ & shell against the tube & thickness from & conductivity \\
+\midrule
+melting  & liquid        & $\Amelt$               & $k_{l}$ \\
+freezing & frozen solid  & $A_{\mathrm{avail}}-\Amelt$ & $k_{s}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+While melting, heat crosses the melt to reach the remaining solid --- the
+familiar picture. While freezing, solidification also nucleates at the wall, so
+heat crosses the \emph{frozen} shell, and the liquid is displaced outward beyond
+the front where it plays no part in the conduction path at all.
+
+Written this way the four limiting states need no special handling:
+
+\begin{center}
+\begin{tabular}{@{}l l l l@{}}
+\toprule
+state & direction & $\delta$ & PCM-side resistance \\
+\midrule
+fully solid  & melting  & $0$                    & none; the front is at the tube \\
+fully melted & melting  & $\delta_{\mathrm{merge}}$ & the full liquid annulus \\
+fully melted & freezing & $0$                    & none; nothing has frozen \\
+fully solid  & freezing & $\delta_{\mathrm{merge}}$ & the full frozen annulus \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Function: \code{conduction\_shell}. The direction is taken from the sign of
+$T_{j}-\Tpcm$, which is known before the conductance is formed and has the same
+sign as $q'$.
+
+\subsubsection*{What this replaced, and what it was worth}
+
+Until v0.7 the \emph{melted} thickness was used in both directions, with
+$\km=k_{l}$ whenever any melt existed. On charging that is correct. On
+discharging it puts the conduction path on the wrong side of the front, and the
+two thicknesses are complementary, so the error is a \emph{time reversal} rather
+than a scale factor:
+
+\begin{center}
+\begin{tabular}{@{}r r r r r r@{}}
+\toprule
+$\varepsilon_{\mathrm{local}}$ & $\delta$ used & $\delta$ wanted
+ & $R'$ used & $R'$ wanted & ratio \\
+ & \si{\milli\meter} & \si{\milli\meter}
+ & \multicolumn{2}{c}{\si{\meter\kelvin\per\watt}} & \\
+\midrule
+1.00 & 23.37 &  0.00 & 0.2639 & 0.0000 & $\infty$ \\
+0.50 & 14.32 & 14.32 & 0.1833 & 0.1375 & 1.33 \\
+0.08 &  3.48 & 22.01 & 0.0541 & 0.1897 & 0.28 \\
+0.00 &  0.00 & 23.37 & 0.0000 & 0.1979 & 0 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+A discharge runs down that table. The modelled resistance \emph{fell} by a
+factor of five as the store froze, where it should rise from nothing to its
+maximum; a segment frozen solid was given \textbf{zero} PCM-side resistance at
+precisely the point where the physical resistance is largest.
+
+The consequence is visible in $\Ui$ and was for a long time mistaken for
+physics. Mid-well at the end of each half-cycle the discharge value exceeded the
+charge value by a factor of \textbf{seven}, and \S\ref{sec:defects} recorded
+that as the melt layer refreezing --- solid PCM conducting better than liquid.
+But $k_{s}/k_{l}=1.33$, and nothing accounted for the remaining $5.3$. With the
+shell taken on the correct side, the two half-cycles become near mirror images:
+at $t\to0$ the values agree to \SI{0.5}{\percent}, because the shell has zero
+thickness at the start of \emph{both}; at the end the ratio is $1.265$, which is
+$k_{s}/k_{l}$ less the fact that the frozen shell does not grow quite as thick
+as the melted one.
+
+\begin{center}
+\begin{tabular}{@{}l r r@{}}
+\toprule
+at the design point & melt side & directional \\
+\midrule
+$\Ui$ mid-well, $t\to0$, charge / discharge & 822 / 117 & 823 / 829 \\
+$\Ui$ mid-well, end, charge / discharge     & 117 / 821 & 117 / 148 \\
+CSS deviation                                & \SI{+1.23}{\percent} & \SI{+4.73}{\percent} \\
+residual $\varepsilon$ at end of discharge   & 0.0823 & 0.0094 \\
+$\varepsilon$ at end of charge               & 1.0000 & 0.9706 \\
+$\Nwells$                                    & 11.743 & 11.626 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The direction of that change is worth dwelling on, because it is the opposite of
+what one would guess. The retired treatment was too \emph{optimistic} at the end
+of the discharge, which is where the rate limit bites --- so the correction
+ought to reduce the delivered energy. It increases it. At the \emph{start} of
+the discharge the retired treatment was infinitely too pessimistic, and that is
+when the driving difference is largest and most of the energy moves; the early
+over-penalty dominates the integral. The store also now very nearly refreezes,
+so the discharge is closer to inventory-limited at the design point than it
+appeared, although the rate-limit diagnostic survives: the residual
+$\varepsilon$ still rises with well count.
+
+\code{Case.front\_geometry = 'melt\_side'} reproduces the retired behaviour
+exactly, which is how this change was separated from the closure change of
+\S\ref{sec:cycles:closure} in the frozen fixture.
+
+\subsubsection*{The honest limit}
+
+One thickness describes one front. After the first half-cycle from a fully solid
+store the geometry is generally \emph{three-region}: at cyclic steady state the
+charge begins with residual liquid in the outer part of the cell, so melting
+produces liquid at the tube, solid in the middle and liquid outside. No single
+$\delta$ represents that, and neither treatment can. The arrangement above is
+the better approximation, not a correct one --- which is what hypothesis H5
+actually assumes, stated plainly.
+
+%---------------------------------------------------------------------
 \subsection{Fin efficiency and the finned surface}
 \label{sec:network:fins}
 

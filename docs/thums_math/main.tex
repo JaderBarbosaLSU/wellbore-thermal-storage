@@ -57,7 +57,7 @@
 with Phase-Change Material in Repurposed Wells\\[6pt]
 \normalsize Thermodynamic Cycles, Borehole Resistance Network,\\
 Melt-Front Formulations, Sizing and Performance Indices\\[4pt]
-\normalsize Model version 0.6 \textperiodcentered\ last updated 2026-09-12 BRT}
+\normalsize Model version 0.7 \textperiodcentered\ last updated 2026-09-18 BRT}
 \author{Craft \& Hawkins Department of Petroleum Engineering\\
 Louisiana State University}
 \date{\today}
@@ -168,6 +168,32 @@ glides, march to CSS, and report the deviation from target. At the design point
 the field delivers \SI{101.23}{\percent} of the \SI{1}{\mega\watt} target under
 the v0.6 closure (\SI{94.26}{\percent} under the retired one), and what governs
 it is the \emph{discharge rate} rather than the inventory.
+
+\medskip
+\noindent\textbf{Changes in version 0.7.} The PCM-side conduction path was on
+the wrong side of the melt front while freezing. Equation~\eqref{eq:he} is a
+shell growing outward from the tube, and the \emph{melted} thickness was used
+for it in both half-cycles. That is correct while melting --- melting begins at
+the tube wall and the liquid genuinely lies between the tube and the remaining
+solid --- but solidification also begins at the tube wall, so during discharge
+the shell against the tube is the \emph{frozen} material, of thickness
+$A_{\mathrm{avail}}-\Amelt$ and conductivity $k_{s}$. The two thicknesses are
+complementary, so the error was a time reversal: the modelled exchanger
+\emph{improved} as it froze, and a segment frozen solid was given zero
+PCM-side resistance exactly where the physical resistance is largest
+(\S\ref{sec:network:shell}).
+
+It had gone unnoticed because every result that mattered for a long time was a
+melting result, and because the symptom --- a discharge $\Ui$ seven times the
+charge value at end of run --- had been rationalised as the melt layer
+refreezing. The conductivity ratio is only $1.33$.
+
+With the shell taken correctly the two half-cycles are near mirror images, the
+CSS deviation moves from \SI{+1.23}{\percent} to \SI{+4.73}{\percent}, and the
+residual melted fraction falls from $0.0823$ to $0.0094$ --- the store now very
+nearly refreezes. The charge-side entries of the frozen fixture are
+bit-identical, which is itself the check. \code{Case.front\_geometry} recovers
+the retired behaviour for regression.
 
 \medskip
 \noindent\textbf{Changes in version 0.6.} The discharge side was closed on the

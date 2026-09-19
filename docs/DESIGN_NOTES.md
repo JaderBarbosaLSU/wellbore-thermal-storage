@@ -12,8 +12,8 @@ and it is not in the student notebook.
 
 | | note | worth |
 |---|---|---|
-| DN-1 | The state variable must be enthalpy, not melted area | 9.3 % of cycle energy |
-| DN-2 | The closing conductance is not $U_iP_i$ | 4–33 % on the segment conductance |
+| DN-1 | The state variable must be enthalpy, not melted area | 8.2 % of cycle energy |
+| DN-2 | The closing conductance is not $U_iP_i$ | 4–32 % on the segment conductance |
 | DN-3 | Explicit stepping is inadmissible off the plateau | divergence past 8×10¹⁰ K |
 | DN-4 | The history is stamped where the state is exact | 2.36 h of label error |
 | DN-5 | The discharge march is mirrored; results are not | 0.677 in ε |
@@ -24,6 +24,7 @@ and it is not in the student notebook.
 | DN-10 | The melt front is bounded by the cell, not the borehole | factor 2.9 in δ |
 | DN-11 | The deviation cancels out of round-trip efficiency | 1.2 % of apparent η |
 | DN-12 | `layer_map` uses a node convention *(open)* | ~0.1 pp on the deviation |
+| DN-13 | The conduction path was on the wrong side of the front while freezing | a spurious factor of 7 in $U_i$ |
 
 ---
 
@@ -48,13 +49,14 @@ measured from a datum of fully solid material at the local $T_m$. Subcooled
 solid, two-phase and superheated liquid are three branches of one single-valued
 curve, and ε ∈ [0,1] becomes structural rather than enforced.
 
-**Worth.** At CSS the store finishes every charge fully molten in all 100
-segments with a peak superheat of 18.5 K, and 9.3 % of the energy passing
-through the store each cycle traverses the sensible branches (7.1 % superheat,
-2.3 % subcooling). That is the energy an area-based state must fabricate or
-throw away. A secondary and larger effect is on the *distribution*: sensible
+**Worth.** At CSS, 82 of the 100 segments finish the charge fully molten —
+mean ε = 0.9706, peak superheat 15.6 K — and 8.2 % of the energy passing through
+the store each cycle traverses the sensible branches (4.3 % superheat, 3.9 %
+subcooling). That is the energy an area-based state must fabricate or throw
+away, and it is being clipped in most of the exchanger at the moment the store
+is fullest. A secondary and larger effect is on the *distribution*: sensible
 capacity is self-levelling, and the spread in local melt fraction at equal
-exchanger size falls from 0.405 to 0.000.
+exchanger size falls from 0.407 to 0.000 on a charge from cold.
 
 **Note on a retired number.** Earlier drafts quoted "the discarded heat reached
 148 % of the heat delivered during discharge". That figure was produced by
@@ -79,9 +81,9 @@ and in the limit to drive heat from cold to hot.
 
     K = ṁ c_p (1 − e^−NTU) / Δz        NTU = 2π r_i U_i Δz / (ṁ c_p)
 
-**Worth.** Over the charge, NTU runs 0.083 → 0.602, so the ratio
-(1 − e^−NTU)/NTU runs 0.96 → 0.75: using $U_iP_i$ overstates the segment
-conductance by 4 % to 33 %, with the largest error early, when the melt layer is
+**Worth.** Over the charge, NTU runs 0.081 → 0.588, so the ratio
+(1 − e^−NTU)/NTU runs 0.96 → 0.76: using $U_iP_i$ overstates the segment
+conductance by 4 % to 32 %, with the largest error early, when the melt layer is
 thin and the exchanger is at its best.
 
 ---
@@ -365,3 +367,109 @@ of boundary alignment rather than of resolution.
 **Not yet applied**, because it requires re-freezing the fixture and updating
 both documents for a 0.08 pp change. `validate_case` warns when `n_segments` is
 not a multiple of `N_lay`, which is the case where it is largest.
+
+---
+
+## DN-13 — The conduction path was on the wrong side of the front while freezing
+
+**What was wrong.** The PCM-side resistance in `compute_U_i` is an annulus
+growing **outward from the tube wall**,
+
+    R' = ln(1 + delta/r_e) / (2 pi k),
+
+so the model must say which material that annulus is made of. It used the
+**melted** thickness, with `k_l` whenever any melt existed, in *both*
+half-cycles:
+
+```python
+delta = delta_from_area(A_melt, ...)
+k_m   = case.k_l if E[i] > 0.0 else case.k_s
+```
+
+That is right while melting. Melting begins at the tube wall and the front moves
+outward, so the liquid shell genuinely lies between the tube and the remaining
+solid, and heat genuinely has to cross it.
+
+It is inverted while freezing. Solidification also begins at the tube wall — the
+tube is the driven boundary in both directions — so the shell against the tube
+is the **frozen** material, of thickness corresponding to `A_avail - A_melt` and
+conductivity `k_s`. The liquid is displaced outward, beyond the front, and is
+not in the conduction path at all.
+
+**How bad.** The two are complementary, so the error is a time reversal rather
+than a scale factor. Over a discharge:
+
+| ε | δ used | δ wanted | R used | R wanted | ratio |
+|---|---|---|---|---|---|
+| 1.00 | 23.37 mm | 0.00 mm | 0.2639 | 0.0000 | ∞ |
+| 0.50 | 14.32 | 14.32 | 0.1833 | 0.1375 | 1.33 |
+| 0.08 | 3.48 | 22.01 | 0.0541 | 0.1897 | 0.28 |
+| 0.00 | 0.00 | 23.37 | 0.0000 | 0.1979 | 0 |
+
+(m·K/W per unit tube length.) The discharge runs top to bottom. **The modelled
+resistance fell by a factor of five as the store froze; it should rise from
+nothing to its maximum.** A segment that had frozen solid was given *zero*
+PCM-side resistance, exactly where the physical resistance is largest.
+
+**How it survived.** Every result that mattered for a long time was a *melting*
+result — the first-cycle sizing, the self-levelling comparison, the stability
+and order-of-accuracy studies — and the melting direction was correct
+throughout. The discharge produced a plausible-looking `U_i` that rose through
+the half-cycle, and that rise was rationalised in §14 of the verification
+notebook as "the annulus refrozen, and solid PCM conducts better than liquid".
+The conductivity ratio is only k_s/k_l = 1.33; the observed factor was **7.1**,
+and nobody asked where the other 5.3 came from.
+
+Asking the code one question would have found it: *what resistance do you give a
+segment at ε = 0 during a discharge?*
+
+**The fix.** `conduction_shell` selects the shell by the sign of the driving
+temperature difference, which is known before the conductance and has the same
+sign as q'. All four limits then come out right with no special cases: fully
+solid and melting → δ = 0; fully melted and freezing → δ = 0; and the two
+saturated cases give the full annulus with the appropriate conductivity.
+`Case.front_geometry = 'melt_side'` reproduces the retired behaviour exactly,
+which is how the change was separated from everything else.
+
+**Worth, measured at the design point.**
+
+| | melt_side | directional |
+|---|---|---|
+| U_i mid-well, t→0, charge / discharge | 822 / 117 | 823 / 829 |
+| U_i mid-well, end, charge / discharge | 117 / 821 | 117 / 148 |
+| deviation | +1.23 % | **+4.73 %** |
+| residual ε at end of discharge | 0.0823 | **0.0094** |
+| ε at end of charge | 1.0000 | 0.9706 |
+| N_wells | 11.743 | 11.626 |
+| η_RTE | 0.4320 | 0.4370 |
+| cycles to CSS | 32 | 73 |
+
+The first two rows are the real result. The two half-cycles are now near mirror
+images: at t → 0 they agree to 0.5 % because the shell has zero thickness at the
+start of *both*, and at the end the ratio is 1.265, close to k_s/k_l = 1.333 as
+it should be. The spurious factor of seven is gone.
+
+**A prediction I got wrong, recorded because the reasoning is instructive.** I
+expected the fix to make the store perform *worse*, on the grounds that the
+model was 3.5× too optimistic at the end of the discharge, which is where the
+rate limit bites. The deviation went the other way, +1.23 % → +4.73 %. The error
+was to weigh only the end of the half-cycle: at the *start* the retired
+treatment was infinitely too pessimistic, and that is when the driving
+difference is largest and most of the energy moves. The early over-penalty
+dominates the integral.
+
+**Consequence for the physical reading.** The store now very nearly refreezes
+(residual ε = 0.0094 against 0.0823), so the discharge is much closer to
+inventory-limited at the design point than it appeared. The rate-limit
+*diagnostic* survives — residual ε still rises with well count, 0.0000 at N = 9
+to 0.0826 at N = 16 — but the design point now sits near the bottom of that
+curve rather than in the middle of it.
+
+**Not fixed: the three-region geometry.** One thickness describes one front. At
+cyclic steady state the charge begins with residual liquid in the *outer* part
+of the cell, so melting produces liquid at the tube, solid in the middle and
+liquid outside. Neither treatment can represent that. `conduction_shell` is the
+better approximation, not a correct one, and that is what H5 actually assumes.
+
+**Found by** a reader asking which material the model places next to the tube
+during discharge — the right question, asked of the right function.

@@ -384,8 +384,63 @@ now $T_{\rm pcm}$ rather than $T_m$.
 """))
 
 cells.append(code(src('pcm_capacities', 'pcm_state', 'advance_segment')))
-cells.append(code(src('segment_profile', 'unmirror_march', 'mixed_mean_outlet',
-                      'march_h')))
+cells.append(md(r"""
+### 5.5 Which shell does the heat cross?
+
+The PCM-side resistance is that of an annulus growing **outward from the tube
+wall**,
+
+$$R' = \frac{\ln\left(1+\delta/r_e\right)}{2\pi k},$$
+
+so the model has to answer a question that is easy to skip: *which material is
+that annulus made of, and how thick is it?*
+
+The front always grows away from the tube, because the tube is the driven
+boundary in both half-cycles. So the answer depends on the direction:
+
+| | shell against the tube | thickness from | conductivity |
+|---|---|---|---|
+| **melting** | liquid | $A_{\rm melt}$ | $k_l$ |
+| **freezing** | frozen solid | $A_{\rm avail}-A_{\rm melt}$ | $k_s$ |
+
+While melting, heat crosses the melt to reach the remaining solid. While
+freezing, solidification also begins at the wall, so heat crosses the *frozen*
+shell and the liquid is displaced outward, beyond the front and out of the
+conduction path entirely.
+
+All four limits then come out right without special-casing:
+
+| state | direction | $\delta$ | resistance |
+|---|---|---|---|
+| fully solid | melting | 0 | none — the front is at the tube |
+| fully melted | melting | $\delta_{\rm merge}$ | the full liquid annulus |
+| fully melted | freezing | 0 | none — nothing has frozen yet |
+| fully solid | freezing | $\delta_{\rm merge}$ | the full frozen annulus |
+
+> **This was wrong until v0.7**, and it is worth knowing why it survived so
+> long. The melted thickness was used in *both* directions, so during discharge
+> the conduction path sat on the wrong side of the front. A segment that had
+> frozen solid was given $\delta=0$ and therefore **zero** PCM-side resistance,
+> exactly where the physical resistance is largest. The modelled exchanger
+> improved as it froze rather than degrading, and the discharge $U_i$ ran
+> backwards in time. It never looked obviously wrong because the melting
+> direction — which is most of the interesting physics, and all of the
+> first-cycle results — was correct throughout.
+>
+> Ask the code what it does at $\varepsilon=0$ during a discharge. That single
+> question would have found it.
+
+**The honest limit.** One thickness describes one front. After the first
+half-cycle from a fully solid store the geometry is generally *three-region*: at
+cyclic steady state the charge begins with residual liquid in the outer part of
+the cell, so melting produces liquid at the tube, solid in the middle and liquid
+outside. No single $\delta$ can represent that. The treatment above is the
+better approximation, not a correct one — that is hypothesis **H5**, stated
+plainly.
+"""))
+
+cells.append(code(src('conduction_shell', 'segment_profile', 'unmirror_march',
+                      'mixed_mean_outlet', 'march_h')))
 
 cells.append(md(r"""
 ## 6. The segment march
@@ -772,22 +827,27 @@ $\Delta T_{M,1D}=\Delta T_{3C,2C}/N_{\rm lay}$ reproduces every v0.5a number
 exactly.
 """))
 cells.append(code(r"""
-FIXTURE_V06 = {   # re-frozen 2026-09 for the v0.6 discharge closure -- see below
+FIXTURE_V07 = {   # re-frozen 2026-09 for the v0.7 conduction path -- see below
     'N_rate':             11.5122070312,
     'N_capacity':          9.67244314511,
     'N_wells':            11.5122070312,
     'eps_pcm':             1.0,
     'E_well_kJ':          20857297.9447,
-    'eta_storage':         0.952163601583,
-    'flow_ratio_dc_ch':    0.948828125,
+    'eta_storage':         0.95109006461,
+    'flow_ratio_dc_ch':    0.903125,
     'cop_hp':              2.95633040945,
     'eta_orc':             0.232035822617,
-    'eta_rte':             0.408915233697,
+    'eta_rte':             0.410395410162,
     'eta_rte_nopump':      0.425994284001,
-    'f_pump':             0.0587585434779,
+    'f_pump':              0.05523716054,
     'E_well':              4.63600440156,
     'rho_E':             167.46852173,
 }
+# The CHARGE-side entries are untouched by v0.7 -- N_rate, N_capacity, E_well,
+# rho_E, cop_hp, eta_orc and eta_rte_nopump are all identical to v0.6, because
+# the conduction path was only ever wrong while FREEZING. What moved is the
+# discharge: the flow ratio 0.9488 -> 0.9031 and eta_storage 0.95216 ->
+# 0.95109. That pattern is itself a check on the change.
 # Superseded by the line above, kept so the size of the v0.6 step is on the
 # record. These are the v0.5a values, frozen under the RETIRED closure in which
 # the discharge OUTLET was pinned at T_m,top and the inlet derived from it. The
@@ -806,7 +866,7 @@ res_v = runs['v0.4b']
 merged = dict(res_v['kpis']); merged.update(res_v['detail'])
 print(f"{'quantity':20s} {'frozen':>20s} {'now':>20s}   rel. diff")
 worst = 0.0
-for k, v in FIXTURE_V06.items():
+for k, v in FIXTURE_V07.items():
     now = float(merged[k])
     d = abs(now - v)/abs(v) if v else abs(now)
     worst = max(worst, d)
@@ -1065,21 +1125,22 @@ questions:
   difference a segment actually uses. It is **not** comparable across cases with
   different flow.
 
-The cell after the discharge figure makes that concrete. Mid-well at the end of
-each half-cycle, $U_i$ rises by a factor $7.115$ from charge to discharge while
-NTU rises by $6.907$; the discharge flow ratio is $1.0473$, and
-$7.115/1.0473 = 6.794$ recovers the NTU ratio to within the variation of $c_p$.
-The factor of seven is not a flow effect at all — it is the melt layer. The
-charge ends with a full annulus of liquid PCM between tube and front; the
-discharge ends with that annulus refrozen, and solid PCM conducts better than
-liquid. NTU carries the flow ratio on top of that, which is the whole reason to
-plot the quantity that does not depend on flow.
+The cell after the discharge figure makes that concrete. At $t\to0$ the two
+half-cycles now agree almost exactly — $U_i$ mid-well is $831.9$ on charge and
+$828.0$ on discharge, a ratio of $0.995$ — because at the start of each
+half-cycle the shell between tube and front has **zero thickness**: the charge
+begins from an almost fully solid store and the discharge from an almost fully
+melted one. By the end of each half-cycle a shell has grown, and the ratio is
+$148.1/117.0 = 1.265$, close to $k_s/k_l = 1.333$ as it should be, the
+remainder being that the frozen shell does not grow quite as thick as the
+melted one.
 
-> These figures moved in v0.5a. This section used to march the discharge with
-> the melt state unmirrored and the cascade built by `layer_map(T_m_lay_dc, …)`
-> — the flow-reversal defect corrected in `run_cycle` in v0.5, which had been
-> left in place here. The ratios read $1.401$ and $1.386$ against a flow ratio
-> misquoted as $1.023$.
+That near-symmetry is the point, and it is new in v0.7. Until then the two
+half-cycles differed by a **factor of seven** at the end of the run, which was
+read here as a physical effect of the melt layer. It was not: the conduction
+path was being taken on the wrong side of the front during freezing, so the
+modelled exchanger *improved* as it froze instead of degrading. See the note in
+§5 and DN-13.
 
 $U_i$ is drawn on a log axis, and it spans about a factor of seven
 ($117$ to $833$ W m⁻² K⁻¹ over both half-cycles): the log scale keeps
@@ -1337,6 +1398,7 @@ consistency is not validation, and a reviewer will ask.
 
 | version | date | change |
 |---|---|---|
+| **0.7** | this build | **The conduction path was on the wrong side of the front while freezing.** The PCM-side resistance is an annulus growing outward from the tube, $\ln(1+\delta/r_e)/2\pi k$. The melted thickness was used for it in *both* directions — correct while melting, inverted while freezing, where the shell against the tube is the *frozen* material of thickness $A_{\rm avail}-A_{\rm melt}$ and conductivity $k_s$. A segment frozen solid was given zero PCM-side resistance where the physical resistance is largest, so the modelled exchanger **improved as it froze**. `conduction_shell` now picks the shell by the sign of the driving difference; `Case.front_geometry='melt_side'` reproduces the retired behaviour exactly. Consequences: the two half-cycles are now near mirror images ($U_i$ ratio at $t\to0$ is $0.995$, and $1.265\approx k_s/k_l$ at the end, against a spurious factor of **seven** before); the deviation $+1.23\,\% \to +4.73\,\%$; the residual melt fraction $0.0823 \to 0.0094$, so the store now very nearly refreezes; the store no longer melts *completely* — $82$ of $100$ segments reach $\varepsilon=1$, mean $0.9706$. Charge-side fixture entries are bit-identical, which is itself the check: only the discharge moved. Found by a reader asking which material the model puts next to the tube during discharge. |
 | **0.6** | this build | **The discharge closure was solving for the wrong end.** Only the two exchanger *inlets* are boundary conditions on the march; both outlets are results. The discharge was closed the other way round — the outlet pinned at $T_{2d}=T_{m,\rm top}-\Delta T_{m,2D}$ with $\Delta T_{m,2D}=0$, the inlet derived from it — and the model's own solution contradicts that: at the start of a discharge at CSS the water leaves at $157.93$ °C, nearly 8 K above the top layer's melting point, because the PCM is superheated. The implied inlet approach was also silently $\Delta T_{3C,2C}/N_{\rm lay}=6.111$ K, one layer width, chosen by nobody. `DT_m_2D` is replaced by **`DT_M_1D`**, a subcooling of the inlet (state **1d**) below the *coldest* layer, the symmetric partner of `DT_4C_M`; $T_{2d}$ is demoted to a provisional estimate and reported against the realised value. `simulate_css_corrected` adds **one** ORC correction pass at the realised outlet — enough because the outlet is pinned by the store, not the plant (it moves $<0.3$ K while the inlet moves 9 K). Verified a pure reparameterisation: at $\Delta T_{M,1D}=6.111$ K every v0.5a number returns exactly (§16.5). At the symmetric 10 K the deviation goes $-5.69\,\%\to+1.23\,\%$ — **most of the shortfall was the closure, not the store**. §13 re-frozen for the new closure. |
 | **0.5a** | this build | **Two recording defects, no physics.** (i) `march_h` recorded the state at the *start* of a step but stamped it with the time at the *end*, and appended `E` after the update while the other state arrays came from before it. On a logarithmic grid the last step is 2.36 h, so every recorded profile was up to a quarter of a half-cycle stale and the true end state was never recorded: the map read $\varepsilon=0.356$ at the end of discharge against $0.1545$ from the march. Frames are now stamped in **`t_hist`** at the instants where the state is exact, start at $t=0$, and include the end state; `segment_profile` evaluates the closing frame's fluid profile from that end state. (ii) The **discharge was plotted mirrored** in §14.2 and §16 — the discharge marches from the far end, and only the sizing loops were un-mirroring it. `unmirror_march` now returns every discharge result in depth indexing, so both half-cycles share one cascade and one depth axis, and §16.3 prints the map-closure residual (zero). §14 also carried the *flow-reversal* bug fixed in `run_cycle` in v0.5 — it built the discharge cascade with `layer_map(T_m_lay_dc, ...)` and passed the state unmirrored. `N_wells`, the CSS deviation, energy closure and every reported index are unchanged. |
 | 0.5 | 2026-09 | **Cyclic steady state** (§16). At CSS $\eta_{\rm storage}\equiv1$ exactly, so $\lambda$ is unattainable and the rate criterion is degenerate even at $\lambda=0$; sizing is replaced by simulation — $N$ from latent heat alone, both flows pinned by their glides, march to CSS, report the deviation. The field delivers **94.26 %** of the 1 MWe target, and the shortfall is a *discharge rate* limit. Flow-reversal defect fixed in `run_cycle`: the melt state was handed to the discharge unmirrored while the cascade was mirrored, shifting the enthalpy datum by up to 48.9 K. §12.1 removed. |
@@ -1422,7 +1484,7 @@ sensible capacity the store also has. That is deliberate and conservative.
 cells.append(code(src('simulate_css', 'simulate_css_corrected', 'css_report')))
 
 cells.append(code(r"""
-css = simulate_css_corrected(CASE)
+css = simulate_css_corrected(CASE, n_cycles=250)
 css_report(CASE, css)
 """))
 
@@ -1476,7 +1538,7 @@ cells.append(md(r"""
 Folded onto depth as in §14: **solid = down leg, dotted = return leg.**
 """))
 cells.append(code(r"""
-cssr = simulate_css_corrected(CASE, record=True)
+cssr = simulate_css_corrected(CASE, record=True, n_cycles=250)
 chc, dcc = cssr['charge'], cssr['discharge']
 s_dev = chc['z']; half = len(s_dev)//2
 zd, zu = s_dev[:half], CASE.L_tube - s_dev[half:]
@@ -1594,11 +1656,12 @@ cells.append(md(r"""
 With $N$ no longer solved for, the design question becomes a curve rather than
 a root. Each point is an independent march to CSS.
 
-Note the range: under the v0.6 closure the latent-only sizing slightly
-*overshoots* the target, so the crossing sits **below** $N_{\rm lat}$ rather
-than well above it. Under the retired closure the same curve crossed near
-$N\approx19$ — the closure moved the answer by more than the well count does
-over half this range.
+Note the range: the latent-only sizing rule now *overshoots* the target by
+some \SI{4.7}{\percent}, so the crossing sits **below** $N_{\rm lat}$, near
+$N\approx10.1$. Two modelling corrections moved it there from $N\approx19$ in
+v0.5 — the discharge closure (§16.5) and the conduction path (§5.5). Neither was
+a change to the physics of the store; both were changes to what the model had
+been asked to assume about it.
 """))
 cells.append(code(r"""
 N_lat = css['N_wells']
@@ -1610,8 +1673,8 @@ rows = []
 # since every point would otherwise be marched to CSS twice. The realised
 # outlet moves by less than 0.3 K over this range, so the two agree anyway.
 T_2d_fixed = css['T_2d_realised']
-for N in (9.0, 10.0, 11.0, N_lat, 13.0, 16.0):
-    rr = simulate_css(CASE, N=N, T_2d=T_2d_fixed)
+for N in (9.0, 10.0, N_lat, 13.0, 16.0):
+    rr = simulate_css(CASE, N=N, T_2d=T_2d_fixed, n_cycles=250)
     rows.append({'N_wells': rr['N_wells'],
                  'delivered/req': rr['Q_discharge_kJ']/rr['required_kJ'],
                  'MWe': rr['W_el_out_implied']/1000.0,
@@ -1728,7 +1791,10 @@ V05A = {
     'T_2d':             423.14999999999998,     # K, the (then prescribed) outlet
 }
 
-legacy = CASE.with_(DT_M_1D=CASE.DT_3C_2C/CASE.N_lay)
+# BOTH retired choices, or the test conflates two changes and fails for the
+# wrong reason: v0.5a ran the melt-side conduction path as well.
+legacy = CASE.with_(DT_M_1D=CASE.DT_3C_2C/CASE.N_lay,
+                    front_geometry='melt_side')
 _, _, T_leg = cycle_state_points(legacy)
 r_leg = simulate_css(legacy)          # uncorrected, exactly as v0.5a ran it
 now = dict(r_leg); now['T_3d'] = T_leg['T_3d']; now['T_2d'] = T_leg['T_2d']
@@ -1797,8 +1863,8 @@ Each point is an independent march to CSS with the ORC correction pass.
 cells.append(code(r"""
 Tmb = T_m_bottom(CASE) - 273.15
 rows = []
-for sub in (CASE.DT_3C_2C/CASE.N_lay, 8.0, 10.0, 12.0, 15.0):
-    rr = simulate_css_corrected(CASE.with_(DT_M_1D=sub))
+for sub in (CASE.DT_3C_2C/CASE.N_lay, 8.0, 10.0, 12.0):
+    rr = simulate_css_corrected(CASE.with_(DT_M_1D=sub), n_cycles=250)
     rows.append({'DT_M_1D': sub, 'T_3d [C]': Tmb - sub,
                  'N_wells': rr['N_wells'],
                  'deviation %': 100*rr['deviation'],
@@ -1834,15 +1900,20 @@ plt.tight_layout(); plt.show()
 
 cells.append(md(r"""
 **The shortfall was mostly self-inflicted.** Giving the discharge the same
-10 K approach the charge gets moves the deviation from $-5.69\,\%$ to
-$+1.23\,\%$ — the field now *exceeds* the target. The curve crosses zero at
-$\Delta T_{M,1D}\approx9.30$ K and saturates near $+6.3\,\%$ at 15 K, where the
-store refreezes completely ($\varepsilon\to0$) and the limit stops being a rate
-limit and becomes an inventory limit.
+10 K approach the charge gets moves the deviation from $-1.55\,\%$ to
+$+4.73\,\%$ — the field now *exceeds* the target. The curve crosses zero near
+$\Delta T_{M,1D}\approx7.2$ K and flattens above 12 K, where the store refreezes
+completely ($\varepsilon\to0$) and the limit stops being a rate limit and
+becomes an inventory limit.
+
+> These figures are v0.7. Under the retired conduction path (§5.5) the same
+> sweep ran from $-5.69\,\%$ to $+1.23\,\%$ — a shift of the same size, but
+> around a centre that was too low, because the discharge was being throttled
+> from its first minute by a resistance that should not have been there.
 
 **$\Delta T_{M,1D}=10$ K is a principle, not a tuning.** It is chosen because it
 is the symmetric partner of $\Delta T_{4C,M}$, not because it happens to land
-near the target. Choosing $9.30$ K instead would zero the deviation — and
+near the target. Choosing $7.2$ K instead would zero the deviation — and
 destroy the only thing the deviation is good for, which is being a *reported
 result* rather than a satisfied constraint.
 
