@@ -373,10 +373,36 @@ case = CASE.with_(
     n_times    = 40,         # logarithmic time levels per half-cycle
 )
 
+# =============================================================================
+#  How many cycles the CSS loop may take before giving up.
+#
+#  WATCH FOR THE BANNER.  If a run prints
+#
+#        *** NOT CONVERGED ***
+#
+#  then the store had NOT returned to its own state when the loop stopped, and
+#  every number below that line is meaningless -- the deviation, the melted
+#  fractions, all of it.  The run does not fail, it just reports.  Raise this
+#  and re-run.
+#
+#  It is here rather than buried in the calls because it is a number you WILL
+#  have to change.  Cycles to convergence grow with the well count and with
+#  anything that makes each well work less hard: the design point needs about
+#  70, N = 16 needs well over 200, and a low latent heat can need 300+.
+# =============================================================================
+N_CYCLES = 250
+
 validate_case(case)
 """))
 
 cells.append(md(r"""
+> **`N_CYCLES` is the one numerical setting you will actually have to touch.**
+> Everything else in the block above is physics. This one is a give-up limit on
+> the cyclic-steady-state loop, and if it is too low the run still prints a full
+> set of results — they are simply not results, because the store had not
+> returned to its own state. The `*** NOT CONVERGED ***` banner is the only
+> thing standing between you and a plausible-looking wrong answer, so read it.
+>
 > If `validate_case` warns that `n_segments` is not a multiple of `N_lay`, the
 > layer boundaries do not fall on segment boundaries and one layer is short.
 > It is a small effect here — worth about $0.1$ percentage points on the
@@ -430,7 +456,7 @@ cells.append(code(r"""
 # n_cycles: convergence slowed in v0.7 (the design point needs ~75 cycles,
 # and it grows with the well count). The default of 80 is no longer
 # comfortable -- see the NOT CONVERGED banner in the report below.
-css = simulate_css_corrected(case, record=True, n_cycles=250)
+css = simulate_css_corrected(case, record=True, n_cycles=N_CYCLES)
 css_report(case, css)
 """))
 
@@ -583,7 +609,8 @@ plots and roughly doubles the time per point.
 """ ))
 
 cells.append(code(r"""
-def sweep(field, values, base=None, N=None, correct_once=True):
+def sweep(field, values, base=None, N=None, correct_once=True,
+          n_cycles=None):
     '''Run one parameter over a list of values and collect the results.
 
     Returns a DataFrame with one row per value. Add whatever else you need to
@@ -591,17 +618,24 @@ def sweep(field, values, base=None, N=None, correct_once=True):
     available.
     '''
     base = base or case
+    n_cycles = N_CYCLES if n_cycles is None else n_cycles
     T_2d_fixed = None
     if correct_once:
-        T_2d_fixed = simulate_css_corrected(base, N=N, n_cycles=250)['T_2d_realised']
+        T_2d_fixed = simulate_css_corrected(
+            base, N=N, n_cycles=n_cycles)['T_2d_realised']
     rows = []
     for v in values:
         c = base.with_(**{field: v})
         bad = [m for lvl, m in validate_case(c, verbose=False) if lvl == 'error']
         if bad:
             print(f'  {field}={v}: SKIPPED -- {bad[0]}');  continue
-        r = simulate_css(c, N=N, T_2d=T_2d_fixed, n_cycles=250)
+        r = simulate_css(c, N=N, T_2d=T_2d_fixed, n_cycles=n_cycles)
+        if not r['converged']:
+            print(f'  {field}={v}: *** NOT CONVERGED *** at n_cycles='
+                  f'{n_cycles}, drift {r["history"][-1]["drift"]:.1e}.'
+                  f' Raise N_CYCLES; this row is not usable.')
         rows.append({field: v,
+                     'converged':    r['converged'],
                      'N_wells':      r['N_wells'],
                      'deviation_%':  100*r['deviation'],
                      'MWe':          r['W_el_out_implied']/1000.0,
