@@ -167,17 +167,17 @@ leaves no root. Under the reformulation that saturation is not a failure: it
 \begin{center}
 \begin{tabular}{@{}l r l@{}}
 \toprule
-$\Nwells$ & 11.6255 & latent heat alone, not solved \\
+$\Nwells$ & 11.6322 & latent heat alone, not solved \\
 $\md^{\mathrm{ch}}$, $\md^{\mathrm{dc}}$ & 0.9655, 0.9708 & \si{\kilogram\per\second} per leg-pair \\
 flow ratio & 1.0055 & a consequence, not a solve \\
-cycles to CSS & 73 & \\
+cycles to CSS & 70 & \\
 $\eta_{\mathrm{storage}}$ & 1.000000 & Eq.~\eqref{eq:css-unity} \\
 \midrule
-required $\Delta E_{\mathrm{in,ORC}}$ & \num{1.89556e8} & kJ \\
-delivered at CSS & \num{1.98524e8} & kJ \\
-\textbf{deviation} & \textbf{+4.731} & \si{\percent} \\
+required $\Delta E_{\mathrm{in,ORC}}$ & \num{1.89665e8} & kJ \\
+delivered at CSS & \num{1.98251e8} & kJ \\
+\textbf{deviation} & \textbf{+4.527} & \si{\percent} \\
 \midrule
-implied net output & 1.0473 & MWe against a target of 1.0000 \\
+implied net output & 1.0453 & MWe against a target of 1.0000 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -187,7 +187,7 @@ These are v0.7 figures: the discharge inlet prescribed by
 Eq.~\eqref{eq:inlets}, the conduction shell taken on the correct side of the
 front (\S\ref{sec:network:shell}), and the ORC corrected once at the realised
 outlet. Under the two retired treatments together the same hardware delivered
-\SI{94.26}{\percent} of target rather than \SI{104.73}{\percent}.
+\SI{94.26}{\percent} of target rather than \SI{104.53}{\percent}.
 
 \begin{center}
 \end{center}
@@ -195,8 +195,8 @@ outlet. Under the two retired treatments together the same hardware delivered
 \subsubsection*{The shortfall is a rate limit, not an inventory limit}
 
 At CSS the store melts \emph{completely} --- $\varepsilon_{\mathrm{local}}=1.000$
-at $82$ of the $100$ segments at end of charge, mean $0.9706$ --- and returns to
-a mean of $0.0094$. It very nearly refreezes within the \SI{10}{\hour} window,
+at $82$ of the $100$ segments at end of charge, mean $0.9715$ --- and returns to
+a mean of $0.0116$. It very nearly refreezes within the \SI{10}{\hour} window,
 so at this design point the store is closer to inventory-limited than to
 rate-limited. The design curve is what separates the two, and the rate-limit
 signature survives in it:
@@ -206,12 +206,11 @@ signature survives in it:
 \toprule
 $\Nwells$ & delivered/req & MWe & $\varepsilon$ end charge & $\varepsilon$ end discharge \\
 \midrule
- 9.000 & 0.9283 & 0.9283 & 1.000 & 0.000 \\
-10.000 & 0.9894 & 0.9894 & 1.000 & 0.000 \\
-11.626 & 1.0473 & 1.0473 & 0.971 & 0.009 \\
-12.500 & 1.0576 & 1.0576 & 0.934 & 0.026 \\
-14.000 & 1.0684 & 1.0684 & 0.874 & 0.053 \\
-16.000 & 1.0766 & 1.0766 & 0.803 & 0.083 \\
+ 9.000 & 0.9243 & 0.9243 & 1.000 & 0.000 \\
+10.000 & 0.9863 & 0.9863 & 1.000 & 0.000 \\
+11.632 & 1.0453 & 1.0453 & 0.972 & 0.012 \\
+13.000 & 1.0599 & 1.0599 & 0.917 & 0.040 \\
+16.000 & 1.0747 & 1.0747 & 0.817 & 0.098 \\
 \bottomrule
 \end{tabular}
 \end{center}

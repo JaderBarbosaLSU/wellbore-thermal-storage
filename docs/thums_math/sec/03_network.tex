@@ -196,6 +196,113 @@ $\varepsilon$ still rises with well count.
 exactly, which is how this change was separated from the closure change of
 \S\ref{sec:cycles:closure} in the frozen fixture.
 
+\subsubsection*{And when there is no front at all}
+
+The rule above answers ``which side of the front'', which presupposes a front. A
+cell that is \emph{entirely} one phase --- all subcooled solid, or all
+superheated liquid --- has none, and asking the rule anyway returns a resistance
+that depends on the \emph{direction} of the heat flow: zero one way, the full
+annulus the other. Same body, same material, two answers.
+
+What changes at a branch boundary is not the geometry but the \emph{meaning of
+the state variable}. In two-phase, $\Tpcm=\Tm$ is the temperature of the
+\emph{front}, and the resistance that belongs with it is tube-to-front. In
+single phase there is no front: $\Tpcm$ is the \emph{volume mean} of the cell,
+and the resistance that belongs with a mean is mean-to-surface.
+
+Take the cell as an annulus $r_{e}\le r\le r_{o}$, adiabatic at $r_{o}$ --- the
+neighbouring cell is identical, so that boundary is a symmetry plane --- storing
+sensible heat at a uniform volumetric rate $s=\rho c\,\mathrm{d}T/\mathrm{d}t$.
+Quasi-steady, the heat crossing radius $r$ is what the material beyond it
+stores,
+\begin{equation}
+  -k\,2\pi r\,\frac{\mathrm{d}T}{\mathrm{d}r}
+  \;=\; s\,\pi\left(r_{o}^{2}-r^{2}\right),
+  \label{eq:bulk-ode}
+\end{equation}
+which integrates to
+\begin{equation}
+  T(r_{e})-T(r) \;=\; \frac{s}{2k}
+  \left[r_{o}^{2}\ln\frac{r}{r_{e}}-\frac{r^{2}-r_{e}^{2}}{2}\right].
+  \label{eq:bulk-profile}
+\end{equation}
+Averaging Eq.~\eqref{eq:bulk-profile} over the volume and dividing by
+$Q'=s\pi(r_{o}^{2}-r_{e}^{2})$ gives $R'_{\mathrm{bulk}}=S/2\pi k$ with, writing
+$\beta=r_{o}/r_{e}$,
+\begin{equation}
+  \boxed{\;S \;=\; \frac{\beta^{4}\ln\beta-\dfrac{\beta^{4}}{2}
+  +\dfrac{\beta^{2}}{2}-\dfrac{\left(\beta^{2}-1\right)^{2}}{4}}
+  {\left(\beta^{2}-1\right)^{2}}\;}
+  \label{eq:shape-factor}
+\end{equation}
+
+\noindent
+$S$ depends on \textbf{geometry alone} --- $k$ cancels --- so one shape factor
+serves both phases and only the conductivity changes between them. For the
+default cell $\beta=2.1086$ and $S=0.34672$, against $\ln\beta=0.74604$ for the
+surface-to-surface annulus: the mean-to-surface resistance is smaller by a
+factor $2.152$, the cylindrical analogue of the familiar $1/3$ for a plane slab
+with uniform generation. Equation~\eqref{eq:shape-factor} was checked against
+numerical quadrature of the same integral to six decimals.
+
+The network of \S\ref{sec:network:fins} takes a thickness rather than a
+resistance, and wraps it in the fin efficiency and the finned-area ratio. Fed
+back as an equivalent thickness,
+\begin{equation}
+  \ln\left(1+\frac{\delta_{\mathrm{eq}}}{r_{e}}\right)=S
+  \qquad\Longrightarrow\qquad
+  \delta_{\mathrm{eq}} = r_{e}\left(e^{S}-1\right) = \SI{8.74}{\milli\meter},
+  \label{eq:delta-eq}
+\end{equation}
+the single-phase branches stay inside exactly the same machinery as the
+two-phase ones instead of needing a second path. Like $S$, it is a property of
+the geometry alone. Functions: \code{bulk\_shape\_factor},
+\code{bulk\_equivalent\_delta}.
+
+\begin{center}
+\begin{tabular}{@{}l l l@{}}
+\toprule
+state & before v0.8 & v0.8 \\
+\midrule
+subcooled solid, heated    & $\delta=0$, no resistance &
+  $\delta_{\mathrm{eq}}$, $k_{s}$ \\
+subcooled solid, cooled    & $\delta_{\mathrm{merge}}$, the full annulus &
+  $\delta_{\mathrm{eq}}$, $k_{s}$ \\
+superheated liquid, cooled & $\delta=0$, no resistance &
+  $\delta_{\mathrm{eq}}$, $k_{l}$ \\
+superheated liquid, heated & $\delta_{\mathrm{merge}}$, the full annulus &
+  $\delta_{\mathrm{eq}}$, $k_{l}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The two retired values \emph{bracket} the answer from opposite sides --- zero,
+and $2.152$ times too large --- and which one a cell received depended on the
+direction of the heat flow.
+
+\medskip
+\noindent\textbf{The jump at a branch boundary is real, and it is not an
+artefact.} As $\varepsilon_{\mathrm{local}}\to1^{-}$ while melting, the front is
+at $r_{o}$ and $R'=\ln\beta/2\pi k_{l}$; the instant the cell becomes
+superheated, $R'$ drops to $S/2\pi k_{l}$. Nothing physical has moved. What
+changed is that $\Tpcm$ stopped being the front temperature and became the
+volume mean, and the resistance follows its reference. The same occurs at
+$\varepsilon_{\mathrm{local}}\to0$, where the mechanism switches from
+\emph{warming a body} to \emph{moving a front}. The flux never becomes
+unbounded, because Eq.~\eqref{eq:K-derived} caps it at the capacity rate.
+
+\medskip
+\noindent
+The effect on the integrated result is modest --- the CSS deviation moves
+\SI{+4.73}{\percent} to \SI{+4.53}{\percent}, because the two errors partly
+cancel over a half-cycle. The qualitative effect is larger, and is set out in
+\S\ref{sec:defects}: the spurious infinite conductance at
+$\varepsilon_{\mathrm{local}}=0$ and $1$ is gone, and with it the claim that the
+exchanger is at its best at $t\to0$. It is at its best shortly \emph{after}
+melting begins, when a segment has a front at the tube and almost nothing
+between them.
+
 \subsubsection*{The honest limit}
 
 One thickness describes one front. After the first half-cycle from a fully solid

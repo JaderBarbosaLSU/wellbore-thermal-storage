@@ -458,6 +458,71 @@ accounted for the other factor of five.
 One question to the code would have found it: \emph{what resistance do you give
 a segment at $\epsloc=0$ during a discharge?}
 
+\paragraph{And when there is no front at all.}
+That rule answers ``which side of the front'', which assumes there is one. A
+cell that is \emph{entirely} one phase --- all subcooled solid, or all
+superheated liquid --- has none. Ask the rule anyway and it gives a resistance
+that depends on which way the heat is going: zero one way, the whole annulus the
+other. Same body, same material, two answers. That cannot be right, and until
+v0.8 it is what the model did.
+
+What changes in a single-phase cell is the \emph{meaning} of $\Tpcm$. In
+two-phase it is the temperature of the \textbf{front}, so the right resistance
+is tube-to-front. In single phase it is the \textbf{volume mean}, so the right
+resistance is mean-to-surface --- a different question with a different answer.
+
+Take the cell as an annulus $r_e\le r\le r_o$, adiabatic at $r_o$ (the
+neighbouring cell is identical, so that face is a symmetry plane), storing
+sensible heat at a uniform volumetric rate $s$. Quasi-steady, whatever crosses
+radius $r$ is what the material beyond it stores:
+
+$$-k\,2\pi r\frac{{\rm d}T}{{\rm d}r}=s\,\pi\left(r_o^2-r^2\right)
+\;\Longrightarrow\;
+T(r_e)-T(r)=\frac{s}{2k}\left[r_o^2\ln\frac{r}{r_e}-\frac{r^2-r_e^2}{2}\right].$$
+
+Average over the volume, divide by $Q'=s\pi(r_o^2-r_e^2)$, and you get
+$R'_{\rm bulk}=S/2\pi k$ with $\beta=r_o/r_e$ and
+
+$$S=\frac{\beta^4\ln\beta-\beta^4/2+\beta^2/2-(\beta^2-1)^2/4}{(\beta^2-1)^2}.$$
+
+\textbf{$S$ depends on geometry alone} --- $k$ cancels --- so one shape factor
+does for both phases and only the conductivity changes. Here $\beta=2.109$ and
+$S=0.3467$ against $\ln\beta=0.7460$ for the surface-to-surface annulus: smaller
+by $2.152$, which is the cylindrical version of the $1/3$ you already know for a
+slab with uniform generation.
+
+It goes back into the network as an equivalent thickness,
+$\delta_{\rm eq}=r_e(e^S-1)=\SI{8.74}{\milli\meter}$, so the fin efficiency and
+finned-area machinery apply unchanged. The two values it replaces --- $0$ and
+$\delta_{\rm merge}=\SI{23.37}{\milli\meter}$ --- bracket it from either side.
+
+\paragraph{A discontinuity that is real.}
+$R'$ jumps at each branch boundary. As $\epsloc\to1^-$ while melting the front
+is at $r_o$ and $R'=\ln\beta/2\pi k_l$; the moment the cell becomes superheated,
+$R'=S/2\pi k_l$. Nothing physical moved --- the reference temperature changed
+from the front to the mean, and the resistance follows it. The same happens at
+$\epsloc\to0$, where the mechanism switches from \emph{warming a body} to
+\emph{moving a front}. The flux stays bounded because $K$ saturates at the
+capacity rate.
+
+One consequence is worth knowing before you read any $U_i$ plot: \textbf{the
+exchanger is not at its best at $t=0$}. It is at its best shortly \emph{after}
+melting starts, when there is a front at the tube and almost nothing between
+them:
+
+\begin{center}
+\begin{tabular}{@{}r r r l@{}}
+\toprule
+$t$ [h] & $\epsloc$ & $U_i$ & which resistance \\
+\midrule
+ 0.00 & 0.000 & 260.2 & bulk, subcooled solid \\
+ 1.16 & 0.039 & \textbf{479.4} & shell, thin melt --- the best moment of the run \\
+ 3.41 & 0.245 & 214.8 & shell, thicker \\
+10.00 & 1.000 & 213.7 & bulk, superheated liquid \\
+\bottomrule
+\end{tabular}
+\end{center}
+
 \paragraph{What one thickness cannot do.}
 One $\delta$ describes one front. At cyclic steady state the charge begins with
 residual liquid in the \emph{outer} part of the cell, so melting then produces
@@ -684,19 +749,19 @@ rather than with the physics.
 \label{tab:design}
 \begin{tabular}{@{}l r l@{}}
 \toprule
-$\Nwells$ & 11.626 & from latent heat alone, not solved \\
+$\Nwells$ & 11.632 & from latent heat alone, not solved \\
 $\md^{\mathrm{ch}}$, $\md^{\mathrm{dc}}$ & 0.966, 0.971 &
   \si{\kilogram\per\second} per leg-pair \\
-cycles to convergence & 73 & \\
+cycles to convergence & 70 & \\
 $\eta_{\mathrm{storage}}$ & 1.000000 & Eq.~\eqref{eq:unity} \\
 \midrule
-\textbf{deviation} & \textbf{+4.731} & \si{\percent} \\
-implied net output & 1.0473 & MWe against a target of 1.0000 \\
-realised discharge glide & 57.56 & \si{\kelvin} against \num{55} assumed \\
-realised outlet $T_{2d}$ & 148.7 & \si{\celsius} \\
+\textbf{deviation} & \textbf{+4.527} & \si{\percent} \\
+implied net output & 1.0453 & MWe against a target of 1.0000 \\
+realised discharge glide & 57.44 & \si{\kelvin} against \num{55} assumed \\
+realised outlet $T_{2d}$ & 148.6 & \si{\celsius} \\
 \midrule
-$\epsloc$ at end of charge & 0.9706 & \num{82} of \num{100} segments reach 1 \\
-$\epsloc$ at end of discharge & 0.0094 & it very nearly refreezes \\
+$\epsloc$ at end of charge & 0.9715 & \num{82} of \num{100} segments reach 1 \\
+$\epsloc$ at end of discharge & 0.0116 & it very nearly refreezes \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -715,26 +780,26 @@ question.
 \toprule
  & meaning & value & what moves it \\
 \midrule
-$\eta_T$ & discharge thermal $\to$ net electric & 0.1899 &
+$\eta_T$ & discharge thermal $\to$ net electric & 0.1898 &
   the power block alone \\
-$\eta_{T,\mathrm{eff}}$ & the same, less discharge pumping & 0.1851 &
+$\eta_{T,\mathrm{eff}}$ & the same, less discharge pumping & 0.1850 &
   tube bore, flow, well depth \\
-$\eta_{\mathrm{RTE}}$ & round trip, both parasitics & 0.4370 &
+$\eta_{\mathrm{RTE}}$ & round trip, both parasitics & 0.4367 &
   COP, $\eta_{\mathrm{ORC}}$, parasitics \\
 $\varepsilon_{\mathrm{RTE}}$ & $\eta_{\mathrm{RTE}}\times$ cycled fraction &
-  0.4201 & anything leaving PCM unused \\
+  0.4192 & anything leaving PCM unused \\
 \midrule
-$\Delta E_{\mathrm{therm}}$ & thermal energy per well & \SI{4744}{\kilo\watt\hour} &
+$\Delta E_{\mathrm{therm}}$ & thermal energy per well & \SI{4734}{\kilo\watt\hour} &
   $\hm$, $\rho$, $V_{\mathrm{well}}$ \\
 $\Delta E_{\mathrm{elec}}$ & net electric energy per well &
-  \SI{878}{\kilo\watt\hour} & the above $\times\ \eta_{T,\mathrm{eff}}$ \\
+  \SI{876}{\kilo\watt\hour} & the above $\times\ \eta_{T,\mathrm{eff}}$ \\
 $\rho_E$ & thermal energy density &
-  \SI{171.4}{\kilo\watt\hour\per\meter\cubed} & $\hm$, $\rho$ \\
+  \SI{171.0}{\kilo\watt\hour\per\meter\cubed} & $\hm$, $\rho$ \\
 \midrule
-cycled fraction & $\varepsilon_{\mathrm{ch}}-\varepsilon_{\mathrm{dc}}$ & 0.9612 &
+cycled fraction & $\varepsilon_{\mathrm{ch}}-\varepsilon_{\mathrm{dc}}$ & 0.9599 &
   \\
 pumping & charge / discharge & 26.0 / \SI{26.4}{\kilo\watt} &
-  \SI{5.00}{\percent} of gross \\
+  \SI{5.02}{\percent} of gross \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -776,7 +841,7 @@ A profile without a sawtooth means your cascade is not doing anything.
 latent-only sizing rule doing its job --- and it is also the moment when an
 area-based model would be discarding heat across most of the exchanger.
 
-\textbf{And it very nearly empties.} The residual after discharge is $0.0094$.
+\textbf{And it very nearly empties.} The residual after discharge is $0.0116$.
 That residual is the diagnostic that matters most in a parametric study, and
 \S\ref{sec:params} explains how to read it. Note what it says here: at this
 design point the store is closer to \emph{inventory}-limited than to

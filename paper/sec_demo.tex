@@ -573,10 +573,10 @@ energies are the same number. The first cycle absorbs more than any later one
 because it alone begins from a cold, fully solid store --- which is precisely
 why a first-cycle result cannot be quoted for a repeating duty.
 
-At the latent-only size the field delivers \SI{104.73}{\percent} of target. The
+At the latent-only size the field delivers \SI{104.53}{\percent} of target. The
 store comes close to melting completely at end of charge ---
 $\varepsilon_{\mathrm{local}}=1$ at \num{82} of \num{100} stations, mean
-$0.9706$ --- and returns to a mean of $0.0094$, so it very nearly refreezes. The
+$0.9715$ --- and returns to a mean of $0.0116$, so it very nearly refreezes. The
 binding constraint at this design point is therefore closer to inventory than to
 rate, and it is the design curve rather than any single number that separates
 them. The
@@ -596,7 +596,7 @@ than on more phase-change material.
   xlabel={$\Nwells$}, ylabel={delivered / target},
   title={\small (a) energy delivered}, ymin=0.91, ymax=1.09, xmin=8.5, xmax=16.5,
   grid=both, grid style={gray!20}]
-\addplot[thick,mark=*,mark size=1.3pt,blue!70!black] coordinates {(9.00,0.92826) (10.00,0.98936) (11.63,1.04733) (12.50,1.05763) (14.00,1.06836) (16.00,1.07659)};
+\addplot[thick,mark=*,mark size=1.3pt,blue!70!black] coordinates {(9.00,0.92431) (10.00,0.98625) (11.63,1.04529) (13.00,1.05987) (16.00,1.07467)};
 \addplot[dashed,gray,domain=8.5:16.5,samples=2,forget plot] {1};
 \node[font=\scriptsize,gray] at (axis cs:15.0,0.985) {target};
 \end{axis}
@@ -606,12 +606,12 @@ than on more phase-change material.
   title={\small (b) unfrozen fraction at end of discharge},
   ymin=-0.005, ymax=0.095, xmin=8.5, xmax=16.5,
   grid=both, grid style={gray!20}]
-\addplot[thick,mark=triangle*,mark size=1.6pt,orange!85!black] coordinates {(9.00,0.0000) (10.00,0.0000) (11.63,0.0094) (12.50,0.0255) (14.00,0.0529) (16.00,0.0826)};
+\addplot[thick,mark=triangle*,mark size=1.6pt,orange!85!black] coordinates {(9.00,0.0000) (10.00,0.0000) (11.63,0.0116) (13.00,0.0399) (16.00,0.0983)};
 \end{axis}
 \end{tikzpicture}
 \caption{Cyclic steady state against exchanger count; each point is an
 independent march to convergence. (a) Delivered energy crosses target near
-$\Nwells\approx10.1$, \emph{below} the latent-only count of $11.63$.
+$\Nwells\approx10.2$, \emph{below} the latent-only count of $11.63$.
 (b) The diagnostic: the
 residual melted fraction at end of discharge \emph{rises} with exchanger count,
 because each unit is then worked less hard and proportionally less of it

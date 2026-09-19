@@ -428,9 +428,9 @@ def segment_profile(case, T_inlet, T_m_seg, m_dot, k_wall, E, n_segments=None):
     dz = case.L_tube / n_segments
     A, T_pcm = pcm_state(E, T_m_seg, case)
     delta = delta_from_area(A, case.r_e, case.num_fins, case.fin_t, case.fin_L)
-    A_avail = pcm_capacities(case)[0]
-    d_melt, k_melt = conduction_shell(case, A, A_avail, True)
-    d_froz, k_froz = conduction_shell(case, A, A_avail, False)
+    A_avail, E_lat = pcm_capacities(case)[:2]
+    d_melt, k_melt = conduction_shell(case, A, A_avail, True, E, E_lat)
+    d_froz, k_froz = conduction_shell(case, A, A_avail, False, E, E_lat)
 
     T_prof = np.empty(n_segments + 1)
     T_prof[0] = T_inlet
@@ -442,7 +442,7 @@ def segment_profile(case, T_inlet, T_m_seg, m_dot, k_wall, E, n_segments=None):
     for i in range(n_segments):
         melting = T0 > T_pcm[i]
         d_path = float(d_melt[i] if melting else d_froz[i])
-        k_m = k_melt if melting else k_froz
+        k_m = float(k_melt[i] if melting else k_froz[i])
         h_i, cp_d, _, _ = h_internal(case.fluid2, T0, case.P, case.r_i, m_dot)
         U_i = compute_U_i(h_i, case.r_i, case.r_e, k_wall, case.Rf_i, k_m,
                           d_path, case.L_tube, case.fin_t,
@@ -460,7 +460,65 @@ def segment_profile(case, T_inlet, T_m_seg, m_dot, k_wall, E, n_segments=None):
                 A_melt=A, T_pcm=T_pcm, delta=delta, E=np.array(E, float))
 
 
-def conduction_shell(case, A_melt, A_avail, melting):
+def bulk_shape_factor(case):
+    """Dimensionless resistance of a SINGLE-PHASE cell, mean to tube surface.
+
+    A cell that is entirely one phase has no front. Heat entering at the tube is
+    stored throughout its volume, so the temperature varies with radius and the
+    lumped state T_pcm is the VOLUME MEAN. The resistance that belongs with that
+    mean is not the surface-to-surface annulus value.
+
+    Take the cell as an annulus r_e <= r <= r_o, adiabatic at r_o (its neighbour
+    is identical, so the boundary is a symmetry plane), storing sensible heat at
+    a uniform volumetric rate s = rho c dT/dt. Quasi-steady, the heat crossing
+    radius r is what the material beyond it stores,
+
+        -k 2 pi r dT/dr = s pi (r_o^2 - r^2),
+
+    which integrates to
+
+        T(r_e) - T(r) = (s/2k) [ r_o^2 ln(r/r_e) - (r^2 - r_e^2)/2 ].
+
+    Averaging over the volume and dividing by the total Q' = s pi (r_o^2-r_e^2)
+    gives R'_bulk = S/(2 pi k) with, writing beta = r_o/r_e,
+
+        S = [ beta^4 ln(beta) - beta^4/2 + beta^2/2 - (beta^2-1)^2/4 ]
+            / (beta^2 - 1)^2 .
+
+    S depends on GEOMETRY ALONE -- k cancels -- so one shape factor serves both
+    phases and only the conductivity changes between them. For the default cell,
+    beta = 2.1086 and S = 0.34672, against ln(beta) = 0.74604 for the
+    surface-to-surface annulus: the mean-to-surface resistance is smaller by a
+    factor 2.152, the cylindrical analogue of the familiar 1/3 for a slab with
+    uniform generation.
+
+    Verified against numerical quadrature of the same integral to six decimals.
+    """
+    beta = case.r_cell / case.r_e
+    b2 = beta * beta
+    return ((b2 * b2 * np.log(beta) - b2 * b2 / 2.0 + b2 / 2.0
+             - (b2 - 1.0) ** 2 / 4.0) / (b2 - 1.0) ** 2)
+
+
+def bulk_equivalent_delta(case):
+    """The shell thickness that reproduces the bulk resistance.
+
+    The network in `compute_U_i` takes a thickness, not a resistance, and wraps
+    it in the fin efficiency and the finned-area ratio. Feeding it an equivalent
+    thickness therefore keeps the single-phase branches inside exactly the same
+    machinery as the two-phase ones, rather than bolting a second path onto it:
+
+        ln(1 + delta_eq/r_e) = S    =>    delta_eq = r_e (e^S - 1).
+
+    Like S it is a property of the geometry alone -- the same delta_eq serves
+    subcooled solid and superheated liquid, and only k changes. For the default
+    cell it is 8.74 mm, against 0 and 23.37 mm, which are the two values the
+    model used before this was worked out.
+    """
+    return case.r_e * (np.exp(bulk_shape_factor(case)) - 1.0)
+
+
+def conduction_shell(case, A_melt, A_avail, melting, E=None, E_lat=None):
     """Thickness and conductivity of the shell between the tube and the front.
 
     The PCM-side resistance in `compute_U_i` is that of an annulus growing
@@ -506,16 +564,36 @@ def conduction_shell(case, A_melt, A_avail, melting):
     retired one can represent that; this one is the better approximation, not a
     correct treatment. It is hypothesis H5, stated honestly.
     """
-    A_path = A_melt if melting else (A_avail - A_melt)
-    k_path = case.k_l if melting else case.k_s
-    if case.front_geometry == "melt_side":          # retired, see above
-        A_path = A_melt
-        k_path = case.k_l
-    elif case.front_geometry != "directional":
+    if case.front_geometry not in ("directional", "melt_side"):
         raise ValueError(f"front_geometry must be 'directional' or "
                          f"'melt_side', not {case.front_geometry!r}")
+
+    A_melt = np.asarray(A_melt, float)
+    if case.front_geometry == "melt_side":          # retired, see above
+        return (delta_from_area(A_melt, case.r_e, case.num_fins, case.fin_t,
+                                case.fin_L),
+                np.full(A_melt.shape, case.k_l))
+
+    # ---- two-phase: the shell between the tube and the front --------------
+    A_path = A_melt if melting else (A_avail - A_melt)
     delta = delta_from_area(A_path, case.r_e, case.num_fins, case.fin_t,
                             case.fin_L)
+    k_path = np.full(A_melt.shape, case.k_l if melting else case.k_s)
+
+    # ---- single phase: there is no front, so there is no side ------------
+    # `E` is optional only so that callers which do not have it (none, now)
+    # keep the two-phase behaviour; when it is given, the single-phase cells
+    # get the bulk resistance of `bulk_shape_factor`, the SAME in both
+    # directions, because a one-phase cell has no front and cannot care which
+    # way the heat is going.
+    if E is not None:
+        E = np.asarray(E, float)
+        d_bulk = bulk_equivalent_delta(case)
+        solid = E < 0.0                              # subcooled solid
+        liquid = E > E_lat                           # superheated liquid
+        delta = np.where(solid | liquid, d_bulk, delta)
+        k_path = np.where(solid, case.k_s,
+                          np.where(liquid, case.k_l, k_path))
     return delta, k_path
 
 
@@ -613,8 +691,8 @@ def march_h(case, T_inlet, T_m_seg, m_dot, k_wall, times,
         # is about. The conduction path is a separate question -- which side of
         # the front the heat has to cross -- and depends on the direction.
         delta = delta_from_area(A, r_e, case.num_fins, case.fin_t, case.fin_L)
-        d_melt, k_melt = conduction_shell(case, A, A_avail, True)
-        d_froz, k_froz = conduction_shell(case, A, A_avail, False)
+        d_melt, k_melt = conduction_shell(case, A, A_avail, True, E, E_lat)
+        d_froz, k_froz = conduction_shell(case, A, A_avail, False, E, E_lat)
         T0 = T_inlet
         q_prime = np.zeros(n_segments)
         if record:
@@ -628,7 +706,7 @@ def march_h(case, T_inlet, T_m_seg, m_dot, k_wall, times,
             # known, and it has the same sign as q'.
             melting = T0 > T_pcm[i]
             d_path = float(d_melt[i] if melting else d_froz[i])
-            k_m = k_melt if melting else k_froz
+            k_m = float(k_melt[i] if melting else k_froz[i])
             h_i, cp_d, _, _ = h_internal(case.fluid2, T0, case.P, r_i, m_dot)
             U_i = compute_U_i(h_i, r_i, r_e, k_wall, case.Rf_i, k_m,
                               d_path, case.L_tube, case.fin_t,

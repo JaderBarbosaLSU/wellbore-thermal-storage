@@ -244,6 +244,43 @@ value at the end of the charge, against $k_{s}/k_{l}=1.33$; with
 Eq.~\eqref{eq:shell-choice} the two half-cycles become near mirror images,
 agreeing to \SI{0.5}{\percent} at $t\to0$ and differing by $1.265$ at the end.
 
+\paragraph{When there is no front.}
+Equation~\eqref{eq:shell-choice} answers ``which side of the front'', which
+presupposes one. A control volume that is entirely one phase --- subcooled solid
+or superheated liquid --- has none, and the rule then returns a resistance that
+depends on the direction of the heat flow. The same body of the same material
+cannot have two resistances.
+
+What changes at a branch boundary is the meaning of the state. In two-phase,
+$\Tpcm=\Tm$ is the temperature of the \emph{front} and the appropriate
+resistance is tube-to-front. In single phase $\Tpcm$ is the \emph{volume mean},
+and the resistance that belongs with a mean is mean-to-surface. Treating the
+control volume as an annulus $r_{e}\le r\le r_{o}$, adiabatic at $r_{o}$ by
+symmetry with its neighbour and storing sensible heat at a uniform volumetric
+rate, the quasi-steady balance $-k\,2\pi r\,\mathrm{d}T/\mathrm{d}r
+=s\pi(r_{o}^{2}-r^{2})$ integrates and averages to
+$R'_{\mathrm{bulk}}=S/2\pi k$ with
+\begin{equation}
+  S=\frac{\beta^{4}\ln\beta-\beta^{4}/2+\beta^{2}/2
+    -\left(\beta^{2}-1\right)^{2}/4}{\left(\beta^{2}-1\right)^{2}},
+  \qquad \beta=\frac{r_{o}}{r_{e}} .
+  \label{eq:shape-factor}
+\end{equation}
+$S$ depends on geometry alone --- $k$ cancels --- so one shape factor serves both
+phases. For the case studied $\beta=2.109$ and $S=0.3467$ against
+$\ln\beta=0.7460$ for the surface-to-surface annulus: smaller by $2.152$, the
+cylindrical counterpart of the familiar $1/3$ for a slab with uniform
+generation. It enters the network as an equivalent thickness
+$\delta_{\mathrm{eq}}=r_{e}(e^{S}-1)$, so the fin efficiency and finned-area
+ratio apply unchanged.
+
+The resistance is then discontinuous across a branch boundary, and that is not
+an artefact: as $\varepsilon_{\mathrm{local}}\to1^{-}$ while melting the front
+is at $r_{o}$ and $R'=\ln\beta/2\pi k_{l}$, while the instant the volume becomes
+superheated $R'=S/2\pi k_{l}$. Nothing has moved; the reference temperature has
+changed from the front to the mean, and the resistance follows it. The flux
+remains bounded because Eq.~\eqref{eq:K} caps it at the capacity rate.
+
 \paragraph{What a single thickness cannot do.}
 One $\delta$ describes one front. After the first half-cycle from a uniformly
 solid store the geometry is in general three-region: at cyclic steady state the

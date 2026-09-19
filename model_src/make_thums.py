@@ -29,7 +29,7 @@ ENTRY = ('Case', 'simulate_css_corrected', 'simulate_css', 'css_report',
          'cycle_state_points', 'energy_budget', 'melting_temperatures',
          'T_m_bottom', 'layer_map', 'march_h', 'pcm_state', 'pcm_capacities',
          'segment_profile', 'unmirror_march', 'mixed_mean_outlet',
-         'conduction_shell',
+         'conduction_shell', 'bulk_shape_factor', 'bulk_equivalent_delta',
          'delta_from_area', 'calculate_pressure_drop')
 
 HEADER = '''"""THUMS -- latent heat storage in a repurposed wellbore.

@@ -430,6 +430,65 @@ All four limits then come out right without special-casing:
 > Ask the code what it does at $\varepsilon=0$ during a discharge. That single
 > question would have found it.
 
+#### And when there is no front at all
+
+The table above answers "which side of the front", which presupposes a front.
+A cell that is **entirely one phase** — subcooled solid, or superheated liquid —
+has none. Ask the shell rule what to do there and it gives two different answers
+depending on the direction, which cannot be right: it is the same body of the
+same material either way.
+
+What changes in a single-phase cell is the *meaning of the state variable*. In
+two-phase, $T_{\rm pcm}=T_m$ is the temperature **of the front**, and the
+resistance that belongs with it is tube-to-front. In single phase there is no
+front, $T_{\rm pcm}$ is the **volume mean** of the cell, and the resistance that
+belongs with a mean is mean-to-surface.
+
+Take the cell as an annulus $r_e\le r\le r_o$, adiabatic at $r_o$ — its
+neighbour is identical, so that boundary is a symmetry plane — storing sensible
+heat at a uniform volumetric rate. Quasi-steady, the heat crossing radius $r$ is
+what the material beyond it stores:
+
+$$-k\,2\pi r\frac{{\rm d}T}{{\rm d}r}=s\,\pi\left(r_o^2-r^2\right)
+\quad\Longrightarrow\quad
+T(r_e)-T(r)=\frac{s}{2k}\left[r_o^2\ln\frac{r}{r_e}-\frac{r^2-r_e^2}{2}\right].$$
+
+Averaging over the volume and dividing by $Q'=s\pi(r_o^2-r_e^2)$ gives
+$R'_{\rm bulk}=S/2\pi k$ with, for $\beta=r_o/r_e$,
+
+$$\boxed{\;S=\frac{\beta^4\ln\beta-\dfrac{\beta^4}{2}+\dfrac{\beta^2}{2}
+-\dfrac{(\beta^2-1)^2}{4}}{(\beta^2-1)^2}\;}$$
+
+**$S$ depends on geometry alone** — $k$ cancels — so one shape factor serves
+both phases and only the conductivity changes. Here $\beta=2.1086$ and
+$S=0.34672$, against $\ln\beta=0.74604$ for the surface-to-surface annulus: the
+mean-to-surface resistance is smaller by $2.152$, the cylindrical analogue of
+the familiar $1/3$ for a slab with uniform generation.
+
+Fed back as an equivalent thickness, $\ln(1+\delta_{\rm eq}/r_e)=S$ gives
+$\delta_{\rm eq}=r_e(e^S-1)=8.74$ mm — so the same fin efficiency and
+finned-area machinery handles it, with no second path bolted on.
+
+| state | before v0.8 | v0.8 |
+|---|---|---|
+| subcooled solid, heated | $\delta=0$, **no resistance** | $\delta_{\rm eq}$, $k_s$ |
+| subcooled solid, cooled | $\delta_{\rm merge}$, the *full* annulus | $\delta_{\rm eq}$, $k_s$ |
+| superheated liquid, cooled | $\delta=0$, **no resistance** | $\delta_{\rm eq}$, $k_l$ |
+| superheated liquid, heated | $\delta_{\rm merge}$, the *full* annulus | $\delta_{\rm eq}$, $k_l$ |
+
+The two old values **bracketed** the answer from opposite sides — zero, and
+$2.152\times$ too large — and which one you got depended on the direction of the
+heat flow.
+
+> **The jump at a branch boundary is real, and it is not a bug.** As
+> $\varepsilon\to1^-$ while melting, the front is at $r_o$ and
+> $R'=\ln\beta/2\pi k_l$; the instant the cell becomes superheated,
+> $R'$ drops to $S/2\pi k_l$. Nothing physical moved. What changed is that
+> $T_{\rm pcm}$ stopped being the front temperature and became the volume mean,
+> and the resistance follows the reference. The same happens at
+> $\varepsilon\to0$, where the mechanism switches from *warming a body* to
+> *moving a front*.
+
 **The honest limit.** One thickness describes one front. After the first
 half-cycle from a fully solid store the geometry is generally *three-region*: at
 cyclic steady state the charge begins with residual liquid in the outer part of
@@ -439,7 +498,8 @@ better approximation, not a correct one — that is hypothesis **H5**, stated
 plainly.
 """))
 
-cells.append(code(src('conduction_shell', 'segment_profile', 'unmirror_march',
+cells.append(code(src('bulk_shape_factor', 'bulk_equivalent_delta',
+                      'conduction_shell', 'segment_profile', 'unmirror_march',
                       'mixed_mean_outlet', 'march_h')))
 
 cells.append(md(r"""
@@ -827,19 +887,19 @@ $\Delta T_{M,1D}=\Delta T_{3C,2C}/N_{\rm lay}$ reproduces every v0.5a number
 exactly.
 """))
 cells.append(code(r"""
-FIXTURE_V07 = {   # re-frozen 2026-09 for the v0.7 conduction path -- see below
+FIXTURE_V08 = {   # re-frozen 2026-09 for the v0.8 bulk resistance -- see below
     'N_rate':             11.5122070312,
     'N_capacity':          9.67244314511,
     'N_wells':            11.5122070312,
     'eps_pcm':             1.0,
     'E_well_kJ':          20857297.9447,
-    'eta_storage':         0.95109006461,
-    'flow_ratio_dc_ch':    0.903125,
+    'eta_storage':         0.951536074928,
+    'flow_ratio_dc_ch':    0.906640625,
     'cop_hp':              2.95633040945,
     'eta_orc':             0.232035822617,
-    'eta_rte':             0.410395410162,
+    'eta_rte':             0.410286227963,
     'eta_rte_nopump':      0.425994284001,
-    'f_pump':              0.05523716054,
+    'f_pump':             0.055496908173,
     'E_well':              4.63600440156,
     'rho_E':             167.46852173,
 }
@@ -866,7 +926,7 @@ res_v = runs['v0.4b']
 merged = dict(res_v['kpis']); merged.update(res_v['detail'])
 print(f"{'quantity':20s} {'frozen':>20s} {'now':>20s}   rel. diff")
 worst = 0.0
-for k, v in FIXTURE_V07.items():
+for k, v in FIXTURE_V08.items():
     now = float(merged[k])
     d = abs(now - v)/abs(v) if v else abs(now)
     worst = max(worst, d)
@@ -1125,29 +1185,37 @@ questions:
   difference a segment actually uses. It is **not** comparable across cases with
   different flow.
 
-The cell after the discharge figure makes that concrete. At $t\to0$ the two
-half-cycles now agree almost exactly — $U_i$ mid-well is $831.9$ on charge and
-$828.0$ on discharge, a ratio of $0.995$ — because at the start of each
-half-cycle the shell between tube and front has **zero thickness**: the charge
-begins from an almost fully solid store and the discharge from an almost fully
-melted one. By the end of each half-cycle a shell has grown, and the ratio is
-$148.1/117.0 = 1.265$, close to $k_s/k_l = 1.333$ as it should be, the
-remainder being that the frozen shell does not grow quite as thick as the
-melted one.
+The cell after the discharge figure makes that concrete, and the trajectory of
+one mid-well segment tells the whole story:
 
-That near-symmetry is the point, and it is new in v0.7. Until then the two
-half-cycles differed by a **factor of seven** at the end of the run, which was
-read here as a physical effect of the melt layer. It was not: the conduction
-path was being taken on the wrong side of the front during freezing, so the
-modelled exchanger *improved* as it froze instead of degrading. See the note in
-§5 and DN-13.
+| $t$ [h] | $\varepsilon_{local}$ | $U_i$ | which resistance |
+|---|---|---|---|
+| 0.00 | 0.000 | 260.2 | bulk, subcooled solid |
+| 1.16 | 0.039 | 479.4 | shell — thin melt, so the *least* resistance of the run |
+| 3.41 | 0.245 | 214.8 | shell — thicker, degrading |
+| 10.00 | 1.000 | 213.7 | bulk, superheated liquid |
 
-$U_i$ is drawn on a log axis, and it spans about a factor of seven
-($117$ to $833$ W m⁻² K⁻¹ over both half-cycles): the log scale keeps
-the late-time curves, which bunch at the low end, readable against the $t\to0$
-curve. That $t\to0$ value is worth noting — the melt layer is absent, $h_e$
-saturates at its cap, and the borehole is limited by the tube alone. It is the
-ceiling no amount of PCM-side design can beat.
+The exchanger is best not at $t=0$ but shortly after melting starts, when there
+is a front at the tube and almost nothing between them. Before that the heat is
+warming a solid body and must reach its mean; after it, the melt layer grows and
+gets in the way.
+
+The two half-cycles are now near mirror images — charge $260.2\to213.7$,
+discharge $213.7\to260.0$ — differing only through $k_s/k_l$. Two corrections
+got them there. Until v0.7 the conduction path was taken on the wrong side of
+the front while freezing, so the modelled exchanger *improved* as it froze and
+the two half-cycles differed by a **factor of seven** at end of run (DN-13).
+Until v0.8 the single-phase states had either zero resistance or the full
+annulus depending on direction, which is where the old $t\to0$ value of $832$
+came from (DN-14).
+
+$U_i$ is drawn on a log axis, and over the charge it spans $117$ to
+$826$ W m⁻² K⁻¹ across segments and times: the log scale keeps the late-time
+curves, which bunch at the low end, readable against the early ones. The
+**maximum is not at $t=0$** — it is reached shortly after melting begins, where
+a segment has a front at the tube and a vanishing shell. That is the ceiling no
+amount of PCM-side design can beat, and it lasts only as long as the melt film
+is thin.
 """))
 
 cells.append(md(r"""
@@ -1398,6 +1466,7 @@ consistency is not validation, and a reviewer will ask.
 
 | version | date | change |
 |---|---|---|
+| **0.8** | this build | **A single-phase cell has no front, so it cannot have a side.** The v0.7 shell rule, asked what to do for a cell that is entirely subcooled solid or entirely superheated liquid, returned a resistance that depended on the DIRECTION of the heat flow — zero one way, the full annulus the other. Same body, same material, two answers. What actually changes in a single-phase cell is the meaning of $T_{\rm pcm}$: it is the *volume mean*, not the front temperature, so the resistance that belongs with it is **mean-to-surface**. Solving the annulus with uniform sensible storage and an adiabatic outer boundary gives a shape factor $S$ that depends on **geometry alone** ($k$ cancels), $S=0.34672$ here against $\ln\beta=0.74604$ — smaller by $2.152$, the cylindrical analogue of $1/3$ for a slab. Fed back as $\delta_{\rm eq}=r_e(e^S-1)=8.74$ mm so the existing fin machinery handles it unchanged. The two retired values bracketed the truth from opposite sides. Effect: deviation $+4.73\,\%\to+4.53\,\%$, residual $\varepsilon$ $0.0094\to0.0116$ — small, because the errors partly cancelled over a half-cycle. The qualitative change is larger: $U_i$ at $t\to0$ falls $823\to260$, the spurious infinite conductance at $\varepsilon=0$ and $\varepsilon=1$ is gone, and the exchanger's best moment is now correctly *just after melting starts* rather than before it. Raised by a reader asking whether zero resistance in the single-phase limits was better than computing one. It was not. |
 | **0.7** | this build | **The conduction path was on the wrong side of the front while freezing.** The PCM-side resistance is an annulus growing outward from the tube, $\ln(1+\delta/r_e)/2\pi k$. The melted thickness was used for it in *both* directions — correct while melting, inverted while freezing, where the shell against the tube is the *frozen* material of thickness $A_{\rm avail}-A_{\rm melt}$ and conductivity $k_s$. A segment frozen solid was given zero PCM-side resistance where the physical resistance is largest, so the modelled exchanger **improved as it froze**. `conduction_shell` now picks the shell by the sign of the driving difference; `Case.front_geometry='melt_side'` reproduces the retired behaviour exactly. Consequences: the two half-cycles are now near mirror images ($U_i$ ratio at $t\to0$ is $0.995$, and $1.265\approx k_s/k_l$ at the end, against a spurious factor of **seven** before); the deviation $+1.23\,\% \to +4.73\,\%$; the residual melt fraction $0.0823 \to 0.0094$, so the store now very nearly refreezes; the store no longer melts *completely* — $82$ of $100$ segments reach $\varepsilon=1$, mean $0.9706$. Charge-side fixture entries are bit-identical, which is itself the check: only the discharge moved. Found by a reader asking which material the model puts next to the tube during discharge. |
 | **0.6** | this build | **The discharge closure was solving for the wrong end.** Only the two exchanger *inlets* are boundary conditions on the march; both outlets are results. The discharge was closed the other way round — the outlet pinned at $T_{2d}=T_{m,\rm top}-\Delta T_{m,2D}$ with $\Delta T_{m,2D}=0$, the inlet derived from it — and the model's own solution contradicts that: at the start of a discharge at CSS the water leaves at $157.93$ °C, nearly 8 K above the top layer's melting point, because the PCM is superheated. The implied inlet approach was also silently $\Delta T_{3C,2C}/N_{\rm lay}=6.111$ K, one layer width, chosen by nobody. `DT_m_2D` is replaced by **`DT_M_1D`**, a subcooling of the inlet (state **1d**) below the *coldest* layer, the symmetric partner of `DT_4C_M`; $T_{2d}$ is demoted to a provisional estimate and reported against the realised value. `simulate_css_corrected` adds **one** ORC correction pass at the realised outlet — enough because the outlet is pinned by the store, not the plant (it moves $<0.3$ K while the inlet moves 9 K). Verified a pure reparameterisation: at $\Delta T_{M,1D}=6.111$ K every v0.5a number returns exactly (§16.5). At the symmetric 10 K the deviation goes $-5.69\,\%\to+1.23\,\%$ — **most of the shortfall was the closure, not the store**. §13 re-frozen for the new closure. |
 | **0.5a** | this build | **Two recording defects, no physics.** (i) `march_h` recorded the state at the *start* of a step but stamped it with the time at the *end*, and appended `E` after the update while the other state arrays came from before it. On a logarithmic grid the last step is 2.36 h, so every recorded profile was up to a quarter of a half-cycle stale and the true end state was never recorded: the map read $\varepsilon=0.356$ at the end of discharge against $0.1545$ from the march. Frames are now stamped in **`t_hist`** at the instants where the state is exact, start at $t=0$, and include the end state; `segment_profile` evaluates the closing frame's fluid profile from that end state. (ii) The **discharge was plotted mirrored** in §14.2 and §16 — the discharge marches from the far end, and only the sizing loops were un-mirroring it. `unmirror_march` now returns every discharge result in depth indexing, so both half-cycles share one cascade and one depth axis, and §16.3 prints the map-closure residual (zero). §14 also carried the *flow-reversal* bug fixed in `run_cycle` in v0.5 — it built the discharge cascade with `layer_map(T_m_lay_dc, ...)` and passed the state unmirrored. `N_wells`, the CSS deviation, energy closure and every reported index are unchanged. |
@@ -1673,7 +1742,7 @@ rows = []
 # since every point would otherwise be marched to CSS twice. The realised
 # outlet moves by less than 0.3 K over this range, so the two agree anyway.
 T_2d_fixed = css['T_2d_realised']
-for N in (9.0, 10.0, N_lat, 13.0, 16.0):
+for N in (9.0, 10.0, N_lat, 13.0):
     rr = simulate_css(CASE, N=N, T_2d=T_2d_fixed, n_cycles=250)
     rows.append({'N_wells': rr['N_wells'],
                  'delivered/req': rr['Q_discharge_kJ']/rr['required_kJ'],
@@ -1817,8 +1886,14 @@ now = dict(r_leg); now['T_3d'] = T_leg['T_3d']; now['T_2d'] = T_leg['T_2d']
 # tolerance for these three is the honest response rather than a fudge --
 # provided the first group stays exact, which is what actually rules out a
 # leak.
+# `eta_storage` is NOT in this group, and the reason is worth a line. It is
+# identically 1 at CSS as a matter of algebra -- the state returns to itself in
+# an adiabatic store -- but the COMPUTED value depends on which cycle the drift
+# test stopped at, so it inherits the 1e-9 tolerance like any other marched
+# quantity. An identity in the mathematics is still only converged-to in the
+# arithmetic. It sat here until v0.8 and reported 1.0000000012.
 EXACT = ('N_wells', 'm1_ch', 'm1_dc', 'flow_ratio', 'required_kJ',
-         'eta_storage', 'T_3d', 'T_2d')
+         'T_3d', 'T_2d')
 print(f"{'quantity':18s} {'v0.5a (git b383a48)':>24s} {'v0.6 at legacy':>24s}"
       f"   rel. diff   class")
 worst_exact = worst_iter = 0.0
@@ -1863,7 +1938,7 @@ Each point is an independent march to CSS with the ORC correction pass.
 cells.append(code(r"""
 Tmb = T_m_bottom(CASE) - 273.15
 rows = []
-for sub in (CASE.DT_3C_2C/CASE.N_lay, 8.0, 10.0, 12.0):
+for sub in (CASE.DT_3C_2C/CASE.N_lay, 8.0, 10.0):
     rr = simulate_css_corrected(CASE.with_(DT_M_1D=sub), n_cycles=250)
     rows.append({'DT_M_1D': sub, 'T_3d [C]': Tmb - sub,
                  'N_wells': rr['N_wells'],

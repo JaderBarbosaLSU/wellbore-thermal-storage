@@ -25,6 +25,7 @@ and it is not in the student notebook.
 | DN-11 | The deviation cancels out of round-trip efficiency | 1.2 % of apparent η |
 | DN-12 | `layer_map` uses a node convention *(open)* | ~0.1 pp on the deviation |
 | DN-13 | The conduction path was on the wrong side of the front while freezing | a spurious factor of 7 in $U_i$ |
+| DN-14 | A single-phase cell has no front, so it cannot have a side | $U_i(t\to0)$ 823 → 260 |
 
 ---
 
@@ -473,3 +474,113 @@ better approximation, not a correct one, and that is what H5 actually assumes.
 
 **Found by** a reader asking which material the model places next to the tube
 during discharge — the right question, asked of the right function.
+
+---
+
+## DN-14 — A single-phase cell has no front, so it cannot have a side
+
+**What was wrong.** DN-13 made the conduction shell follow the direction of the
+phase change. Asked what to do for a cell that is *entirely* one phase — all
+subcooled solid, or all superheated liquid — the same rule returned a resistance
+that depended on the direction of the heat flow:
+
+| state | direction | δ | R′ [m·K/W] |
+|---|---|---|---|
+| subcooled solid | heated | 0 | **0** |
+| subcooled solid | cooled | δ_merge | **0.1979** |
+| superheated liquid | cooled | 0 | **0** |
+| superheated liquid | heated | δ_merge | **0.2639** |
+
+Same body, same material, two answers. There is no front in a single-phase
+cell, so "which side of it" is not a question that has an answer.
+
+**What actually changes at a branch boundary is the meaning of the state
+variable.** In two-phase, T_pcm = T_m is the temperature *of the front*, and the
+resistance that belongs with it is tube-to-front. In single phase there is no
+front; T_pcm is the *volume mean* of the cell, and the resistance that belongs
+with a mean is mean-to-surface.
+
+**The derivation.** Take the cell as an annulus r_e ≤ r ≤ r_o, adiabatic at r_o
+— its neighbour is identical, so that boundary is a symmetry plane — storing
+sensible heat at a uniform volumetric rate s = ρc dT/dt. Quasi-steady, the heat
+crossing radius r is what the material beyond it stores:
+
+    −k 2πr dT/dr = s π(r_o² − r²)
+
+    T(r_e) − T(r) = (s/2k)[ r_o² ln(r/r_e) − (r² − r_e²)/2 ]
+
+Averaging over the volume and dividing by Q′ = s π(r_o² − r_e²) gives
+R′_bulk = S/(2πk) with, for β = r_o/r_e,
+
+    S = [ β⁴ lnβ − β⁴/2 + β²/2 − (β²−1)²/4 ] / (β²−1)²
+
+**S depends on geometry alone** — k cancels — so one shape factor serves both
+phases and only the conductivity changes. For the default cell β = 2.1086 and
+S = 0.34672, against lnβ = 0.74604 for the surface-to-surface annulus: smaller
+by a factor 2.152, the cylindrical analogue of the familiar 1/3 for a slab with
+uniform generation. Checked against numerical quadrature of the same integral to
+six decimals.
+
+Fed back as an equivalent thickness, ln(1 + δ_eq/r_e) = S gives
+δ_eq = r_e(e^S − 1) = **8.74 mm**, so the existing fin-efficiency and
+finned-area machinery handles the single-phase branches unchanged instead of
+needing a second path. Like S, it is a property of the geometry alone.
+
+**The two retired values bracketed the answer** from opposite sides: zero, and
+2.152× too large — and which one you got depended on the direction of the heat
+flow.
+
+**Worth.**
+
+| | v0.7 | v0.8 |
+|---|---|---|
+| deviation | +4.73 % | **+4.53 %** |
+| residual ε at end of discharge | 0.0094 | 0.0116 |
+| ε at end of charge | 0.9706 | 0.9715 |
+| N_wells | 11.6255 | 11.6322 |
+| η_RTE | 0.4370 | 0.4367 |
+| U_i mid-well at t→0, charge | 823 | **260** |
+| U_i mid-well at end, charge | 117 | 214 |
+
+The integrated effect is small — 0.20 percentage points on the deviation —
+because the two errors partly cancelled over a half-cycle: too little resistance
+at one end, too much at the other. **The qualitative change is larger.** The
+spurious infinite conductance at ε = 0 and ε = 1 is gone, and with it the claim
+that the exchanger is at its best at t → 0. It is not:
+
+| t [h] | ε | U_i | which resistance |
+|---|---|---|---|
+| 0.00 | 0.000 | 260.2 | bulk, subcooled solid |
+| 1.16 | 0.039 | **479.4** | shell — thin melt, the best moment of the run |
+| 3.41 | 0.245 | 214.8 | shell — thicker, degrading |
+| 10.00 | 1.000 | 213.7 | bulk, superheated liquid |
+
+The exchanger is best *shortly after melting starts*, when there is a front at
+the tube and almost nothing between them. Before that, heat is warming a solid
+body and must reach its mean; after it, the melt layer grows and gets in the
+way. The two half-cycles are now near mirror images, 260 → 214 on charge and
+214 → 260 on discharge, differing only through k_s/k_l.
+
+**The jump at a branch boundary is real, and it is not a bug.** As ε → 1⁻ while
+melting, R′ = lnβ/2πk_l; the instant the cell becomes superheated it drops to
+S/2πk_l. Nothing physical moved — T_pcm stopped being the front temperature and
+became the volume mean, and the resistance follows the reference. The same
+happens at ε → 0, where the mechanism switches from *warming a body* to *moving
+a front*. The driving difference is bounded by the capacity rate through
+K = ṁc_p(1−e^−NTU)/Δz, so the jump never produces an unbounded flux.
+
+**Still not resolved.** All of this is a correction bolted onto a body that
+formally has no internal profile (H1, H5). R′_bulk is the best available within
+one scalar per segment; the honest treatment of the sensible branches is radial
+discretisation — an apparent-heat-capacity scheme on a 1-D radial grid — which
+would also dissolve the three-region problem left open in DN-13.
+
+**Raised by** a reader asking whether assuming zero resistance in the
+single-phase limits was better than computing one. It was not.
+
+**One thing this exposed.** The equivalence test in §16.5 classified
+`eta_storage` as a closed-form quantity. It is identically 1 at CSS as a matter
+of algebra, but the *computed* value depends on which cycle the drift test
+stopped at, so it inherits the 1e-9 tolerance like any marched quantity, and it
+reported 1.0000000012. An identity in the mathematics is still only converged-to
+in the arithmetic. Moved to the iteration-terminated group.

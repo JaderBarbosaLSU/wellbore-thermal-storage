@@ -57,7 +57,7 @@
 with Phase-Change Material in Repurposed Wells\\[6pt]
 \normalsize Thermodynamic Cycles, Borehole Resistance Network,\\
 Melt-Front Formulations, Sizing and Performance Indices\\[4pt]
-\normalsize Model version 0.7 \textperiodcentered\ last updated 2026-09-18 BRT}
+\normalsize Model version 0.8 \textperiodcentered\ last updated 2026-09-19 BRT}
 \author{Craft \& Hawkins Department of Petroleum Engineering\\
 Louisiana State University}
 \date{\today}
@@ -168,6 +168,28 @@ glides, march to CSS, and report the deviation from target. At the design point
 the field delivers \SI{101.23}{\percent} of the \SI{1}{\mega\watt} target under
 the v0.6 closure (\SI{94.26}{\percent} under the retired one), and what governs
 it is the \emph{discharge rate} rather than the inventory.
+
+\medskip
+\noindent\textbf{Changes in version 0.8.} A single-phase cell has no front, so
+it cannot have a side. The rule introduced in v0.7, asked what to do for a cell
+that is entirely subcooled solid or entirely superheated liquid, returned a
+resistance that depended on the \emph{direction} of the heat flow --- zero one
+way, the full annulus the other. What actually changes in a single-phase cell is
+the meaning of $\Tpcm$: it is the volume mean rather than the front temperature,
+so the resistance that belongs with it is mean-to-surface. Solving the annulus
+with uniform sensible storage and an adiabatic outer boundary gives a shape
+factor, Eq.~\eqref{eq:shape-factor}, that depends on \emph{geometry alone}:
+$S=0.34672$ here against $\ln\beta=0.74604$, smaller by $2.152$, the cylindrical
+analogue of $1/3$ for a slab. It enters as an equivalent thickness
+$\delta_{\mathrm{eq}}=\SI{8.74}{\milli\meter}$ so that the existing fin
+machinery is unchanged (\S\ref{sec:network:shell}).
+
+The two retired values bracketed the answer from opposite sides, so the
+integrated effect is small: the CSS deviation moves \SI{+4.73}{\percent} to
+\SI{+4.53}{\percent}. The qualitative effect is not. The spurious infinite
+conductance at $\varepsilon_{\mathrm{local}}=0$ and $1$ disappears, $\Ui$ at
+$t\to0$ falls from $823$ to $260$, and the exchanger's best moment is correctly
+placed \emph{just after} melting starts rather than before it.
 
 \medskip
 \noindent\textbf{Changes in version 0.7.} The PCM-side conduction path was on
