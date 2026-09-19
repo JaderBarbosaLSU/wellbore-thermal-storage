@@ -150,9 +150,13 @@ $\md^{\mathrm{dc}}$ & pinned by the discharging glide \\
 
 \noindent
 Nothing is solved. There is no root-find anywhere in \code{simulate\_css}, so
-the question of convergence does not arise; what was an unsatisfiable constraint
-becomes a reported output --- the deviation of the delivered energy, and hence
-of the net electrical output, from its target. Sizing on latent heat alone
+the question of a \emph{bracket} does not arise --- there is no equation being
+inverted and no interval that might fail to contain a root. What remains is the
+plain convergence of the outer loop toward the repeating state, which is a
+different and much better-behaved question, and is taken up in
+\S\ref{sec:cyclic:converge}. What was an unsatisfiable constraint becomes a
+reported output --- the deviation of the delivered energy, and hence of the net
+electrical output, from its target. Sizing on latent heat alone
 \emph{overestimates} $\Nwells$, because it ignores the sensible capacity the
 store also has; that is deliberate and conservative.
 
@@ -232,6 +236,65 @@ useful duty at the wellhead (\S\ref{sec:defects:h9}); H3 is saturated over
 one-sided \SI{-0.3}{\percent} bias. A \SI{6}{\percent} deviation sits inside
 that band. It should be reported as \emph{``the store is discharge-rate limited
 by roughly \SI{6}{\percent} at this sizing''} and not as a calibrated shortfall.
+
+%---------------------------------------------------------------------
+\subsection{Convergence, and a limit worth watching}
+\label{sec:cyclic:converge}
+
+The outer loop is the only iteration in the procedure, and it carries a give-up
+limit, \code{n\_cycles}. Two things about it are worth recording, because the
+failure it guards against is silent.
+
+\subsubsection*{How many cycles}
+
+The drift $\max_{i}|E'_{i}|_{\mathrm{end}}-E'_{i}|_{\mathrm{start}}|$ falls
+roughly geometrically, and the number of cycles to cross the tolerance grows
+with the exchanger count --- and, more generally, with anything that makes each
+unit work less hard, since a store cycled through a smaller fraction of its
+inventory takes longer to forget its initial state.
+
+\begin{center}
+\begin{tabular}{@{}l r@{}}
+\toprule
+case & cycles to $10^{-9}$ \\
+\midrule
+design point, $\Nwells=11.63$ & $\approx70$ \\
+$\Nwells=13$ & $\approx170$ \\
+$\Nwells=16$ & $>200$ \\
+$\hm=\SI{180}{\kilo\joule\per\kilogram}$ & $117$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The historical default of $80$ was comfortable when the design point converged
+in $32$ cycles (v0.6). It is not comfortable now: the v0.7 and v0.8 corrections
+both slowed convergence, and a parametric study that moves toward larger fields
+will cross the limit routinely.
+
+\subsubsection*{Why it is guarded loudly}
+
+A run that has not converged does not fail. It does not raise, and it does not
+return \code{NaN}. It prints a \emph{complete} set of results --- deviation,
+melted fractions, every performance index --- which are indistinguishable from
+good ones except that the store had not returned to its own state, so none of
+them mean anything. That is the worst shape a numerical failure can take, and it
+is why \code{css\_report} now prints
+
+\begin{center}
+\code{*** NOT CONVERGED *** stopped at the n\_cycles limit of \ldots}
+\end{center}
+
+\noindent
+rather than the reassuring ``converged in $N$ cycles'' it printed until v0.7,
+which read as a success whatever the drift. In a sweep the banner can scroll past
+inside a loop, so the sweep helper prints one line per offending point and
+carries a \code{converged} column in the table it returns.
+
+In the student notebook the limit is declared as \code{N\_CYCLES} in
+\S3.1, immediately under the case, rather than buried in the calls: it is the one
+\emph{numerical} setting a reader has to change, and it should be as visible as
+the physics.
 
 %---------------------------------------------------------------------
 \subsection{The discharge closure, and what it was worth}

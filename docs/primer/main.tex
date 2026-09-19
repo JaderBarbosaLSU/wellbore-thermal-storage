@@ -662,7 +662,7 @@ one cascade rather than two.
 Everything so far describes one half-cycle from a given starting state. A plant
 repeating a daily schedule does not start from a cold, fully solid store after
 the first day, so the cycle must be repeated until the state reproduces itself.
-That takes of order thirty cycles here.
+That takes about \num{70} cycles here, and the count grows with the exchanger count.
 
 At that point something restrictive happens. The enthalpy change over a
 complete cycle is zero by definition, and the store is adiabatic (H6), so
@@ -1128,7 +1128,7 @@ frozen dataclass, so variants are made by copying:
   case = CASE.with_(h_m = 180_000.0,      # J/kg, not kJ/kg
                     N_lay = 12)
   validate_case(case)
-  css = simulate_css_corrected(case, record=True, n_cycles=300)
+  css = simulate_css_corrected(case, record=True, n_cycles=N_CYCLES)
   css_report(case, css)
 \end{verbatim}
 \vspace{-1.2em}
@@ -1148,11 +1148,23 @@ Four things that will otherwise cost you an afternoon:
   imported, so the old value is used and the old answer is reported without
   complaint.
 
-\item \textbf{Watch the convergence banner.} Cycles to convergence grow with the
-  well count. The default limit of 80 is comfortable at the design point and
-  \emph{not} comfortable at, say, $\hm=\SI{180}{\kilo\joule\per\kilogram}$,
-  which needs 117. If you see \code{*** NOT CONVERGED ***}, raise
-  \code{n\_cycles}; nothing below that line means anything until you do.
+\item \textbf{Watch the convergence banner.} \code{N\_CYCLES} sits in \S3.1
+  directly under the case, because it is the one \emph{numerical} setting you
+  will have to change. It is a give-up limit on the cyclic-steady-state loop,
+  and cycles to convergence grow with the exchanger count and with anything that
+  makes each unit work less hard: the design point needs about \num{70},
+  $\Nwells=16$ needs well over \num{200}, and
+  $\hm=\SI{180}{\kilo\joule\per\kilogram}$ can need \num{300} or more.
+
+  The failure mode is what makes this worth a paragraph. A run that has not
+  converged does not crash and does not return \code{NaN}: it prints a
+  \emph{complete} set of results, indistinguishable from a good one except for
+  the \code{*** NOT CONVERGED ***} banner above them. The store had not returned
+  to its own state, so the deviation, the melted fractions and every index below
+  that line mean nothing. In a sweep the banner can scroll past inside a loop,
+  so \code{sweep} prints one line per offending point and carries a
+  \code{converged} column in the table it returns --- check it before plotting
+  anything.
 
 \item \textbf{Run \code{validate\_case} every time.} It does not check that the
   model is right --- that is settled elsewhere --- but that \emph{your

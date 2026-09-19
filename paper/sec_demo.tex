@@ -99,7 +99,7 @@ update is a handful of property evaluations and one closed-form advance, which
 is what makes the branchwise-exact scheme worth its arithmetic: an explicit
 integrator would need the time grid refined by some three orders of magnitude to
 remain stable at the late steps (\S\ref{sec:integration}), and the outer loop
-multiplies that cost by thirty.
+multiplies that cost by the number of cycles to convergence, of order \num{70}.
 
 \begin{figure}[tbp]
 \centering
@@ -436,7 +436,7 @@ The results above are \emph{first-cycle} results: the store begins fully solid
 at $\Tm$ and the cycle does not return to that state. Repeating the
 charge--discharge schedule drives the store to a cyclic steady state (CSS) in
 which the end-of-cycle state reproduces the start-of-cycle state. Convergence
-takes of order thirty cycles here.
+takes about \num{70} cycles here, and the count grows with the exchanger count --- \num{16} wells need more than \num{200}.
 
 At CSS the enthalpy change over a complete cycle is zero by definition, and the
 store is adiabatic, so
