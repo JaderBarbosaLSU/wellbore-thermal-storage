@@ -687,3 +687,14 @@ network. An energy balance over the whole cycle is one line and would have
 caught it on day one. It is now an acceptance test.
 
 **Raised by** the same student, from the same reading.
+
+**Postscript: the version guard has a blind spot.** `check_version` was added at
+v0.8 precisely to stop a stale version string shipping, and it did not stop this
+one. It passed the v0.9 build cleanly, because it checks only that the three
+generators *agree with each other* — and they agreed, on `0.8`. Agreement is not
+currency. The notebook went out with correct v0.9 physics under a `0.8` stamp,
+which is exactly the confusion the guard exists to prevent, arriving by the one
+route it does not watch. Bumping `VERSION` is still a manual act, and nothing
+ties it to "the physics changed". A guard that compares the build against the
+last *released* stamp, and refuses when the model sources have changed but the
+version has not, would close it. Not yet written.
