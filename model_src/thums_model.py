@@ -1597,8 +1597,24 @@ class Case:
     DT_M_1D: float = 10.0
     T_source_C: float = 60.0
     DT_4C_M: float = 10.0
+    # How far the SOURCE stream is cooled in the heat-pump evaporator. This is
+    # the specification: it sets the source flow needed for a given duty.
     DT_3A_4A: float = 10.0
-    DT_3A_13H: float = 10.0
+    # Minimum approach in the heat-pump evaporator, at its COLD end -- where
+    # the source leaves and the refrigerant enters. The evaporating
+    # temperature is DERIVED from it,
+    #     T_13h = T_source_C - DT_3A_4A - DT_pinch_HPE,
+    # so the approach can no longer be negative by arithmetic. Unlike the ORC
+    # evaporator the cold stream here is isothermal with NO preheat kink, so
+    # the gap is monotonic in Q and an end approach is genuinely sufficient:
+    # no composite-curve search is needed. See DN-17.
+    DT_pinch_HPE: float = 5.0
+    # RETIRED at v0.9. The evaporating temperature used to be set by
+    # T_13h = T_source_C - DT_3A_13H, independently of DT_3A_4A, so the
+    # approach was the DIFFERENCE of two free fields and nothing checked its
+    # sign. Left here only so that an old Case naming it fails loudly in
+    # validate_case rather than being silently ignored.
+    DT_3A_13H: float = None
     DT_2H_3C: float = 10.0
     DT_sub: float = 2.0
     DT_3C_2C: float = 55.0        # secondary-fluid glide          [K]
@@ -2574,8 +2590,14 @@ def cycle_state_points(case, T_2d=None):
         T_2d=T_2d_C + 273.15,
         T_3d=T_3d_C + 273.15,                     # the borehole inlet, state 1d
         T_4c=case.T_m_C + case.DT_4C_M + 273.15,
+        # The source stream, and the evaporating temperature DERIVED from its
+        # outlet. Until v0.9 these were two independent fields and the
+        # approach between them was their difference, unchecked: the default
+        # pair made it exactly zero, and reversing them made it negative with
+        # no symptom anywhere, because T_4a was written here and never read
+        # again. See DN-17.
         T_4a=case.T_source_C - case.DT_3A_4A + 273.15,
-        T_13h=case.T_source_C - case.DT_3A_13H + 273.15,
+        T_13h=case.T_source_C - case.DT_3A_4A - case.DT_pinch_HPE + 273.15,
     )
     T["T_3c"] = T["T_4c"]
     T["T_2c"] = T["T_3c"] - case.DT_3C_2C

@@ -598,6 +598,117 @@ the cycle code by hand --- not by any of the internal consistency machinery of
 \S\ref{sec:defects:verification}, which was looking only at the store.
 
 %---------------------------------------------------------------------
+\subsection{The heat-pump evaporator had no approach at all}
+\label{sec:defects:hpe}
+
+The two previous subsections concern quantities that were computed wrongly.
+This one concerns a quantity that was never computed.
+
+Two independent fields set the two ends of the same exchanger:
+\begin{equation}
+  T_{4a} = T_{\mathrm{source}} - \Delta T_{3A,4A},
+  \qquad
+  T_{13h} = T_{\mathrm{source}} - \Delta T_{3A,13H},
+  \label{eq:hpe-old}
+\end{equation}
+so the approach between the source outlet and the evaporating temperature was
+their \emph{difference}, and nothing anywhere checked its sign:
+
+\begin{center}
+\begin{tabular}{@{}r r r r r l@{}}
+\toprule
+$\Delta T_{3A,4A}$ & $\Delta T_{3A,13H}$ & source out & evaporating & approach
+ & reported $\mathrm{COP}$ \\
+\midrule
+10 & 10 & \SI{50.0}{\celsius} & \SI{50.0}{\celsius} & $+0.0$ & 2.8868 \\
+ 8 & 10 & \SI{52.0}{\celsius} & \SI{50.0}{\celsius} & $+2.0$ & 2.8868 \\
+12 & 10 & \SI{48.0}{\celsius} & \SI{50.0}{\celsius} & $\mathbf{-2.0}$ & 2.8868 \\
+15 & 10 & \SI{45.0}{\celsius} & \SI{50.0}{\celsius} & $\mathbf{-5.0}$ & 2.8868 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The defaults put the approach at exactly \emph{zero} --- infinite area. Rows
+three and four are second-law violations, and the model reports the same
+$\mathrm{COP}$ for all four.
+
+\medskip
+\noindent\textbf{Why no test could have caught it.} $T_{4a}$ was written into
+the state dictionary at one line and \textbf{never read again}. The source
+stream's energy balance was never closed, so there was no exchanger there to
+pinch: the evaporating temperature was declared, the source outlet was declared,
+and the two were never required to be consistent. A crossing could not produce a
+symptom because nothing downstream depended on the quantity that crossed.
+
+That generalises, and it is the reason this subsection exists:
+
+\begin{center}
+\emph{A parameter that influences no output cannot be validated by any amount of
+checking the outputs.}
+\end{center}
+
+\noindent
+$\Delta T_{3A,4A}$ was inert. Energy closure, the CSS identity
+(Eq.~\eqref{eq:css-unity}), the frozen fixture and the equivalence tests of
+\S\ref{sec:defects:verification} all passed with it set to a value that violates
+the second law. The guard added at v0.8 was worse than useless: it warned when
+the two fields were \emph{equal} --- the benign case --- and was silent when
+they were reversed.
+
+\medskip
+\noindent\textbf{The repair.} The evaporating temperature is now derived rather
+than declared,
+\begin{equation}
+  \boxed{\;T_{13h} \;=\; T_{\mathrm{source}} - \Delta T_{3A,4A}
+          - \Delta T_{\mathrm{pinch,HPE}}\;}
+  \qquad \Delta T_{\mathrm{pinch,HPE}} = \SI{5}{\kelvin},
+  \label{eq:hpe-new}
+\end{equation}
+so the approach is positive by construction. $\Delta T_{3A,13H}$ is retired, and
+\code{validate\_case} raises if a Case still names it rather than ignoring it
+silently. $\Delta T_{3A,4A}$ is no longer inert: it now moves the evaporating
+temperature, and with it the $\mathrm{COP}$.
+
+\medskip
+\noindent\textbf{Why an end approach is sufficient here, when
+\S\ref{sec:defects:orcpinch} needed a composite-curve search.} The cold stream
+in this evaporator is isothermal with \emph{no preheat section}: state $4h$
+enters two-phase and $13h$ leaves saturated, so its composite is flat and has no
+kink. The hot stream is monotonic. The gap is therefore monotonic in $Q$ and its
+minimum lies necessarily at the cold end, which is exactly what
+$\Delta T_{\mathrm{pinch,HPE}}$ names. The ORC evaporator needs the search
+precisely because its liquid preheat puts a kink \emph{before} the plateau, and
+that is what moves the pinch into the interior.
+
+\medskip
+\noindent\textbf{What it costs.}
+
+\begin{center}
+\begin{tabular}{@{}l r r@{}}
+\toprule
+ & before & after \\
+\midrule
+evaporating temperature & \SI{50.0}{\celsius} & \SI{45.0}{\celsius} \\
+$\mathrm{COP}$          & 2.8868 & 2.7594 \\
+$\eta_{\mathrm{RTE}}$   & 0.3140 & 0.3003 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Everything on the discharge side is untouched to the last digit --- $\eta_{T}$,
+the net electric energy per well, $\Nwells$, the CSS deviation, the thermal
+energy per well and the storage density --- because the heat pump appears only
+in the charging branch of the budget.
+
+\medskip
+\noindent\textbf{Still open.} The source stream is specified but not sized:
+nothing tracks its mass flow, so the cost of cooling it by \SI{10}{\kelvin}
+rather than \SI{5}{\kelvin} remains invisible. Closing that would make
+$\Delta T_{3A,4A}$ a genuine trade rather than a free choice.
+
+%---------------------------------------------------------------------
 \subsection{Version history}
 
 \begin{longtable}{@{}l l p{0.60\linewidth}@{}}
@@ -612,15 +723,19 @@ version & date & change \\
   The heat-pump IHX-2 balance is closed on enthalpy with the correct flow split
   $1-x_{8h}$ in place of the evaporator-inlet quality $x_{4h}$
   (\S\ref{sec:defects:ihx2}); the cycle had been out of balance by
-  \SI{4.8}{\percent}. $\eta_{\mathrm{ORC}}$ $0.2320\to0.1738$, $\mathrm{COP}$
-  $2.9563\to2.8868$, $\Nwells$ $11.632\to15.659$, $\eta_{\mathrm{RTE}}$
-  $0.4367\to0.3140$. \emph{Every} storage quantity is unchanged to the last
+  \SI{4.8}{\percent}. The heat-pump evaporator is closed on an approach that
+  exists: the evaporating temperature is derived from the source outlet rather
+  than declared beside it (\S\ref{sec:defects:hpe}), where the two free fields
+  had made the approach exactly zero and could have made it negative in
+  silence. $\eta_{\mathrm{ORC}}$ $0.2320\to0.1738$, $\mathrm{COP}$
+  $2.9563\to2.7594$, $\Nwells$ $11.632\to15.659$, $\eta_{\mathrm{RTE}}$
+  $0.4367\to0.3003$. \emph{Every} storage quantity is unchanged to the last
   digit carried --- CSS deviation, thermal energy per well, cycled fraction,
   storage density --- which is the evidence that the two corrections are
   confined to the cycles. New guard rails in \code{validate\_case}: boiling of
   the charging water, the zero approaches at the heat-pump source outlet and in
   the ORC regenerator, and a report whenever the pinch forces the boiling
-  temperature down. \\
+  temperature down; \code{DT\_3A\_13H} is retired and raises if named. \\
 0.5--0.8 & 2026-09 &
   Cyclic steady state replaces first-cycle sizing (\S\ref{sec:cyclic:reform});
   two recording defects in the history corrected; the discharge closed on its

@@ -158,12 +158,29 @@ def validate_case(case, verbose=True):
     # None of these is an error. Each is a place where the model quietly
     # assumes an infinite exchanger, and a parametric study that leans on it
     # will report an efficiency no hardware can reach.
-    if case.DT_3A_4A == case.DT_3A_13H:
-        warn(f'DT_3A_4A == DT_3A_13H == {case.DT_3A_4A:.3f} K, so the '
-             f'heat-pump source leaves the evaporator at exactly the '
-             f'evaporating temperature: a zero approach at that end, which '
-             f'needs infinite area. Make DT_3A_4A the smaller of the two for '
-             f'a finite evaporator.')
+    if getattr(case, 'DT_3A_13H', None) is not None:
+        err(f'DT_3A_13H = {case.DT_3A_13H} was RETIRED at v0.9 and is now '
+            f'ignored. It used to set the evaporating temperature '
+            f'independently of DT_3A_4A, so the approach in the heat-pump '
+            f'evaporator was the difference of two free fields and nothing '
+            f'checked its sign: the defaults made it exactly zero, and '
+            f'reversing them made it negative with no symptom. The '
+            f'evaporating temperature is now derived, '
+            f'T_13h = T_source_C - DT_3A_4A - DT_pinch_HPE. Set '
+            f'DT_pinch_HPE instead, and leave DT_3A_13H at None.')
+    if case.DT_pinch_HPE <= 0:
+        err(f'DT_pinch_HPE = {case.DT_pinch_HPE} K; the refrigerant must '
+            f'evaporate BELOW the source outlet or the evaporator runs heat '
+            f'uphill. Zero means infinite area.')
+    elif case.DT_pinch_HPE < 2.0:
+        warn(f'DT_pinch_HPE = {case.DT_pinch_HPE:.2f} K is a very close '
+             f'approach in the heat-pump evaporator; the area needed grows '
+             f'roughly as 1/DT as this goes to zero')
+    T_evap = case.T_source_C - case.DT_3A_4A - case.DT_pinch_HPE
+    if T_evap <= case.T_sink_C:
+        err(f'the derived evaporating temperature {T_evap:.2f} C is at or '
+            f'below the sink at {case.T_sink_C:.2f} C; there is no lift left '
+            f'to speak of. Reduce DT_3A_4A or DT_pinch_HPE.')
     warn('the ORC regenerator has a zero approach by construction '
          '(T_9e = T_7e in double_stage_rankine), so its duty is an upper '
          'bound rather than a design value. This is structural, not a '

@@ -698,3 +698,74 @@ route it does not watch. Bumping `VERSION` is still a manual act, and nothing
 ties it to "the physics changed". A guard that compares the build against the
 last *released* stamp, and refuses when the model sources have changed but the
 version has not, would close it. Not yet written.
+
+---
+
+## DN-17 — The heat-pump evaporator had no approach at all
+
+**What was wrong.** Two independent fields set the two ends of the same
+exchanger:
+
+    T_4a  = T_source_C - DT_3A_4A      # source outlet
+    T_13h = T_source_C - DT_3A_13H     # evaporating temperature
+
+so the approach between them was their *difference*, `DT_3A_13H - DT_3A_4A`,
+and nothing checked its sign. The defaults, `10.0` and `10.0`, made it exactly
+**zero**: the source left the evaporator at precisely the evaporating
+temperature, which needs infinite area. Swap them — `DT_3A_4A = 12`,
+`DT_3A_13H = 10` — and the approach is **−2 K**, a second-law violation.
+
+The model reported the same COP in all three cases.
+
+**Why nothing could have caught it.** `T_4a` was written into the state dict at
+one line and **never read again**. The source stream's energy balance was never
+closed, so there was no exchanger there at all: the evaporating temperature was
+declared, the source outlet was declared, and the two were never required to be
+consistent. A crossing could not produce a symptom because nothing downstream
+depended on the quantity that would have crossed. The v0.8 guard added for this
+was worse than useless — it warned when the two were *equal*, the benign case,
+and said nothing when they were reversed.
+
+That is the more general lesson here, and it is worth more than the fix: **a
+parameter that influences no output cannot be validated by any amount of
+checking the outputs.** `DT_3A_4A` was inert, so every consistency test the
+project has — energy closure, the CSS identity, the fixture, the equivalence
+tests — passed with it set to a value that violates the second law.
+
+**The fix.** The evaporating temperature is now *derived* from the source
+outlet and a stated minimum approach:
+
+    T_13h = T_source_C - DT_3A_4A - DT_pinch_HPE      # DT_pinch_HPE = 5 K
+
+`DT_3A_13H` is retired and `validate_case` raises if a Case still names it,
+rather than ignoring it silently. The approach is now positive by construction
+and `DT_3A_4A` is no longer inert: it moves the evaporating temperature, and
+therefore the COP.
+
+**Why an end approach is sufficient here, when it was not for the ORC.** The
+cold stream in this evaporator is isothermal with **no preheat section** —
+state 4h enters two-phase and 13h leaves saturated, so the composite is flat
+with no kink. The hot stream is monotonic. The gap is therefore monotonic in Q
+and its minimum is necessarily at the cold end, which is what `DT_pinch_HPE`
+names. No composite-curve search is needed. The ORC evaporator needs one
+precisely because its liquid preheat puts a kink before the plateau, which is
+what moves the pinch into the interior (DN-15).
+
+**What it costs.**
+
+    T_evap    50.0 -> 45.0 C
+    COP     2.8868 -> 2.7594      -4.4 %
+    eta_RTE 0.3140 -> 0.3003      -4.4 %
+
+Everything on the discharge side is untouched to the last digit — `eta_T`, net
+electric per well, `N_wells`, the CSS deviation, thermal energy per well,
+storage density — because the heat pump appears only in the charging branch of
+the budget. It buys electricity in, not electricity out.
+
+**Still open.** The source stream is specified but not sized: nothing tracks the
+source mass flow, so the cost of cooling it by 10 K rather than 5 K is still
+invisible. Closing that would make `DT_3A_4A` a genuine trade rather than a
+free choice.
+
+**Raised by** the observation that a zero approach was holding only by accident.
+It was not even an accident: it was the absence of a mechanism.

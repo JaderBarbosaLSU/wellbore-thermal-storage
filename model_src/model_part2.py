@@ -62,8 +62,24 @@ class Case:
     DT_M_1D: float = 10.0
     T_source_C: float = 60.0
     DT_4C_M: float = 10.0
+    # How far the SOURCE stream is cooled in the heat-pump evaporator. This is
+    # the specification: it sets the source flow needed for a given duty.
     DT_3A_4A: float = 10.0
-    DT_3A_13H: float = 10.0
+    # Minimum approach in the heat-pump evaporator, at its COLD end -- where
+    # the source leaves and the refrigerant enters. The evaporating
+    # temperature is DERIVED from it,
+    #     T_13h = T_source_C - DT_3A_4A - DT_pinch_HPE,
+    # so the approach can no longer be negative by arithmetic. Unlike the ORC
+    # evaporator the cold stream here is isothermal with NO preheat kink, so
+    # the gap is monotonic in Q and an end approach is genuinely sufficient:
+    # no composite-curve search is needed. See DN-17.
+    DT_pinch_HPE: float = 5.0
+    # RETIRED at v0.9. The evaporating temperature used to be set by
+    # T_13h = T_source_C - DT_3A_13H, independently of DT_3A_4A, so the
+    # approach was the DIFFERENCE of two free fields and nothing checked its
+    # sign. Left here only so that an old Case naming it fails loudly in
+    # validate_case rather than being silently ignored.
+    DT_3A_13H: float = None
     DT_2H_3C: float = 10.0
     DT_sub: float = 2.0
     DT_3C_2C: float = 55.0        # secondary-fluid glide          [K]

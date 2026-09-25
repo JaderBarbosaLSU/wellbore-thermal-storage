@@ -188,8 +188,14 @@ def cycle_state_points(case, T_2d=None):
         T_2d=T_2d_C + 273.15,
         T_3d=T_3d_C + 273.15,                     # the borehole inlet, state 1d
         T_4c=case.T_m_C + case.DT_4C_M + 273.15,
+        # The source stream, and the evaporating temperature DERIVED from its
+        # outlet. Until v0.9 these were two independent fields and the
+        # approach between them was their difference, unchecked: the default
+        # pair made it exactly zero, and reversing them made it negative with
+        # no symptom anywhere, because T_4a was written here and never read
+        # again. See DN-17.
         T_4a=case.T_source_C - case.DT_3A_4A + 273.15,
-        T_13h=case.T_source_C - case.DT_3A_13H + 273.15,
+        T_13h=case.T_source_C - case.DT_3A_4A - case.DT_pinch_HPE + 273.15,
     )
     T["T_3c"] = T["T_4c"]
     T["T_2c"] = T["T_3c"] - case.DT_3C_2C
