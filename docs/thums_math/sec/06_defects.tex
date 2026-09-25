@@ -437,6 +437,167 @@ comment in the source and an earlier audit that repeated it.
 \end{description}
 
 %---------------------------------------------------------------------
+\subsection{The ORC evaporator ran heat uphill}
+\label{sec:defects:orcpinch}
+
+Every defect above concerns the store. This one and the next concern the two
+power cycles, and they are the most consequential in the document: together they
+move $\eta_{\mathrm{RTE}}$ by \SI{-28}{\percent} and the well count by
+\SI{+35}{\percent}.
+
+The ORC evaporating temperature was set from the hot end of the water alone,
+\begin{equation}
+  T_{3e} \;=\; T_{2d} - \Delta T_{2D,3E},
+  \label{eq:hot-end-rule}
+\end{equation}
+and nothing ever examined the rest of the exchanger. That is safe only when the
+two streams have similar heat-capacity curves. Here they could hardly be less
+alike. The water \emph{glides} \SI{55}{\kelvin}, from \SI{146.1}{\celsius} to
+\SI{91.1}{\celsius}. The cyclopentane takes \SI{76}{\percent} of its heat
+\emph{boiling at one temperature}, \SI{134.1}{\celsius}. Composite curves of
+that shape cross, and these crossed comprehensively:
+
+\begin{center}
+\begin{tabular}{@{}r r r r@{}}
+\toprule
+$Q/Q_{\mathrm{tot}}$ & $T_{\mathrm{water}}$ [\si{\celsius}]
+ & $T_{\mathrm{ORC}}$ [\si{\celsius}] & gap [\si{\kelvin}] \\
+\midrule
+0.000 &  91.1 & 103.9 & $-12.7$ \\
+0.235 & 104.1 & 133.7 & $\mathbf{-29.5}$ \\
+0.700 & 129.7 & 134.1 & $-4.4$ \\
+1.000 & 146.1 & 134.1 & $+12.0$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Only the top fifth of the surface had heat flowing in the right direction. The
+reported $\eta_{\mathrm{ORC}}=0.2320$ was therefore not optimistic but
+\textbf{unreachable}: no isentropic efficiency and no exchanger area buys it,
+because over most of the evaporator the heat was flowing from cold to hot.
+
+\medskip
+\noindent\textbf{Why it survived.} $\Delta T_{2D,3E}=\SI{12}{\kelvin}$ is a
+perfectly sensible approach \emph{at the hot end}, and the hot end is the one
+place anybody checks. The violation is a full \SI{30}{\kelvin} away from the
+point the parameter names.
+
+\medskip
+\noindent\textbf{The repair.} \code{orc\_pinch} constructs both composite curves
+properly --- real enthalpy on both sides, the latent plateau as a vertical
+segment rather than a straight line in $T$, an even grid in $Q$ that includes
+every break point --- and returns the minimum gap wherever it falls.
+\code{feasible\_rankine} keeps Eq.~\eqref{eq:hot-end-rule} when it already
+clears $\Delta T_{\mathrm{pinch,ORC}}$, and otherwise bisects $T_{3e}$ downward
+until the pinch is met. The new field is
+$\Delta T_{\mathrm{pinch,ORC}}=\SI{5}{\kelvin}$.
+
+\begin{center}
+\begin{tabular}{@{}l r r@{}}
+\toprule
+ & v0.8 & v0.9 \\
+\midrule
+$T_{3e}$ at CSS [\si{\celsius}] & 136.53 & 95.89 \\
+$\eta_{\mathrm{ORC}}$           & 0.2320 & 0.1738 \\
+$\Nwells$                       & 11.632 & 15.659 \\
+$\eta_{\mathrm{RTE}}$           & 0.4367 & 0.3140 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\medskip
+\noindent\textbf{The design consequence, which outlives the bug.} The glide
+$\Delta T_{3C,2C}$ is not a free parameter to be raised for storage density.
+Raising it buys PCM inventory per well and destroys the ORC in the same
+movement, because a fluid boiling at a single temperature cannot follow a
+gliding one. That trade-off was invisible while the pinch went unchecked and it
+is now the binding constraint in any parametric study. Buying it back requires a
+zeotropic mixture, a second pressure level, or a supercritical cycle --- not a
+larger exchanger.
+
+%---------------------------------------------------------------------
+\subsection{The heat pump created energy in IHX-2}
+\label{sec:defects:ihx2}
+
+The second internal heat exchanger of the high-temperature heat pump was closed
+with an effectiveness expression carrying the wrong flow fraction:
+\begin{equation}
+  T_{7h} = T_{12h} - \epsilon_{\mathrm{IHX2}}\,
+           \underbrace{x_{4h}}_{\text{\textbf{wrong}}}\,
+           \mathrm{cpr}_{2}\left(T_{12h}-T_{13h}\right).
+\end{equation}
+$x_{4h}$ is the vapour \emph{quality} at the evaporator inlet. A quality is not
+a flow split, and a flow split is what belongs there. The stream crossing IHX-2
+on the vapour side is the suction stream --- what left the flash separator as
+\emph{liquid}, passed through the evaporator, and is on its way to the low-stage
+compressor --- which is $1-x_{8h}$. IHX-1, one screen earlier, correctly uses
+$x_{8h}$, the flashed vapour.
+
+The two numbers are close enough to look plausible and different enough to break
+the first law:
+
+\begin{center}
+\begin{tabular}{@{}l r@{}}
+\toprule
+per \si{\kilogram} of high-stage flow & \si{\kilo\joule\per\kilogram} \\
+\midrule
+IHX-2, heat given by the liquid    & 9.19 \\
+IHX-2, heat taken by the vapour    & 21.76 \\
+\midrule
+condenser $h_{2h}-h_{3h}$          & 271.43 \\
+compressor work $+$ evaporator heat & 258.33 \\
+\textbf{energy from nowhere}       & \textbf{13.11} \;(\SI{4.8}{\percent}) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\medskip
+\noindent\textbf{The repair.} The effectiveness loop is gone, replaced by the
+enthalpy balance it was approximating:
+\begin{align}
+  h_{12h} &= h_{3h}  - x_{8h}\left(h_{11h}-h_{10h}\right)
+    && \text{IHX-1, vapour} = x_{8h}, \notag\\
+  h_{7h}  &= h_{12h} - \left(1-x_{8h}\right)\left(h_{1h}-h_{13h}\right)
+    && \text{IHX-2, vapour} = 1-x_{8h}, \label{eq:ihx-balance}\\
+  x_{8h}  &= \frac{h_{7h}-h_{9h}}{h_{10h}-h_{9h}}
+    && \text{separator, } h_{8h}=h_{7h}. \notag
+\end{align}
+$x_{8h}$ appears on both sides, so Eq.~\eqref{eq:ihx-balance} is a fixed point.
+It is linear and strongly contracting --- the gain is $0.013$ --- and reaches
+$10^{-12}$ in a handful of iterations. State $1h$ is fixed independently by the
+isentropic compression back from $2h$, so $\epsilon_{\mathrm{IHX2}}$ becomes an
+\textbf{output}: the effectiveness the regenerator would have to have. It is
+reported, and a value above unity would mean the component cannot exist. At the
+design point it is $0.2338$.
+
+\begin{center}
+\begin{tabular}{@{}l r r@{}}
+\toprule
+ & v0.8 & v0.9 \\
+\midrule
+$x_{8h}$                 & 0.4160 & 0.3778 \\
+$\mathrm{COP}$           & 2.9563 & 2.8868 \\
+cycle residual [\si{\kilo\joule\per\kilogram}]
+                         & 13.11 & \num{1.7e-12} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\medskip
+\noindent\textbf{Why it survived.} Nothing ever summed the cycle. The COP
+expression is written in terms of $x_{8h}$ and is correct as written; it simply
+consumed an $x_{8h}$ produced by an inconsistent network. An energy balance over
+the whole cycle is one line, and it would have caught this on the first day. It
+is now an acceptance test, and so is the IHX-2 balance on its own.
+
+\medskip
+\noindent
+Both defects in this subsection and the last were found by a reader following
+the cycle code by hand --- not by any of the internal consistency machinery of
+\S\ref{sec:defects:verification}, which was looking only at the store.
+
+%---------------------------------------------------------------------
 \subsection{Version history}
 
 \begin{longtable}{@{}l l p{0.60\linewidth}@{}}
@@ -444,6 +605,29 @@ comment in the source and an earlier audit that repeated it.
 version & date & change \\
 \midrule
 \endhead
+\textbf{0.9} & 2026-09 &
+  Both thermodynamic cycles repaired. The ORC evaporating temperature is set by
+  a composite-curve pinch on the whole evaporator rather than by its hot end
+  (\S\ref{sec:defects:orcpinch}); the crossing had been \SI{-29.8}{\kelvin}.
+  The heat-pump IHX-2 balance is closed on enthalpy with the correct flow split
+  $1-x_{8h}$ in place of the evaporator-inlet quality $x_{4h}$
+  (\S\ref{sec:defects:ihx2}); the cycle had been out of balance by
+  \SI{4.8}{\percent}. $\eta_{\mathrm{ORC}}$ $0.2320\to0.1738$, $\mathrm{COP}$
+  $2.9563\to2.8868$, $\Nwells$ $11.632\to15.659$, $\eta_{\mathrm{RTE}}$
+  $0.4367\to0.3140$. \emph{Every} storage quantity is unchanged to the last
+  digit carried --- CSS deviation, thermal energy per well, cycled fraction,
+  storage density --- which is the evidence that the two corrections are
+  confined to the cycles. New guard rails in \code{validate\_case}: boiling of
+  the charging water, the zero approaches at the heat-pump source outlet and in
+  the ORC regenerator, and a report whenever the pinch forces the boiling
+  temperature down. \\
+0.5--0.8 & 2026-09 &
+  Cyclic steady state replaces first-cycle sizing (\S\ref{sec:cyclic:reform});
+  two recording defects in the history corrected; the discharge closed on its
+  inlet rather than its outlet (\S\ref{sec:cyclic:closure}); the conduction
+  shell taken on the correct side of the front
+  (\S\ref{sec:network:shell}); the single-phase branches given a proper
+  mean-to-surface bulk resistance rather than zero or the full annulus. \\
 \textbf{0.4a} & 2026-09 &
   No physics. \S\ref{sec:front:enthalpy} rewritten as a teaching treatment of
   Formulation~C. Reporting rule added (\S\ref{sec:hydraulics:capacity}):

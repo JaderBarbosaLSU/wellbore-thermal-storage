@@ -171,14 +171,14 @@ leaves no root. Under the reformulation that saturation is not a failure: it
 \begin{center}
 \begin{tabular}{@{}l r l@{}}
 \toprule
-$\Nwells$ & 11.6322 & latent heat alone, not solved \\
+$\Nwells$ & 15.6592 & latent heat alone, not solved \\
 $\md^{\mathrm{ch}}$, $\md^{\mathrm{dc}}$ & 0.9655, 0.9708 & \si{\kilogram\per\second} per leg-pair \\
 flow ratio & 1.0055 & a consequence, not a solve \\
-cycles to CSS & 70 & \\
+cycles to CSS & 71 & \\
 $\eta_{\mathrm{storage}}$ & 1.000000 & Eq.~\eqref{eq:css-unity} \\
 \midrule
-required $\Delta E_{\mathrm{in,ORC}}$ & \num{1.89665e8} & kJ \\
-delivered at CSS & \num{1.98251e8} & kJ \\
+required $\Delta E_{\mathrm{in,ORC}}$ & \num{2.55326e8} & kJ \\
+delivered at CSS & \num{2.66884e8} & kJ \\
 \textbf{deviation} & \textbf{+4.527} & \si{\percent} \\
 \midrule
 implied net output & 1.0453 & MWe against a target of 1.0000 \\
@@ -187,14 +187,22 @@ implied net output & 1.0453 & MWe against a target of 1.0000 \\
 \end{center}
 
 \noindent
-These are v0.7 figures: the discharge inlet prescribed by
+These are v0.9 figures: the discharge inlet prescribed by
 Eq.~\eqref{eq:inlets}, the conduction shell taken on the correct side of the
-front (\S\ref{sec:network:shell}), and the ORC corrected once at the realised
-outlet. Under the two retired treatments together the same hardware delivered
-\SI{94.26}{\percent} of target rather than \SI{104.53}{\percent}.
+front (\S\ref{sec:network:shell}), the single-phase branches carrying the bulk
+resistance of \S\ref{sec:network:shell}, and both thermodynamic cycles repaired
+(\S\ref{sec:defects:orcpinch}, \S\ref{sec:defects:ihx2}).
 
-\begin{center}
-\end{center}
+The well count rose from $11.63$ to $15.66$ at v0.9, and the required energy
+with it, because the ORC evaporating temperature is now set by the evaporator
+pinch rather than by its hot end and $\eta_{\mathrm{ORC}}$ fell from $0.2320$ to
+$0.1738$. The \textbf{deviation did not move at all} --- it is $+4.527$ per cent
+before and after, to six figures --- and neither did the thermal energy per
+well, the cycled fraction or the storage density. That separation is not a
+coincidence and it is the point of \S\ref{sec:cyclic:closure}: the deviation
+is a statement about the \emph{glide the exchanger achieves}, which no change to
+a power cycle can touch. What the cycle correction changes is how many of these
+boreholes the plant needs, not how well any one of them works.
 
 \subsubsection*{The shortfall is a rate limit, not an inventory limit}
 
@@ -210,11 +218,12 @@ signature survives in it:
 \toprule
 $\Nwells$ & delivered/req & MWe & $\varepsilon$ end charge & $\varepsilon$ end discharge \\
 \midrule
- 9.000 & 0.9243 & 0.9243 & 1.000 & 0.000 \\
-10.000 & 0.9863 & 0.9863 & 1.000 & 0.000 \\
-11.632 & 1.0453 & 1.0453 & 0.972 & 0.012 \\
-13.000 & 1.0599 & 1.0599 & 0.917 & 0.040 \\
-16.000 & 1.0747 & 1.0747 & 0.817 & 0.098 \\
+ 9.000 & 0.7042 & 0.7042 & 1.000 & 0.000 \\
+12.000 & 0.9104 & 0.9104 & 1.000 & 0.000 \\
+14.000 & 1.0064 & 1.0064 & 1.000 & 0.000 \\
+15.659 & 1.0453 & 1.0453 & 0.972 & 0.012 \\
+17.000 & 1.0568 & 1.0568 & 0.931 & 0.033 \\
+18.000 & 1.0627 & 1.0627 & 0.903 & 0.049 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -224,18 +233,27 @@ The residual melt fraction \emph{rises} with $\Nwells$. That is the signature of
 a rate-limited discharge: more wells means each is worked less hard, so
 proportionally less of each one refreezes. Were the limit an inventory limit,
 the residual would fall. The lever is therefore on the discharge side --- flow,
-window, or conductance --- and not more PCM. The target is met near
-$\Nwells\approx25$, about $2.2\times$ the latent-only count.
+window, or conductance --- and not more PCM.
+
+The curve crosses the target at $\Nwells\approx13.86$, \emph{below} the
+latent-only count of $15.659$, which is the same conclusion as before the cycle
+corrections and for the same reason: sizing on latent heat alone ignores the
+sensible capacity the cascade also cycles, so it overestimates
+(\S\ref{sec:cyclic:reform}). Above $\Nwells\approx18$ the discharge leaves so
+much liquid behind that the cycle-to-cycle drift takes hundreds of cycles to
+settle; $\Nwells=20$ does not reach the \num{1e-9} tolerance within the
+\num{400}-cycle limit at all, which the banner in \code{css\_report} reports
+rather than hides.
 
 \subsubsection*{How much of this to believe}
 
-The \SI{-5.7}{\percent} deviation is a model result and inherits every
+The \SI{+4.5}{\percent} deviation is a model result and inherits every
 assumption of \S\ref{sec:defects}. H9 is worth of order \SI{25}{\percent} of the
 useful duty at the wellhead (\S\ref{sec:defects:h9}); H3 is saturated over
 \SI{99}{\percent} of the well (\S\ref{sec:defects:h3}); the time grid carries a
-one-sided \SI{-0.3}{\percent} bias. A \SI{6}{\percent} deviation sits inside
+one-sided \SI{-0.3}{\percent} bias. A \SI{5}{\percent} deviation sits inside
 that band. It should be reported as \emph{``the store is discharge-rate limited
-by roughly \SI{6}{\percent} at this sizing''} and not as a calibrated shortfall.
+by roughly \SI{5}{\percent} at this sizing''} and not as a calibrated shortfall.
 
 %---------------------------------------------------------------------
 \subsection{Convergence, and a limit worth watching}
@@ -353,6 +371,14 @@ $\Delta T_{M,1D}$ & $T_{3d}$ & $\Nwells$ & deviation & realised $T_{2d}$
 \end{tabular}
 \end{center}
 
+\noindent
+\emph{These well counts are v0.6 figures and predate the cycle corrections of
+\S\ref{sec:defects:orcpinch} and \S\ref{sec:defects:ihx2}; at v0.9 the same
+sweep sits near $\Nwells=15.7$. The deviations are unchanged, for the reason
+given at the design point above: the deviation is a property of the glide the
+exchanger achieves and is independent of both power cycles.}
+
+\medskip
 \noindent
 Giving the discharge the same \SI{10}{\kelvin} approach the charge already had
 moves the field from \SI{5.7}{\percent} below target to \SI{1.2}{\percent} above

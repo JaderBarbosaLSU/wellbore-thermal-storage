@@ -22,6 +22,51 @@ import pandas as pd
 # ==========================================================================
 
 
+def make_cp_state(fluid: str):
+    # HEOS is usually fine; if you use REFPROP, swap backend.
+    return CP.AbstractState("HEOS", fluid)
+
+
+def get_props_state(state, T: float, P: float):
+    # Returns rho [kg/m3], mu [Pa.s], cp [J/kg.K], k [W/m.K]
+    state.update(CP.PT_INPUTS, P, T)
+    rho = state.rhomass()
+    mu  = state.viscosity()
+    cp  = state.cpmass()
+    k   = state.conductivity()
+    return rho, mu, cp, k
+
+
+def compute_h_i_from_state(state, r_i, m_dot_d_well, T, P):
+    # Same logic as your compute_h_i_coolprop, but using a pre-built state
+    try:
+        rho, mu, cp, k = get_props_state(state, float(T), float(P))
+    except Exception:
+        return 1e-9, 0.0, 0.0, 0.0
+
+    D_h = 2.0 * r_i
+    A = pi * r_i**2
+    u = m_dot_d_well / (rho * A) if (rho * A) > 1e-30 else 0.0
+
+    Re = rho * u * D_h / mu if mu > 1e-30 else 0.0
+    Pr = cp * mu / k if (k > 1e-30 and mu > 1e-30) else 0.0
+
+    if Re < 2300.0:
+        Nu = 3.66
+    else:
+        # Your turbulent correlation
+        try:
+            f = (0.79 * np.log(Re) - 1.64)**(-2)
+            if f > 1e-30:
+                Nu = (f / 8.0) * (Re - 1000.0) * Pr / (1.0 + 12.7 * np.sqrt(f / 8.0) * (Pr**(2/3) - 1.0))
+            else:
+                Nu = 3.66
+        except Exception:
+            Nu = 3.66
+
+    h_i = Nu * k / D_h if (D_h > 1e-30 and k > 1e-30) else 1e-9
+    return h_i, Re, Pr, cp
+
 ########################################
 ########################################
 ########################################
@@ -241,129 +286,63 @@ def two_stage_htheatpump_2regs(refrig, T_13h, T_2h, DT_sub):
   except ValueError:
       cpr_1 = 1.0
 
-  # Convergence loop for T_7h
-  T_7h = T_3h - 4.  # initial guess for T_7h
-  tol = 1e-4  # Tolerance for convergence
-  max_iter = 100 # Maximum iterations
-  p_7h = p_condh # State 7h is at condenser pressure
-
-  for _ in range(max_iter):
-      try:
-          # Calculate h_7h based on current T_7h and p_7h
-          h_7h_calc = CP.PropsSI('H', 'T', T_7h, 'P', p_7h, refrig)/1000.
-
-          # State 8h: Flash Gas two-phase mixture (p_inth, h_8h=h_7h_calc)
-          p_8h = p_inth
-          h_8h_calc = h_7h_calc # Isenthalpic expansion from 7h
-          # Ensure denominator is non-zero before calculating x_8h
-          if abs(h_10h - h_9h) > 1e-9:
-               x_8h_calc = (h_8h_calc - h_9h) / (h_10h - h_9h)
-          else:
-               x_8h_calc = 0.0 # If denominator is zero, assume quality is zero
-
-          # Ensure x_8h_calc is within [0, 1] bounds
-          x_8h_calc = max(0.0, min(1.0, x_8h_calc))
-
-          # Calculate T_12h based on IHX-1 effectiveness
-          T_12h_calc = T_3h - epsilon_IHX_1 * x_8h_calc * cpr_1 * (T_3h - T_10h)
-
-          # IHX-2 effectiveness (based on T_1h and T_13h, and T_12h and T_13h)
-          # Ensure denominator is non-zero
-          denominator_epsilon2 = (T_12h_calc - T_13h)
-          if abs(denominator_epsilon2) > 1e-9:
-               epsilon_IHX_2_calc = (T_1h - T_13h) / denominator_epsilon2
-          else:
-               epsilon_IHX_2_calc = 1.0 # Assume 100% effectiveness if temperature difference is zero
-
-
-          # CP_ratio_2:
-          try:
-              cpf_2 = CP.PropsSI('C', 'P', p_condh, 'Q', 0, refrig)
-              cpv_2 = CP.PropsSI('C', 'P', p_evaph, 'Q', 1, refrig)
-              # Avoid division by zero
-              if abs(cpf_2) > 1e-9:
-                   cpr_2_calc = cpv_2 / cpf_2
-              else:
-                   cpr_2_calc = 1.0 # Assume ratio is 1 if cpf is zero
-          except ValueError:
-              cpr_2_calc = 1.0
-
-          # State 4h: two-phase mixture (p_evaph, h_4h=h_9h)
-          p_4h = p_evaph
-          h_4h_calc = h_9h # Isenthalpic expansion from 9h
-          # Ensure denominator is non-zero before calculating x_4h
-          if abs(h_13h - h_14h) > 1e-9:
-              x_4h_calc = (h_4h_calc - h_14h) / (h_13h - h_14h)
-          else:
-               x_4h_calc = 0.0 # If denominator is zero, assume quality is zero
-
-          # Ensure x_4h_calc is within [0, 1] bounds
-          x_4h_calc = max(0.0, min(1.0, x_4h_calc))
-
-          # Calculate T_7h_new based on IHX-2 effectiveness
-          # Ensure denominator is non-zero before calculation
-          if abs(cpr_2_calc * (T_12h_calc - T_13h)) > 1e-9:
-               T_7h_new = T_12h_calc - epsilon_IHX_2_calc * x_4h_calc * cpr_2_calc * (T_12h_calc - T_13h)
-          else:
-               T_7h_new = T_7h # No change if denominator is zero
-
-          # Check for convergence of T_7h
-          if abs(T_7h_new - T_7h) < tol:
-              T_7h = T_7h_new # Update T_7h to the converged value
-              # After convergence, update all dependent state properties with the converged T_7h
-              h_7h = h_7h_calc
-              h_8h = h_8h_calc
-              x_8h = x_8h_calc
-              T_12h = T_12h_calc
-              epsilon_IHX_2 = epsilon_IHX_2_calc
-              cpr_2 = cpr_2_calc
-              h_4h = h_4h_calc
-              x_4h = x_4h_calc
-              break # Exit the loop if converged
-
-          T_7h = T_7h_new # Update guess for the next iteration
-
-      except ValueError as e:
-          print(f"Warning: CoolProp calculation failed in T_7h convergence loop: {e}. Breaking loop.")
-          # Assign NaN to dependent properties on error and break
-          h_7h, x_8h, T_12h, epsilon_IHX_2, cpr_2, h_4h, x_4h = np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan
-          break # Exit loop on CoolProp error
-
+  # --- the IHX network, closed by an exact enthalpy balance ---------------
+  # The two regenerators are closed by ENERGY, not by effectiveness-times-
+  # cp-ratio correlations. Which stream passes through each one matters:
+  #
+  #   IHX-1   liquid 3h -> 12h  (1 kg)   heats the FLASHED VAPOUR, x_8h,
+  #                                      from 10h to 11h
+  #   IHX-2   liquid 12h -> 7h  (1 kg)   heats the SUCTION stream, which is
+  #                                      what left the separator as LIQUID,
+  #                                      (1 - x_8h), from 13h to 1h
+  #
+  # x_8h appears on both sides, so the three relations are solved as a fixed
+  # point. The map is linear and strongly contracting here, so it converges
+  # in a handful of steps.
+  #
+  # Until v0.9 IHX-2 used x_4h -- the vapour QUALITY at the evaporator inlet
+  # -- where the flow SPLIT (1 - x_8h) belongs. A quality is not a flow
+  # fraction, and the cycle did not close: IHX-2 took 9.19 kJ/kg out of the
+  # liquid and put 21.76 kJ/kg into the vapour, and the condenser reported
+  # 271.43 kJ/kg against 258.33 kJ/kg of work plus evaporator heat. That is
+  # a 4.8 % creation of energy, and it inflated the COP.
+  p_7h = p_condh
+  dh_IHX1 = h_11h - h_10h            # per kg of flashed vapour
+  dh_IHX2 = h_1h - h_13h             # per kg of suction (low-stage) flow
+  x_8h = 0.3
+  for _n_ihx in range(200):
+      h_12h = h_3h - x_8h * dh_IHX1
+      h_7h = h_12h - (1.0 - x_8h) * dh_IHX2
+      x_new = (h_7h - h_9h) / (h_10h - h_9h)          # h_8h = h_7h
+      converged = abs(x_new - x_8h) < 1e-12
+      x_8h = x_new
+      if converged:
+          break
   else:
-      # After max iterations without convergence, assign the values from the last iteration
-      # Need to recalculate dependent variables one last time based on the final T_7h
-      try:
-          h_7h = CP.PropsSI('H', 'T', T_7h, 'P', p_7h, refrig)/1000.
-          if abs(h_10h - h_9h) > 1e-9:
-               x_8h = (h_7h - h_9h) / (h_10h - h_9h)
-          else:
-               x_8h = 0.0
-          x_8h = max(0.0, min(1.0, x_8h))
-          T_12h = T_3h - epsilon_IHX_1 * x_8h * cpr_1 * (T_3h - T_10h)
-          denominator_epsilon2 = (T_12h - T_13h)
-          if abs(denominator_epsilon2) > 1e-9:
-               epsilon_IHX_2 = (T_1h - T_13h) / denominator_epsilon2
-          else:
-               epsilon_IHX_2 = 1.0
-          try:
-               cpf_2 = CP.PropsSI('C', 'P', p_condh, 'Q', 0, refrig)
-               cpv_2 = CP.PropsSI('C', 'P', p_evaph, 'Q', 1, refrig)
-               if abs(cpf_2) > 1e-9:
-                    cpr_2 = cpv_2 / cpf_2
-               else:
-                    cpr_2 = 1.0
-          except ValueError:
-               cpr_2 = 1.0
-          h_4h = h_9h
-          if abs(h_10h - h_9h) > 1e-9:
-              x_4h = (h_4h - h_9h) / (h_10h - h_9h)
-          else:
-               x_4h = 0.0
-          x_4h = max(0.0, min(1.0, x_4h))
+      raise RuntimeError(
+          "two_stage_htheatpump_2regs: the IHX enthalpy balance did not "
+          f"converge in 200 iterations (x_8h = {x_8h!r}). The pressure "
+          "levels or the subcooling are probably inconsistent.")
+  if not np.isfinite(x_8h) or not (0.0 <= x_8h <= 1.0):
+      raise RuntimeError(
+          f"two_stage_htheatpump_2regs: separator vapour fraction "
+          f"x_8h = {x_8h:.6g} is outside [0, 1], so there is no physical "
+          "flash split. Check T_2h, T_13h and DT_sub.")
+  h_12h = h_3h - x_8h * dh_IHX1
+  h_7h = h_12h - (1.0 - x_8h) * dh_IHX2
+  h_8h = h_7h                        # isenthalpic expansion into the separator
+  h_4h = h_9h                        # isenthalpic expansion into the evaporator
+  T_7h = CP.PropsSI('T', 'H', h_7h * 1000., 'P', p_condh, refrig)
+  T_12h = CP.PropsSI('T', 'H', h_12h * 1000., 'P', p_condh, refrig)
 
-      except ValueError as e:
-          print(f"Warning: Final CoolProp calculation failed after max iterations: {e}.")
-          h_7h, x_8h, T_12h, epsilon_IHX_2, cpr_2, h_4h, x_4h = np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan
+  # Both of these are now DIAGNOSTICS rather than inputs. State 1h is fixed
+  # by the isentropic compression back from 2h, so the effectiveness IHX-2
+  # would need in order to deliver it is an OUTPUT of the cycle, and worth
+  # reading: a value above 1 would mean the regenerator cannot exist.
+  x_4h = (h_4h - h_14h) / (h_13h - h_14h)
+  epsilon_IHX_2 = (T_1h - T_13h) / (T_12h - T_13h)
+  cpr_2 = (CP.PropsSI('C', 'P', p_evaph, 'Q', 1, refrig)
+           / CP.PropsSI('C', 'P', p_condh, 'Q', 0, refrig))
 
 
   # State 7h (using the converged T_7h)
@@ -449,6 +428,97 @@ def two_stage_htheatpump_2regs(refrig, T_13h, T_2h, DT_sub):
 # network
 # ==========================================================================
 
+
+def compute_T_re(T0, T1, T_m, r_i, r_e, k_w, h_i, Rf_i_prime, k_m, delta, L_tube, fin_t, fin_L, num_fins):
+    """
+    Computes the temperature at the external radius of the inner tube (T_re)
+    considering the thermal resistances, including the melt layer around finned tubes.
+
+    Args:
+        T0: Fluid temperature at the start of the segment [K].
+        T1: Fluid temperature at the end of the segment [K].
+        T_m: Melting temperature of the PCM [K].
+        r_i: Internal radius of the tube [m].
+        r_e: External radius of the tube [m].
+        k_w: Wall thermal conductivity (also used for fin conductivity) [W/m.K]. # Updated docstring
+        h_i: Internal convective heat transfer coefficient [W/m.K].
+        Rf_i_prime: Internal fouling resistance [m²·K/W].
+        k_m: PCM thermal conductivity [W/m.K].
+        delta: Melt layer thickness [m].
+        L_tube: Length of the tube [m].
+        fin_t: Thickness of each fin [m].
+        fin_L: Length of each fin extending radially outwards [m].
+        num_fins: The number of fins.
+
+    Returns:
+        Temperature at the external radius of the inner tube [K].
+    """
+    T_avg = 0.5 * (T0 + T1)
+
+    # R1 remains unchanged
+    R1 = Rf_i_prime + 1/h_i + (r_i / k_w) * np.log(r_e / r_i)
+
+    # Calculate h_e (heat transfer coefficient for the outer layer)
+    if delta > 1e-9 and r_e > 1e-9: # Check for non-zero delta and r_e
+        log_term = np.log(1 + delta / r_e)
+        if log_term > 1e-9: # Check for non-zero log term
+            h_e = k_m / r_e / log_term
+        else:
+             h_e = k_m / delta # Use the previous definition for very small delta
+    else:
+        h_e = 1e9 # Assign a small value, leading to large resistance
+
+    # Calculate fin parameters for efficiency (needed for eta_o)
+    fin_Lc = fin_L + fin_t / 2.0
+    # Ensure h_e is not zero or negative before taking sqrt, use k_w for fin conductivity
+    if h_e > 1e-9 and k_w > 1e-9 and fin_t > 1e-9:
+        fin_m = np.sqrt(2 * h_e / k_w / fin_t) # Used k_w instead of KW
+    else:
+        fin_m = 1e9 # Assign a large value if denominator is near zero
+
+    # Calculate fin efficiency
+    fin_m_Lc = fin_m * fin_Lc
+    if fin_m_Lc != 0:
+        fin_eff = np.tanh(fin_m_Lc) / fin_m_Lc
+    else:
+        fin_eff = 1.0 # Efficiency is 100% if fin_m * fin_Lc is zero
+
+    # Calculate fin surface area (needed for eta_o)
+    A_f = L_tube * (2 * fin_L + fin_t)
+
+    # Calculate total outer surface area (needed for eta_o)
+    A_t = 2 * L_tube * (np.pi * r_e + num_fins * fin_L)
+
+    # Calculate overall surface efficiency
+    if A_t > 0:
+        eta_o = 1 - (num_fins * A_f / A_t) * (1 - fin_eff)
+    else:
+        eta_o = 1.0
+
+    # Calculate perim_T
+    perim_T = 2 * (np.pi * r_e + num_fins * fin_L)
+
+    # Calculate R2
+    # Ensure perim_T, h_e, and eta_o are effectively non-zero
+    if perim_T > 1e-9 and h_e > 1e-9 and eta_o > 1e-9:
+         R2 = (2 * np.pi * r_i) / (perim_T * h_e * eta_o)
+    else:
+         R2 = float('inf') # Assign infinite resistance if denominator is zero or near zero
+
+    # Avoid division by zero or infinity when calculating T_re
+    denominator = R1 + R2
+    if denominator == 0 or np.isinf(denominator):
+         # If R1 + R2 is zero or infinite, T_re cannot be calculated in this way.
+         # This might indicate an issue with resistances (e.g., R2 is inf).
+         # In this case, T_re is likely T_avg or T_m depending on the context.
+         # Given that R2 being inf means no heat transfer from the outer layer,
+         # the temperature at the outer radius should approach the fluid temperature T_avg.
+         T_re = T_avg
+    else:
+         numerator = R1 * (T_avg - T_m)
+         T_re = T_avg - numerator / denominator
+
+    return T_re
 
 ########################################
 ########################################
@@ -557,6 +627,85 @@ def compute_U_i(h_i, r_i, r_e, k_w, Rf_i_prime, k_m, delta, L_tube, fin_t, fin_L
 # ==========================================================================
 
 
+def compute_delta2_fast(r_e, k_m, cp_m, rho_m, h_m, T_m, T_re, t,tol=1e-8, max_iter=30, delta_max=1.0):
+    # Physical/degenerate guards
+    if r_e <= 0.0 or t <= 0.0:
+        return 0.0
+    if abs(T_re - T_m) < 1e-9 or T_re <= T_m:
+        return 0.0
+
+    alpha_m = k_m / (rho_m * cp_m)
+    Fo = alpha_m * t / (r_e * r_e)
+    Ph = abs(h_m / (cp_m * (T_re - T_m)))  # >0 since T_re>T_m
+
+    # term(x) = 0.5 x^2 ln x - 0.25 x^2 + 0.25, x=1+delta/r_e
+    def F(delta):
+        x = 1.0 + delta / r_e
+        if x <= 0.0:
+            return np.nan
+        term = 0.5 * x * x * np.log(x) - 0.25 * x * x + 0.25
+        return Fo - Ph * term
+
+    def dF(delta):
+        x = 1.0 + delta / r_e
+        if x <= 0.0:
+            return np.nan
+        # dF/dδ = -Ph*(x ln x)/r_e
+        return -(Ph / r_e) * (x * np.log(x))
+
+    # Bracket on [0, delta_max]
+    a, b = 0.0, float(delta_max)
+    fa, fb = F(a), F(b)
+
+    # If no root is bracketed, fall back to 0 (consistent with your physical logic)
+    if not np.isfinite(fa) or not np.isfinite(fb) or fa * fb > 0:
+        # if fa is already ~0, return 0
+        if np.isfinite(fa) and abs(fa) < tol:
+            return 0.0
+        return 0.0
+
+    # Initial guess: small-delta asymptotic, clipped to bracket
+    delta = r_e * np.sqrt(max(0.0, 2.0 * Fo / Ph))
+    delta = float(np.clip(delta, a, b))
+
+    # Safeguarded Newton (Newton when it stays in bracket; otherwise bisection)
+    for _ in range(max_iter):
+        f = F(delta)
+        if not np.isfinite(f):
+            delta = 0.5 * (a + b)
+            continue
+        if abs(f) < tol:
+            return delta
+
+        df = dF(delta)
+        if np.isfinite(df) and abs(df) > 1e-14:
+            delta_new = delta - f / df
+        else:
+            delta_new = np.nan
+
+        # Keep bracket; if Newton goes out, bisect
+        if (not np.isfinite(delta_new)) or (delta_new <= a) or (delta_new >= b):
+            delta_new = 0.5 * (a + b)
+
+        f_new = F(delta_new)
+        if not np.isfinite(f_new):
+            delta_new = 0.5 * (a + b)
+            f_new = F(delta_new)
+
+        if abs(f_new) < tol:
+            return delta_new
+
+        # Update bracket
+        if fa * f_new < 0:
+            b, fb = delta_new, f_new
+        else:
+            a, fa = delta_new, f_new
+
+        delta = delta_new
+
+    # best available (midpoint of final bracket)
+    return 0.5 * (a + b)
+
 #####################################
 #####################################
 #####################################
@@ -568,9 +717,308 @@ def compute_U_i(h_i, r_i, r_e, k_w, Rf_i_prime, k_m, delta, L_tube, fin_t, fin_L
 # ==========================================================================
 
 
+def temperature_profile_melt(geom_par_vector, T_inlet, N_lay, T_m_lay, k_w, Rf_i_prime, m_dot_d_well, P, fluid, t,
+    k_m, cp_m, rho_m, h_m, n_segments, delta_max=1.0,
+    delta_tol=1e-5, delta_maxiter=20
+):
+    """
+    Calculates the temperature and melt layer profiles along the well at a given time.
+
+    Args:
+        geom_par_vector: An array or list containing [L_well, L_tube, D_well, r_i, r_e, D_i_tube, D_e_tube, fin_t, fin_L, num_fins, num_tubes].
+        T_inlet: Inlet temperature of the fluid in Kelvin.
+        N_lay: Number of layers in the PCM.
+        T_m_lay: Vector (size N_lay + 1) with the melting temperatures of the PCM layers in Kelvin.
+        k_w: Wall thermal conductivity (also used for fin conductivity) [W/m.K]. # Updated docstring
+        Rf_i_prime: Internal fouling resistance [m²·K/W].
+        m_dot_d_well: Mass flow rate of the fluid per well [kg/s].
+        P: Pressure of the fluid [Pa].
+        fluid: Name of the working fluid.
+        t: Time elapsed [s].
+        k_m: PCM thermal conductivity [W/m.K].
+        cp_m: PCM specific heat capacity [J/kg.K].
+        rho_m: PCM density [kg/m³].
+        h_m: Latent heat of fusion of the PCM [J/kg].
+        n_segments: Number of segments to divide the well length.
+        delta_max: Maximum possible melt layer thickness for convergence [m].
+        delta_tol: Tolerance for melt layer thickness convergence.
+        delta_maxiter: Maximum iterations for melt layer thickness calculation.
+
+    Returns:
+        A tuple containing:
+            - df: DataFrame with the temperature and other profiles along the well.
+            - Q: Heat transfer rate [W].
+            - V_melt: Melt volume [m³].
+    """
+    # Unpack the geometric parameters
+    L_well, L_tube, D_well, r_i, r_e, D_i_tube, D_e_tube, fin_t, fin_L, num_fins, num_tubes = geom_par_vector
+    L = L_tube # Use L_tube as the length for the profile calculation
+
+    state = make_cp_state(fluid)
+
+    def compute_h_i_coolprop(r_i, m_dot_d_well, fluid, T, P):
+        try:
+            rho = PropsSI("D", "T", T, "P", P, fluid)
+            mu = PropsSI("V", "T", T, "P", P, fluid)
+            cp = PropsSI("C", "T", T, "P", P, fluid)
+            k = PropsSI("L", "T", T, "P", P, fluid)
+        except ValueError:
+            # Handle cases where T or P are outside fluid range
+            return 1e-9, 0, 0, 0 # Return a small h_i and zero other properties
+
+        D_h = 2 * r_i
+        A = pi * r_i**2
+        if rho * A > 1e-9:
+             u = m_dot_d_well / (rho * A)
+        else:
+             u = 0 # Avoid division by zero
+
+        if mu > 1e-9: # Avoid division by zero
+             Re = rho * u * D_h / mu
+        else:
+             Re = 0 # If viscosity is zero or near zero, Re is effectively infinite, but 0 avoids division
+
+        if k > 1e-9 and cp > 1e-9 and mu > 1e-9: # Avoid division by zero
+             Pr = cp * mu / k
+        else:
+             Pr = 0 # If k, cp, or mu is zero or near zero, Pr is effectively infinite, but 0 avoids division
+
+
+        if Re < 2300:
+            Nu = 3.66
+        else:
+            try:
+                f = (0.79 * np.log(Re) - 1.64)**(-2)
+                # Ensure f is non-negative and non-zero before taking sqrt
+                if f > 1e-9:
+                    Nu = (f / 8) * (Re - 1000) * Pr / (1 + 12.7 * np.sqrt(f / 8) * (Pr**(2/3) - 1))
+                else:
+                    Nu = 3.66 # Fallback to laminar Nu if f is problematic
+            except (ValueError, RuntimeWarning):
+                 Nu = 3.66 # Fallback to laminar Nu in case of log(Re) issues for small Re
+
+
+        if D_h > 1e-9 and k > 1e-9: # Avoid division by zero
+            h_i = Nu * k / D_h
+        else:
+             h_i = 1e-9 # Assign a small value if Dh or k is zero
+
+        return h_i, Re, Pr, cp
+
+
+    dz = L / n_segments
+    z = np.linspace(0, L, n_segments + 1)
+    z_lay = np.linspace(0, L, N_lay + 1)    # positions of the PCM layer transitions
+    T = [T_inlet]
+    NTUs = []
+    U_is = []
+    deltas = []
+    Res = []
+    Prs = []
+    T_res = []
+
+
+    # Assign T_m to each z based on coarse grid
+    T_m = np.zeros_like(z)
+
+    for j in range(N_lay):
+        # interval [z_lay[j], z_lay[j+1])
+        mask = (z >= z_lay[j]) & (z < z_lay[j+1])
+        T_m[mask] = T_m_lay[j]
+
+    # Ensure the last point gets the last layer temperature
+    T_m[-1] = T_m_lay[-1]
+
+
+
+
+    for i in range(n_segments):
+        z0, z1 = z[i], z[i + 1]
+        T0 = T[-1]
+
+        #h_i, Re, Pr, cp_d = compute_h_i_coolprop(r_i, m_dot_d_well, fluid, T0, P)
+        h_i, Re, Pr, cp_d = compute_h_i_from_state(state, r_i, m_dot_d_well, T0, P)
+
+
+        # Initial guess for delta and T_re
+        #delta_guess = 0.001 # Start with a small melt layer guess
+        #T1_guess = T0
+        #T_re_guess = T0
+
+        # Initial guess for delta and T_re (warm-start)
+        if i == 0:
+            delta_guess = 0.001
+            T_re_guess = T0
+        else:
+            # warm start from previous segment
+            delta_guess = deltas[-1]
+            T_re_guess = T_res[-1]
+
+        delta_guess = float(np.clip(delta_guess, 0.0, delta_max))
+        T1_guess = T0  # keep simple; you already have an NTU-based T1 update below
+
+
+
+
+
+
+        # Predict NTU and T1 with base guess for delta
+        # Call compute_U_i without KW
+        U_i_guess = compute_U_i(h_i, r_i, r_e, k_w, Rf_i_prime, k_m, delta_guess, L_tube, fin_t, fin_L, num_fins)
+
+        # Avoid division by zero if cp_d is zero or near zero
+        if m_dot_d_well * cp_d > 1e-9:
+             NTU_guess = (2 * pi * r_i * U_i_guess * dz) / (m_dot_d_well * cp_d)
+        else:
+             NTU_guess = 0 # If denominator is zero, NTU is zero, no temperature change
+
+        # Ensure exp argument is not too large or too small
+        if NTU_guess > 50: # Arbitrary large value to prevent overflow
+             exp_term = 0
+        elif NTU_guess < -50: # Arbitrary small value
+             exp_term = np.inf # Or handle appropriately, likely indicates an issue
+        else:
+             exp_term = np.exp(-NTU_guess)
+
+        T1_guess = T_m[i] + (T0 - T_m[i]) * exp_term
+
+
+        for _ in range(delta_maxiter):
+            # Call compute_T_re without KW
+            T_re_new = compute_T_re(
+                T0, T1_guess, T_m[i], r_i, r_e, k_w, h_i, Rf_i_prime, k_m, delta_guess, L_tube, fin_t, fin_L, num_fins
+            )
+            try:
+                delta_new = compute_delta2_fast(
+                    r_e, k_m, cp_m, rho_m, h_m, T_m[i], T_re_new, t,
+                    tol=delta_tol, max_iter=50, delta_max=delta_max
+                )
+            except Exception as e:
+                delta_new = 0.0 # Default to zero melt layer on error
+
+            # Call compute_U_i without KW
+            U_i_new = compute_U_i(h_i, r_i, r_e, k_w, Rf_i_prime, k_m, delta_new, L_tube, fin_t, fin_L, num_fins)
+
+             # Avoid division by zero if cp_d is zero or near zero
+            if m_dot_d_well * cp_d > 1e-9:
+                 NTU_new = (2 * pi * r_i * U_i_new * dz) / (m_dot_d_well * cp_d)
+            else:
+                 NTU_new = 0 # If denominator is zero, NTU is zero, no temperature change
+
+             # Ensure exp argument is not too large or too small
+            if NTU_new > 50: # Arbitrary large value to prevent overflow
+                 exp_term_new = 0
+            elif NTU_new < -50: # Arbitrary small value
+                 exp_term_new = np.inf # Or handle appropriately
+            else:
+                 exp_term_new = np.exp(-NTU_new)
+
+
+            T1_new = T_m[i] + (T0 - T_m[i]) * exp_term_new
+
+
+            # Check for convergence of delta and T_re
+            if np.abs(delta_new - delta_guess) < delta_tol and np.abs(T_re_new - T_re_guess) < 1e-3:
+                break
+            delta_guess = delta_new
+            T1_guess = T1_new
+            T_re_guess = T_re_new
+
+
+        # After convergence loop, store the results for this segment
+        deltas.append(delta_new)
+        U_is.append(U_i_new)
+        NTUs.append(NTU_new)
+        T.append(T1_new)
+        Res.append(Re)
+        Prs.append(Pr)
+        T_res.append(T_re_new)
+
+    # Compute enthalpies and heat transfer rate using the final temperatures
+    try:
+        h_in = PropsSI("H", "T", T[0], "P", P, fluid)
+        h_out = PropsSI("H", "T", T[-1], "P", P, fluid)
+        Q = m_dot_d_well * (h_in - h_out)  # [W]
+    except ValueError:
+        Q = 0.0 # Assign zero heat transfer if enthalpy calculation fails
+
+
+    # Compute the melt cross-section area at each segment and total melt volume
+    # deltas has length n_segments, z has length n_segments + 1
+    # A_melt should correspond to the segment centers or ends. Using deltas at segment ends (i=1 to n_segments)
+    # or segment average delta. Let's use the delta calculated for each segment.
+    deltas_array = np.array(deltas) # This has length n_segments
+    # Ensure r_e + deltas_array is non-negative before squaring
+    radii_plus_delta_sq = (r_e + np.maximum(0, deltas_array))**2
+    A_melt = np.pi * (radii_plus_delta_sq - r_e**2)  # [m²], len=n_segments
+    A_melt = np.maximum(0, A_melt) # Ensure melt area is non-negative
+
+    V_melt = np.sum(A_melt * dz)  # [m³], simple Riemann sum using segment length dz
+
+
+    df = pd.DataFrame({
+        "z [m]": z[1:], # Use segment end points for plotting profile
+        "T [K]": T[1:],
+        "NTU [-]": NTUs,
+        "U_i [W/m²·K]": U_is,
+        "delta [m]": deltas,
+        "T_re [K]": T_res,
+        "Re [-]": Res,
+        "Pr [-]": Prs,
+        "A_melt [m2]": A_melt
+    })
+
+    return df, Q, V_melt
+
+
 ########################################
 ########################################
 ########################################
+
+
+def time_profiles_melt(times, geom_par_vector, T_inlet, N_lay, T_m_lay, k_w, Rf_i_prime, m_dot_d_well, P, fluid, k_m, cp_m, rho_m, h_m,
+    n_segments, delta_max=1.0, delta_tol=1e-5, delta_maxiter=20
+):
+    """
+    Computes the temperature and melt layer profiles along the well at several times,
+    returns the heat transfer rate, melt volume at each time,
+    and the cumulative heat transferred (in Joules).
+
+    Parameters:
+    -----------
+    times : array-like
+        List or array of times [s] at which to compute the profiles.
+    geom_par_vector: An array or list containing [L_well, L_tube, D_well, r_i, r_e, D_i_tube, D_e_tube, fin_t, fin_L, num_fins, num_tubes].
+
+    Returns:
+    --------
+    profiles : dict
+        Dictionary: {time: DataFrame}, one DataFrame per time step
+    Qs : dict
+        Dictionary: {time: Q}, heat transfer rate [W] at each time step
+    Vmelts : dict
+        Dictionary: {time: V_melt}, melt volume [m³] at each time step
+    Q_cumulative : float
+        Cumulative heat transferred to the melt [J]
+    """
+    profiles = {}
+    Qs = {}
+    Vmelts = {}
+    for t in times:
+        df, Q, V_melt = temperature_profile_melt(geom_par_vector, T_inlet, N_lay, T_m_lay, k_w, Rf_i_prime,m_dot_d_well, P, fluid, t,
+            k_m, cp_m, rho_m, h_m, n_segments, delta_max, delta_tol, delta_maxiter
+        )
+        profiles[t] = df
+        Qs[t] = Q
+        Vmelts[t] = V_melt
+
+    # Convert Qs and times to arrays for integration
+    Q_values = np.array(list(Qs.values()))
+    times_arr = np.array(list(Qs.keys()))
+    Q_cumulative = np.trapezoid(Q_values, times_arr)/1000.  # [kJ]
+
+    return profiles, Qs, Vmelts, Q_cumulative
+
 
 
 # ==========================================================================
@@ -728,6 +1176,27 @@ def calculate_pressure_drop(geom_par_vector, m_dot_well_tube, fluid, T_inlet, T_
 # ==========================================================================
 
 
+def evaluate_Q_ratio_ch(m_dot_c, N_wells_val, num_tubes, geom_par_vector, times_ch,
+                        T_4c_kelvin, N_lay, T_m_lay, k_m_l, Rf_i_prime, P, fluid2, cp_m_l, rho_m_l, h_m,
+                        n_segments, delta_max, D_E_out_HP):
+    """
+    Evaluates Q_ratio_ch for a given m_dot_c_well1.
+    """
+    m_dot_c_well = m_dot_c / N_wells_val
+    m_dot_c_well1 = m_dot_c_well / num_tubes
+
+    profsl, Qliq, Vliq_well, Q_cum_l_well1 = time_profiles_melt(times_ch, geom_par_vector,
+        T_4c_kelvin, N_lay, T_m_lay, k_m_l, Rf_i_prime, m_dot_c_well1, P, fluid2, k_m_l, cp_m_l, rho_m_l, h_m,
+        n_segments, delta_max)
+
+    Q_cum_l_well = num_tubes * Q_cum_l_well1
+    Q_cum_l = N_wells_val * Q_cum_l_well
+
+    if abs(Q_cum_l) > 1e-9:
+        return D_E_out_HP / Q_cum_l
+    else:
+        return float('inf') # Assign a large value if denominator is zero
+
 #########################################
 #########################################
 #########################################
@@ -735,15 +1204,331 @@ def calculate_pressure_drop(geom_par_vector, m_dot_well_tube, fluid, T_inlet, T_
 # Function to evaluate the energy ratio for a given value of m_dot_d_well1 (Discharging)
 
 
-#########################################
-#########################################
-#########################################
+def evaluate_Q_ratio_dc(N_wells, m_dot_d_well1_val, num_tubes, geom_par_vector, times_dc,
+                        T_3d_kelvin, N_lay, T_m_lay_dc, k_w, Rf_i_prime, P, fluid2, k_m_s, cp_m_s, rho_m_s, h_m,
+                        n_segments, delta_max, D_E_in_ORC):
+
+    profss, Qsol, Vsol_well, Q_cum_s_well1 = time_profiles_melt(times_dc, geom_par_vector,
+        T_3d_kelvin, N_lay, T_m_lay_dc, k_w, Rf_i_prime, m_dot_d_well1_val, P, fluid2, k_m_s, cp_m_s, rho_m_s, h_m,
+        n_segments, delta_max)
+
+    Q_cum_s_well = -num_tubes * Q_cum_s_well1
+    Q_cum_s = N_wells * Q_cum_s_well
+
+    if abs(Q_cum_s) > 1e-9:
+        return D_E_in_ORC / Q_cum_s
+    else:
+        return float('inf') # Assign a large value if denominator is zero
 
 
 #########################################
 #########################################
 #########################################
 
+
+def find_N_wells_for_Q_ratio_ch_fast(target_Q_ratio, tolerance,N_wells_low, N_wells_high,
+    m_dot_c, num_tubes, geom_par_vector, times_ch,
+    T_4c_kelvin, N_lay, T_m_lay, k_m_l, Rf_i_prime, P, fluid2, cp_m_l, rho_m_l, h_m,
+    n_segments, delta_max, D_E_out_HP,
+    N_hint=None,
+    max_iterations=50,
+    cache_round_ndigits=6,
+    verbose=False
+):
+    """
+    Faster bracketed solver for N_wells such that Q_ratio_ch ~ target_Q_ratio.
+
+    Improvements included:
+      (1) Memoization of expensive function evaluations
+      (2) Illinois regula falsi (bracket-preserving, faster than bisection in practice)
+      (3) Smarter bracketing using an optional hint N_hint (e.g., previous optimum in sweeps)
+
+    Parameters
+    ----------
+    N_hint : float or None
+        If provided, attempts to bracket the solution around N_hint within [N_wells_low, N_wells_high].
+        Use this in sweeps: pass the previous N_wells solution as N_hint to reduce iterations.
+
+    Notes
+    -----
+    - Assumes Q_ratio_ch is reasonably monotone with N_wells (common here since m_dot per well ~ 1/N).
+    - Returns a float N_wells (you can round/ceil outside if you need an integer).
+    """
+
+    # --- Small helpers ---
+    def _clamp_positive(x):
+        return max(1.0, float(x))
+
+    # Memoization cache (keyed by rounded N)
+    cache = {}
+
+    def func(N_wells_val):
+        # clamp to physical domain
+        N_wells_val = _clamp_positive(N_wells_val)
+
+        key = round(N_wells_val, cache_round_ndigits)
+        if key in cache:
+            return cache[key]
+
+        # quick reject: if flow per tube is ~0, Q_ratio gets pathological
+        m_dot_c_well1_val = (m_dot_c / N_wells_val) / num_tubes
+        if m_dot_c_well1_val <= 1e-12:
+            val = 1e9
+            cache[key] = val
+            return val
+
+        try:
+            q_ratio = evaluate_Q_ratio_ch(
+                m_dot_c, N_wells_val, num_tubes, geom_par_vector, times_ch,
+                T_4c_kelvin, N_lay, T_m_lay, k_m_l, Rf_i_prime, P, fluid2, cp_m_l, rho_m_l, h_m,
+                n_segments, delta_max, D_E_out_HP
+            )
+            val = q_ratio - target_Q_ratio
+        except Exception:
+            val = 1e9
+
+        cache[key] = val
+        return val
+
+    # --- Step (3): smarter bracketing around N_hint, if provided ---
+    lo = _clamp_positive(N_wells_low)
+    hi = max(lo + 1e-12, float(N_wells_high))  # avoid hi==lo
+
+    if N_hint is not None and np.isfinite(N_hint):
+        # Try a tight bracket around the hint first, clipped to [lo, hi]
+        center = float(N_hint)
+        a_try = max(lo, 0.6 * center)
+        b_try = min(hi, 1.4 * center)
+
+        # If the bracket collapses (hint near bounds), widen gracefully
+        if b_try <= a_try * (1.0 + 1e-12):
+            a_try = lo
+            b_try = hi
+
+        fa_try = func(a_try)
+        fb_try = func(b_try)
+
+        # If it brackets, use it; else fall back to original full bracket
+        if np.isfinite(fa_try) and np.isfinite(fb_try) and fa_try * fb_try < 0:
+            lo, hi = a_try, b_try
+
+    # Evaluate endpoints
+    f_lo = func(lo)
+    f_hi = func(hi)
+
+    # If not bracketed, attempt automatic expansion around midpoint (best-effort)
+    if not (np.isfinite(f_lo) and np.isfinite(f_hi)) or f_lo * f_hi > 0:
+        if verbose:
+            print(f"[warn] Target not bracketed initially in [{lo}, {hi}]. Attempting expansion.")
+
+        # Expand in a few steps, but stay positive and within some sane upper bound
+        mid = 0.5 * (lo + hi)
+        a, b = lo, hi
+        fa, fb = f_lo, f_hi
+
+        # Try expand up to 6 times (geometric)
+        for _ in range(6):
+            # expand outward
+            a_new = max(1.0, a / 1.8)
+            b_new = b * 1.8
+            fa_new = func(a_new)
+            fb_new = func(b_new)
+
+            if np.isfinite(fa_new) and np.isfinite(fb_new) and fa_new * fb_new < 0:
+                lo, hi = a_new, b_new
+                f_lo, f_hi = fa_new, fb_new
+                break
+
+            a, b, fa, fb = a_new, b_new, fa_new, fb_new
+
+        # If still not bracketed: return whichever endpoint is closer in residual
+        if f_lo * f_hi > 0:
+            if verbose:
+                print("[warn] Could not bracket root after expansion. Returning closest bound.")
+            return lo if abs(f_lo) < abs(f_hi) else hi
+
+    # --- Step (2): Illinois regula falsi loop (faster than bisection, still bracketed) ---
+    a, b = float(lo), float(hi)
+    fa, fb = float(f_lo), float(f_hi)
+
+    if verbose:
+        print(f"Starting Illinois regula falsi on [{a:.6g}, {b:.6g}] with target={target_Q_ratio:.4g}")
+
+    for it in range(1, max_iterations + 1):
+        denom = (fb - fa)
+        if abs(denom) < 1e-30:
+            # function almost flat between endpoints; return midpoint
+            c = 0.5 * (a + b)
+            return _clamp_positive(c)
+
+        # regula falsi point
+        c = (a * fb - b * fa) / denom
+        c = _clamp_positive(c)
+
+        fc = float(func(c))
+
+        if verbose:
+            print(f"  it={it:02d} a={a:.6g} b={b:.6g} c={c:.6g} fa={fa:.3e} fb={fb:.3e} fc={fc:.3e}")
+
+        # Convergence check on residual
+        if abs(fc) < tolerance:
+            return c
+
+        # Update bracket with Illinois modification to avoid endpoint stalling
+        if fa * fc < 0:
+            b, fb = c, fc
+            fa *= 0.5
+        else:
+            a, fa = c, fc
+            fb *= 0.5
+
+    # If max iterations reached, return best available (midpoint of final bracket)
+    return 0.5 * (a + b)
+
+
+#########################################
+#########################################
+#########################################
+
+
+def find_m_dot_d_well1_for_Q_ratio_dc_fast(
+    target_Q_ratio, tolerance,
+    ratio_low, ratio_high,
+    m_dot_c_well1, N_wells, num_tubes, geom_par_vector, times_dc,
+    T_3d_kelvin, N_lay, T_m_lay_dc, k_w, Rf_i_prime, P, fluid2, k_m_s, cp_m_s, rho_m_s, h_m,
+    n_segments, delta_max, D_E_in_ORC,
+    ratio_hint=None,
+    max_iterations=50,
+    cache_round_ndigits=6,
+    verbose=False
+):
+    """
+    Faster bracketed solver for discharging m_dot_d_well1 using a root-find on ratio:
+        ratio = m_dot_d_well1 / m_dot_c_well1
+        find ratio such that Q_ratio_dc(ratio) ~ target_Q_ratio
+
+    Improvements included:
+      (1) Memoization of expensive function evaluations (ratio -> residual)
+      (2) Illinois regula falsi (bracket-preserving, faster than bisection in practice)
+      (3) Smarter bracketing using optional ratio_hint (e.g., previous optimum in sweeps)
+
+    Returns
+    -------
+    m_dot_d_well1_opt : float
+        Optimal discharging mass flow rate per tube [kg/s]
+    """
+
+    # ---- helpers ----
+    def _clamp_ratio(x):
+        # ratio must be positive
+        return max(1e-12, float(x))
+
+    # Memoization cache: key is rounded ratio
+    cache = {}
+
+    def func(ratio_val):
+        ratio_val = _clamp_ratio(ratio_val)
+        key = round(ratio_val, cache_round_ndigits)
+        if key in cache:
+            return cache[key]
+
+        m_dot_d_well1_val = ratio_val * m_dot_c_well1
+
+        # quick reject
+        if m_dot_d_well1_val <= 1e-12:
+            val = 1e9
+            cache[key] = val
+            return val
+
+        try:
+            q_ratio = evaluate_Q_ratio_dc(
+                N_wells, m_dot_d_well1_val, num_tubes, geom_par_vector, times_dc,
+                T_3d_kelvin, N_lay, T_m_lay_dc, k_w, Rf_i_prime, P, fluid2,
+                k_m_s, cp_m_s, rho_m_s, h_m,
+                n_segments, delta_max, D_E_in_ORC
+            )
+            val = q_ratio - target_Q_ratio
+        except Exception:
+            val = 1e9
+
+        cache[key] = val
+        return val
+
+    # ---- Step (3): smarter bracketing around ratio_hint ----
+    a = _clamp_ratio(ratio_low)
+    b = max(a * (1.0 + 1e-12), float(ratio_high))
+
+    if ratio_hint is not None and np.isfinite(ratio_hint):
+        center = float(ratio_hint)
+        a_try = max(a, 0.6 * center)
+        b_try = min(b, 1.4 * center)
+
+        if b_try <= a_try * (1.0 + 1e-12):
+            a_try, b_try = a, b
+
+        fa_try, fb_try = func(a_try), func(b_try)
+
+        if np.isfinite(fa_try) and np.isfinite(fb_try) and fa_try * fb_try < 0:
+            a, b = a_try, b_try
+
+    fa = func(a)
+    fb = func(b)
+
+    # If not bracketed, best-effort expansion
+    if not (np.isfinite(fa) and np.isfinite(fb)) or fa * fb > 0:
+        if verbose:
+            print(f"[warn] Target not bracketed initially in ratio [{a}, {b}]. Attempting expansion.")
+
+        a0, b0 = a, b
+        fa0, fb0 = fa, fb
+
+        for _ in range(6):
+            a_new = max(1e-12, a0 / 1.8)
+            b_new = b0 * 1.8
+            fa_new = func(a_new)
+            fb_new = func(b_new)
+            if np.isfinite(fa_new) and np.isfinite(fb_new) and fa_new * fb_new < 0:
+                a, b, fa, fb = a_new, b_new, fa_new, fb_new
+                break
+            a0, b0, fa0, fb0 = a_new, b_new, fa_new, fb_new
+
+        # Still not bracketed → return closer bound
+        if fa * fb > 0:
+            if verbose:
+                print("[warn] Could not bracket root after expansion. Returning closest bound.")
+            ratio_best = a if abs(fa) < abs(fb) else b
+            return ratio_best * m_dot_c_well1
+
+    # ---- Step (2): Illinois regula falsi loop ----
+    if verbose:
+        print(f"Starting Illinois regula falsi on ratio [{a:.6g}, {b:.6g}] target={target_Q_ratio:.4g}")
+
+    for it in range(1, max_iterations + 1):
+        denom = (fb - fa)
+        if abs(denom) < 1e-30:
+            ratio_mid = 0.5 * (a + b)
+            return ratio_mid * m_dot_c_well1
+
+        c = (a * fb - b * fa) / denom
+        c = _clamp_ratio(c)
+
+        fc = float(func(c))
+
+        if verbose:
+            print(f"  it={it:02d} a={a:.6g} b={b:.6g} c={c:.6g} fa={fa:.3e} fb={fb:.3e} fc={fc:.3e}")
+
+        if abs(fc) < tolerance:
+            return c * m_dot_c_well1
+
+        if fa * fc < 0:
+            b, fb = c, fc
+            fa *= 0.5  # Illinois damping
+        else:
+            a, fa = c, fc
+            fb *= 0.5
+
+    # fallback: midpoint
+    return 0.5 * (a + b) * m_dot_c_well1
 
 #############################################
 #############################################
@@ -801,6 +1586,12 @@ class Case:
     T_sink_C: float = 20.0
     DT_E_sink: float = 5.0
     DT_2D_3E: float = 12.0
+    # Minimum water-to-working-fluid gap ANYWHERE in the ORC evaporator, not
+    # just at its hot end. DT_2D_3E alone cannot keep the two composite curves
+    # apart, because the ORC takes most of its heat at one temperature while
+    # the water glides; see `orc_pinch`. Raise this and the ORC boils lower
+    # and yields less; lower it and the exchanger grows. See DN-15.
+    DT_pinch_ORC: float = 5.0
     # Discharge-inlet subcooling below the COLDEST cascade layer, state 1d in
     # the plant diagram; the symmetric partner of DT_4C_M. See DN-8.
     DT_M_1D: float = 10.0
@@ -1616,6 +2407,132 @@ def T_m_bottom(case):
     return case.T_m - case.DT_3C_2C * (case.N_lay - 1) / case.N_lay
 
 
+def _orc_cold_composite(rank, fluid, n=300):
+    """The ORC-side composite curve of the evaporator: (Q, T), cold end first.
+
+    Two cold streams share the water:
+
+      * the MAIN stream, 1 kg per kg of evaporator flow, from state 10e to
+        state 3e at p_evape -- liquid preheat, then boiling at the constant
+        temperature T_3e;
+      * the REHEAT stream, y_frac of the flow, from 5e to 6e at p_inte,
+        superheated vapour throughout.
+
+    Both are built on real enthalpy, so the latent plateau appears as a
+    vertical segment rather than being smeared into a straight line in T.
+    That matters: the plateau is where this evaporator pinches.
+    """
+    y = rank["y_frac"]
+    p_e, p_i = rank["p_evape"], rank["p_5e"]
+    h10, h3 = rank["h_10e"], rank["h_3e"]
+    h5, h6 = rank["h_5e"], rank["h_6e"]
+    T10, T3 = rank["T_10e"], rank["T_3e"]
+    T5, T6 = rank["T_5e"], rank["T_6e"]
+    h_bub = CP.PropsSI("H", "P", p_e, "Q", 0, fluid) / 1000.0
+
+    # sample in ENTHALPY, not temperature: a (T, p) call exactly on the
+    # saturation line raises, and the preheat ends exactly there
+    h_pre = np.linspace(h10, h_bub, n)
+    T_pre = np.array([CP.PropsSI("T", "H", x * 1000.0, "P", p_e, fluid)
+                      for x in h_pre])
+    h_rh = np.linspace(h5, h6, n)
+    T_rh = np.array([CP.PropsSI("T", "H", x * 1000.0, "P", p_i, fluid)
+                     for x in h_rh])
+
+    def Q_main(t):
+        if t <= T10:
+            return 0.0
+        if t >= T3:
+            return h3 - h10                      # preheat AND latent
+        return float(np.interp(t, T_pre, h_pre)) - h10
+
+    def Q_reheat(t):
+        if t <= T5:
+            return 0.0
+        if t >= T6:
+            return y * (h6 - h5)
+        return y * (float(np.interp(t, T_rh, h_rh)) - h5)
+
+    lo, hi = min(T10, T5), max(T3, T6)
+    grid = set(np.linspace(lo, hi, 4 * n))
+    grid |= {T10, T5, T6, T3, np.nextafter(T3, lo)}   # break points
+    Ts = np.array(sorted(t for t in grid if lo <= t <= hi))
+    Qs = np.array([Q_main(t) + Q_reheat(t) for t in Ts])
+    keep = np.concatenate(([True], np.diff(Qs) > 1e-12))
+    return Qs[keep], Ts[keep]
+
+
+def orc_pinch(rank, T_w_hot, T_w_cold, fluid, P_water, n=600):
+    """Smallest water-minus-ORC temperature difference in the evaporator [K].
+
+    Negative when the two composite curves cross, which is a second-law
+    violation: the reported ORC efficiency is then unreachable, whatever the
+    component efficiencies.
+
+    The water is the hot stream and follows REAL enthalpy at `P_water`, not a
+    straight line in temperature, and the search runs over an even grid in Q
+    that includes every break point. The pinch is found wherever it lies; it
+    is emphatically not assumed to sit at an end. For the case as shipped in
+    v0.8 it sat at 23 % of the duty, where boiling begins.
+    """
+    Qc, Tc = _orc_cold_composite(rank, fluid)
+    Q_total = Qc[-1]
+    Tw = np.linspace(T_w_cold, T_w_hot, 400)
+    hw = np.array([CP.PropsSI("H", "T", t, "P", P_water, "Water") / 1000.0
+                   for t in Tw])
+    Qh = (hw - hw[0]) * Q_total / (hw[-1] - hw[0])    # water flow scales out
+    Qq = np.unique(np.concatenate([np.linspace(0.0, Q_total, n), Qc, Qh]))
+    Qq = Qq[(Qq >= 0.0) & (Qq <= Q_total)]
+    return float(np.min(np.interp(Qq, Qh, Tw) - np.interp(Qq, Qc, Tc)))
+
+
+def feasible_rankine(case, T_1e, T_w_hot, T_w_cold):
+    """The ORC at the highest boiling temperature the water can actually reach.
+
+    The old rule set the evaporating temperature from the HOT END alone,
+    T_3e = T_2d - DT_2D_3E, and never looked at the rest of the exchanger.
+    With a 55 K water glide against a cycle that takes ~76 % of its heat at
+    one constant temperature, that is not a small error: the curves crossed by
+    30 K and the quoted eta_ORC = 0.232 was unachievable.
+
+    So: start from the old rule, keep it if it already clears
+    `case.DT_pinch_ORC`, and otherwise bisect T_3e DOWNWARD until the pinch
+    equals the requirement. Returns the rank dict, with two extra keys
+    recording what happened.
+    """
+    T_3e_want = T_w_hot - case.DT_2D_3E
+    rank = double_stage_rankine(case.fluid, T_1e, T_3e_want)
+    pinch = orc_pinch(rank, T_w_hot, T_w_cold, case.fluid, case.P)
+    if pinch >= case.DT_pinch_ORC:
+        rank["T_3e_uncorrected"] = T_3e_want
+        rank["pinch"] = pinch
+        return rank
+
+    lo = T_1e + 10.0                     # floor: no cycle worth the name below
+    hi = T_3e_want
+    def pinch_at(t):
+        return orc_pinch(double_stage_rankine(case.fluid, T_1e, t),
+                         T_w_hot, T_w_cold, case.fluid, case.P)
+    if pinch_at(lo) < case.DT_pinch_ORC:
+        raise RuntimeError(
+            f"no ORC boiling temperature above {lo - 273.15:.1f} C clears the "
+            f"required pinch of {case.DT_pinch_ORC:.1f} K against water at "
+            f"{T_w_hot - 273.15:.1f} -> {T_w_cold - 273.15:.1f} C "
+            f"(best is {pinch_at(lo):+.2f} K). The water glide is too large "
+            f"for a cycle that boils at one temperature: reduce DT_3C_2C, or "
+            f"raise the water temperatures, or relax DT_pinch_ORC.")
+    for _ in range(80):
+        mid = 0.5 * (lo + hi)
+        if pinch_at(mid) >= case.DT_pinch_ORC:
+            lo = mid
+        else:
+            hi = mid
+    rank = double_stage_rankine(case.fluid, T_1e, lo)
+    rank["T_3e_uncorrected"] = T_3e_want
+    rank["pinch"] = orc_pinch(rank, T_w_hot, T_w_cold, case.fluid, case.P)
+    return rank
+
+
 def cycle_state_points(case, T_2d=None):
     """ORC and heat-pump state points, and the two cycle efficiencies.
 
@@ -1664,7 +2581,15 @@ def cycle_state_points(case, T_2d=None):
     T["T_2c"] = T["T_3c"] - case.DT_3C_2C
     T["T_2h"] = T["T_3c"] + case.DT_2H_3C
 
-    rank = double_stage_rankine(case.fluid, T["T_1e"], T["T_3e"])
+    # T["T_3e"] above is only the OLD hot-end rule, kept so the uncorrected
+    # value stays visible. What the water can actually deliver is decided by
+    # the whole evaporator, so the boiling temperature comes back from the
+    # pinch check and is written into T -- otherwise the reported state points
+    # and the efficiency would describe different cycles. This runs on the
+    # correction pass too, with the realised T_2d.
+    rank = feasible_rankine(case, T["T_1e"], T["T_2d"], T["T_3d"])
+    T["T_3e_hot_end_rule"] = T["T_3e"]
+    T["T_3e"] = rank["T_3e"]
     hp = two_stage_htheatpump_2regs(case.refrig, T["T_13h"], T["T_2h"],
                                     case.DT_sub)
     for name, v in (("rank_eff", rank.get("rank_eff")),
@@ -2359,10 +3284,23 @@ def css_report(case, r):
     print("CYCLIC STEADY STATE")
     print("=" * 66)
     if r["lambda_overridden"]:
-        print("  NOTE  lambda forced to 0. A non-zero loss surplus cannot be")
+        print(f"  NOTE  lambda forced to 0, from case.loss_surplus = "
+              f"{case.loss_surplus:.3f}. A non-zero loss surplus cannot be")
         print("        absorbed at CSS: the state returns to itself and this")
         print("        model has no loss path, so charge == discharge exactly.")
+        print("        The ZERO is what drove this run; the 0.050 in the Case")
+        print("        is inert here and affects only energy_budget called on")
+        print("        its own.")
         print()
+    if r["T"].get("T_3e_hot_end_rule") is not None:
+        old = r["T"]["T_3e_hot_end_rule"] - 273.15
+        new = r["T"]["T_3e"] - 273.15
+        if new < old - 1e-6:
+            print(f"  NOTE  ORC boiling temperature set by the EVAPORATOR "
+                  f"PINCH, not by DT_2D_3E:")
+            print(f"        hot-end rule would give {old:7.2f} C; the pinch "
+                  f"allows {new:7.2f} C.")
+            print()
     print(f"  N_wells          {r['N_wells']:10.4f}   from latent heat alone, not solved")
     print(f"  m_dot charge     {r['m1_ch']:10.4f} kg/s per leg-pair, pinned by the glide")
     print(f"  m_dot discharge  {r['m1_dc']:10.4f} kg/s per leg-pair, pinned by the glide")

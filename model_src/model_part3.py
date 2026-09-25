@@ -21,6 +21,132 @@ def T_m_bottom(case):
     return case.T_m - case.DT_3C_2C * (case.N_lay - 1) / case.N_lay
 
 
+def _orc_cold_composite(rank, fluid, n=300):
+    """The ORC-side composite curve of the evaporator: (Q, T), cold end first.
+
+    Two cold streams share the water:
+
+      * the MAIN stream, 1 kg per kg of evaporator flow, from state 10e to
+        state 3e at p_evape -- liquid preheat, then boiling at the constant
+        temperature T_3e;
+      * the REHEAT stream, y_frac of the flow, from 5e to 6e at p_inte,
+        superheated vapour throughout.
+
+    Both are built on real enthalpy, so the latent plateau appears as a
+    vertical segment rather than being smeared into a straight line in T.
+    That matters: the plateau is where this evaporator pinches.
+    """
+    y = rank["y_frac"]
+    p_e, p_i = rank["p_evape"], rank["p_5e"]
+    h10, h3 = rank["h_10e"], rank["h_3e"]
+    h5, h6 = rank["h_5e"], rank["h_6e"]
+    T10, T3 = rank["T_10e"], rank["T_3e"]
+    T5, T6 = rank["T_5e"], rank["T_6e"]
+    h_bub = CP.PropsSI("H", "P", p_e, "Q", 0, fluid) / 1000.0
+
+    # sample in ENTHALPY, not temperature: a (T, p) call exactly on the
+    # saturation line raises, and the preheat ends exactly there
+    h_pre = np.linspace(h10, h_bub, n)
+    T_pre = np.array([CP.PropsSI("T", "H", x * 1000.0, "P", p_e, fluid)
+                      for x in h_pre])
+    h_rh = np.linspace(h5, h6, n)
+    T_rh = np.array([CP.PropsSI("T", "H", x * 1000.0, "P", p_i, fluid)
+                     for x in h_rh])
+
+    def Q_main(t):
+        if t <= T10:
+            return 0.0
+        if t >= T3:
+            return h3 - h10                      # preheat AND latent
+        return float(np.interp(t, T_pre, h_pre)) - h10
+
+    def Q_reheat(t):
+        if t <= T5:
+            return 0.0
+        if t >= T6:
+            return y * (h6 - h5)
+        return y * (float(np.interp(t, T_rh, h_rh)) - h5)
+
+    lo, hi = min(T10, T5), max(T3, T6)
+    grid = set(np.linspace(lo, hi, 4 * n))
+    grid |= {T10, T5, T6, T3, np.nextafter(T3, lo)}   # break points
+    Ts = np.array(sorted(t for t in grid if lo <= t <= hi))
+    Qs = np.array([Q_main(t) + Q_reheat(t) for t in Ts])
+    keep = np.concatenate(([True], np.diff(Qs) > 1e-12))
+    return Qs[keep], Ts[keep]
+
+
+def orc_pinch(rank, T_w_hot, T_w_cold, fluid, P_water, n=600):
+    """Smallest water-minus-ORC temperature difference in the evaporator [K].
+
+    Negative when the two composite curves cross, which is a second-law
+    violation: the reported ORC efficiency is then unreachable, whatever the
+    component efficiencies.
+
+    The water is the hot stream and follows REAL enthalpy at `P_water`, not a
+    straight line in temperature, and the search runs over an even grid in Q
+    that includes every break point. The pinch is found wherever it lies; it
+    is emphatically not assumed to sit at an end. For the case as shipped in
+    v0.8 it sat at 23 % of the duty, where boiling begins.
+    """
+    Qc, Tc = _orc_cold_composite(rank, fluid)
+    Q_total = Qc[-1]
+    Tw = np.linspace(T_w_cold, T_w_hot, 400)
+    hw = np.array([CP.PropsSI("H", "T", t, "P", P_water, "Water") / 1000.0
+                   for t in Tw])
+    Qh = (hw - hw[0]) * Q_total / (hw[-1] - hw[0])    # water flow scales out
+    Qq = np.unique(np.concatenate([np.linspace(0.0, Q_total, n), Qc, Qh]))
+    Qq = Qq[(Qq >= 0.0) & (Qq <= Q_total)]
+    return float(np.min(np.interp(Qq, Qh, Tw) - np.interp(Qq, Qc, Tc)))
+
+
+def feasible_rankine(case, T_1e, T_w_hot, T_w_cold):
+    """The ORC at the highest boiling temperature the water can actually reach.
+
+    The old rule set the evaporating temperature from the HOT END alone,
+    T_3e = T_2d - DT_2D_3E, and never looked at the rest of the exchanger.
+    With a 55 K water glide against a cycle that takes ~76 % of its heat at
+    one constant temperature, that is not a small error: the curves crossed by
+    30 K and the quoted eta_ORC = 0.232 was unachievable.
+
+    So: start from the old rule, keep it if it already clears
+    `case.DT_pinch_ORC`, and otherwise bisect T_3e DOWNWARD until the pinch
+    equals the requirement. Returns the rank dict, with two extra keys
+    recording what happened.
+    """
+    T_3e_want = T_w_hot - case.DT_2D_3E
+    rank = double_stage_rankine(case.fluid, T_1e, T_3e_want)
+    pinch = orc_pinch(rank, T_w_hot, T_w_cold, case.fluid, case.P)
+    if pinch >= case.DT_pinch_ORC:
+        rank["T_3e_uncorrected"] = T_3e_want
+        rank["pinch"] = pinch
+        return rank
+
+    lo = T_1e + 10.0                     # floor: no cycle worth the name below
+    hi = T_3e_want
+    def pinch_at(t):
+        return orc_pinch(double_stage_rankine(case.fluid, T_1e, t),
+                         T_w_hot, T_w_cold, case.fluid, case.P)
+    if pinch_at(lo) < case.DT_pinch_ORC:
+        raise RuntimeError(
+            f"no ORC boiling temperature above {lo - 273.15:.1f} C clears the "
+            f"required pinch of {case.DT_pinch_ORC:.1f} K against water at "
+            f"{T_w_hot - 273.15:.1f} -> {T_w_cold - 273.15:.1f} C "
+            f"(best is {pinch_at(lo):+.2f} K). The water glide is too large "
+            f"for a cycle that boils at one temperature: reduce DT_3C_2C, or "
+            f"raise the water temperatures, or relax DT_pinch_ORC.")
+    for _ in range(80):
+        mid = 0.5 * (lo + hi)
+        if pinch_at(mid) >= case.DT_pinch_ORC:
+            lo = mid
+        else:
+            hi = mid
+    rank = double_stage_rankine(case.fluid, T_1e, lo)
+    rank["T_3e_uncorrected"] = T_3e_want
+    rank["pinch"] = orc_pinch(rank, T_w_hot, T_w_cold, case.fluid, case.P)
+    return rank
+
+
 def cycle_state_points(case, T_2d=None):
     """ORC and heat-pump state points, and the two cycle efficiencies.
 
@@ -69,7 +195,15 @@ def cycle_state_points(case, T_2d=None):
     T["T_2c"] = T["T_3c"] - case.DT_3C_2C
     T["T_2h"] = T["T_3c"] + case.DT_2H_3C
 
-    rank = double_stage_rankine(case.fluid, T["T_1e"], T["T_3e"])
+    # T["T_3e"] above is only the OLD hot-end rule, kept so the uncorrected
+    # value stays visible. What the water can actually deliver is decided by
+    # the whole evaporator, so the boiling temperature comes back from the
+    # pinch check and is written into T -- otherwise the reported state points
+    # and the efficiency would describe different cycles. This runs on the
+    # correction pass too, with the realised T_2d.
+    rank = feasible_rankine(case, T["T_1e"], T["T_2d"], T["T_3d"])
+    T["T_3e_hot_end_rule"] = T["T_3e"]
+    T["T_3e"] = rank["T_3e"]
     hp = two_stage_htheatpump_2regs(case.refrig, T["T_13h"], T["T_2h"],
                                     case.DT_sub)
     for name, v in (("rank_eff", rank.get("rank_eff")),
@@ -764,10 +898,23 @@ def css_report(case, r):
     print("CYCLIC STEADY STATE")
     print("=" * 66)
     if r["lambda_overridden"]:
-        print("  NOTE  lambda forced to 0. A non-zero loss surplus cannot be")
+        print(f"  NOTE  lambda forced to 0, from case.loss_surplus = "
+              f"{case.loss_surplus:.3f}. A non-zero loss surplus cannot be")
         print("        absorbed at CSS: the state returns to itself and this")
         print("        model has no loss path, so charge == discharge exactly.")
+        print("        The ZERO is what drove this run; the 0.050 in the Case")
+        print("        is inert here and affects only energy_budget called on")
+        print("        its own.")
         print()
+    if r["T"].get("T_3e_hot_end_rule") is not None:
+        old = r["T"]["T_3e_hot_end_rule"] - 273.15
+        new = r["T"]["T_3e"] - 273.15
+        if new < old - 1e-6:
+            print(f"  NOTE  ORC boiling temperature set by the EVAPORATOR "
+                  f"PINCH, not by DT_2D_3E:")
+            print(f"        hot-end rule would give {old:7.2f} C; the pinch "
+                  f"allows {new:7.2f} C.")
+            print()
     print(f"  N_wells          {r['N_wells']:10.4f}   from latent heat alone, not solved")
     print(f"  m_dot charge     {r['m1_ch']:10.4f} kg/s per leg-pair, pinned by the glide")
     print(f"  m_dot discharge  {r['m1_dc']:10.4f} kg/s per leg-pair, pinned by the glide")

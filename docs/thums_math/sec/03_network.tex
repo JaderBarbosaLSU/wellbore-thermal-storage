@@ -210,40 +210,154 @@ the state variable}. In two-phase, $\Tpcm=\Tm$ is the temperature of the
 single phase there is no front: $\Tpcm$ is the \emph{volume mean} of the cell,
 and the resistance that belongs with a mean is mean-to-surface.
 
-Take the cell as an annulus $r_{e}\le r\le r_{o}$, adiabatic at $r_{o}$ --- the
-neighbouring cell is identical, so that boundary is a symmetry plane --- storing
-sensible heat at a uniform volumetric rate $s=\rho c\,\mathrm{d}T/\mathrm{d}t$.
-Quasi-steady, the heat crossing radius $r$ is what the material beyond it
-stores,
+The derivation is elementary but it is set out in full below, because the
+result is used everywhere in the single-phase branches and because each step
+carries a modelling choice that is easy to make silently.
+
+\subsubsection*{Step 1: what is being computed}
+
+The quantity wanted is a \emph{mean-to-surface} resistance,
+\begin{equation}
+  R'_{\mathrm{bulk}} \;\equiv\; \frac{\overline{T}-T_{s}}{Q'},
+  \qquad
+  \overline{T} \;\equiv\; \frac{1}{V}\int_{V} T\,\mathrm{d}V,
+  \label{eq:bulk-def}
+\end{equation}
+and not the surface-to-surface resistance of Eq.~\eqref{eq:he}. The averaging
+is not a choice of convenience: the state variable is $E'$, the \emph{total}
+energy of the cell per unit tube length, so the temperature the formulation
+inverts out of it is by construction the volume mean. Any other weighting would
+be inconsistent with the definition of $E'$ itself.
+
+\subsubsection*{Step 2: a field to average}
+
+A mean needs a profile, and a profile needs a heat-flow model. Take the cell as
+an annulus $r_{e}\le r\le r_{o}$, adiabatic at $r_{o}$ --- the neighbouring cell
+is identical, so that boundary is a symmetry plane --- and quasi-steady, so that
+its stored energy changes at a uniform volumetric rate
+$s=\rho c\,\mathrm{d}T/\mathrm{d}t$ while the tube carries the whole flux. A
+uniformly distributed storage rate is mathematically a uniform volumetric
+source, and the problem becomes the classical one of steady conduction with
+uniform generation:
+\begin{equation}
+  \frac{k}{r}\frac{\mathrm{d}}{\mathrm{d}r}
+    \left(r\frac{\mathrm{d}T}{\mathrm{d}r}\right) + s \;=\; 0,
+  \qquad
+  \left.\frac{\mathrm{d}T}{\mathrm{d}r}\right|_{r_{o}} = 0 .
+  \label{eq:bulk-pde}
+\end{equation}
+
+\subsubsection*{Step 3: integrate once --- the flux}
+
+One integration of Eq.~\eqref{eq:bulk-pde} gives
+$rk\,\mathrm{d}T/\mathrm{d}r=-sr^{2}/2+C_{1}$, and the adiabatic condition at
+$r_{o}$ fixes $C_{1}=sr_{o}^{2}/2$:
 \begin{equation}
   -k\,2\pi r\,\frac{\mathrm{d}T}{\mathrm{d}r}
-  \;=\; s\,\pi\left(r_{o}^{2}-r^{2}\right),
+  \;=\; -\,s\,\pi\left(r_{o}^{2}-r^{2}\right).
   \label{eq:bulk-ode}
 \end{equation}
-which integrates to
+Equation~\eqref{eq:bulk-ode} states that whatever crosses radius $r$ is what the
+material beyond it stores. Evaluated at $r=r_{e}$ it returns the cell energy
+balance, $\left|Q'\right|=s\pi(r_{o}^{2}-r_{e}^{2})$, which is a check that $s$
+and $Q'$ are the same statement rather than two independent quantities.
+
+\subsubsection*{Step 4: integrate again --- the profile}
+
+Writing $\theta(r)=T(r)-T(r_{e})$ and integrating Eq.~\eqref{eq:bulk-ode} from
+the tube outward,
 \begin{equation}
-  T(r_{e})-T(r) \;=\; \frac{s}{2k}
+  \theta(r) \;=\; \frac{s}{2k}\int_{r_{e}}^{r}
+    \left(\frac{r_{o}^{2}}{r'}-r'\right)\mathrm{d}r'
+  \;=\; \frac{s}{2k}
   \left[r_{o}^{2}\ln\frac{r}{r_{e}}-\frac{r^{2}-r_{e}^{2}}{2}\right].
   \label{eq:bulk-profile}
 \end{equation}
-Averaging Eq.~\eqref{eq:bulk-profile} over the volume and dividing by
-$Q'=s\pi(r_{o}^{2}-r_{e}^{2})$ gives $R'_{\mathrm{bulk}}=S/2\pi k$ with, writing
-$\beta=r_{o}/r_{e}$,
+
+\subsubsection*{Step 5: average over the volume}
+
+With the annular element $\mathrm{d}V=2\pi r\,\mathrm{d}r$ per unit length,
 \begin{equation}
-  \boxed{\;S \;=\; \frac{\beta^{4}\ln\beta-\dfrac{\beta^{4}}{2}
-  +\dfrac{\beta^{2}}{2}-\dfrac{\left(\beta^{2}-1\right)^{2}}{4}}
-  {\left(\beta^{2}-1\right)^{2}}\;}
+  \overline{\theta} \;=\;
+  \frac{\displaystyle\int_{r_{e}}^{r_{o}}\theta(r)\,2\pi r\,\mathrm{d}r}
+       {\pi\left(r_{o}^{2}-r_{e}^{2}\right)}
+  \;=\; \frac{2}{r_{o}^{2}-r_{e}^{2}}
+        \int_{r_{e}}^{r_{o}}\theta(r)\,r\,\mathrm{d}r ,
+  \label{eq:bulk-average}
+\end{equation}
+which requires only two elementary integrals, with $\beta=r_{o}/r_{e}$:
+\begin{equation}
+  \int_{r_{e}}^{r_{o}}\! r\ln\frac{r}{r_{e}}\,\mathrm{d}r
+    = \frac{r_{o}^{2}}{2}\ln\beta-\frac{r_{o}^{2}-r_{e}^{2}}{4},
+  \qquad
+  \int_{r_{e}}^{r_{o}}\!\left(r^{2}-r_{e}^{2}\right) r\,\mathrm{d}r
+    = \frac{r_{o}^{4}-r_{e}^{4}}{4}
+      -\frac{r_{e}^{2}\left(r_{o}^{2}-r_{e}^{2}\right)}{2}.
+  \label{eq:bulk-integrals}
+\end{equation}
+
+\subsubsection*{Step 6: form the resistance and non-dimensionalise}
+
+Dividing Eq.~\eqref{eq:bulk-average} by $Q'=s\pi(r_{o}^{2}-r_{e}^{2})$ removes
+$s$ entirely --- as it must, or the ``resistance'' would depend on how hard the
+cell was being driven. Writing $R'_{\mathrm{bulk}}=S/2\pi k$ defines the shape
+factor $S=2\pi k R'_{\mathrm{bulk}}$, and substituting $r_{o}=\beta r_{e}$ into
+Eqs.~\eqref{eq:bulk-average}--\eqref{eq:bulk-integrals} gives
+\begin{equation}
+  \boxed{\;S \;=\;
+  \frac{4\beta^{4}\ln\beta-3\beta^{4}+4\beta^{2}-1}
+       {4\left(\beta^{2}-1\right)^{2}}\;}
   \label{eq:shape-factor}
 \end{equation}
 
 \noindent
 $S$ depends on \textbf{geometry alone} --- $k$ cancels --- so one shape factor
-serves both phases and only the conductivity changes between them. For the
-default cell $\beta=2.1086$ and $S=0.34672$, against $\ln\beta=0.74604$ for the
-surface-to-surface annulus: the mean-to-surface resistance is smaller by a
-factor $2.152$, the cylindrical analogue of the familiar $1/3$ for a plane slab
-with uniform generation. Equation~\eqref{eq:shape-factor} was checked against
-numerical quadrature of the same integral to six decimals.
+serves both phases and only the conductivity changes between them.
+
+\subsubsection*{Step 7: two checks}
+
+\noindent\textbf{(a) The thin-annulus limit.} Write the wall thickness of the
+annulus as $L=r_{o}-r_{e}$, so that $\beta=1+L/r_{e}$, and expand
+Eq.~\eqref{eq:shape-factor} for $L/r_{e}\ll1$. This gives $S\to L/3r_{e}$ and
+therefore
+\begin{equation}
+  R'_{\mathrm{bulk}} \;\longrightarrow\;
+  \frac{L/3r_{e}}{2\pi k}
+  \;=\; \frac{L}{3k\left(2\pi r_{e}\right)}
+  \;=\; \frac{L}{3kA},
+  \label{eq:slab-limit}
+\end{equation}
+with $A$ the surface area per unit length: the mean-to-surface resistance of a
+plane slab with uniform generation. The convergence is fast --- at $L/r_{e}=0.2$
+the ratio $S/(L/3r_{e})$ is already $0.9965$, and at $0.05$ it is $0.9998$. The
+cylindrical result is the familiar $1/3$ deformed by curvature, and nothing
+more.
+
+\medskip
+\noindent\textbf{(b) Against the surface-to-surface annulus.} For the default
+cell $\beta=2.1086$ and $S=0.34672$, against $\ln\beta=0.74604$ in
+Eq.~\eqref{eq:he}: the mean-to-surface resistance is $46.5\%$ of the
+surface-to-surface one. Smaller is the only defensible sign, and not by a
+factor so near unity that the distinction would be cosmetic. In absolute terms,
+
+\begin{center}
+\begin{tabular}{@{}l r r@{}}
+\toprule
+ & $R'_{\mathrm{bulk}}=S/2\pi k$ & $R'_{\mathrm{annulus}}=\ln\beta/2\pi k$ \\
+ & [\si{\meter\kelvin\per\watt}] & [\si{\meter\kelvin\per\watt}] \\
+\midrule
+solid, $k_{s}=\SI{0.60}{\watt\per\meter\per\kelvin}$  & 0.0920 & 0.1979 \\
+liquid, $k_{l}=\SI{0.45}{\watt\per\meter\per\kelvin}$ & 0.1226 & 0.2639 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Equation~\eqref{eq:shape-factor} was additionally checked against numerical
+quadrature of Eq.~\eqref{eq:bulk-average} to six decimals, and every step above
+against a symbolic algebra system.
+
+\subsubsection*{Step 8: back into the network as a thickness}
 
 The network of \S\ref{sec:network:fins} takes a thickness rather than a
 resistance, and wraps it in the fin efficiency and the finned-area ratio. Fed
@@ -254,9 +368,10 @@ back as an equivalent thickness,
   \delta_{\mathrm{eq}} = r_{e}\left(e^{S}-1\right) = \SI{8.74}{\milli\meter},
   \label{eq:delta-eq}
 \end{equation}
-the single-phase branches stay inside exactly the same machinery as the
-two-phase ones instead of needing a second path. Like $S$, it is a property of
-the geometry alone. Functions: \code{bulk\_shape\_factor},
+against $\delta_{\mathrm{merge}}=r_{o}-r_{e}=\SI{23.37}{\milli\meter}$. The
+single-phase branches then stay inside exactly the same machinery as the
+two-phase ones instead of needing a second path. Like $S$, $\delta_{\mathrm{eq}}$
+is a property of the geometry alone. Functions: \code{bulk\_shape\_factor},
 \code{bulk\_equivalent\_delta}.
 
 \begin{center}

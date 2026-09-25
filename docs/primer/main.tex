@@ -40,7 +40,7 @@
 
 \title{\textbf{P2H2P wellbore storage}\\[4pt]
 \large A primer: how the model works\\[8pt]
-\normalsize Companion to \code{P2H2P\_model.ipynb}, model version 0.6}
+\normalsize Companion to \code{P2H2P\_model.ipynb}, model version 0.8}
 \author{Craft \& Hawkins Department of Petroleum Engineering\\
 Louisiana State University}
 \date{\today}
@@ -154,8 +154,8 @@ which takes a few tens of seconds.
 
 \node[blk, below=of in] (cyc) {%
   \textbf{1. Thermodynamic cycles}\hfill\emph{plant, once}\\[2pt]
-  heat pump (two stage, two regenerators) $\Rightarrow \mathrm{COP}=2.956$;
-  ORC (double stage) $\Rightarrow \eta_{\mathrm{ORC}}=0.233$};
+  heat pump (two stage, two regenerators) $\Rightarrow \mathrm{COP}=2.887$;
+  ORC (double stage) $\Rightarrow \eta_{\mathrm{ORC}}=0.174$};
 
 \node[blk, below=of cyc] (bud) {%
   \textbf{2. Energy budget for one cycle}\hfill\emph{field}\\[2pt]
@@ -412,7 +412,12 @@ in the default case $\mathrm{NTU}$ runs from $0.083$ to $0.602$, so the two
 forms differ by \SI{4}{\percent} to \SI{33}{\percent} --- largest early, when
 the melt layer is thin and the exchanger is at its best.
 
-\paragraph{Which shell the heat crosses --- and why it is not obvious.}
+$\Ui$ itself is defined in \S\ref{sec:Ui}. Everything between here and there is
+about the one term in it that changes as the segment melts.
+
+\subsection{Which shell the heat crosses --- and why it is not obvious}
+\label{sec:shell-primer}
+
 The PCM-side term in $\Ui$ is a conduction shell growing \emph{outward from the
 tube wall}, $R'=\ln(1+\delta/r_e)/2\pi k$. So the model has to say what that
 shell is made of, and the answer is not the same in the two half-cycles.
@@ -483,13 +488,24 @@ T(r_e)-T(r)=\frac{s}{2k}\left[r_o^2\ln\frac{r}{r_e}-\frac{r^2-r_e^2}{2}\right].$
 Average over the volume, divide by $Q'=s\pi(r_o^2-r_e^2)$, and you get
 $R'_{\rm bulk}=S/2\pi k$ with $\beta=r_o/r_e$ and
 
-$$S=\frac{\beta^4\ln\beta-\beta^4/2+\beta^2/2-(\beta^2-1)^2/4}{(\beta^2-1)^2}.$$
+$$S=\frac{4\beta^4\ln\beta-3\beta^4+4\beta^2-1}{4\left(\beta^2-1\right)^2}.$$
 
-\textbf{$S$ depends on geometry alone} --- $k$ cancels --- so one shape factor
-does for both phases and only the conductivity changes. Here $\beta=2.109$ and
-$S=0.3467$ against $\ln\beta=0.7460$ for the surface-to-surface annulus: smaller
-by $2.152$, which is the cylindrical version of the $1/3$ you already know for a
-slab with uniform generation.
+\textbf{$S$ depends on geometry alone} --- $k$ cancels, as it must, or the
+``resistance'' would depend on how hard you were driving it --- so one shape
+factor does for both phases and only the conductivity changes. Here
+$\beta=2.109$ and $S=0.3467$ against $\ln\beta=0.7460$ for the
+surface-to-surface annulus: smaller by $2.152$, and smaller is the only
+defensible sign.
+
+If you want to check it against something you already know, call the wall
+thickness of the annulus $L=r_o-r_e$, so $\beta=1+L/r_e$, and expand for a thin
+one, $L/r_e\ll1$:
+$$S \;\longrightarrow\; \frac{L}{3r_e}
+\qquad\Longrightarrow\qquad
+R'_{\rm bulk}\to\frac{L/3r_e}{2\pi k}=\frac{L}{3kA},$$
+with $A=2\pi r_e$ the area per unit length. That is the mean-to-surface
+resistance of a uniformly-generating slab, straight out of the textbook. The
+curvature only deforms the familiar $1/3$.
 
 It goes back into the network as an equivalent thickness,
 $\delta_{\rm eq}=r_e(e^S-1)=\SI{8.74}{\milli\meter}$, so the fin efficiency and
@@ -530,16 +546,105 @@ liquid at the tube, solid in the middle and liquid outside --- three regions. No
 single thickness represents that. The arrangement above is the better
 approximation, not a correct one, and that is what hypothesis H5 really assumes.
 
-\paragraph{Where $\Ui$ comes from.}
-$\Ui$ is the usual series network referred to the inner tube area: internal
-convection (Gnielinski), the fouling resistance, conduction through the tube
-wall, and then the PCM side --- the finned outer surface with its fin
-efficiency, in series with conduction across the annular melt layer of current
-thickness $\delta_i$. That last term is the one that changes as the segment
-melts, and it is what makes the problem nonlinear and interesting: the
-exchanger degrades as it fills. The melt thickness is recovered from $\Amelt$
-by inverting the finned-annulus area relation, which is why \code{delta\_from\_area}
-exists.
+%=======================================================================
+\section{The overall coefficient \texorpdfstring{$\Ui$}{Ui}}
+\label{sec:Ui}
+
+Everything above feeds one number. $\Ui$ is the usual series network, referred
+to the \emph{inner} tube area --- which is why the perimeter paired with it in
+Eq.~\eqref{eq:K} is $2\pi r_i$ and not the outer or the finned one:
+\begin{equation}
+  \boxed{\;
+  \Ui \;=\;
+  \Bigl[\,
+    \underbrace{\tfrac{1}{h_i}}_{\text{internal convection}}
+    \;+\;\underbrace{R''_{f,i}}_{\text{fouling}}
+    \;+\;\underbrace{\tfrac{r_i}{k_w}\ln\tfrac{r_e}{r_i}}_{\text{tube wall}}
+    \;+\;\underbrace{\tfrac{2\pi r_i}{P_T\,\eta_o\,h_e}}_{\text{PCM side}}
+  \,\Bigr]^{-1},
+  \qquad
+  h_e \;=\; \frac{k}{r_e\,\ln\!\left(1+\delta/r_e\right)} .
+  \;}
+  \label{eq:Ui}
+\end{equation}
+Every term is a resistance in \si{\meter\squared\kelvin\per\watt} \emph{on the
+inner area}, so they add. Taking them in order:
+
+\begin{itemize}
+\item $h_i$ is the water-side convective coefficient, from the Gnielinski
+  correlation with properties evaluated at the local bulk temperature. It is
+  re-evaluated at every segment and every step.
+\item $R''_{f,i}$ is a prescribed internal fouling resistance,
+  \SI{1e-3}{\meter\squared\kelvin\per\watt}. It is a constant, not a model.
+\item The wall term is plain cylindrical conduction through the steel,
+  $r_i \ln(r_e/r_i)/k_w$, referred to the inner area.
+\item The PCM term is the shell of \S\ref{sec:shell-primer}, and it is where the
+  geometry lives. $h_e$ is the shell conductance \emph{on the tube outer
+  surface}; $2\pi r_i/P_T$ moves it to the inner area, and $\eta_o$ discounts it
+  for the fins not being isothermal.
+\end{itemize}
+
+\noindent The fins enter through two quantities only. The finned perimeter
+\begin{equation}
+  P_T = 2\pi r_e + 2 n_f L_f = \SI{0.4924}{\meter}
+\end{equation}
+against a bare-tube $2\pi r_e = \SI{0.1324}{\meter}$ --- a factor of $3.72$,
+which is the whole point of putting fins there. And the overall surface
+efficiency
+\begin{equation}
+  \eta_o = 1-\frac{n_f A_f}{A_t}\left(1-\eta_f\right),
+  \qquad
+  \eta_f = \frac{\tanh(m L_c)}{m L_c},
+  \qquad
+  m=\sqrt{\frac{2 h_e}{k_w t_f}},
+  \quad L_c = L_f + \tfrac{t_f}{2},
+\end{equation}
+with $A_f = L_{\rm tube}(2L_f+t_f)$ the surface of one fin and
+$A_t = 2L_{\rm tube}(\pi r_e + n_f L_f)$ the total outer surface. At the design
+geometry the fins are short and the PCM is a poor conductor, so $mL_c$ stays
+between $0.24$ and $0.35$ over a half-cycle and $\eta_f$ between $0.98$ and
+$0.96$: the fins are nearly isothermal, $\eta_o\approx0.97$, and the discount
+hardly matters. Change $L_f$ or $k_w$ enough and it will.
+
+\paragraph{A trap worth knowing about.}
+$k_w$ appears twice in Eq.~\eqref{eq:Ui} and in $\eta_f$ with \emph{different}
+physical meanings --- the tube-wall conductivity, and the \emph{fin}
+conductivity --- and one argument carries both. If you fin the tube in a
+different material, or if you are tempted to pass a PCM conductivity into that
+slot, the model will accept it silently and give you a wrong $\eta_f$.
+
+\paragraph{Which term actually matters.}
+Worth knowing before you sweep anything. For the top segment over a charge at
+cyclic steady state:
+
+\begin{center}
+\begin{tabular}{@{}l r r r@{}}
+\toprule
+term & resistance [\si{\meter\squared\kelvin\per\watt}] & share of the total
+  & moves? \\
+\midrule
+internal convection & \num{1.07e-4} & \SI{1}{}--\SI{2}{\percent} & barely \\
+fouling             & \num{1.00e-3} & \SI{12}{}--\SI{21}{\percent} & no \\
+tube wall           & \num{9.43e-5} & \SI{1}{}--\SI{2}{\percent} & no \\
+PCM side            & \num{3.5e-3}--\num{7.1e-3}
+                    & \SI{74}{}--\SI{86}{\percent} & \textbf{yes, by $2\times$} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Three quarters to six sevenths of the resistance is on the PCM side, and it is
+the only term that moves --- it doubles over the half-cycle as the shell
+thickens. That is what makes the problem nonlinear and interesting: the
+exchanger degrades as it fills. It is also why a parametric study of $k_l$,
+$k_s$, the fin geometry or the cell radius will show up in the results while one
+of $h_i$ is nearly invisible. The fouling resistance is the surprise --- a
+guessed constant carrying up to a fifth of the total, so it deserves a sweep of
+its own.
+
+Finally, the thickness $\delta$ that $h_e$ needs is recovered from the state
+variable by inverting the finned-annulus area relation --- the fins occupy metal
+volume that is not PCM --- which is what \code{delta\_from\_area} is for.
 
 %=======================================================================
 \section{Integrating in time}
@@ -662,7 +767,7 @@ one cascade rather than two.
 Everything so far describes one half-cycle from a given starting state. A plant
 repeating a daily schedule does not start from a cold, fully solid store after
 the first day, so the cycle must be repeated until the state reproduces itself.
-That takes about \num{70} cycles here, and the count grows with the exchanger count.
+That takes about \num{71} cycles here, and the count grows with the exchanger count.
 
 At that point something restrictive happens. The enthalpy change over a
 complete cycle is zero by definition, and the store is adiabatic (H6), so
@@ -726,6 +831,48 @@ about performance: this field is \SI{1.2}{\percent} larger than a
 efficiency from the delivered energy and the \emph{target} input would flatter
 it by that amount.
 
+\paragraph{What sets the ORC evaporating temperature --- read this before you
+sweep the glide.}
+Not the hot end. Until v0.9 the model set it by an approach below the exchanger
+outlet, $T_{3e}=T_{2d}-\Delta T_{2D,3E}$, and never looked at the rest of the
+evaporator. That was wrong, and not by a little.
+
+Think about the two curves. The water is \textbf{sensible}: it glides the whole
+$\Delta T_{3C,2C}=\SI{55}{\kelvin}$, from \SI{146}{\celsius} down to
+\SI{91}{\celsius}, because that glide is what pins the flow. The cyclopentane is
+\textbf{latent} over most of its duty: it takes \SI{76}{\percent} of its heat
+boiling at one temperature. A sloping line and a flat one meet in the middle,
+and the hot-end rule put the flat one at \SI{134}{\celsius} --- above the water
+over four fifths of the exchanger. Heat was flowing from cold to hot. The pinch
+was $\mathbf{-30}$~\textbf{K}.
+
+There is a back-of-the-envelope version worth carrying in your head. If the
+cycle takes a fraction $\phi$ of its heat at one temperature, the water can only
+supply it from the part of its glide lying above that temperature, so
+$$\frac{T_{2d}-T_{3e}}{T_{2d}-T_{3d}} \;\ge\; \phi .$$
+With $\phi=0.76$, $T_{3e}$ has to sit at least three quarters of the way down
+the glide. The hot-end rule put it one fifth of the way down.
+
+\code{orc\_pinch} now builds both curves properly and reports the smallest gap
+anywhere; \code{feasible\_rankine} lowers $T_{3e}$ until that gap reaches
+\code{DT\_pinch\_ORC} (default \SI{5}{\kelvin}). At the design point that means
+\SI{95.4}{\celsius} instead of \SI{134.1}{\celsius}, and $\eta_{\mathrm{ORC}}$
+of $0.174$ instead of $0.232$.
+
+\medskip
+\noindent\textbf{Why this matters more to you than to anyone else.} You are
+about to sweep $\Delta T_{3C,2C}$. Before v0.9 that sweep would have shown the
+glide as almost free: widen it, grade the cascade, cycle more PCM per well, and
+the ORC never notices. It notices now. Widening the glide pushes $T_{3e}$ down
+by roughly $\phi$ times the widening, and takes $\eta_{\mathrm{ORC}}$ with it.
+\textbf{The optimum glide is interior, and finding it is a genuinely
+interesting result} --- more interesting than any of the single-parameter
+sweeps, because the two effects pull in opposite directions and nothing in the
+model tells you in advance where they balance. Watch for the
+\code{validate\_case} warning that reports when the pinch has forced $T_{3e}$
+down, and plot $\eta_{\mathrm{RTE}}$ and $\Nwells$ against the glide on the same
+axis.
+
 \paragraph{One correction pass.}
 The ORC evaporating temperature follows the exchanger outlet, which is now a
 result. So the calculation is run twice: once with a provisional outlet, then
@@ -749,10 +896,10 @@ rather than with the physics.
 \label{tab:design}
 \begin{tabular}{@{}l r l@{}}
 \toprule
-$\Nwells$ & 11.632 & from latent heat alone, not solved \\
+$\Nwells$ & 15.659 & from latent heat alone, not solved \\
 $\md^{\mathrm{ch}}$, $\md^{\mathrm{dc}}$ & 0.966, 0.971 &
   \si{\kilogram\per\second} per leg-pair \\
-cycles to convergence & 70 & \\
+cycles to convergence & 71 & \\
 $\eta_{\mathrm{storage}}$ & 1.000000 & Eq.~\eqref{eq:unity} \\
 \midrule
 \textbf{deviation} & \textbf{+4.527} & \si{\percent} \\
@@ -780,19 +927,19 @@ question.
 \toprule
  & meaning & value & what moves it \\
 \midrule
-$\eta_T$ & discharge thermal $\to$ net electric & 0.1898 &
+$\eta_T$ & discharge thermal $\to$ net electric & 0.1410 &
   the power block alone \\
-$\eta_{T,\mathrm{eff}}$ & the same, less discharge pumping & 0.1850 &
+$\eta_{T,\mathrm{eff}}$ & the same, less discharge pumping & 0.1362 &
   tube bore, flow, well depth \\
-$\eta_{\mathrm{RTE}}$ & round trip, both parasitics & 0.4367 &
+$\eta_{\mathrm{RTE}}$ & round trip, both parasitics & 0.3140 &
   COP, $\eta_{\mathrm{ORC}}$, parasitics \\
 $\varepsilon_{\mathrm{RTE}}$ & $\eta_{\mathrm{RTE}}\times$ cycled fraction &
-  0.4192 & anything leaving PCM unused \\
+  0.3014 & anything leaving PCM unused \\
 \midrule
 $\Delta E_{\mathrm{therm}}$ & thermal energy per well & \SI{4734}{\kilo\watt\hour} &
   $\hm$, $\rho$, $V_{\mathrm{well}}$ \\
 $\Delta E_{\mathrm{elec}}$ & net electric energy per well &
-  \SI{876}{\kilo\watt\hour} & the above $\times\ \eta_{T,\mathrm{eff}}$ \\
+  \SI{645}{\kilo\watt\hour} & the above $\times\ \eta_{T,\mathrm{eff}}$ \\
 $\rho_E$ & thermal energy density &
   \SI{171.0}{\kilo\watt\hour\per\meter\cubed} & $\hm$, $\rho$ \\
 \midrule
@@ -1152,8 +1299,9 @@ Four things that will otherwise cost you an afternoon:
   directly under the case, because it is the one \emph{numerical} setting you
   will have to change. It is a give-up limit on the cyclic-steady-state loop,
   and cycles to convergence grow with the exchanger count and with anything that
-  makes each unit work less hard: the design point needs about \num{70},
-  $\Nwells=16$ needs well over \num{200}, and
+  makes each unit work less hard: the design point needs about \num{71},
+  $\Nwells=17$ needs \num{142} and $\Nwells=20$ does not converge in
+  \num{400} at all, and
   $\hm=\SI{180}{\kilo\joule\per\kilogram}$ can need \num{300} or more.
 
   The failure mode is what makes this worth a paragraph. A run that has not

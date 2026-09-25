@@ -29,6 +29,7 @@ ENTRY = ('Case', 'simulate_css_corrected', 'simulate_css', 'css_report',
          'cycle_state_points', 'energy_budget', 'melting_temperatures',
          'T_m_bottom', 'layer_map', 'march_h', 'pcm_state', 'pcm_capacities',
          'segment_profile', 'unmirror_march', 'mixed_mean_outlet',
+         'orc_pinch', 'feasible_rankine',
          'conduction_shell', 'bulk_shape_factor', 'bulk_equivalent_delta',
          'delta_from_area', 'calculate_pressure_drop')
 
@@ -138,6 +139,57 @@ def validate_case(case, verbose=True):
     if case.n_times < 8:
         warn(f'n_times = {case.n_times}; the logarithmic grid needs enough '
              f'levels that the last step does not span most of the window')
+
+    # --- the working fluid is liquid water, and must stay that way --------
+    T_sat_w = CP.PropsSI('T', 'P', case.P, 'Q', 0, 'Water') - 273.15
+    if T_in_ch >= T_sat_w:
+        err(f'the charging inlet T_4c = {T_in_ch:.2f} C is at or above the '
+            f'saturation temperature of water at P = {case.P/1e5:.2f} bar, '
+            f'which is {T_sat_w:.2f} C. The model assumes single-phase '
+            f'liquid throughout (H7) and carries no boiling correlation, so '
+            f'it would report nonsense rather than fail. Raise case.P or '
+            f'lower T_m_C + DT_4C_M.')
+    elif T_sat_w - T_in_ch < 10.0:
+        warn(f'the charging inlet is {T_sat_w - T_in_ch:.2f} K below the '
+             f'saturation temperature of water at {case.P/1e5:.2f} bar; '
+             f'there is very little margin against boiling')
+
+    # --- approaches that are zero by construction -------------------------
+    # None of these is an error. Each is a place where the model quietly
+    # assumes an infinite exchanger, and a parametric study that leans on it
+    # will report an efficiency no hardware can reach.
+    if case.DT_3A_4A == case.DT_3A_13H:
+        warn(f'DT_3A_4A == DT_3A_13H == {case.DT_3A_4A:.3f} K, so the '
+             f'heat-pump source leaves the evaporator at exactly the '
+             f'evaporating temperature: a zero approach at that end, which '
+             f'needs infinite area. Make DT_3A_4A the smaller of the two for '
+             f'a finite evaporator.')
+    warn('the ORC regenerator has a zero approach by construction '
+         '(T_9e = T_7e in double_stage_rankine), so its duty is an upper '
+         'bound rather than a design value. This is structural, not a '
+         'setting you can change from Case.')
+
+    # --- the ORC evaporator has to obey the second law --------------------
+    try:
+        rank, _hp, Tst = cycle_state_points(case)
+        got = rank.get('pinch')
+        old = rank.get('T_3e_uncorrected')
+        if old is not None and rank['T_3e'] < old - 1e-6:
+            rank_old = double_stage_rankine(case.fluid, Tst['T_1e'], old)
+            warn(f'the ORC pinch forced the boiling temperature DOWN, from '
+                 f'{old - 273.15:.2f} C to {rank["T_3e"] - 273.15:.2f} C, and '
+                 f'with it eta_ORC from {rank_old["rank_eff"]:.4f} to '
+                 f'{rank["rank_eff"]:.4f}. The hot-end rule DT_2D_3E = '
+                 f'{case.DT_2D_3E:.1f} K is not what sets the evaporating '
+                 f'temperature here; the pinch at DT_pinch_ORC = '
+                 f'{case.DT_pinch_ORC:.1f} K is. This is the honest cost of a '
+                 f'{case.DT_3C_2C:.0f} K water glide against a fluid that '
+                 f'boils at one temperature.')
+        elif got is not None:
+            msgs.append(('info', f'ORC evaporator pinch {got:+.2f} K, '
+                                 f'requirement {case.DT_pinch_ORC:.1f} K'))
+    except Exception as e:                       # never block on a diagnostic
+        warn(f'could not evaluate the ORC pinch: {e}')
 
     if verbose:
         if not msgs:

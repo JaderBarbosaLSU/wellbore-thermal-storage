@@ -42,6 +42,40 @@ figures throughout --- the cycles are untouched by any of this. What the storage
 model determines is how much hardware the cycle needs, not how efficiently it
 runs.
 
+\subsection*{Headline results, version 0.9}
+
+That last sentence held for as long as the cycles were believed. At v0.9 both
+of them turned out to be wrong, and in the direction that matters
+(\S\ref{sec:defects:orcpinch}, \S\ref{sec:defects:ihx2}). The ORC evaporator was
+running heat uphill over four fifths of its surface, and the heat pump was
+creating \SI{4.8}{\percent} of its own condenser duty in a regenerator.
+
+\begin{center}
+\begin{tabular}{@{}l r r l@{}}
+\toprule
+ & v0.8 & \textbf{v0.9} & \\
+\midrule
+$\eta_{\mathrm{ORC}}$        & 0.2320 & \textbf{0.1738} & pinch, not hot end \\
+$\mathrm{COP}$               & 2.9563 & \textbf{2.8868} & IHX-2 flow split \\
+$\Nwells$                    & 11.632 & \textbf{15.659} & consequence of both \\
+$\eta_{\mathrm{RTE}}$        & 0.4367 & \textbf{0.3140} & consequence of both \\
+\midrule
+CSS deviation                & \SI{+4.527}{\percent} & \SI{+4.527}{\percent}
+  & \emph{unchanged} \\
+thermal per well [\si{\kilo\watt\hour}] & 4734.26 & 4734.26 & \emph{unchanged} \\
+$\rho_{E}$ [\si{\kilo\watt\hour\per\meter\cubed}] & 171.02 & 171.02
+  & \emph{unchanged} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The lower block is the evidence that the repair is confined to the cycles: not
+one storage quantity moves, in any digit carried. The upper block is the cost of
+having believed them. \textbf{Read $\eta_{\mathrm{RTE}}=0.31$, not $0.44$}, and
+read the earlier tables in this document as the record of how the storage model
+was arrived at rather than as current performance.
+
 %---------------------------------------------------------------------
 \subsection{The structure of the model}
 

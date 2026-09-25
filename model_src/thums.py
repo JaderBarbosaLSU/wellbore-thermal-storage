@@ -256,129 +256,63 @@ def two_stage_htheatpump_2regs(refrig, T_13h, T_2h, DT_sub):
   except ValueError:
       cpr_1 = 1.0
 
-  # Convergence loop for T_7h
-  T_7h = T_3h - 4.  # initial guess for T_7h
-  tol = 1e-4  # Tolerance for convergence
-  max_iter = 100 # Maximum iterations
-  p_7h = p_condh # State 7h is at condenser pressure
-
-  for _ in range(max_iter):
-      try:
-          # Calculate h_7h based on current T_7h and p_7h
-          h_7h_calc = CP.PropsSI('H', 'T', T_7h, 'P', p_7h, refrig)/1000.
-
-          # State 8h: Flash Gas two-phase mixture (p_inth, h_8h=h_7h_calc)
-          p_8h = p_inth
-          h_8h_calc = h_7h_calc # Isenthalpic expansion from 7h
-          # Ensure denominator is non-zero before calculating x_8h
-          if abs(h_10h - h_9h) > 1e-9:
-               x_8h_calc = (h_8h_calc - h_9h) / (h_10h - h_9h)
-          else:
-               x_8h_calc = 0.0 # If denominator is zero, assume quality is zero
-
-          # Ensure x_8h_calc is within [0, 1] bounds
-          x_8h_calc = max(0.0, min(1.0, x_8h_calc))
-
-          # Calculate T_12h based on IHX-1 effectiveness
-          T_12h_calc = T_3h - epsilon_IHX_1 * x_8h_calc * cpr_1 * (T_3h - T_10h)
-
-          # IHX-2 effectiveness (based on T_1h and T_13h, and T_12h and T_13h)
-          # Ensure denominator is non-zero
-          denominator_epsilon2 = (T_12h_calc - T_13h)
-          if abs(denominator_epsilon2) > 1e-9:
-               epsilon_IHX_2_calc = (T_1h - T_13h) / denominator_epsilon2
-          else:
-               epsilon_IHX_2_calc = 1.0 # Assume 100% effectiveness if temperature difference is zero
-
-
-          # CP_ratio_2:
-          try:
-              cpf_2 = CP.PropsSI('C', 'P', p_condh, 'Q', 0, refrig)
-              cpv_2 = CP.PropsSI('C', 'P', p_evaph, 'Q', 1, refrig)
-              # Avoid division by zero
-              if abs(cpf_2) > 1e-9:
-                   cpr_2_calc = cpv_2 / cpf_2
-              else:
-                   cpr_2_calc = 1.0 # Assume ratio is 1 if cpf is zero
-          except ValueError:
-              cpr_2_calc = 1.0
-
-          # State 4h: two-phase mixture (p_evaph, h_4h=h_9h)
-          p_4h = p_evaph
-          h_4h_calc = h_9h # Isenthalpic expansion from 9h
-          # Ensure denominator is non-zero before calculating x_4h
-          if abs(h_13h - h_14h) > 1e-9:
-              x_4h_calc = (h_4h_calc - h_14h) / (h_13h - h_14h)
-          else:
-               x_4h_calc = 0.0 # If denominator is zero, assume quality is zero
-
-          # Ensure x_4h_calc is within [0, 1] bounds
-          x_4h_calc = max(0.0, min(1.0, x_4h_calc))
-
-          # Calculate T_7h_new based on IHX-2 effectiveness
-          # Ensure denominator is non-zero before calculation
-          if abs(cpr_2_calc * (T_12h_calc - T_13h)) > 1e-9:
-               T_7h_new = T_12h_calc - epsilon_IHX_2_calc * x_4h_calc * cpr_2_calc * (T_12h_calc - T_13h)
-          else:
-               T_7h_new = T_7h # No change if denominator is zero
-
-          # Check for convergence of T_7h
-          if abs(T_7h_new - T_7h) < tol:
-              T_7h = T_7h_new # Update T_7h to the converged value
-              # After convergence, update all dependent state properties with the converged T_7h
-              h_7h = h_7h_calc
-              h_8h = h_8h_calc
-              x_8h = x_8h_calc
-              T_12h = T_12h_calc
-              epsilon_IHX_2 = epsilon_IHX_2_calc
-              cpr_2 = cpr_2_calc
-              h_4h = h_4h_calc
-              x_4h = x_4h_calc
-              break # Exit the loop if converged
-
-          T_7h = T_7h_new # Update guess for the next iteration
-
-      except ValueError as e:
-          print(f"Warning: CoolProp calculation failed in T_7h convergence loop: {e}. Breaking loop.")
-          # Assign NaN to dependent properties on error and break
-          h_7h, x_8h, T_12h, epsilon_IHX_2, cpr_2, h_4h, x_4h = np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan
-          break # Exit loop on CoolProp error
-
+  # --- the IHX network, closed by an exact enthalpy balance ---------------
+  # The two regenerators are closed by ENERGY, not by effectiveness-times-
+  # cp-ratio correlations. Which stream passes through each one matters:
+  #
+  #   IHX-1   liquid 3h -> 12h  (1 kg)   heats the FLASHED VAPOUR, x_8h,
+  #                                      from 10h to 11h
+  #   IHX-2   liquid 12h -> 7h  (1 kg)   heats the SUCTION stream, which is
+  #                                      what left the separator as LIQUID,
+  #                                      (1 - x_8h), from 13h to 1h
+  #
+  # x_8h appears on both sides, so the three relations are solved as a fixed
+  # point. The map is linear and strongly contracting here, so it converges
+  # in a handful of steps.
+  #
+  # Until v0.9 IHX-2 used x_4h -- the vapour QUALITY at the evaporator inlet
+  # -- where the flow SPLIT (1 - x_8h) belongs. A quality is not a flow
+  # fraction, and the cycle did not close: IHX-2 took 9.19 kJ/kg out of the
+  # liquid and put 21.76 kJ/kg into the vapour, and the condenser reported
+  # 271.43 kJ/kg against 258.33 kJ/kg of work plus evaporator heat. That is
+  # a 4.8 % creation of energy, and it inflated the COP.
+  p_7h = p_condh
+  dh_IHX1 = h_11h - h_10h            # per kg of flashed vapour
+  dh_IHX2 = h_1h - h_13h             # per kg of suction (low-stage) flow
+  x_8h = 0.3
+  for _n_ihx in range(200):
+      h_12h = h_3h - x_8h * dh_IHX1
+      h_7h = h_12h - (1.0 - x_8h) * dh_IHX2
+      x_new = (h_7h - h_9h) / (h_10h - h_9h)          # h_8h = h_7h
+      converged = abs(x_new - x_8h) < 1e-12
+      x_8h = x_new
+      if converged:
+          break
   else:
-      # After max iterations without convergence, assign the values from the last iteration
-      # Need to recalculate dependent variables one last time based on the final T_7h
-      try:
-          h_7h = CP.PropsSI('H', 'T', T_7h, 'P', p_7h, refrig)/1000.
-          if abs(h_10h - h_9h) > 1e-9:
-               x_8h = (h_7h - h_9h) / (h_10h - h_9h)
-          else:
-               x_8h = 0.0
-          x_8h = max(0.0, min(1.0, x_8h))
-          T_12h = T_3h - epsilon_IHX_1 * x_8h * cpr_1 * (T_3h - T_10h)
-          denominator_epsilon2 = (T_12h - T_13h)
-          if abs(denominator_epsilon2) > 1e-9:
-               epsilon_IHX_2 = (T_1h - T_13h) / denominator_epsilon2
-          else:
-               epsilon_IHX_2 = 1.0
-          try:
-               cpf_2 = CP.PropsSI('C', 'P', p_condh, 'Q', 0, refrig)
-               cpv_2 = CP.PropsSI('C', 'P', p_evaph, 'Q', 1, refrig)
-               if abs(cpf_2) > 1e-9:
-                    cpr_2 = cpv_2 / cpf_2
-               else:
-                    cpr_2 = 1.0
-          except ValueError:
-               cpr_2 = 1.0
-          h_4h = h_9h
-          if abs(h_10h - h_9h) > 1e-9:
-              x_4h = (h_4h - h_9h) / (h_10h - h_9h)
-          else:
-               x_4h = 0.0
-          x_4h = max(0.0, min(1.0, x_4h))
+      raise RuntimeError(
+          "two_stage_htheatpump_2regs: the IHX enthalpy balance did not "
+          f"converge in 200 iterations (x_8h = {x_8h!r}). The pressure "
+          "levels or the subcooling are probably inconsistent.")
+  if not np.isfinite(x_8h) or not (0.0 <= x_8h <= 1.0):
+      raise RuntimeError(
+          f"two_stage_htheatpump_2regs: separator vapour fraction "
+          f"x_8h = {x_8h:.6g} is outside [0, 1], so there is no physical "
+          "flash split. Check T_2h, T_13h and DT_sub.")
+  h_12h = h_3h - x_8h * dh_IHX1
+  h_7h = h_12h - (1.0 - x_8h) * dh_IHX2
+  h_8h = h_7h                        # isenthalpic expansion into the separator
+  h_4h = h_9h                        # isenthalpic expansion into the evaporator
+  T_7h = CP.PropsSI('T', 'H', h_7h * 1000., 'P', p_condh, refrig)
+  T_12h = CP.PropsSI('T', 'H', h_12h * 1000., 'P', p_condh, refrig)
 
-      except ValueError as e:
-          print(f"Warning: Final CoolProp calculation failed after max iterations: {e}.")
-          h_7h, x_8h, T_12h, epsilon_IHX_2, cpr_2, h_4h, x_4h = np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan
+  # Both of these are now DIAGNOSTICS rather than inputs. State 1h is fixed
+  # by the isentropic compression back from 2h, so the effectiveness IHX-2
+  # would need in order to deliver it is an OUTPUT of the cycle, and worth
+  # reading: a value above 1 would mean the regenerator cannot exist.
+  x_4h = (h_4h - h_14h) / (h_13h - h_14h)
+  epsilon_IHX_2 = (T_1h - T_13h) / (T_12h - T_13h)
+  cpr_2 = (CP.PropsSI('C', 'P', p_evaph, 'Q', 1, refrig)
+           / CP.PropsSI('C', 'P', p_condh, 'Q', 0, refrig))
 
 
   # State 7h (using the converged T_7h)
@@ -812,6 +746,12 @@ class Case:
     T_sink_C: float = 20.0
     DT_E_sink: float = 5.0
     DT_2D_3E: float = 12.0
+    # Minimum water-to-working-fluid gap ANYWHERE in the ORC evaporator, not
+    # just at its hot end. DT_2D_3E alone cannot keep the two composite curves
+    # apart, because the ORC takes most of its heat at one temperature while
+    # the water glides; see `orc_pinch`. Raise this and the ORC boils lower
+    # and yields less; lower it and the exchanger grows. See DN-15.
+    DT_pinch_ORC: float = 5.0
     # Discharge-inlet subcooling below the COLDEST cascade layer, state 1d in
     # the plant diagram; the symmetric partner of DT_4C_M. See DN-8.
     DT_M_1D: float = 10.0
@@ -1538,6 +1478,132 @@ def T_m_bottom(case):
     return case.T_m - case.DT_3C_2C * (case.N_lay - 1) / case.N_lay
 
 
+def _orc_cold_composite(rank, fluid, n=300):
+    """The ORC-side composite curve of the evaporator: (Q, T), cold end first.
+
+    Two cold streams share the water:
+
+      * the MAIN stream, 1 kg per kg of evaporator flow, from state 10e to
+        state 3e at p_evape -- liquid preheat, then boiling at the constant
+        temperature T_3e;
+      * the REHEAT stream, y_frac of the flow, from 5e to 6e at p_inte,
+        superheated vapour throughout.
+
+    Both are built on real enthalpy, so the latent plateau appears as a
+    vertical segment rather than being smeared into a straight line in T.
+    That matters: the plateau is where this evaporator pinches.
+    """
+    y = rank["y_frac"]
+    p_e, p_i = rank["p_evape"], rank["p_5e"]
+    h10, h3 = rank["h_10e"], rank["h_3e"]
+    h5, h6 = rank["h_5e"], rank["h_6e"]
+    T10, T3 = rank["T_10e"], rank["T_3e"]
+    T5, T6 = rank["T_5e"], rank["T_6e"]
+    h_bub = CP.PropsSI("H", "P", p_e, "Q", 0, fluid) / 1000.0
+
+    # sample in ENTHALPY, not temperature: a (T, p) call exactly on the
+    # saturation line raises, and the preheat ends exactly there
+    h_pre = np.linspace(h10, h_bub, n)
+    T_pre = np.array([CP.PropsSI("T", "H", x * 1000.0, "P", p_e, fluid)
+                      for x in h_pre])
+    h_rh = np.linspace(h5, h6, n)
+    T_rh = np.array([CP.PropsSI("T", "H", x * 1000.0, "P", p_i, fluid)
+                     for x in h_rh])
+
+    def Q_main(t):
+        if t <= T10:
+            return 0.0
+        if t >= T3:
+            return h3 - h10                      # preheat AND latent
+        return float(np.interp(t, T_pre, h_pre)) - h10
+
+    def Q_reheat(t):
+        if t <= T5:
+            return 0.0
+        if t >= T6:
+            return y * (h6 - h5)
+        return y * (float(np.interp(t, T_rh, h_rh)) - h5)
+
+    lo, hi = min(T10, T5), max(T3, T6)
+    grid = set(np.linspace(lo, hi, 4 * n))
+    grid |= {T10, T5, T6, T3, np.nextafter(T3, lo)}   # break points
+    Ts = np.array(sorted(t for t in grid if lo <= t <= hi))
+    Qs = np.array([Q_main(t) + Q_reheat(t) for t in Ts])
+    keep = np.concatenate(([True], np.diff(Qs) > 1e-12))
+    return Qs[keep], Ts[keep]
+
+
+def orc_pinch(rank, T_w_hot, T_w_cold, fluid, P_water, n=600):
+    """Smallest water-minus-ORC temperature difference in the evaporator [K].
+
+    Negative when the two composite curves cross, which is a second-law
+    violation: the reported ORC efficiency is then unreachable, whatever the
+    component efficiencies.
+
+    The water is the hot stream and follows REAL enthalpy at `P_water`, not a
+    straight line in temperature, and the search runs over an even grid in Q
+    that includes every break point. The pinch is found wherever it lies; it
+    is emphatically not assumed to sit at an end. For the case as shipped in
+    v0.8 it sat at 23 % of the duty, where boiling begins.
+    """
+    Qc, Tc = _orc_cold_composite(rank, fluid)
+    Q_total = Qc[-1]
+    Tw = np.linspace(T_w_cold, T_w_hot, 400)
+    hw = np.array([CP.PropsSI("H", "T", t, "P", P_water, "Water") / 1000.0
+                   for t in Tw])
+    Qh = (hw - hw[0]) * Q_total / (hw[-1] - hw[0])    # water flow scales out
+    Qq = np.unique(np.concatenate([np.linspace(0.0, Q_total, n), Qc, Qh]))
+    Qq = Qq[(Qq >= 0.0) & (Qq <= Q_total)]
+    return float(np.min(np.interp(Qq, Qh, Tw) - np.interp(Qq, Qc, Tc)))
+
+
+def feasible_rankine(case, T_1e, T_w_hot, T_w_cold):
+    """The ORC at the highest boiling temperature the water can actually reach.
+
+    The old rule set the evaporating temperature from the HOT END alone,
+    T_3e = T_2d - DT_2D_3E, and never looked at the rest of the exchanger.
+    With a 55 K water glide against a cycle that takes ~76 % of its heat at
+    one constant temperature, that is not a small error: the curves crossed by
+    30 K and the quoted eta_ORC = 0.232 was unachievable.
+
+    So: start from the old rule, keep it if it already clears
+    `case.DT_pinch_ORC`, and otherwise bisect T_3e DOWNWARD until the pinch
+    equals the requirement. Returns the rank dict, with two extra keys
+    recording what happened.
+    """
+    T_3e_want = T_w_hot - case.DT_2D_3E
+    rank = double_stage_rankine(case.fluid, T_1e, T_3e_want)
+    pinch = orc_pinch(rank, T_w_hot, T_w_cold, case.fluid, case.P)
+    if pinch >= case.DT_pinch_ORC:
+        rank["T_3e_uncorrected"] = T_3e_want
+        rank["pinch"] = pinch
+        return rank
+
+    lo = T_1e + 10.0                     # floor: no cycle worth the name below
+    hi = T_3e_want
+    def pinch_at(t):
+        return orc_pinch(double_stage_rankine(case.fluid, T_1e, t),
+                         T_w_hot, T_w_cold, case.fluid, case.P)
+    if pinch_at(lo) < case.DT_pinch_ORC:
+        raise RuntimeError(
+            f"no ORC boiling temperature above {lo - 273.15:.1f} C clears the "
+            f"required pinch of {case.DT_pinch_ORC:.1f} K against water at "
+            f"{T_w_hot - 273.15:.1f} -> {T_w_cold - 273.15:.1f} C "
+            f"(best is {pinch_at(lo):+.2f} K). The water glide is too large "
+            f"for a cycle that boils at one temperature: reduce DT_3C_2C, or "
+            f"raise the water temperatures, or relax DT_pinch_ORC.")
+    for _ in range(80):
+        mid = 0.5 * (lo + hi)
+        if pinch_at(mid) >= case.DT_pinch_ORC:
+            lo = mid
+        else:
+            hi = mid
+    rank = double_stage_rankine(case.fluid, T_1e, lo)
+    rank["T_3e_uncorrected"] = T_3e_want
+    rank["pinch"] = orc_pinch(rank, T_w_hot, T_w_cold, case.fluid, case.P)
+    return rank
+
+
 def cycle_state_points(case, T_2d=None):
     """ORC and heat-pump state points, and the two cycle efficiencies.
 
@@ -1586,7 +1652,15 @@ def cycle_state_points(case, T_2d=None):
     T["T_2c"] = T["T_3c"] - case.DT_3C_2C
     T["T_2h"] = T["T_3c"] + case.DT_2H_3C
 
-    rank = double_stage_rankine(case.fluid, T["T_1e"], T["T_3e"])
+    # T["T_3e"] above is only the OLD hot-end rule, kept so the uncorrected
+    # value stays visible. What the water can actually deliver is decided by
+    # the whole evaporator, so the boiling temperature comes back from the
+    # pinch check and is written into T -- otherwise the reported state points
+    # and the efficiency would describe different cycles. This runs on the
+    # correction pass too, with the realised T_2d.
+    rank = feasible_rankine(case, T["T_1e"], T["T_2d"], T["T_3d"])
+    T["T_3e_hot_end_rule"] = T["T_3e"]
+    T["T_3e"] = rank["T_3e"]
     hp = two_stage_htheatpump_2regs(case.refrig, T["T_13h"], T["T_2h"],
                                     case.DT_sub)
     for name, v in (("rank_eff", rank.get("rank_eff")),
@@ -1922,10 +1996,23 @@ def css_report(case, r):
     print("CYCLIC STEADY STATE")
     print("=" * 66)
     if r["lambda_overridden"]:
-        print("  NOTE  lambda forced to 0. A non-zero loss surplus cannot be")
+        print(f"  NOTE  lambda forced to 0, from case.loss_surplus = "
+              f"{case.loss_surplus:.3f}. A non-zero loss surplus cannot be")
         print("        absorbed at CSS: the state returns to itself and this")
         print("        model has no loss path, so charge == discharge exactly.")
+        print("        The ZERO is what drove this run; the 0.050 in the Case")
+        print("        is inert here and affects only energy_budget called on")
+        print("        its own.")
         print()
+    if r["T"].get("T_3e_hot_end_rule") is not None:
+        old = r["T"]["T_3e_hot_end_rule"] - 273.15
+        new = r["T"]["T_3e"] - 273.15
+        if new < old - 1e-6:
+            print(f"  NOTE  ORC boiling temperature set by the EVAPORATOR "
+                  f"PINCH, not by DT_2D_3E:")
+            print(f"        hot-end rule would give {old:7.2f} C; the pinch "
+                  f"allows {new:7.2f} C.")
+            print()
     print(f"  N_wells          {r['N_wells']:10.4f}   from latent heat alone, not solved")
     print(f"  m_dot charge     {r['m1_ch']:10.4f} kg/s per leg-pair, pinned by the glide")
     print(f"  m_dot discharge  {r['m1_dc']:10.4f} kg/s per leg-pair, pinned by the glide")
@@ -2060,6 +2147,57 @@ def validate_case(case, verbose=True):
     if case.n_times < 8:
         warn(f'n_times = {case.n_times}; the logarithmic grid needs enough '
              f'levels that the last step does not span most of the window')
+
+    # --- the working fluid is liquid water, and must stay that way --------
+    T_sat_w = CP.PropsSI('T', 'P', case.P, 'Q', 0, 'Water') - 273.15
+    if T_in_ch >= T_sat_w:
+        err(f'the charging inlet T_4c = {T_in_ch:.2f} C is at or above the '
+            f'saturation temperature of water at P = {case.P/1e5:.2f} bar, '
+            f'which is {T_sat_w:.2f} C. The model assumes single-phase '
+            f'liquid throughout (H7) and carries no boiling correlation, so '
+            f'it would report nonsense rather than fail. Raise case.P or '
+            f'lower T_m_C + DT_4C_M.')
+    elif T_sat_w - T_in_ch < 10.0:
+        warn(f'the charging inlet is {T_sat_w - T_in_ch:.2f} K below the '
+             f'saturation temperature of water at {case.P/1e5:.2f} bar; '
+             f'there is very little margin against boiling')
+
+    # --- approaches that are zero by construction -------------------------
+    # None of these is an error. Each is a place where the model quietly
+    # assumes an infinite exchanger, and a parametric study that leans on it
+    # will report an efficiency no hardware can reach.
+    if case.DT_3A_4A == case.DT_3A_13H:
+        warn(f'DT_3A_4A == DT_3A_13H == {case.DT_3A_4A:.3f} K, so the '
+             f'heat-pump source leaves the evaporator at exactly the '
+             f'evaporating temperature: a zero approach at that end, which '
+             f'needs infinite area. Make DT_3A_4A the smaller of the two for '
+             f'a finite evaporator.')
+    warn('the ORC regenerator has a zero approach by construction '
+         '(T_9e = T_7e in double_stage_rankine), so its duty is an upper '
+         'bound rather than a design value. This is structural, not a '
+         'setting you can change from Case.')
+
+    # --- the ORC evaporator has to obey the second law --------------------
+    try:
+        rank, _hp, Tst = cycle_state_points(case)
+        got = rank.get('pinch')
+        old = rank.get('T_3e_uncorrected')
+        if old is not None and rank['T_3e'] < old - 1e-6:
+            rank_old = double_stage_rankine(case.fluid, Tst['T_1e'], old)
+            warn(f'the ORC pinch forced the boiling temperature DOWN, from '
+                 f'{old - 273.15:.2f} C to {rank["T_3e"] - 273.15:.2f} C, and '
+                 f'with it eta_ORC from {rank_old["rank_eff"]:.4f} to '
+                 f'{rank["rank_eff"]:.4f}. The hot-end rule DT_2D_3E = '
+                 f'{case.DT_2D_3E:.1f} K is not what sets the evaporating '
+                 f'temperature here; the pinch at DT_pinch_ORC = '
+                 f'{case.DT_pinch_ORC:.1f} K is. This is the honest cost of a '
+                 f'{case.DT_3C_2C:.0f} K water glide against a fluid that '
+                 f'boils at one temperature.')
+        elif got is not None:
+            msgs.append(('info', f'ORC evaporator pinch {got:+.2f} K, '
+                                 f'requirement {case.DT_pinch_ORC:.1f} K'))
+    except Exception as e:                       # never block on a diagnostic
+        warn(f'could not evaluate the ORC pinch: {e}')
 
     if verbose:
         if not msgs:

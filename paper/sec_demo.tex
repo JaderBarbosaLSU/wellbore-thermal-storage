@@ -133,12 +133,12 @@ multiplies that cost by the number of cycles to convergence, of order \num{70}.
   \begin{minipage}[t]{0.46\linewidth}
     \raggedright
     high-temperature heat pump\\ two stages, two regenerators\\
-    $\Rightarrow\ \mathrm{COP}=2.956$
+    $\Rightarrow\ \mathrm{COP}=2.887$
   \end{minipage}\hfill
   \begin{minipage}[t]{0.46\linewidth}
     \raggedright
     organic Rankine cycle\\ double-stage\\
-    $\Rightarrow\ \eta_{\mathrm{ORC}}=0.2328$
+    $\Rightarrow\ \eta_{\mathrm{ORC}}=0.1738$
   \end{minipage}\\[4pt]
   inlets from Eq.~\eqref{eq:inlets}: $T_{4c}=\SI{160.0}{\celsius}$,
   $T_{3d}=\SI{91.1}{\celsius}$\\
@@ -524,11 +524,12 @@ Each row is an independent march to CSS.}
 \toprule
 $\Nwells$ & delivered/target & $\varepsilon$ end charge & $\varepsilon$ end discharge \\
 \midrule
-11.544 & 0.9426 & 1.000 & 0.154 \\
-14.000 & 0.9662 & 1.000 & 0.288 \\
-16.000 & 0.9777 & 1.000 & 0.376 \\
-20.000 & 0.9931 & 1.000 & 0.505 \\
-26.000 & 1.0082 & 1.000 & 0.629 \\
+ 9.000 & 0.7042 & 1.000 & 0.000 \\
+12.000 & 0.9104 & 1.000 & 0.000 \\
+14.000 & 1.0064 & 1.000 & 0.000 \\
+15.659 & 1.0453 & 0.972 & 0.012 \\
+17.000 & 1.0568 & 0.931 & 0.033 \\
+18.000 & 1.0627 & 0.903 & 0.049 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -594,24 +595,24 @@ than on more phase-change material.
 \begin{tikzpicture}
 \begin{axis}[width=0.48\linewidth,height=5.4cm,
   xlabel={$\Nwells$}, ylabel={delivered / target},
-  title={\small (a) energy delivered}, ymin=0.91, ymax=1.09, xmin=8.5, xmax=16.5,
+  title={\small (a) energy delivered}, ymin=0.66, ymax=1.10, xmin=8.5, xmax=18.5,
   grid=both, grid style={gray!20}]
-\addplot[thick,mark=*,mark size=1.3pt,blue!70!black] coordinates {(9.00,0.92431) (10.00,0.98625) (11.63,1.04529) (13.00,1.05987) (16.00,1.07467)};
+\addplot[thick,mark=*,mark size=1.3pt,blue!70!black] coordinates {(9.00,0.70419) (12.00,0.91045) (14.00,1.00637) (15.66,1.04527) (17.00,1.05683) (18.00,1.06270)};
 \addplot[dashed,gray,domain=8.5:16.5,samples=2,forget plot] {1};
-\node[font=\scriptsize,gray] at (axis cs:15.0,0.985) {target};
+\node[font=\scriptsize,gray] at (axis cs:16.6,0.965) {target};
 \end{axis}
 \begin{axis}[width=0.48\linewidth,height=5.4cm,at={(0.52\linewidth,0)},
   xlabel={$\Nwells$},
   ylabel={residual $\varepsilon_{\mathrm{local}}$},
   title={\small (b) unfrozen fraction at end of discharge},
-  ymin=-0.005, ymax=0.095, xmin=8.5, xmax=16.5,
+  ymin=-0.003, ymax=0.055, xmin=8.5, xmax=18.5,
   grid=both, grid style={gray!20}]
-\addplot[thick,mark=triangle*,mark size=1.6pt,orange!85!black] coordinates {(9.00,0.0000) (10.00,0.0000) (11.63,0.0116) (13.00,0.0399) (16.00,0.0983)};
+\addplot[thick,mark=triangle*,mark size=1.6pt,orange!85!black] coordinates {(9.00,0.0000) (12.00,0.0000) (14.00,0.0000) (15.66,0.0116) (17.00,0.0326) (18.00,0.0491)};
 \end{axis}
 \end{tikzpicture}
 \caption{Cyclic steady state against exchanger count; each point is an
 independent march to convergence. (a) Delivered energy crosses target near
-$\Nwells\approx10.2$, \emph{below} the latent-only count of $11.63$.
+$\Nwells\approx13.9$, \emph{below} the latent-only count of $15.66$.
 (b) The diagnostic: the
 residual melted fraction at end of discharge \emph{rises} with exchanger count,
 because each unit is then worked less hard and proportionally less of it

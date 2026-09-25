@@ -206,131 +206,63 @@ def two_stage_htheatpump_2regs(refrig, T_13h, T_2h, DT_sub):
       print("Warning: Could not calculate cp for cpr_1 calculation. Setting cpr_1 to 1.0")
       cpr_1 = 1.0
 
-  # Convergence loop for T_7h
-  T_7h = T_3h - 4.  # initial guess for T_7h
-  tol = 1e-4  # Tolerance for convergence
-  max_iter = 100 # Maximum iterations
-  p_7h = p_condh # State 7h is at condenser pressure
-
-  for _ in range(max_iter):
-      try:
-          # Calculate h_7h based on current T_7h and p_7h
-          h_7h_calc = CP.PropsSI('H', 'T', T_7h, 'P', p_7h, refrig)/1000.
-
-          # State 8h: Flash Gas two-phase mixture (p_inth, h_8h=h_7h_calc)
-          p_8h = p_inth
-          h_8h_calc = h_7h_calc # Isenthalpic expansion from 7h
-          # Ensure denominator is non-zero before calculating x_8h
-          if abs(h_10h - h_9h) > 1e-9:
-               x_8h_calc = (h_8h_calc - h_9h) / (h_10h - h_9h)
-          else:
-               x_8h_calc = 0.0 # If denominator is zero, assume quality is zero
-
-          # Ensure x_8h_calc is within [0, 1] bounds
-          x_8h_calc = max(0.0, min(1.0, x_8h_calc))
-
-          # Calculate T_12h based on IHX-1 effectiveness
-          T_12h_calc = T_3h - epsilon_IHX_1 * x_8h_calc * cpr_1 * (T_3h - T_10h)
-
-          # IHX-2 effectiveness (based on T_1h and T_13h, and T_12h and T_13h)
-          # Ensure denominator is non-zero
-          denominator_epsilon2 = (T_12h_calc - T_13h)
-          if abs(denominator_epsilon2) > 1e-9:
-               epsilon_IHX_2_calc = (T_1h - T_13h) / denominator_epsilon2
-          else:
-               epsilon_IHX_2_calc = 1.0 # Assume 100% effectiveness if temperature difference is zero
-
-
-          # CP_ratio_2:
-          try:
-              cpf_2 = CP.PropsSI('C', 'P', p_condh, 'Q', 0, refrig)
-              cpv_2 = CP.PropsSI('C', 'P', p_evaph, 'Q', 1, refrig)
-              # Avoid division by zero
-              if abs(cpf_2) > 1e-9:
-                   cpr_2_calc = cpv_2 / cpf_2
-              else:
-                   cpr_2_calc = 1.0 # Assume ratio is 1 if cpf is zero
-          except ValueError:
-              # print("Warning: Could not calculate cp for cpr_2 calculation. Setting cpr_2 to 1.0") # Commented out to avoid flooding output
-              cpr_2_calc = 1.0
-
-          # State 4h: two-phase mixture (p_evaph, h_4h=h_9h)
-          p_4h = p_evaph
-          h_4h_calc = h_9h # Isenthalpic expansion from 9h
-          # Ensure denominator is non-zero before calculating x_4h
-          if abs(h_13h - h_14h) > 1e-9:
-              x_4h_calc = (h_4h_calc - h_14h) / (h_13h - h_14h)
-          else:
-               x_4h_calc = 0.0 # If denominator is zero, assume quality is zero
-
-          # Ensure x_4h_calc is within [0, 1] bounds
-          x_4h_calc = max(0.0, min(1.0, x_4h_calc))
-
-          # Calculate T_7h_new based on IHX-2 effectiveness
-          # Ensure denominator is non-zero before calculation
-          if abs(cpr_2_calc * (T_12h_calc - T_13h)) > 1e-9:
-               T_7h_new = T_12h_calc - epsilon_IHX_2_calc * x_4h_calc * cpr_2_calc * (T_12h_calc - T_13h)
-          else:
-               T_7h_new = T_7h # No change if denominator is zero
-
-          # Check for convergence of T_7h
-          if abs(T_7h_new - T_7h) < tol:
-              T_7h = T_7h_new # Update T_7h to the converged value
-              # After convergence, update all dependent state properties with the converged T_7h
-              h_7h = h_7h_calc
-              h_8h = h_8h_calc
-              x_8h = x_8h_calc
-              T_12h = T_12h_calc
-              epsilon_IHX_2 = epsilon_IHX_2_calc
-              cpr_2 = cpr_2_calc
-              h_4h = h_4h_calc
-              x_4h = x_4h_calc
-              break # Exit the loop if converged
-
-          T_7h = T_7h_new # Update guess for the next iteration
-
-      except ValueError as e:
-          print(f"Warning: CoolProp calculation failed in T_7h convergence loop: {e}. Breaking loop.")
-          # Assign NaN to dependent properties on error and break
-          h_7h, x_8h, T_12h, epsilon_IHX_2, cpr_2, h_4h, x_4h = np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan
-          break # Exit loop on CoolProp error
-
+  # --- the IHX network, closed by an exact enthalpy balance ---------------
+  # The two regenerators are closed by ENERGY, not by effectiveness-times-
+  # cp-ratio correlations. Which stream passes through each one matters:
+  #
+  #   IHX-1   liquid 3h -> 12h  (1 kg)   heats the FLASHED VAPOUR, x_8h,
+  #                                      from 10h to 11h
+  #   IHX-2   liquid 12h -> 7h  (1 kg)   heats the SUCTION stream, which is
+  #                                      what left the separator as LIQUID,
+  #                                      (1 - x_8h), from 13h to 1h
+  #
+  # x_8h appears on both sides, so the three relations are solved as a fixed
+  # point. The map is linear and strongly contracting here, so it converges
+  # in a handful of steps.
+  #
+  # Until v0.9 IHX-2 used x_4h -- the vapour QUALITY at the evaporator inlet
+  # -- where the flow SPLIT (1 - x_8h) belongs. A quality is not a flow
+  # fraction, and the cycle did not close: IHX-2 took 9.19 kJ/kg out of the
+  # liquid and put 21.76 kJ/kg into the vapour, and the condenser reported
+  # 271.43 kJ/kg against 258.33 kJ/kg of work plus evaporator heat. That is
+  # a 4.8 % creation of energy, and it inflated the COP.
+  p_7h = p_condh
+  dh_IHX1 = h_11h - h_10h            # per kg of flashed vapour
+  dh_IHX2 = h_1h - h_13h             # per kg of suction (low-stage) flow
+  x_8h = 0.3
+  for _n_ihx in range(200):
+      h_12h = h_3h - x_8h * dh_IHX1
+      h_7h = h_12h - (1.0 - x_8h) * dh_IHX2
+      x_new = (h_7h - h_9h) / (h_10h - h_9h)          # h_8h = h_7h
+      converged = abs(x_new - x_8h) < 1e-12
+      x_8h = x_new
+      if converged:
+          break
   else:
-      print("Warning: Convergence for T_7h not achieved within max iterations.")
-      # After max iterations without convergence, assign the values from the last iteration
-      # Need to recalculate dependent variables one last time based on the final T_7h
-      try:
-          h_7h = CP.PropsSI('H', 'T', T_7h, 'P', p_7h, refrig)/1000.
-          if abs(h_10h - h_9h) > 1e-9:
-               x_8h = (h_7h - h_9h) / (h_10h - h_9h)
-          else:
-               x_8h = 0.0
-          x_8h = max(0.0, min(1.0, x_8h))
-          T_12h = T_3h - epsilon_IHX_1 * x_8h * cpr_1 * (T_3h - T_10h)
-          denominator_epsilon2 = (T_12h - T_13h)
-          if abs(denominator_epsilon2) > 1e-9:
-               epsilon_IHX_2 = (T_1h - T_13h) / denominator_epsilon2
-          else:
-               epsilon_IHX_2 = 1.0
-          try:
-               cpf_2 = CP.PropsSI('C', 'P', p_condh, 'Q', 0, refrig)
-               cpv_2 = CP.PropsSI('C', 'P', p_evaph, 'Q', 1, refrig)
-               if abs(cpf_2) > 1e-9:
-                    cpr_2 = cpv_2 / cpf_2
-               else:
-                    cpr_2 = 1.0
-          except ValueError:
-               cpr_2 = 1.0
-          h_4h = h_9h
-          if abs(h_10h - h_9h) > 1e-9:
-              x_4h = (h_4h - h_9h) / (h_10h - h_9h)
-          else:
-               x_4h = 0.0
-          x_4h = max(0.0, min(1.0, x_4h))
+      raise RuntimeError(
+          "two_stage_htheatpump_2regs: the IHX enthalpy balance did not "
+          f"converge in 200 iterations (x_8h = {x_8h!r}). The pressure "
+          "levels or the subcooling are probably inconsistent.")
+  if not np.isfinite(x_8h) or not (0.0 <= x_8h <= 1.0):
+      raise RuntimeError(
+          f"two_stage_htheatpump_2regs: separator vapour fraction "
+          f"x_8h = {x_8h:.6g} is outside [0, 1], so there is no physical "
+          "flash split. Check T_2h, T_13h and DT_sub.")
+  h_12h = h_3h - x_8h * dh_IHX1
+  h_7h = h_12h - (1.0 - x_8h) * dh_IHX2
+  h_8h = h_7h                        # isenthalpic expansion into the separator
+  h_4h = h_9h                        # isenthalpic expansion into the evaporator
+  T_7h = CP.PropsSI('T', 'H', h_7h * 1000., 'P', p_condh, refrig)
+  T_12h = CP.PropsSI('T', 'H', h_12h * 1000., 'P', p_condh, refrig)
 
-      except ValueError as e:
-          print(f"Warning: Final CoolProp calculation failed after max iterations: {e}.")
-          h_7h, x_8h, T_12h, epsilon_IHX_2, cpr_2, h_4h, x_4h = np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan
+  # Both of these are now DIAGNOSTICS rather than inputs. State 1h is fixed
+  # by the isentropic compression back from 2h, so the effectiveness IHX-2
+  # would need in order to deliver it is an OUTPUT of the cycle, and worth
+  # reading: a value above 1 would mean the regenerator cannot exist.
+  x_4h = (h_4h - h_14h) / (h_13h - h_14h)
+  epsilon_IHX_2 = (T_1h - T_13h) / (T_12h - T_13h)
+  cpr_2 = (CP.PropsSI('C', 'P', p_evaph, 'Q', 1, refrig)
+           / CP.PropsSI('C', 'P', p_condh, 'Q', 0, refrig))
 
 
   # State 7h (using the converged T_7h)

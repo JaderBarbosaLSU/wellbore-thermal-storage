@@ -253,26 +253,39 @@ cannot have two resistances.
 
 What changes at a branch boundary is the meaning of the state. In two-phase,
 $\Tpcm=\Tm$ is the temperature of the \emph{front} and the appropriate
-resistance is tube-to-front. In single phase $\Tpcm$ is the \emph{volume mean},
-and the resistance that belongs with a mean is mean-to-surface. Treating the
-control volume as an annulus $r_{e}\le r\le r_{o}$, adiabatic at $r_{o}$ by
-symmetry with its neighbour and storing sensible heat at a uniform volumetric
-rate, the quasi-steady balance $-k\,2\pi r\,\mathrm{d}T/\mathrm{d}r
-=s\pi(r_{o}^{2}-r^{2})$ integrates and averages to
+resistance is tube-to-front. In single phase $\Tpcm$ is the \emph{volume mean}
+--- the state variable is the control volume's total energy, so the temperature
+recovered from it can be nothing else --- and the resistance that belongs with a
+mean is mean-to-surface, $R'_{\mathrm{bulk}}=(\overline{T}-T_{s})/Q'$.
+
+Treat the control volume as an annulus $r_{e}\le r\le r_{o}$, adiabatic at
+$r_{o}$ by symmetry with its neighbour, storing sensible heat at a uniform
+volumetric rate $s$. Quasi-steady, whatever crosses radius $r$ is what the
+material beyond it stores, $-k\,2\pi r\,\mathrm{d}T/\mathrm{d}r
+=-s\pi(r_{o}^{2}-r^{2})$, which integrates to
+\begin{equation}
+  T(r)-T(r_{e}) = \frac{s}{2k}
+  \left[r_{o}^{2}\ln\frac{r}{r_{e}}-\frac{r^{2}-r_{e}^{2}}{2}\right].
+  \label{eq:bulk-profile}
+\end{equation}
+Averaging Eq.~\eqref{eq:bulk-profile} over the volume and dividing by
+$Q'=s\pi(r_{o}^{2}-r_{e}^{2})$ eliminates $s$ and leaves
 $R'_{\mathrm{bulk}}=S/2\pi k$ with
 \begin{equation}
-  S=\frac{\beta^{4}\ln\beta-\beta^{4}/2+\beta^{2}/2
-    -\left(\beta^{2}-1\right)^{2}/4}{\left(\beta^{2}-1\right)^{2}},
+  S=\frac{4\beta^{4}\ln\beta-3\beta^{4}+4\beta^{2}-1}
+         {4\left(\beta^{2}-1\right)^{2}},
   \qquad \beta=\frac{r_{o}}{r_{e}} .
   \label{eq:shape-factor}
 \end{equation}
 $S$ depends on geometry alone --- $k$ cancels --- so one shape factor serves both
-phases. For the case studied $\beta=2.109$ and $S=0.3467$ against
-$\ln\beta=0.7460$ for the surface-to-surface annulus: smaller by $2.152$, the
-cylindrical counterpart of the familiar $1/3$ for a slab with uniform
-generation. It enters the network as an equivalent thickness
-$\delta_{\mathrm{eq}}=r_{e}(e^{S}-1)$, so the fin efficiency and finned-area
-ratio apply unchanged.
+phases. Two checks fix it. Expanded for a thin annulus of wall thickness
+$L=r_{o}-r_{e}$, Eq.~\eqref{eq:shape-factor} gives $S\to L/3r_{e}$ and hence
+$R'_{\mathrm{bulk}}\to L/3kA$, the mean-to-surface resistance of a plane slab
+with uniform generation; and for the case studied $\beta=2.109$ and $S=0.3467$
+against $\ln\beta=0.7460$ for the surface-to-surface annulus, smaller by
+$2.152$. It enters the network as an equivalent thickness
+$\delta_{\mathrm{eq}}=r_{e}(e^{S}-1)=\SI{8.74}{\milli\meter}$, so the fin
+efficiency and finned-area ratio apply unchanged.
 
 The resistance is then discontinuous across a branch boundary, and that is not
 an artefact: as $\varepsilon_{\mathrm{local}}\to1^{-}$ while melting the front
@@ -456,6 +469,70 @@ lost, to machine precision, with no possibility of drift. It should be stressed
 that this is a \emph{consistency} property and not evidence of correctness: the
 two operations are inverse, so a small residual measures floating-point
 arithmetic and nothing else.
+
+%=======================================================================
+\section{Coupling to the power cycle: a pinch constraint, not an approach}
+\label{sec:pinch}
+
+The formulation above delivers heat as a \emph{glide}: the cascade is graded so
+that the water sweeps the full $\Delta T_{3C,2C}$, and that glide is what pins
+both mass flows. Any power cycle downstream must absorb it. This section states
+the constraint that couples the two, because it is easy to state incorrectly and
+the incorrect version is the natural one to write.
+
+Let $T_{2d}$ and $T_{3d}$ be the hot and cold ends of the water on discharge. It
+is tempting to fix the evaporating temperature of a downstream ORC by an
+approach at the hot end,
+\begin{equation}
+  T_{3e} \;=\; T_{2d} - \Delta T_{2D,3E},
+  \label{eq:hot-end}
+\end{equation}
+and to check nothing else. Equation~\eqref{eq:hot-end} is sufficient only when
+the two streams have comparable heat-capacity curves. A subcritical ORC is the
+case in which they do not: the working fluid absorbs the bulk of its duty
+\emph{isothermally}, at $T_{3e}$, while the water is sensible throughout. A
+horizontal composite and a sloping one meet somewhere in the interior, and the
+binding condition is therefore
+\begin{equation}
+  \Delta T_{\mathrm{pinch}} \;=\;
+  \min_{0 \le Q \le Q_{\mathrm{tot}}}
+  \Bigl[\,T_{\mathrm{water}}(Q) - T_{\mathrm{wf}}(Q)\,\Bigr]
+  \;\ge\; \Delta T_{\mathrm{pinch}}^{\min},
+  \label{eq:pinch}
+\end{equation}
+evaluated over the whole exchanger. Both composites must be built on real
+enthalpy: the water because $c_{p}$ varies appreciably over a glide of several
+tens of kelvin, and the working fluid because the latent plateau is a vertical
+segment in $(Q,T)$ and is destroyed by any linear-in-$T$ approximation.
+
+The severity scales with the glide. Writing $\phi$ for the fraction of the
+cycle's heat input absorbed at $T_{3e}$, the water can supply heat above $T_{3e}$
+only over the portion of its own duty lying above that temperature. For a
+constant-$c_{p}$ water stream this gives the necessary condition
+\begin{equation}
+  \frac{T_{2d}-T_{3e}}{T_{2d}-T_{3d}} \;\ge\; \phi ,
+  \label{eq:pinch-necessary}
+\end{equation}
+so a cycle taking $\phi=0.76$ of its heat at one temperature requires
+$T_{3e}$ to sit at least three quarters of the way down the glide --- which
+Eq.~\eqref{eq:hot-end}, placing it a fixed small approach below the \emph{top},
+violates by a margin that grows linearly with $\Delta T_{3C,2C}$.
+
+The practical consequence for a storage concept of this kind is a design
+tension that the sizing calculation does not otherwise expose. A wide glide is
+attractive on the storage side: it grades the cascade, raises the PCM inventory
+cycled per unit volume, and reduces the well count. The same width degrades the
+power cycle, because Eq.~\eqref{eq:pinch-necessary} forces the evaporating
+temperature down and the cycle efficiency with it. The optimum is interior, and
+it cannot be found by treating $\Delta T_{3C,2C}$ as a free storage parameter.
+Recovering the lost efficiency requires a working fluid that also glides --- a
+zeotropic mixture --- or a supercritical or multi-pressure cycle; it does not
+require a larger evaporator.
+
+Section~\ref{sec:demo} reports the magnitude for the case studied: imposing
+Eq.~\eqref{eq:pinch} in place of Eq.~\eqref{eq:hot-end} moves the evaporating
+temperature from \SI{134.1}{\celsius} to \SI{95.4}{\celsius} and
+$\eta_{\mathrm{ORC}}$ from $0.232$ to $0.174$.
 
 %=======================================================================
 \section{Branchwise-exact time integration}

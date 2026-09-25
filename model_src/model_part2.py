@@ -51,6 +51,12 @@ class Case:
     T_sink_C: float = 20.0
     DT_E_sink: float = 5.0
     DT_2D_3E: float = 12.0
+    # Minimum water-to-working-fluid gap ANYWHERE in the ORC evaporator, not
+    # just at its hot end. DT_2D_3E alone cannot keep the two composite curves
+    # apart, because the ORC takes most of its heat at one temperature while
+    # the water glides; see `orc_pinch`. Raise this and the ORC boils lower
+    # and yields less; lower it and the exchanger grows. See DN-15.
+    DT_pinch_ORC: float = 5.0
     # Discharge-inlet subcooling below the COLDEST cascade layer, state 1d in
     # the plant diagram; the symmetric partner of DT_4C_M. See DN-8.
     DT_M_1D: float = 10.0

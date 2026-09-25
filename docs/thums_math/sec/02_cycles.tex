@@ -105,6 +105,47 @@ $T_{2d}$. Demoting $T_{2d}$ to a result therefore couples the plant to the
 store. It is handled by one correction pass rather than an outer loop, for a
 reason that is checked rather than assumed --- see \S\ref{sec:cyclic:closure}.
 
+%---------------------------------------------------------------------
+\subsection{What actually sets the evaporating temperature}
+\label{sec:cycles:pinch}
+
+$T_{3e}$ does \emph{not} follow from $T_{2d}$ by a hot-end approach, although
+that is how it was written until v0.9 and it is the natural thing to write. The
+binding constraint lives in the middle of the evaporator, and the reason is
+structural rather than numerical.
+
+The borehole water is a \emph{sensible} stream: it glides the full
+$\Delta T_{3C,2C}$, by construction, because that glide is what sizes the flow.
+The ORC working fluid is a \emph{latent} stream over most of its duty: at the
+design point it absorbs \SI{76}{\percent} of its heat boiling at the single
+temperature $T_{3e}$. A sloping line and a horizontal one converge, and where
+they meet is set by the whole exchanger, not by either end:
+\begin{equation}
+  \Delta T_{\mathrm{pinch}} \;=\;
+  \min_{0 \le Q \le Q_{\mathrm{tot}}}
+  \left[\,T_{\mathrm{water}}(Q) - T_{\mathrm{ORC}}(Q)\,\right]
+  \;\ge\; \Delta T_{\mathrm{pinch,ORC}} .
+  \label{eq:pinch}
+\end{equation}
+Both composites are built on real enthalpy --- the water because $c_{p}$ is not
+constant over \SI{55}{\kelvin}, the working fluid because the latent plateau
+must appear as a vertical segment and not be smeared into a slope. The cold
+composite carries two streams, the main flow from state $10e$ to $3e$ at
+$p_{\mathrm{evap}}$ and the fraction $y$ reheated from $5e$ to $6e$ at
+$p_{\mathrm{int}}$.
+
+Equation~\eqref{eq:pinch} is what determines $T_{3e}$: the hot-end rule is kept
+when it already satisfies it, and $T_{3e}$ is otherwise lowered until it does.
+At the design point the hot-end rule gives \SI{134.1}{\celsius} and
+Eq.~\eqref{eq:pinch} permits only \SI{95.4}{\celsius}, which is not a small
+correction and is worked through in \S\ref{sec:defects:orcpinch}.
+
+\emph{The general lesson, which matters more than the number.} Any storage
+concept that delivers heat as a \emph{glide} is badly matched to a power cycle
+that absorbs it at \emph{one temperature}, and the mismatch tightens as the
+glide widens. The glide cannot be treated as a free lever for storage density.
+Functions: \code{orc\_pinch}, \code{feasible\_rankine}.
+
 Given the state points, the cycle efficiencies
 \begin{equation}
   \eta_{\mathrm{ORC}} \;=\; \frac{w_{\mathrm{net}}}{q_{\mathrm{in}}},
