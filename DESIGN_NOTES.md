@@ -769,3 +769,100 @@ free choice.
 
 **Raised by** the observation that a zero approach was holding only by accident.
 It was not even an accident: it was the absence of a mechanism.
+
+---
+
+## DN-18 — Four temperature differences that were doing more than one job
+
+Not defects, this time: an audit. Each of these was a single field standing in
+for two or three independent physical statements. All four changes are exact
+no-ops at their defaults, verified to \(10^{-6}\) on every reported quantity.
+
+### 1. `DT_E_sink` referenced the wrong end
+
+`T_1e = T_sink_C + DT_E_sink` measures the ORC condenser approach to the sink
+**inlet**. That is the same wrong-end pattern that made `DT_3A_13H` unsafe
+(DN-17); it was merely masked, because the sink is modelled as an infinite
+reservoir and inlet = outlet. Now `T_1e = T_sink_C + DT_sink_glide +
+DT_E_sink`, with `DT_sink_glide = 0`.
+
+**And the ORC condenser is not structurally safe the way the HTHP condenser
+is.** State 4e is superheated by 22.5 K, so the hot composite has a
+desuperheating kink at the HOT end — 7 % of the duty. Give the sink any glide
+and the pinch appears at that corner, **interior, at 93.4 % of the duty**, and
+crosses at about 5.4 K:
+
+    sink glide  0 K -> +5.000 K      4 K -> +1.263 K
+                5 K -> +0.328 K      6 K -> -0.606 K   crosses
+
+The HTHP condenser has no such kink: state 2h is *saturated vapour*, because
+the model forces isentropic compression to land exactly on the dew line, so its
+only kink is the 2 K subcooling at the COLD end where the gap is widest. The
+rule is not "isothermal hot stream is safe" — it is **where the kink sits**.
+
+### 2. `DT_2D_3E` is inert but not obsolete
+
+`T_3e` is now written as what it always was:
+
+    T_3e = min( T_2d - DT_2D_3E ,  T_3e_pinch )
+
+Neither constraint subsumes the other, and `rank['T_3e_binding']` names the
+active one. At the default `DT_2D_3E = 12 K` the pinch binds across the whole
+useful range of glides (15–70 K), so the hot-end rule never becomes active —
+but it would if raised, and it remains the bisection's upper bracket. The
+change is presentational: the same arithmetic, stated as a constraint rather
+than as "start from the old rule and correct it".
+
+### 3. The cascade span was tied to the glide, and the bound runs the other way
+
+`DT_cascade` now grades the cascade independently, defaulting to `DT_3C_2C`.
+
+That default is not arbitrary. With span = glide·(N−1)/N, the approach between
+the water and the layer it is working on is **exactly `DT_4C_M` at the leading
+face of every layer**, decaying to `DT_4C_M - span/N` at each trailing face —
+10.000 K and 3.889 K at the design point. That sawtooth *is* the cascade, and
+matching the span to the glide is the unique choice that makes it uniform.
+
+The important correction is to the direction of the bound. The span must be
+**larger** than glide minus the approach, not smaller:
+
+    charging : span > DT_3C_2C  - DT_4C_M = 45.0 K
+    discharge: span > glide_dc  - DT_M_1D = 45.0 K
+
+At the default, span = 48.889 K — only **3.889 K of margin**. Below the bound
+the driving difference inverts at the far end of the well, and `validate_case`
+now raises. Sweeping the cascade narrower is the dangerous direction, and it is
+the one that looks attractive because it raises `T_m,bottom` and hence the ORC
+evaporating temperature:
+
+    span 26.7 K -> eta_RTE 0.3508, but residual melt 0.196 and -32.6 % delivery
+    span 48.9 K -> eta_RTE 0.3003, residual melt 0.012,        +4.5 % delivery
+
+### 4. `DT_3D_2D`: the two half-cycles need not glide alike
+
+Two of the three couplings were never assumptions. `T_3c = T_4c`, so the HTHP
+condenser glide **is** the borehole charging glide — same water, same flow,
+closed loop, energy conservation. Likewise the ORC evaporator glide is the
+borehole discharging glide. Neither can be relaxed.
+
+What *was* assumed is that the charging and discharging glides are equal: both
+mass flows were divided by `DT_3C_2C`. `DT_3D_2D` now separates them, and there
+is an interior optimum:
+
+    DT_3D_2D 40 K -> deviation +6.4 %, eta_RTE 0.2764, store fully refreezes
+    DT_3D_2D 55 K -> deviation +4.5 %, eta_RTE 0.3003
+    DT_3D_2D 65 K -> deviation -8.5 %, eta_RTE 0.3041, residual melt 0.227
+
+A wider discharge glide raises `T_2d`, lets the ORC boil hotter and lifts
+`eta_RTE` — until the store cannot keep up and the plant misses its target.
+
+**Why the three were originally tied together.** The cascade is *shared
+hardware*: graded once, and both half-cycles must live with it. Matching both
+water glides to the span is the only way to hold a uniform approach in both
+directions. That is a defensible design choice — but it is a choice, and the
+tables above show it is not obviously the best one.
+
+**Still open.** Two interior optima are now visible (cascade span, discharge
+glide) and neither has been searched, nor has the glide itself (DN-15). That is
+a three-parameter optimisation the model can now express and has never been
+asked.

@@ -15,36 +15,42 @@ secondary fluid circulating through the boreholes is pressurised water.
 Every state point is fixed by a specified approach temperature rather than by a
 component model. Writing $\Tm$ for the PCM melting point,
 \begin{align}
-  T_{1e} &= T_{\mathrm{sink}} + \Delta T_{E,\mathrm{sink}}, &
+  T_{1e} &= T_{\mathrm{sink}} + \Delta T_{\mathrm{sink,glide}}
+            + \Delta T_{E,\mathrm{sink}}, &
   T_{3d} &= \Tm^{\mathrm{bot}} - \Delta T_{M,1D}, \\
-  T_{2d} &= T_{3d} + \Delta T_{3C,2C}\ \text{(provisional)}, &
-  T_{3e} &= T_{2d} - \Delta T_{2D,3E}, \\
+  T_{2d} &= T_{3d} + \Delta T_{3D,2D}\ \text{(provisional)}, &
+  T_{3e} &= \min\!\left(T_{2d}-\Delta T_{2D,3E},\,
+                        T_{3e}^{\mathrm{pinch}}\right), \\
   T_{4c} &= \Tm + \Delta T_{4C,M}, &
   T_{4a} &= T_{\mathrm{source}} - \Delta T_{3A,4A}, \\
-  T_{13h} &= T_{\mathrm{source}} - \Delta T_{3A,13H}, &
+  T_{13h} &= T_{4a} - \Delta T_{\mathrm{pinch,HPE}}, &
   T_{3c} &= T_{4c}, \\
   T_{2c} &= T_{3c} - \Delta T_{3C,2C}, &
   T_{2h} &= T_{3c} + \Delta T_{2H,3C},
 \end{align}
 with
 \begin{equation}
-  \Tm^{\mathrm{bot}} \;=\; \Tm - \Delta T_{3C,2C}\,
+  \Tm^{\mathrm{bot}} \;=\; \Tm - \Delta T_{\mathrm{cascade}}\,
   \frac{N_{\mathrm{lay}}-1}{N_{\mathrm{lay}}}
   \label{eq:Tmbot}
 \end{equation}
 the melting temperature of the coldest cascade layer, \SI{101.111}{\celsius} for
 the default case. Function: \code{T\_m\_bottom}, \code{cycle\_state\_points}.
 
-The secondary-fluid glide across the borehole field, $\Delta T_{3C,2C}$, is the
-principal design variable of the study, and since v0.6 its only job is to set
-the two mass flow rates. The discharge-side glide is equal to it by
-construction,
-\begin{equation}
-  \Delta T_{2D,3D} \;=\; \Delta T_{3C,2C},
-  \label{eq:glide-tied}
-\end{equation}
-which in v0.1 was two independent variables carrying a comment that they must be
-equal; a comment is not a constraint.
+Three of these approaches are \emph{derived} rather than free, and saying so is
+the point of the arrangement above. $T_{13h}$ follows from the source outlet
+(\S\ref{sec:defects:hpe}); $T_{3e}$ is the smaller of two constraints
+(\S\ref{sec:cycles:pinch}); and $T_{1e}$ is referenced to the sink
+\emph{outlet}, which coincides with its inlet only because
+$\Delta T_{\mathrm{sink,glide}}=0$ models the sink as a reservoir.
+
+The charging glide $\Delta T_{3C,2C}$ is the principal design variable of the
+study, and since v0.6 its only job is to set the two mass flow rates. Until
+v0.9b the discharging glide and the cascade grading were not separate fields at
+all: both were $\Delta T_{3C,2C}$. They are now
+$\Delta T_{3D,2D}$ and $\Delta T_{\mathrm{cascade}}$, each defaulting to it, and
+\S\ref{sec:cycles:glides} sets out which of the resulting equalities are forced
+by energy conservation and which were merely assumed.
 
 \subsection{Which temperatures may be prescribed}
 \label{sec:cycles:closure}
@@ -145,6 +151,118 @@ concept that delivers heat as a \emph{glide} is badly matched to a power cycle
 that absorbs it at \emph{one temperature}, and the mismatch tightens as the
 glide widens. The glide cannot be treated as a free lever for storage density.
 Functions: \code{orc\_pinch}, \code{feasible\_rankine}.
+
+\medskip
+\noindent\textbf{Two constraints, not one.} $T_{3e}$ is the smaller of a
+minimum approach at the hot end and the largest pinch-feasible value,
+\begin{equation}
+  T_{3e} \;=\; \min\!\left(T_{2d}-\Delta T_{2D,3E},\;\;
+                            T_{3e}^{\mathrm{pinch}}\right),
+  \label{eq:T3e-min}
+\end{equation}
+and neither subsumes the other. At $\Delta T_{2D,3E}=\SI{12}{\kelvin}$ the
+pinch binds across the whole useful range of glides, \SIrange{15}{70}{\kelvin},
+so the hot-end rule is inert in practice while remaining a real constraint if
+raised. The active one is reported.
+
+%---------------------------------------------------------------------
+\subsection{The three glides, and which of them are actually independent}
+\label{sec:cycles:glides}
+
+Three temperature spans in this plant are close to one another in magnitude and
+were, until v0.9b, all set by the single field $\Delta T_{3C,2C}$. They are not
+equally free, and the distinction matters for any parametric study.
+
+\begin{center}
+\begin{tabular}{@{}l l l@{}}
+\toprule
+span & value & status \\
+\midrule
+HTHP condenser water   & \SI{55.0}{\kelvin} & \emph{specified}: $\Delta T_{3C,2C}$ \\
+borehole charging      & \SI{55.0}{\kelvin} & \textbf{forced} equal to the above \\
+ORC evaporator water   & \SI{55.0}{\kelvin} & \emph{specified}: $\Delta T_{3D,2D}$ \\
+borehole discharging   & \SI{55.0}{\kelvin} & \textbf{forced} equal to the above \\
+PCM cascade span       & \SI{48.889}{\kelvin} & \emph{specified}: $\Delta T_{\mathrm{cascade}}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The two \textbf{forced} equalities are not modelling assumptions and cannot be
+relaxed. The state-point construction sets $T_{3c}=T_{4c}$: the water leaves the
+heat-pump condenser and enters the borehole with no state change between, so it
+is the same stream at the same flow. Its rise in the condenser and its fall in
+the borehole are the same number by energy conservation. The discharge side is
+identical in structure.
+
+What \emph{was} assumed is only that the charging and discharging glides are
+equal --- both mass flows were divided by $\Delta T_{3C,2C}$ --- and that the
+cascade is graded to match them.
+
+\medskip
+\noindent\textbf{The cascade span, and why its bound runs the way it does.}
+With a span one layer short of the glide, the approach between the water and
+the layer it is working on is \emph{exactly} $\Delta T_{4C,M}$ at the leading
+face of every layer, decaying to $\Delta T_{4C,M}-\Delta T_{\mathrm{cascade}}/N_{\mathrm{lay}}$
+at each trailing face --- \SI{10.000}{\kelvin} and \SI{3.889}{\kelvin} at the
+design point. That sawtooth is the cascade, and matching the span to the glide
+is the \emph{unique} choice that makes it uniform.
+
+The span is therefore bounded \textbf{below}, not above:
+\begin{equation}
+  \mathrm{span} \;>\; \max\!\left(
+    \Delta T_{3C,2C}-\Delta T_{4C,M},\;\;
+    \Delta T_{3D,2D}-\Delta T_{M,1D}\right) = \SI{45.0}{\kelvin},
+  \label{eq:span-bound}
+\end{equation}
+against a design value of \SI{48.889}{\kelvin}: a margin of only
+\SI{3.889}{\kelvin}. Below the bound the driving difference \emph{inverts} at
+the far end of the well, and \code{validate\_case} raises. The narrow direction
+is the dangerous one, and it is also the tempting one, because narrowing the
+cascade raises $T_{m,\mathrm{bottom}}$ and lets the ORC boil hotter:
+
+\begin{center}
+\begin{tabular}{@{}r r r r r@{}}
+\toprule
+span [\si{\kelvin}] & $T_{m,\mathrm{bot}}$ [\si{\celsius}] & deviation
+ & $\varepsilon$ end dc & $\eta_{\mathrm{RTE}}$ \\
+\midrule
+26.7 & 123.3 & \SI{-32.56}{\percent} & 0.196 & \textbf{0.3508} \\
+35.6 & 114.4 & \SI{-17.19}{\percent} & 0.108 & 0.3335 \\
+43.5 & 106.5 & \SI{-4.00}{\percent}  & 0.041 & 0.3149 \\
+\textbf{48.9} & \textbf{101.1} & \SI{+4.53}{\percent} & \textbf{0.012} & 0.3003 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Efficiency and utilisation pull in opposite directions, so there is an interior
+optimum and it has not been searched.
+
+\medskip
+\noindent\textbf{The discharging glide.} $\Delta T_{3D,2D}$ shows the same
+structure. A wider discharge glide raises $T_{2d}$, lets the ORC boil hotter
+and lifts $\eta_{\mathrm{RTE}}$ --- until the store cannot keep up:
+
+\begin{center}
+\begin{tabular}{@{}r r r r@{}}
+\toprule
+$\Delta T_{3D,2D}$ [\si{\kelvin}] & deviation & $\varepsilon$ end dc
+ & $\eta_{\mathrm{RTE}}$ \\
+\midrule
+40 & \SI{+6.41}{\percent} & 0.000 & 0.2764 \\
+55 & \SI{+4.53}{\percent} & 0.012 & 0.3003 \\
+65 & \SI{-8.51}{\percent} & 0.227 & \textbf{0.3041} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+\emph{Why the three were tied together in the first place.} The cascade is
+shared hardware: graded once, and both half-cycles must live with it. Matching
+both water glides to the span is the only way to hold a uniform approach in
+both directions. That is a defensible design choice, and it is now expressible
+as a choice rather than embedded as an identity.
 
 Given the state points, the cycle efficiencies
 \begin{equation}

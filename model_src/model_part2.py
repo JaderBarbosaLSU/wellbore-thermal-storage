@@ -49,7 +49,18 @@ class Case:
     Comp_eff: float = 0.85
     ElH_eff: float = 0.95
     T_sink_C: float = 20.0
+    # Approach at the ORC condenser, measured to the sink OUTLET. With
+    # DT_sink_glide = 0 the sink is an infinite reservoir and outlet = inlet,
+    # which is the model as built. Referencing it to the inlet -- as this did
+    # before v0.9b -- is the same wrong-end pattern that made DT_3A_13H
+    # unsafe; it was merely masked by the reservoir assumption. See DN-18.
     DT_E_sink: float = 5.0
+    # Temperature rise of the sink stream through the ORC condenser. Zero is
+    # the reservoir idealisation. Give it a value and the condenser acquires
+    # an INTERIOR pinch at the desuperheat corner, ~93 % of the duty, which
+    # crosses at about 5.4 K -- the ORC condenser is not structurally safe
+    # the way the HTHP condenser is.
+    DT_sink_glide: float = 0.0
     DT_2D_3E: float = 12.0
     # Minimum water-to-working-fluid gap ANYWHERE in the ORC evaporator, not
     # just at its hot end. DT_2D_3E alone cannot keep the two composite curves
@@ -82,7 +93,35 @@ class Case:
     DT_3A_13H: float = None
     DT_2H_3C: float = 10.0
     DT_sub: float = 2.0
-    DT_3C_2C: float = 55.0        # secondary-fluid glide          [K]
+    # The CHARGING water glide, across the HTHP condenser. Because
+    # T_3c = T_4c -- the water leaves the condenser and enters the borehole
+    # with no state change between -- this is identically the borehole
+    # charging glide. That equality is energy conservation on a closed loop,
+    # not an assumption, and cannot be relaxed.
+    DT_3C_2C: float = 55.0        # charging water glide           [K]
+    # The DISCHARGING water glide, across the ORC evaporator, and likewise
+    # identically the borehole discharging glide. Until v0.9b this was not a
+    # field at all: both mass flows were divided by DT_3C_2C, which silently
+    # asserted that the two half-cycles glide by the same amount. They need
+    # not. None keeps the old behaviour exactly. See DN-18.
+    DT_3D_2D: float = None        # discharging water glide        [K]
+    # The cascade grading parameter. Layer spacing is DT_cascade / N_lay and
+    # the top-to-bottom SPAN is DT_cascade * (N_lay - 1) / N_lay, one layer
+    # short of DT_cascade itself.
+    #
+    # Setting this equal to the charging glide -- which None does -- is not
+    # arbitrary: it is the unique choice that makes the approach between the
+    # water and the layer it is melting equal to DT_4C_M at the LEADING FACE
+    # of every layer, decaying to DT_4C_M - DT_cascade/N_lay at each trailing
+    # face. That sawtooth is the cascade.
+    #
+    # Prescribing it independently is legitimate, but it is bounded BELOW,
+    # not above: the approach at the far end of the well is
+    #     charging : span - (glide_ch - DT_4C_M)
+    #     discharge: span - (glide_dc - DT_M_1D)
+    # so a span SMALLER than glide minus the approach inverts the driving
+    # difference at that end. At the default the margin is only 3.889 K.
+    DT_cascade: float = None      # cascade grading parameter      [K]
     t_ch: float = 10.0            # charging duration              [h]
     t_dc: float = 10.0            # discharging duration           [h]
     loss_surplus: float = 0.05    # assumed storage loss, lambda
@@ -118,6 +157,21 @@ class Case:
     front_geometry: str = "directional"
 
     # ---- derived ----
+    @property
+    def glide_dc_spec(self):
+        """Specified discharging glide; falls back to the charging glide."""
+        return self.DT_3C_2C if self.DT_3D_2D is None else self.DT_3D_2D
+
+    @property
+    def cascade_param(self):
+        """Cascade grading parameter; falls back to the charging glide."""
+        return self.DT_3C_2C if self.DT_cascade is None else self.DT_cascade
+
+    @property
+    def cascade_span(self):
+        """Top-to-bottom melting range, one layer short of cascade_param."""
+        return self.cascade_param * (self.N_lay - 1) / self.N_lay
+
     @property
     def T_m(self):
         return self.T_m_C + 273.15

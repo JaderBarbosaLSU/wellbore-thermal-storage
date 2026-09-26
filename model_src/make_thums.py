@@ -35,7 +35,7 @@ ENTRY = ('Case', 'simulate_css_corrected', 'simulate_css', 'css_report',
 
 HEADER = '''"""THUMS -- latent heat storage in a repurposed wellbore.
 
-The live model, v0.9. One formulation (enthalpy, "Formulation C"), one sizing
+The live model, v0.9b. One formulation (enthalpy, "Formulation C"), one sizing
 framing (specify the hardware and march to cyclic steady state), no root
 finding anywhere.
 
@@ -181,6 +181,47 @@ def validate_case(case, verbose=True):
         err(f'the derived evaporating temperature {T_evap:.2f} C is at or '
             f'below the sink at {case.T_sink_C:.2f} C; there is no lift left '
             f'to speak of. Reduce DT_3A_4A or DT_pinch_HPE.')
+
+    # --- the cascade span is bounded BELOW, not above ---------------------
+    # The approach between the water and the layer it is working on is
+    # DT_4C_M at the leading face of every layer only when the span matches
+    # the glide. Shrink the span and the approach at the FAR end of the well
+    # closes; below the bound it inverts.
+    span = case.cascade_span
+    g_ch, g_dc = case.DT_3C_2C, case.glide_dc_spec
+    for gl, appr, name, half in ((g_ch, case.DT_4C_M, 'DT_4C_M', 'charging'),
+                                 (g_dc, case.DT_M_1D, 'DT_M_1D', 'discharging')):
+        margin = span - (gl - appr)
+        if margin <= 0.0:
+            err(f'the cascade span {span:.3f} K is too NARROW for the '
+                f'{half} glide: the approach at the far end of the well is '
+                f'{margin:.3f} K, so the driving difference inverts there. '
+                f'The span must exceed glide - {name} = {gl - appr:.3f} K. '
+                f'Raise DT_cascade, widen {name}, or narrow the glide. '
+                f'(A span LARGER than the glide is always safe; it is the '
+                f'small-span direction that fails.)')
+        elif margin < 2.0:
+            warn(f'the {half} approach at the far end of the well is only '
+                 f'{margin:.3f} K (span {span:.3f} K against a glide of '
+                 f'{gl:.3f} K less {name} = {appr:.3f} K). Workable, but '
+                 f'that end of the store is being driven very softly')
+
+    if case.DT_cascade is not None:
+        msgs.append(('info',
+                     f'cascade prescribed independently: DT_cascade = '
+                     f'{case.DT_cascade:.3f} K, span {span:.3f} K, against a '
+                     f'charging glide of {g_ch:.3f} K. The leading-face '
+                     f'approach is no longer uniform along the well.'))
+    if case.DT_3D_2D is not None:
+        msgs.append(('info',
+                     f'discharging glide prescribed independently: '
+                     f'DT_3D_2D = {case.DT_3D_2D:.3f} K against a charging '
+                     f'glide of {g_ch:.3f} K'))
+    if case.DT_sink_glide > 0.0:
+        warn(f'DT_sink_glide = {case.DT_sink_glide:.2f} K. The ORC condenser '
+             f'then has an INTERIOR pinch at the desuperheat corner, around '
+             f'93 % of its duty, and the model does not check it. It crosses '
+             f'near {case.DT_E_sink + 0.4:.1f} K of sink glide.')
     warn('the ORC regenerator has a zero approach by construction '
          '(T_9e = T_7e in double_stage_rankine), so its duty is an upper '
          'bound rather than a design value. This is structural, not a '

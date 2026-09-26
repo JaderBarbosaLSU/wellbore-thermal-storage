@@ -873,6 +873,48 @@ model tells you in advance where they balance. Watch for the
 down, and plot $\eta_{\mathrm{RTE}}$ and $\Nwells$ against the glide on the same
 axis.
 
+\paragraph{Three glides, and which of them you may actually change.}
+Three temperature spans in this plant are nearly the same size, and until v0.9b
+one field set all three. They are not equally free:
+
+\begin{center}
+\begin{tabular}{@{}l r l@{}}
+\toprule
+span & value & \\
+\midrule
+HTHP condenser water & \SI{55.0}{\kelvin} & \code{DT\_3C\_2C} \\
+borehole charging    & \SI{55.0}{\kelvin} & \textbf{forced} equal to it \\
+ORC evaporator water & \SI{55.0}{\kelvin} & \code{DT\_3D\_2D} \\
+borehole discharging & \SI{55.0}{\kelvin} & \textbf{forced} equal to it \\
+PCM cascade span     & \SI{48.889}{\kelvin} & \code{DT\_cascade} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The two \textbf{forced} rows are not assumptions. The water leaves the heat-pump
+condenser and enters the borehole with nothing in between, so its rise in one
+and its fall in the other are the same number --- energy conservation on a
+closed loop. You cannot sweep them apart.
+
+The other two you can. \code{DT\_3D\_2D} and \code{DT\_cascade} both default to
+\code{DT\_3C\_2C}, so nothing changes unless you set them.
+
+\medskip
+\noindent\textbf{The cascade span has a lower bound, and it is tight.} With a
+span one layer short of the glide, the approach between the water and the layer
+it is melting is exactly \code{DT\_4C\_M} at each layer's \emph{leading} face,
+decaying to \SI{3.889}{\kelvin} at its trailing face. That sawtooth is the
+cascade. Narrow the span and the approach at the far end of the well closes:
+$$\text{span} \;>\; \text{glide} - \Delta T_{4C,M} \;=\; \SI{45}{\kelvin},$$
+against a default of \SI{48.889}{\kelvin} --- \SI{3.889}{\kelvin} of margin.
+Below it the driving difference inverts and \code{validate\_case} raises. This
+is the direction that will tempt you, because a narrower cascade raises
+$T_{m,\mathrm{bottom}}$ and lets the ORC boil hotter:
+$\eta_{\mathrm{RTE}}$ climbs from $0.300$ to $0.351$ --- while the residual melt
+goes from $0.012$ to $0.196$ and the plant misses target by \SI{33}{\percent}.
+Both of these have interior optima and nobody has looked for them.
+
 \paragraph{One correction pass.}
 The ORC evaporating temperature follows the exchanger outlet, which is now a
 result. So the calculation is run twice: once with a provisional outlet, then

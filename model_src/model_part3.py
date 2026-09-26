@@ -18,7 +18,7 @@ def T_m_bottom(case):
     The discharge enters the exchanger at this end, which is why this is the
     reference for DT_M_1D and not T_m,top.
     """
-    return case.T_m - case.DT_3C_2C * (case.N_lay - 1) / case.N_lay
+    return case.T_m - case.cascade_span
 
 
 def _orc_cold_composite(rank, fluid, n=300):
@@ -101,40 +101,49 @@ def orc_pinch(rank, T_w_hot, T_w_cold, fluid, P_water, n=600):
 
 
 def feasible_rankine(case, T_1e, T_w_hot, T_w_cold):
-    """The ORC at the highest boiling temperature the water can actually reach.
+    """The ORC evaporating temperature, as the MINIMUM of two constraints.
 
-    The old rule set the evaporating temperature from the HOT END alone,
-    T_3e = T_2d - DT_2D_3E, and never looked at the rest of the exchanger.
-    With a 55 K water glide against a cycle that takes ~76 % of its heat at
-    one constant temperature, that is not a small error: the curves crossed by
-    30 K and the quoted eta_ORC = 0.232 was unachievable.
+        T_3e = min( T_2d - DT_2D_3E ,  T_3e^pinch )
 
-    So: start from the old rule, keep it if it already clears
-    `case.DT_pinch_ORC`, and otherwise bisect T_3e DOWNWARD until the pinch
-    equals the requirement. Returns the rank dict, with two extra keys
-    recording what happened.
+    The first is a minimum approach at the HOT END, which is what anybody
+    writes first and what this model used alone until v0.9. The second is the
+    largest boiling temperature for which the composite curves keep
+    `case.DT_pinch_ORC` everywhere, found by bisection. Neither subsumes the
+    other, so the binding one is whichever is lower, and the returned dict
+    says which it was in `T_3e_binding`.
+
+    At the default DT_2D_3E = 12 K the PINCH binds across the whole useful
+    range of glides -- the hot-end rule never becomes active -- so that field
+    is inert in practice while remaining a real constraint if raised. Writing
+    it as a minimum rather than as "start from the old rule and correct it"
+    is the same arithmetic and a more honest statement of intent.
     """
-    T_3e_want = T_w_hot - case.DT_2D_3E
-    rank = double_stage_rankine(case.fluid, T_1e, T_3e_want)
-    pinch = orc_pinch(rank, T_w_hot, T_w_cold, case.fluid, case.P)
-    if pinch >= case.DT_pinch_ORC:
-        rank["T_3e_uncorrected"] = T_3e_want
-        rank["pinch"] = pinch
-        return rank
+    T_3e_hot_end = T_w_hot - case.DT_2D_3E
 
-    lo = T_1e + 10.0                     # floor: no cycle worth the name below
-    hi = T_3e_want
     def pinch_at(t):
         return orc_pinch(double_stage_rankine(case.fluid, T_1e, t),
                          T_w_hot, T_w_cold, case.fluid, case.P)
+
+    # is the hot-end value already pinch-feasible?
+    if pinch_at(T_3e_hot_end) >= case.DT_pinch_ORC:
+        rank = double_stage_rankine(case.fluid, T_1e, T_3e_hot_end)
+        rank["T_3e_uncorrected"] = T_3e_hot_end
+        rank["T_3e_hot_end"] = T_3e_hot_end
+        rank["T_3e_binding"] = "hot-end approach DT_2D_3E"
+        rank["pinch"] = orc_pinch(rank, T_w_hot, T_w_cold, case.fluid, case.P)
+        return rank
+
+    lo = T_1e + 10.0                     # floor: no cycle worth the name below
+    hi = T_3e_hot_end
     if pinch_at(lo) < case.DT_pinch_ORC:
         raise RuntimeError(
             f"no ORC boiling temperature above {lo - 273.15:.1f} C clears the "
             f"required pinch of {case.DT_pinch_ORC:.1f} K against water at "
             f"{T_w_hot - 273.15:.1f} -> {T_w_cold - 273.15:.1f} C "
             f"(best is {pinch_at(lo):+.2f} K). The water glide is too large "
-            f"for a cycle that boils at one temperature: reduce DT_3C_2C, or "
-            f"raise the water temperatures, or relax DT_pinch_ORC.")
+            f"for a cycle that boils at one temperature: reduce the "
+            f"discharging glide, or raise the water temperatures, or relax "
+            f"DT_pinch_ORC.")
     for _ in range(80):
         mid = 0.5 * (lo + hi)
         if pinch_at(mid) >= case.DT_pinch_ORC:
@@ -142,7 +151,9 @@ def feasible_rankine(case, T_1e, T_w_hot, T_w_cold):
         else:
             hi = mid
     rank = double_stage_rankine(case.fluid, T_1e, lo)
-    rank["T_3e_uncorrected"] = T_3e_want
+    rank["T_3e_uncorrected"] = T_3e_hot_end      # kept: reported in css_report
+    rank["T_3e_hot_end"] = T_3e_hot_end
+    rank["T_3e_binding"] = "evaporator pinch DT_pinch_ORC"
     rank["pinch"] = orc_pinch(rank, T_w_hot, T_w_cold, case.fluid, case.P)
     return rank
 
@@ -181,9 +192,9 @@ def cycle_state_points(case, T_2d=None):
     """
     T_3d_C = T_m_bottom(case) - 273.15 - case.DT_M_1D
     # provisional unless the caller supplies the realised value
-    T_2d_C = (T_3d_C + case.DT_3C_2C) if T_2d is None else (T_2d - 273.15)
+    T_2d_C = (T_3d_C + case.glide_dc_spec) if T_2d is None else (T_2d - 273.15)
     T = dict(
-        T_1e=case.T_sink_C + case.DT_E_sink + 273.15,
+        T_1e=case.T_sink_C + case.DT_sink_glide + case.DT_E_sink + 273.15,
         T_3e=T_2d_C - case.DT_2D_3E + 273.15,
         T_2d=T_2d_C + 273.15,
         T_3d=T_3d_C + 273.15,                     # the borehole inlet, state 1d
@@ -239,10 +250,10 @@ def energy_budget(case, rank_eff, hp_cop, T):
 
 def melting_temperatures(case):
     """Layer melting temperatures for charging and for discharging."""
-    dTm = case.DT_3C_2C / case.N_lay
+    dTm = case.cascade_param / case.N_lay
     i = np.arange(case.N_lay, dtype=float)
     return ((case.T_m - i * dTm).tolist(),
-            (case.T_m - case.DT_3C_2C + (i + 1.0) * dTm).tolist())
+            (case.T_m - case.cascade_param + (i + 1.0) * dTm).tolist())
 
 
 # ==========================================================================
@@ -698,7 +709,7 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False, T_2d=None):
     cp_dc = CP.PropsSI("C", "T", 0.5 * (T["T_2d"] + T["T_3d"]), "P",
                        case.P, case.fluid2) / 1000.0
     m1_ch = Eb["Q_dot_out_HP"] / cp_ch / case.DT_3C_2C / (N * case.num_tubes)
-    m1_dc = Eb["Q_dot_in_ORC"] / cp_dc / case.DT_3C_2C / (N * case.num_tubes)
+    m1_dc = Eb["Q_dot_in_ORC"] / cp_dc / case.glide_dc_spec / (N * case.num_tubes)
 
     # ---- march until the state repeats -----------------------------------
     def cycle(E0, rec=False):
@@ -754,7 +765,7 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False, T_2d=None):
         T_2d_assumed=T["T_2d"], T_2d_realised=T_2d_realised,
         T_2c_assumed=T["T_2c"], T_2c_realised=T_2c_realised,
         glide_dc=glide_dc, glide_ch=glide_ch,
-        glide_ratio_dc=glide_dc / case.DT_3C_2C,
+        glide_ratio_dc=glide_dc / case.glide_dc_spec,
         T_2d_was_provisional=T_2d is None,
         T=T, budget=Eb, T_m_seg=T_m_seg)
         # no `T_m_seg_dc`: the discharge is returned in depth indexing, where
