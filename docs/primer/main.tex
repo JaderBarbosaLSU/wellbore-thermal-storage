@@ -1232,39 +1232,86 @@ than one job, and the second job is usually the one that surprises you.
   e/.style={draw, rounded corners=2pt, inner sep=4pt, minimum width=30mm,
             align=center},
   a/.style={-{Latex[length=1.8mm]}, gray!70!black}]
-\node[p] (glide) {$\Delta T_{3C,2C}$\\\scriptsize the glide};
-\node[p, below=10mm of glide] (nlay) {$N_{\mathrm{lay}}$};
-\node[p, below=10mm of nlay] (dm1d) {$\Delta T_{M,1D}$};
-\node[p, below=7mm of dm1d] (d4cm) {$\Delta T_{4C,M}$};
+\node[p] (gch)  {$\Delta T_{3C,2C}$\\\scriptsize charging glide};
+\node[p, below=5mm of gch]  (casc) {$\Delta T_{\mathrm{cascade}}$};
+\node[p, below=5mm of casc] (nlay) {$N_{\mathrm{lay}}$};
+\node[p, below=5mm of nlay] (gdc)  {$\Delta T_{3D,2D}$\\\scriptsize discharge glide};
+\node[p, below=5mm of gdc]  (dm1d) {$\Delta T_{M,1D}$};
+\node[p, below=5mm of dm1d] (d4cm) {$\Delta T_{4C,M}$};
 
-\node[e, right=34mm of glide] (flow) {both mass flows};
-\node[e, below=4mm of flow] (spac) {cascade spacing};
-\node[e, below=4mm of spac] (tbot) {$\Tm^{\mathrm{bot}}$};
-\node[e, below=8mm of tbot] (din) {discharge inlet};
-\node[e, below=4mm of din] (cin) {charge inlet};
+\node[e, right=32mm of gch]  (fch)  {charging flow};
+\node[e, right=32mm of casc] (spac) {cascade spacing};
+\node[e, right=32mm of nlay] (tbot) {$\Tm^{\mathrm{bot}}$};
+\node[e, right=32mm of gdc]  (fdc)  {discharging flow};
+\node[e, right=32mm of dm1d] (t3d)  {$T_{3d}$, $T_{2d}$};
+\node[e, right=32mm of d4cm] (t4c)  {$T_{4c}=T_{3c}$};
 
-\draw[a] (glide) -- (flow);
-\draw[a] (glide) -- (spac);
-\draw[a] (glide) -- (tbot);
-\draw[a] (nlay) -- (spac);
+\node[e, right=24mm of t3d, fill=black!8] (pinch)
+  {ORC evaporator\\\textbf{PINCH}};
+\node[e, right=24mm of t4c, fill=black!8] (t2h) {$T_{2h}$};
+
+\draw[a] (gch)  -- (fch);
+\draw[a] (casc) -- (spac);
+\draw[a] (casc.east) to[out=0,in=180] (tbot.west);
+\draw[a] (nlay.east) to[out=0,in=180] (spac.west);
 \draw[a] (nlay) -- (tbot);
-\draw[a] (tbot) -- (din);
-\draw[a] (dm1d) -- (din);
-\draw[a] (d4cm) -- (cin);
-\node[font=\scriptsize, right=3mm of din, align=left, gray!50!black]
-  {$\Rightarrow$ everything downstream};
+\draw[a] (gdc)  -- (fdc);
+\draw[a] (gdc.east)  to[out=0,in=180] (t3d.west);
+\draw[a] (tbot.east) to[out=0,in=150] (t3d.north west);
+\draw[a] (dm1d) -- (t3d);
+\draw[a] (d4cm) -- (t4c);
+\draw[a] (t3d) -- (pinch);
+\draw[a] (t4c) -- (t2h);
+\node[font=\scriptsize, right=2mm of pinch, align=left, gray!40!black]
+  {$\Rightarrow T_{3e}$\\$\Rightarrow \eta_{\mathrm{ORC}}$};
+\node[font=\scriptsize, right=2mm of t2h, align=left, gray!40!black]
+  {$\Rightarrow \mathrm{COP}$};
 \end{tikzpicture}
-\caption{Parameter couplings. $\Delta T_{4C,M}$ and $\Delta T_{M,1D}$ are the
-two \emph{clean} knobs: each moves exactly one inlet and nothing else. The
-glide and the layer count each do three jobs.}
+\caption{Parameter couplings at v0.10. The charging and discharging glides and
+the cascade grading are now three fields, not one, so sweeping
+$\Delta T_{3C,2C}$ moves only the charging flow. \textbf{There are no clean
+knobs}: $\Delta T_{4C,M}$ reaches the $\mathrm{COP}$ through
+$T_{3c}=T_{4c}$, and $\Delta T_{M,1D}$ reaches $\eta_{\mathrm{ORC}}$ through
+the evaporator pinch.}
 \label{fig:couplings}
 \end{figure}
 
-\paragraph{The trap.} Change the glide expecting a mass-flow effect and you
-have also moved the melting-temperature ladder and, through
-Eq.~\eqref{eq:Tmbot}, the discharge inlet. If you want to vary the flow alone,
-vary the glide and adjust $\Delta T_{M,1D}$ to hold
-$\Tm^{\mathrm{bot}}-\Delta T_{M,1D}$ fixed.
+\paragraph{The old trap, and why it is gone.} Until v0.9b one field set both
+mass flows, the cascade spacing \emph{and} $\Tm^{\mathrm{bot}}$: changing the
+glide moved the whole melting-temperature ladder underneath you. The three are
+now separate fields, and the case block writes all three out, so sweeping
+$\Delta T_{3C,2C}$ moves only the charging flow --- $\Tm^{\mathrm{bot}}$ stays
+at \SI{101.111}{\celsius} whether the glide is \num{40}, \num{55} or
+\SI{70}{\kelvin}.
+
+\emph{One caveat that will bite.} $\Delta T_{\mathrm{cascade}}=\mathrm{None}$
+in the dataclass means \emph{follow} $\Delta T_{3C,2C}$, which restores the old
+behaviour exactly. Sweep from the case built in the notebook, where all three
+are written out, not from the bare default.
+
+\paragraph{There are no clean knobs.} Earlier versions of this primer claimed
+$\Delta T_{4C,M}$ and $\Delta T_{M,1D}$ each moved one inlet and nothing else.
+Both claims are wrong:
+
+\begin{center}
+\begin{tabular}{@{}l l l@{}}
+\toprule
+sweep & what you expect & what also moves \\
+\midrule
+$\Delta T_{4C,M}$, \SIrange{5}{20}{\kelvin} & the charge inlet
+  & $T_{3c}=T_{4c}$, so $T_{2h}$ goes \SIrange{165}{180}{\celsius}
+    and $\mathrm{COP}$ falls $2.884\to2.531$ \\
+$\Delta T_{M,1D}$, \SIrange{6}{18}{\kelvin} & the discharge inlet
+  & $T_{3d}$ and $T_{2d}$ fall, and with them the pinch:
+    $\eta_{\mathrm{ORC}}$ falls $0.1815\to0.1574$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The second is the whole point of \S\ref{sec:shell-primer} and the pinch:
+\textbf{anything that moves $T_{2d}$ or $T_{3d}$ reaches the ORC}, because the
+evaporating temperature is set by composite curves that begin at $T_{3d}$.
 
 \paragraph{Rate or inventory?}
 Every parameter acts on one of two things, and telling them apart is most of
@@ -1278,7 +1325,7 @@ acts on the \textbf{inventory} & acts on the \textbf{rate} & acts on both \\
 $\hm$, $\rho$ & $k_s$, $k_l$ & $\Delta T_{3C,2C}$ \\
 $V_{\mathrm{well}}$, well depth & fins ($n_f$, $L_f$, $t_f$) & $N_{\mathrm{lay}}$ \\
  & tube radii & $\Tm$ \\
- & $\Delta T_{4C,M}$, $\Delta T_{M,1D}$ & \\
+$\Delta T_{\mathrm{cascade}}$ & $\Delta T_{4C,M}$, $\Delta T_{M,1D}$ & $\Delta T_{3D,2D}$ \\
  & window lengths & \\
 \bottomrule
 \end{tabular}

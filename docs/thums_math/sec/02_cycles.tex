@@ -264,6 +264,36 @@ both water glides to the span is the only way to hold a uniform approach in
 both directions. That is a defensible design choice, and it is now expressible
 as a choice rather than embedded as an identity.
 
+\medskip
+\noindent\textbf{There are no clean knobs.} Earlier versions of this document
+and of the primer described $\Delta T_{4C,M}$ and $\Delta T_{M,1D}$ as the two
+parameters that each move one exchanger inlet and nothing else. Neither claim
+survives inspection:
+
+\begin{center}
+\begin{tabular}{@{}l l l@{}}
+\toprule
+sweep & the intended effect & what also moves \\
+\midrule
+$\Delta T_{4C,M}$, \SIrange{5}{20}{\kelvin} & the charge inlet $T_{4c}$
+  & $T_{3c}=T_{4c}$, so $T_{2h}$ runs \SIrange{165}{180}{\celsius}
+    and $\mathrm{COP}$ falls $2.884\to2.531$ \\
+$\Delta T_{M,1D}$, \SIrange{6}{18}{\kelvin} & the discharge inlet $T_{3d}$
+  & $T_{3d}$ and $T_{2d}$ fall, and with them the evaporator pinch:
+    $\eta_{\mathrm{ORC}}$ falls $0.1815\to0.1574$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The first follows from $T_{3c}=T_{4c}$ and the state-point block: the charge
+superheat sets the heat-pump condensing temperature. The second is the
+consequence of \S\ref{sec:cycles:pinch} that is easiest to overlook ---
+\emph{anything} that moves $T_{2d}$ or $T_{3d}$ reaches the ORC, because the
+evaporating temperature is set by composite curves that begin at $T_{3d}$. A
+parametric study that treats either as a single-effect knob will attribute the
+resulting change to the wrong mechanism.
+
 Given the state points, the cycle efficiencies
 \begin{equation}
   \eta_{\mathrm{ORC}} \;=\; \frac{w_{\mathrm{net}}}{q_{\mathrm{in}}},

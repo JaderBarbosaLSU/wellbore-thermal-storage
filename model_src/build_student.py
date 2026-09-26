@@ -285,23 +285,55 @@ cells.append(md(r"""
 ---
 ## 3. The parameters, and how they are coupled
 
-Read this before sweeping anything. Several parameters do more than one job,
-and the second job is usually the one that surprises you.
+Read this before sweeping anything. Almost every parameter does more than one
+job, and the second job is usually the one that surprises you.
+
+### 3.0.1 The storage side
 
 ```
-                 ┌─→ both mass flows          (ṁ = Q̇ / cp / ΔT_3C,2C)
-ΔT_3C,2C ────────┼─→ cascade spacing          (= ΔT_3C,2C / N_lay)
-  the glide      └─→ T_m,bottom               → discharge inlet → everything
+ΔT_3C,2C ──────────→ CHARGING mass flow only    ṁ_ch = Q̇_out,HP / cp / ΔT_3C,2C
+ charging glide       ...and nothing else, now that ΔT_cascade is its own field
 
-                 ┌─→ cascade spacing
-N_lay ───────────┴─→ T_m,bottom               → discharge inlet
+ΔT_3D,2D ──────┬───→ DISCHARGING mass flow      ṁ_dc = Q̇_in,ORC / cp / ΔT_3D,2D
+ discharge glide└──→ T_2d (provisional) ───────────────────┐
+                                                            │
+ΔT_cascade ────┬───→ cascade spacing  (= ΔT_cascade/N_lay)  │
+ the ladder    └───→ T_m,bottom ──→ T_3d ──────────────────→┤
+                                                            │
+N_lay ─────────┬───→ cascade spacing                        │
+               └───→ T_m,bottom ──→ T_3d ──────────────────→┤
+                                                            │
+ΔT_M,1D ───────────→ T_3d  (discharge inlet) ──────────────→┤
+                                                            ▼
+                                            ┌───────────────────────────┐
+                                            │  ORC EVAPORATOR PINCH     │
+                                            │  T_3e = min(hot-end rule, │
+                                            │             pinch)        │
+                                            └───────────┬───────────────┘
+ΔT_pinch,ORC ──────────────────────────────────────────→┤
+                                                        ▼
+                                  η_ORC ──→ energy budget ──→ N_wells
+```
 
-ΔT_4C,M ───────────→ charge inlet only
-ΔT_M,1D ───────────→ discharge inlet only     ← the two clean knobs
+### 3.0.2 The plant side
 
-T_m ───────────────→ the whole cascade, AND the HP condensing temperature
-                      (T_2h = T_4c + ΔT_2H,3C) → COP
+```
+T_m ───────────┬───→ the whole cascade ladder
+               └───→ T_4c ─┐
+ΔT_4C,M ───────────→ T_4c ─┤  (T_3c = T_4c: same water, nothing in between)
+                           ├──→ T_2h = T_3c + ΔT_2H,3C ──┐
+ΔT_2H,3C ──────────────────┘                              │
+                                                          ├──→ COP ──→ budget
+ΔT_3A,4A ──────┬───→ T_4a ──→ T_13h = T_4a − ΔT_pinch,HPE─┤
+ΔT_pinch,HPE ──┘                                          │
+ΔT_sub ───────────────────────────────────────────────────┘
 
+T_sink, ΔT_sink,glide, ΔT_E,sink ──→ T_1e ──→ η_ORC
+```
+
+### 3.0.3 Everything else
+
+```
 geometry (r_e, fins, ────→ U_i → NTU → K      → rate only, not inventory
  L_well, D_well)     └───→ V_well             → inventory only, via N_wells
 
@@ -310,13 +342,39 @@ k_s, k_l ────────────────→ rate, through the m
 c_p,s, c_p,l ────────────→ how much energy the sensible branches carry
 ```
 
-**The trap.** Change the glide expecting a mass-flow effect and you have also
-moved the melting-temperature ladder and the discharge inlet. If you want to
-vary *only* the flow, vary the glide and hold $T_m^{\rm bot}-\Delta T_{M,1D}$
-fixed by adjusting $\Delta T_{M,1D}$ to compensate.
+---
 
-**The two clean knobs** are $\Delta T_{4C,M}$ and $\Delta T_{M,1D}$: each moves
-exactly one inlet and nothing else.
+**The old trap is gone — but only because §3.1 says so.** Until v0.9b one field
+set the charging flow, the discharging flow, the cascade spacing *and*
+`T_m,bottom`. Sweeping the glide moved the whole ladder underneath you. Now
+§3.1 writes `DT_3C_2C`, `DT_3D_2D` and `DT_cascade` out separately, so sweeping
+`DT_3C_2C` moves **only the charging flow**:
+
+| `DT_3C_2C` | `T_m,bottom` | span | `T_3d` |
+|---|---|---|---|
+| 40 K | 101.111 °C | 48.889 K | 91.111 °C |
+| 55 K | 101.111 °C | 48.889 K | 91.111 °C |
+| 70 K | 101.111 °C | 48.889 K | 91.111 °C |
+
+⚠️ **This holds for `case`, not for `CASE`.** `DT_cascade=None` in the raw
+dataclass means *follow `DT_3C_2C`*, which restores the old coupling. Always
+sweep from `case` (which `sweep()` does by default), never from `CASE`.
+
+**There are no clean knobs.** The previous version of this section claimed
+$\Delta T_{4C,M}$ and $\Delta T_{M,1D}$ each moved one inlet and nothing else.
+Both claims are false, and the reasons are worth knowing:
+
+| sweep | what you expect | what also moves |
+|---|---|---|
+| `DT_4C_M` 5→20 K | charge inlet | $T_{3c}=T_{4c}$, so $T_{2h}$ rises 165→180 °C and **COP falls 2.884 → 2.531** |
+| `DT_M_1D` 6→18 K | discharge inlet | $T_{3d}$ drops, so $T_{2d}$ and the pinch drop, and **η_ORC falls 0.1815 → 0.1574** |
+
+The second one is the whole point of the pinch work: **anything that moves
+$T_{2d}$ or $T_{3d}$ reaches the ORC**, because the evaporating temperature is
+set by the composite curves and those start at $T_{3d}$.
+
+So: sweep one parameter, read *both* columns of the KPI table, and when a
+result surprises you come back to these three diagrams and follow the arrows.
 """))
 
 cells.append(md(r"""
