@@ -42,7 +42,7 @@ high-temperature heat pump melts a phase-change material during charging; an
 organic Rankine cycle recovers the energy during discharging; pressurised water
 circulates through finned hairpin tubes in the borehole.
 
-*Model version 0.9b · notebook built {STAMP}*
+*Model version 0.10 · notebook built {STAMP}*
 
 ---
 
@@ -356,10 +356,37 @@ case = CASE.with_(
     k_l      = 0.45,         # liquid conductivity                     [W/m/K]
     N_lay    = 9,            # cascade layers along the well               [-]
 
-    # --- operation -----------------------------------------------------------
-    DT_3C_2C = 55.0,         # water glide: sets BOTH flows AND the cascade [K]
+    # --- the three glides ----------------------------------------------------
+    #  These were ONE field until v0.9b.  Two of the equalities they imply are
+    #  forced by energy conservation and cannot be changed; the other two are
+    #  design choices and are now yours.  See the note below the cell.
+    DT_3C_2C = 55.0,         # CHARGING water glide, HTHP condenser         [K]
+    DT_3D_2D = 55.0,         # DISCHARGING water glide, ORC evaporator      [K]
+    DT_cascade = 55.0,       # cascade grading; SPAN = this * (N_lay-1)/N_lay
+    #                          -> span 48.889 K.  MUST EXCEED 45 K, see below
+
+    # --- borehole approaches -------------------------------------------------
     DT_4C_M  = 10.0,         # charge inlet above the hottest layer         [K]
     DT_M_1D  = 10.0,         # discharge inlet below the coldest layer      [K]
+
+    # --- pinch / approach temperatures in the four exchangers ----------------
+    DT_pinch_ORC = 5.0,      # ORC evaporator, minimum gap ANYWHERE         [K]
+    #                          (interior pinch; this is what sets T_3e)
+    DT_2D_3E = 12.0,         # ORC evaporator, hot-end approach             [K]
+    #                          T_3e = min(T_2d - this, pinch-feasible).
+    #                          INERT at this value: the pinch always binds.
+    DT_pinch_HPE = 5.0,      # HTHP evaporator, cold-end approach           [K]
+    #                          T_13h = T_source - DT_3A_4A - this
+    DT_3A_4A = 10.0,         # how far the SOURCE is cooled                 [K]
+    DT_2H_3C = 10.0,         # HTHP condenser, hot-end approach             [K]
+    DT_sub   = 2.0,          # refrigerant subcooling at condenser exit     [K]
+    DT_E_sink = 5.0,         # ORC condenser approach, to the sink OUTLET   [K]
+    DT_sink_glide = 0.0,     # sink temperature rise; 0 = infinite reservoir[K]
+    #                          ABOVE ~5 K the ORC condenser curves CROSS
+    T_source_C = 60.0,       # heat-pump source                             [C]
+    T_sink_C   = 20.0,       # ORC sink (the ocean, for THUMS)              [C]
+
+    # --- windows -------------------------------------------------------------
     t_ch     = 10.0,         # charging window                              [h]
     t_dc     = 10.0,         # discharging window                           [h]
 
@@ -388,7 +415,7 @@ case = CASE.with_(
 #  It is here rather than buried in the calls because it is a number you WILL
 #  have to change.  Cycles to convergence grow with the well count and with
 #  anything that makes each well work less hard: the design point needs about
-#  70, N = 16 needs well over 200, and a low latent heat can need 300+.
+#  71, N = 17 needs 142, N = 20 does not converge in 400 at all.
 # =============================================================================
 N_CYCLES = 250
 
@@ -396,6 +423,55 @@ validate_case(case)
 """))
 
 cells.append(md(r"""
+### The three glides — which you may change, and which you may not
+
+Three temperature spans in this plant are nearly the same size. Until v0.9b a
+single field set all three, which hid the fact that they are not equally free:
+
+| span | field | status |
+|---|---|---|
+| HTHP condenser water | `DT_3C_2C` | **specified** |
+| borehole, charging | — | **forced** equal to `DT_3C_2C` |
+| ORC evaporator water | `DT_3D_2D` | **specified** |
+| borehole, discharging | — | **forced** equal to `DT_3D_2D` |
+| PCM cascade span | `DT_cascade` | **specified** (span = `DT_cascade`·(N−1)/N) |
+
+The two **forced** rows are not assumptions and you cannot sweep them apart.
+`T_3c = T_4c`: the water leaves the heat-pump condenser and enters the borehole
+with nothing in between, so its rise in one and its fall in the other are the
+same number — energy conservation on a closed loop.
+
+The other two are yours. Setting all three to 55.0 reproduces the old
+behaviour exactly.
+
+**`DT_cascade` has a lower bound, and it is tight.** With the span one layer
+short of the glide, the approach between the water and the layer it is melting
+is exactly `DT_4C_M` at each layer's *leading* face, decaying to 3.889 K at its
+trailing face. That sawtooth **is** the cascade. Narrow the span and the
+approach at the far end of the well closes:
+
+$$\text{span} \;>\; \text{glide} - \Delta T_{4C,M} \;=\; 45\ \text{K}$$
+
+against a span of 48.889 K — only **3.889 K of margin**. Below it the driving
+difference inverts and `validate_case` raises. This is the direction that will
+tempt you, because a narrower cascade raises `T_m,bottom` and lets the ORC boil
+hotter: η_RTE climbs 0.300 → 0.351 while the residual melt goes 0.012 → 0.196
+and the plant misses target by 33 %. Both `DT_cascade` and `DT_3D_2D` have
+interior optima and **nobody has looked for them**.
+
+### The pinch temperatures
+
+`DT_pinch_ORC` is the one that matters. The ORC evaporator pinches in its
+*interior*, not at an end, because the working fluid takes 76 % of its heat at
+one temperature while the water glides — so an approach at the hot end is not a
+constraint at all. `DT_2D_3E` is left in the block above because it *is* a real
+constraint if you raise it, but at 12 K it never binds.
+
+`DT_sink_glide` is 0 by default, which models the sink as an infinite
+reservoir. Give it a value and the ORC condenser acquires an interior pinch at
+its desuperheating corner (≈93 % of the duty) which **crosses at about 5 K** —
+and the model does not check that one. Leave it at 0 unless you mean it.
+
 > **`N_CYCLES` is the one numerical setting you will actually have to touch.**
 > Everything else in the block above is physics. This one is a give-up limit on
 > the cyclic-steady-state loop, and if it is too low the run still prints a full

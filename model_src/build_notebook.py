@@ -548,7 +548,8 @@ $$\dot m_w^{ch}=\frac{\dot Q_{out,HP}}{c_{p,w}\Delta T_{3C,2C}}$$
 $\lambda$ is the assumed storage loss, fixed at 5 %. §12 shows what the model
 now says it actually is.
 """))
-cells.append(code(src('T_m_bottom', 'cycle_state_points', 'energy_budget',
+cells.append(code(src('_orc_cold_composite', 'orc_pinch', 'feasible_rankine',
+                      'T_m_bottom', 'cycle_state_points', 'energy_budget',
                       'melting_temperatures')))
 
 # ---------------------------------------------------------------- 8. dp

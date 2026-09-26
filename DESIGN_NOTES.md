@@ -866,3 +866,14 @@ tables above show it is not obviously the best one.
 glide) and neither has been searched, nor has the glide itself (DN-15). That is
 a three-parameter optimisation the model can now express and has never been
 asked.
+
+**Postscript to DN-18: the verification notebook shipped with a NameError.**
+`cycle_state_points` gained a call to `feasible_rankine`, and the cell in
+`build_notebook.py` that emits it was never told to emit the new function too.
+Nothing in the build executed the notebook, so nothing noticed, and it went out
+in v0.9 and v0.9a. `build_all.py` now runs `check_names`, which walks each
+notebook's code cells in order using `symtable` — not `ast.walk`, which gets
+scope wrong in both directions — and fails the build on any global reference no
+earlier cell defines. Verified by reverting the fix: the guard names
+`cell 22: feasible_rankine` and stops the build. That test matters more than the
+guard, after `check_version` passed a stale stamp for two releases.

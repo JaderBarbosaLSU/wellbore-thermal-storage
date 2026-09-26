@@ -35,7 +35,7 @@ ENTRY = ('Case', 'simulate_css_corrected', 'simulate_css', 'css_report',
 
 HEADER = '''"""THUMS -- latent heat storage in a repurposed wellbore.
 
-The live model, v0.9b. One formulation (enthalpy, "Formulation C"), one sizing
+The live model, v0.10. One formulation (enthalpy, "Formulation C"), one sizing
 framing (specify the hardware and march to cyclic steady state), no root
 finding anywhere.
 
