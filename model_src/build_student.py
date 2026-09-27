@@ -42,7 +42,7 @@ high-temperature heat pump melts a phase-change material during charging; an
 organic Rankine cycle recovers the energy during discharging; pressurised water
 circulates through finned hairpin tubes in the borehole.
 
-*Model version 0.10 · notebook built {STAMP}*
+*Model version 0.11 · notebook built {STAMP}*
 
 ---
 
@@ -118,7 +118,8 @@ from thums import (CASE, validate_case, cycle_state_points, energy_budget,
                    melting_temperatures, T_m_bottom, layer_map,
                    simulate_css, simulate_css_corrected, css_report,
                    march_h, pcm_capacities, pcm_state, unmirror_march,
-                   performance_indices, kpi_report, calculate_pressure_drop)
+                   performance_indices, kpi_report, calculate_pressure_drop,
+                   exchanger_UA, ua_report)
 plt.rcParams.update({'figure.dpi': 110, 'font.size': 9})
 pd.set_option('display.width', 200, 'display.max_columns', 30)
 print('thums loaded ·', len(open('thums.py').read().splitlines()), 'lines')
@@ -607,6 +608,56 @@ kpi_report(case, css, kpi)
 """))
 
 cells.append(md(r"""
+### 4.2.2 What the efficiency costs in hardware
+
+Every efficiency above was bought with exchanger area, and until v0.10 nothing
+said how much. That made every approach temperature a **free lunch**: tighten
+`DT_pinch_ORC` and $\eta_{\rm ORC}$ rises with nothing to pay.
+
+The conductance each exchanger needs follows from its composite curves —
+the same construction as the pinch:
+
+$$UA \;=\; \int_0^{Q}\frac{{\rm d}Q}{\Delta T(Q)},
+\qquad
+\Delta T_{\rm eff}\;\equiv\;\frac{Q}{UA}$$
+
+$\Delta T_{\rm eff}$ is the single approach that would need the same $UA$. For a
+counterflow exchanger with both streams sensible it **is** the log-mean
+difference (verified to $4\times10^{-8}$); with a phase change on one side it is
+the correct generalisation and the LMTD is not.
+"""))
+
+cells.append(code(r"""
+ua = ua_report(case, css)
+"""))
+
+cells.append(md(r"""
+Two things in that table are worth your attention.
+
+**The ORC condenser dominates.** It needs more conductance than the other three
+put together, because it rejects 5.9 MW across an approach of about 5 K to a
+reservoir. `DT_E_sink` is a parameter nobody has swept, and it is the largest
+single lever on total plant area.
+
+**The pinch is no longer free.** Sweeping `DT_pinch_ORC`:
+
+| `DT_pinch_ORC` | $T_{3e}$ | $\eta_{\rm RTE}$ | $UA$ evaporator | $UA$ total |
+|---|---|---|---|---|
+| 1 K | 100.3 °C | 0.3141 | 721.7 | 2490.4 |
+| 2 K | 99.2 °C | 0.3107 | 582.3 | 2373.1 |
+| **5 K** | **95.9 °C** | **0.3003** | **415.9** | **2277.7** |
+| 10 K | 90.3 °C | 0.2823 | 311.9 | 2308.3 |
+
+Going from 10 K to 1 K buys **11.3 %** of round-trip efficiency and costs
+**131 %** more evaporator conductance. Note the total has a shallow minimum
+near the default — tightening the evaporator shrinks the plant, which shrinks
+the other three. That minimum is an optimisation nobody has run.
+
+**For a DoE, report `UA_total_kW_K` beside `eta_RTE` always.** A design that
+wins on efficiency alone may simply be one that specified a bigger exchanger.
+"""))
+
+cells.append(md(r"""
 | indicator | meaning | what moves it |
 |---|---|---|
 | $\eta_T$ | discharge thermal $\to$ net electric | the power block only: $\eta_{\rm ORC}\eta_{\rm turb}\eta_{\rm gen}$. The store cannot change it |
@@ -774,6 +825,9 @@ def sweep(field, values, base=None, N=None, correct_once=True,
                      'deviation_%':  100*r['deviation'],
                      'MWe':          r['W_el_out_implied']/1000.0,
                      'glide_dc_K':   r['glide_dc'],
+                     'UA_tot_kW_K':  k['UA_total_kW_K'],
+                     'UA_orce_kW_K': k['UA_orce_kW_K'],
+                     'pinch_min_K':  k['pinch_min_K'],
                      'T_2d_real_C':  r['T_2d_realised']-273.15,
                      'eps_end_ch':   r['charge']['eps_local'].mean(),
                      'eps_end_dc':   r['discharge']['eps_local'].mean(),

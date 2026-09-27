@@ -29,13 +29,13 @@ ENTRY = ('Case', 'simulate_css_corrected', 'simulate_css', 'css_report',
          'cycle_state_points', 'energy_budget', 'melting_temperatures',
          'T_m_bottom', 'layer_map', 'march_h', 'pcm_state', 'pcm_capacities',
          'segment_profile', 'unmirror_march', 'mixed_mean_outlet',
-         'orc_pinch', 'feasible_rankine',
+         'orc_pinch', 'feasible_rankine', 'exchanger_UA', 'ua_report',
          'conduction_shell', 'bulk_shape_factor', 'bulk_equivalent_delta',
          'delta_from_area', 'calculate_pressure_drop')
 
 HEADER = '''"""THUMS -- latent heat storage in a repurposed wellbore.
 
-The live model, v0.10. One formulation (enthalpy, "Formulation C"), one sizing
+The live model, v0.11. One formulation (enthalpy, "Formulation C"), one sizing
 framing (specify the hardware and march to cyclic steady state), no root
 finding anywhere.
 

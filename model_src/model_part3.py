@@ -158,6 +158,158 @@ def feasible_rankine(case, T_1e, T_w_hot, T_w_cold):
     return rank
 
 
+def _stream_curve(h_cold_end, h_hot_end, p, fluid, n=400):
+    """(Q, T) for a single-pressure stream, from its COLD end.
+
+    Q is duty per unit mass of that stream. Sampling is in enthalpy, so a
+    latent plateau comes out flat and a (T, p) call never lands exactly on
+    the saturation line.
+    """
+    hs = np.linspace(h_cold_end, h_hot_end, n)
+    Ts = np.array([CP.PropsSI("T", "H", x * 1000.0, "P", p, fluid)
+                   for x in hs])
+    return hs - h_cold_end, Ts
+
+
+def _water_curve(T_cold, T_hot, P, Q_total, n=400):
+    """(Q, T) for the water, scaled so its total duty matches Q_total."""
+    Ts = np.linspace(T_cold, T_hot, n)
+    hs = np.array([CP.PropsSI("H", "T", t, "P", P, "Water") / 1000.0
+                   for t in Ts])
+    if abs(hs[-1] - hs[0]) < 1e-12:                 # isothermal reservoir
+        return np.array([0.0, Q_total]), np.array([T_cold, T_hot])
+    return (hs - hs[0]) * Q_total / (hs[-1] - hs[0]), Ts
+
+
+def _UA_from_curves(Qh, Th, Qc, Tc, Q_duty_kW, n=2000):
+    """UA and the effective mean approach, from two composite curves.
+
+    Both curves are (Q, T) measured from the COLD END of the exchanger, on
+    whatever duty basis; only their SHAPE is used. The conductance follows
+    from the local driving difference:
+
+        UA = int dQ / dT      ->     UA = Q_duty * <1/dT>
+
+    and the effective mean approach is the number that reproduces it,
+    dT_eff = Q_duty / UA. For a counterflow exchanger with both streams
+    sensible and constant cp, dT_eff is the log-mean difference exactly;
+    with a phase change on one side it is the correct generalisation, which
+    the LMTD is not.
+
+    Returns (UA [kW/K], dT_eff [K], pinch [K]). UA is infinite and dT_eff
+    zero if the curves touch -- which is the honest answer, and is what the
+    heat-pump evaporator returned before v0.9a gave it an approach.
+    """
+    Q_top = min(Qh[-1], Qc[-1])
+    q = np.linspace(0.0, Q_top, n)
+    dT = np.interp(q, Qh, Th) - np.interp(q, Qc, Tc)
+    pinch = float(np.min(dT))
+    if pinch <= 0.0:
+        return float("inf"), 0.0, pinch
+    # trapezoid on 1/dT, in units of the curves' own duty, then rescaled
+    inv = np.trapezoid(1.0 / dT, q) if hasattr(np, "trapezoid") \
+        else np.trapz(1.0 / dT, q)
+    UA = Q_duty_kW * inv / Q_top
+    return float(UA), float(Q_duty_kW / UA), pinch
+
+
+def exchanger_UA(case, rank, hp, T, Eb):
+    """Conductance UA [kW/K] required by each of the four exchangers.
+
+    The model reports efficiencies but has never reported what they cost in
+    hardware. That gap makes every approach temperature a free lunch: tighten
+    `DT_pinch_ORC` to 1 K and eta_ORC rises with nothing to pay for it. UA is
+    the missing axis, and it is the one that makes the approach temperatures
+    genuine design variables rather than free parameters.
+
+    Each exchanger is integrated over its real composite curves -- the same
+    construction as `orc_pinch`, so a latent plateau is a flat segment and
+    the water follows real enthalpy. Duties are plant-level, from the energy
+    budget, so the UA values are for the whole field and add up.
+
+    Returns a dict of dicts, one per exchanger, each with:
+        duty_kW, UA_kW_per_K, dT_eff_K, pinch_K
+    """
+    F, R = case.fluid, case.refrig
+    out = {}
+
+    # ---- ORC evaporator: water (hot) against the two ORC streams ----------
+    Q_orc = Eb["Q_dot_in_ORC"]
+    Qc, Tc = _orc_cold_composite(rank, F)
+    Qh, Th = _water_curve(T["T_3d"], T["T_2d"], case.P, Qc[-1])
+    out["ORC evaporator"] = dict(zip(
+        ("UA_kW_per_K", "dT_eff_K", "pinch_K"),
+        _UA_from_curves(Qh, Th, Qc, Tc, Q_orc))) | {"duty_kW": Q_orc}
+
+    # ---- ORC condenser: ORC fluid (hot) against the sink ------------------
+    Q_cond_orc = Q_orc * (1.0 - rank["rank_eff"])
+    Qh, Th = _stream_curve(rank["h_1e"], rank["h_4e"], rank["p_conde"], F)
+    Qc, Tc = _water_curve(case.T_sink_C + 273.15,
+                          case.T_sink_C + case.DT_sink_glide + 273.15,
+                          case.P, Qh[-1])
+    out["ORC condenser"] = dict(zip(
+        ("UA_kW_per_K", "dT_eff_K", "pinch_K"),
+        _UA_from_curves(Qh, Th, Qc, Tc, Q_cond_orc))) | {"duty_kW": Q_cond_orc}
+
+    # ---- HTHP condenser: refrigerant (hot) against the charging water -----
+    Q_cond_hp = Eb["Q_dot_out_HP"]
+    Qh, Th = _stream_curve(hp["h_3h"], hp["h_2h"], hp["p_condh"], R)
+    Qc, Tc = _water_curve(T["T_2c"], T["T_3c"], case.P, Qh[-1])
+    out["HTHP condenser"] = dict(zip(
+        ("UA_kW_per_K", "dT_eff_K", "pinch_K"),
+        _UA_from_curves(Qh, Th, Qc, Tc, Q_cond_hp))) | {"duty_kW": Q_cond_hp}
+
+    # ---- HTHP evaporator: source water (hot) against the refrigerant ------
+    # Duty is the condenser heat less the compressor work: what the source
+    # must actually give up.
+    Q_evap_hp = Q_cond_hp * (1.0 - 1.0 / hp["hp_cop"])
+    Qc, Tc = _stream_curve(hp["h_4h"], hp["h_13h"], hp["p_evaph"], R)
+    Qh, Th = _water_curve(T["T_4a"], case.T_source_C + 273.15,
+                          case.P, Qc[-1])
+    out["HTHP evaporator"] = dict(zip(
+        ("UA_kW_per_K", "dT_eff_K", "pinch_K"),
+        _UA_from_curves(Qh, Th, Qc, Tc, Q_evap_hp))) | {"duty_kW": Q_evap_hp}
+
+    finite = [v["UA_kW_per_K"] for v in out.values()
+              if np.isfinite(v["UA_kW_per_K"])]
+    out["TOTAL"] = dict(duty_kW=sum(v["duty_kW"] for v in out.values()),
+                        UA_kW_per_K=sum(finite) if len(finite) == 4
+                        else float("inf"),
+                        dT_eff_K=float("nan"), pinch_K=min(
+                            v["pinch_K"] for v in out.values()))
+    return out
+
+
+def ua_report(case, r):
+    """Print the conductance each exchanger needs, and what it buys."""
+    ua = exchanger_UA(case, r["rank"], r["hp"], r["T"], r["budget"])
+    print("=" * 74)
+    print("EXCHANGER CONDUCTANCE  (plant totals, all wells)")
+    print("=" * 74)
+    print(f"  {'exchanger':<18}{'duty':>10}{'UA':>12}"
+          f"{'dT_eff':>10}{'pinch':>9}")
+    print(f"  {'':<18}{'kW':>10}{'kW/K':>12}{'K':>10}{'K':>9}")
+    print("  " + "-" * 60)
+    for name in ("HTHP evaporator", "HTHP condenser",
+                 "ORC evaporator", "ORC condenser"):
+        v = ua[name]
+        print(f"  {name:<18}{v['duty_kW']:>10.1f}{v['UA_kW_per_K']:>12.2f}"
+              f"{v['dT_eff_K']:>10.2f}{v['pinch_K']:>9.2f}")
+    print("  " + "-" * 60)
+    t = ua["TOTAL"]
+    print(f"  {'TOTAL':<18}{t['duty_kW']:>10.1f}{t['UA_kW_per_K']:>12.2f}"
+          f"{'':>10}{t['pinch_K']:>9.2f}")
+    print()
+    print("  dT_eff is the single approach that would need the same UA. For a")
+    print("  counterflow exchanger with both streams sensible it IS the")
+    print("  log-mean difference; with a phase change on one side it is the")
+    print("  correct generalisation and the LMTD is not.")
+    print()
+    print("  Read this beside eta_RTE. An approach temperature bought cheaply")
+    print("  in efficiency is paid for here, and until v0.10 nothing said so.")
+    return ua
+
+
 def cycle_state_points(case, T_2d=None):
     """ORC and heat-pump state points, and the two cycle efficiencies.
 
@@ -767,7 +919,7 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False, T_2d=None):
         glide_dc=glide_dc, glide_ch=glide_ch,
         glide_ratio_dc=glide_dc / case.glide_dc_spec,
         T_2d_was_provisional=T_2d is None,
-        T=T, budget=Eb, T_m_seg=T_m_seg)
+        T=T, budget=Eb, T_m_seg=T_m_seg, rank=rank, hp=hp)
         # no `T_m_seg_dc`: the discharge is returned in depth indexing, where
         # the cascade is the same physical object as on charge. The mirrored
         # copy is an internal detail of the march and does not leave here.
@@ -842,7 +994,7 @@ def performance_indices(case, r):
     eps_cycled = float(r["charge"]["eps_local"].mean()
                        - r["discharge"]["eps_local"].mean())
     dE_therm = r["Q_discharge_kJ"] / 3600.0 / N          # kWh per well
-    return dict(
+    out = dict(
         eta_T=eta_T, eta_T_eff=eta_T_eff,
         eta_RTE=eta_RTE, eps_RTE=eta_RTE * eps_cycled,
         eps_cycled=eps_cycled,
@@ -851,6 +1003,23 @@ def performance_indices(case, r):
         f_pump=(pumping_ch + pumping_dc) / W_el_out,
         W_el_out_kW=W_el_out, W_el_in_kW=W_el_in,
         rho_E_kWh_m3=dE_therm / case.V_well)
+
+    # ---- what the efficiencies above cost in hardware --------------------
+    # Without these, every approach temperature is a free lunch: tighten
+    # DT_pinch_ORC from 10 K to 1 K and eta_RTE rises 11 % with nothing to
+    # pay, while the evaporator conductance more than doubles. Reported per
+    # unit of delivered electricity as well, which is the form that lets two
+    # designs of different size be compared.
+    if "rank" in r and "hp" in r:
+        ua = exchanger_UA(case, r["rank"], r["hp"], r["T"], r["budget"])
+        out["UA_total_kW_K"] = ua["TOTAL"]["UA_kW_per_K"]
+        out["UA_per_MWe"] = ua["TOTAL"]["UA_kW_per_K"] / (W_el_out / 1000.0)
+        out["pinch_min_K"] = ua["TOTAL"]["pinch_K"]
+        for key, tag in (("HTHP evaporator", "hpe"), ("HTHP condenser", "hpc"),
+                         ("ORC evaporator", "orce"), ("ORC condenser", "orcc")):
+            out[f"UA_{tag}_kW_K"] = ua[key]["UA_kW_per_K"]
+            out[f"dTeff_{tag}_K"] = ua[key]["dT_eff_K"]
+    return out
 
 
 def kpi_report(case, r, k=None):
@@ -874,6 +1043,19 @@ def kpi_report(case, r, k=None):
     print(f"  pumping, charge / discharge    {k['pumping_ch_kW']:8.2f}"
           f" / {k['pumping_dc_kW']:.2f} kW"
           f"   = {100*k['f_pump']:.2f} % of gross output")
+    if "UA_total_kW_K" in k:
+        print()
+        print(f"  UA total, all four exchangers  "
+              f"{k['UA_total_kW_K']:8.1f} kW/K"
+              f"   = {k['UA_per_MWe']:.1f} per MWe")
+        print(f"      HTHP evap {k['UA_hpe_kW_K']:7.1f}  "
+              f"HTHP cond {k['UA_hpc_kW_K']:7.1f}  "
+              f"ORC evap {k['UA_orce_kW_K']:7.1f}  "
+              f"ORC cond {k['UA_orcc_kW_K']:7.1f}")
+        print(f"  smallest approach anywhere     "
+              f"{k['pinch_min_K']:8.2f} K")
+        print("      Read UA beside eta_RTE. Every approach temperature is")
+        print("      bought here; `ua_report` breaks it down.")
     print()
     print("  eta_RTE is independent of the deviation: a field that delivers")
     print("  1 % above target also drew 1 % more in. The deviation is a")

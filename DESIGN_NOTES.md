@@ -877,3 +877,69 @@ scope wrong in both directions — and fails the build on any global reference n
 earlier cell defines. Verified by reverting the fix: the guard names
 `cell 22: feasible_rankine` and stops the build. That test matters more than the
 guard, after `check_version` passed a stale stamp for two releases.
+
+---
+
+## DN-19 — UA per exchanger: pricing the approach temperatures
+
+**The gap.** The model reported efficiencies and never reported what they cost
+in hardware. That made every approach temperature a **free lunch**: tighten
+`DT_pinch_ORC` from \SI{10}{K} to \SI{1}{K} and `eta_RTE` rises 11 %, with
+nothing anywhere to pay for it. For a DoE over sixteen factors that is fatal —
+several of the factors are approach temperatures, and a design that "wins" may
+simply be one that quietly specified a bigger exchanger.
+
+**What was added.** `exchanger_UA` integrates the conductance each of the four
+exchangers needs, over its real composite curves:
+
+    UA = int dQ / dT(Q)        dT_eff = Q / UA
+
+using the same construction as `orc_pinch`, so a latent plateau is flat and the
+water follows real enthalpy. Duties are plant-level from the energy budget, so
+the numbers add up across the field.
+
+`dT_eff` is the single approach that would require the same UA. **For a
+counterflow exchanger with both streams sensible it IS the log-mean
+difference** — verified against the closed form to \num{4e-8} — and with a
+phase change on one side it is the correct generalisation where the LMTD is
+not. UA diverges as the pinch closes, which is the honest answer and is
+precisely what the heat-pump evaporator would have returned before DN-17 gave
+it an approach at all.
+
+**At the design point:**
+
+    exchanger          duty kW    UA kW/K   dT_eff K   pinch K
+    HTHP evaporator     4522.1     496.77      9.10      5.00
+    HTHP condenser      7092.4     242.40     29.26     10.00
+    ORC evaporator      7092.4     415.91     17.05      5.01
+    ORC condenser       5854.0    1122.65      5.21      5.00
+    TOTAL              24560.9    2277.74                5.00
+
+**The ORC condenser dominates**, needing more conductance than the other three
+together. It rejects \SI{5.9}{MW} across about \SI{5}{K} to a reservoir, and
+`DT_E_sink` — a parameter nobody has ever swept — is therefore the largest
+single lever on total plant area in the whole model. That is the first thing
+this KPI has already told us that we did not know.
+
+**The pinch trade, now visible:**
+
+    DT_pinch_ORC   T_3e     eta_RTE   UA_evap   UA_total
+        1 K       100.3 C    0.3141     721.7     2490.4
+        2 K        99.2 C    0.3107     582.3     2373.1
+        5 K        95.9 C    0.3003     415.9     2277.7
+       10 K        90.3 C    0.2823     311.9     2308.3
+
+10 K to 1 K buys \SI{11.3}{\percent} of round-trip efficiency for
+\SI{131}{\percent} more evaporator conductance. Note that `UA_total` has a
+**shallow minimum near the default**: tightening the evaporator shrinks the
+plant, which shrinks the other three exchangers. Nobody has looked for that
+minimum, and it is a cleaner objective than `eta_RTE` alone.
+
+**For the DoE.** `UA_total_kW_K`, `UA_per_MWe` and `pinch_min_K` are now in
+`performance_indices`, so they appear in every sweep table automatically.
+Report UA beside `eta_RTE` always.
+
+**Still open.** UA is a conductance, not an area or a cost: converting it needs
+an assumed overall coefficient per exchanger type, which the model does not
+carry. `cost_per_kWh` sits unused in `Case` and would be the obvious hook for a
+levelised-cost KPI once UA can be priced.

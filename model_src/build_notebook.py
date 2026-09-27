@@ -549,6 +549,8 @@ $\lambda$ is the assumed storage loss, fixed at 5 %. §12 shows what the model
 now says it actually is.
 """))
 cells.append(code(src('_orc_cold_composite', 'orc_pinch', 'feasible_rankine',
+                      '_stream_curve', '_water_curve', '_UA_from_curves',
+                      'exchanger_UA', 'ua_report',
                       'T_m_bottom', 'cycle_state_points', 'energy_budget',
                       'melting_temperatures')))
 
