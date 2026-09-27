@@ -1006,3 +1006,89 @@ The discipline that follows is simple and is now the rule here: **a guard is
 not finished until it has been watched to fail.** Reintroduce the bug,
 confirm the guard fires and names the right thing, then restore. Every guard
 in this build has now been through that, including the two repaired above.
+
+---
+
+## DN-21 — The isentropic efficiencies were outside the cycles, and had to come in
+
+**Raised by** the observation that the hypothesis list said "the expansions and
+compressions carry no isentropic efficiency" while the budget plainly divides
+by `Turb_eff` and `Comp_eff`. Both statements were half true, and the half that
+mattered was the one nobody had written down.
+
+**What was true.** The state points *were* isentropic — `s_5e = s_3e`,
+`s_1h = s_2h`, `s_2e = s_1e` — so `rank_eff` and `hp_cop` as returned were
+reversible-cycle values. And the 0.85 efficiencies *were* applied, as
+multipliers on the work, downstream:
+
+    W_T      = W_el_out / (Turb_eff * ElG_eff)
+    W_el_in  = Q_out_HP / (COP * Comp_eff * ElH_eff)
+
+So the hypothesis text was wrong about every number a reader cares about:
+`eta_RTE` already carried all four efficiencies.
+
+**Why the downstream form was not good enough.**
+
+*Quantitatively, for the ORC, it very nearly was.* Recomputing with genuinely
+irreversible expansions gives 0.14806 against the multiplier's 0.14772 — 0.2 %.
+
+*For the heat pump it was not.* 2.4731 against 2.3455, a **5.4 %
+under-estimate** of the COP. The closure runs backwards from a discharge fixed
+on the dew line, so an irreversible compressor landing there needs a *colder*
+suction (14.25 K of superheat instead of 26.53 K), and the two-stage machine
+recovers part of the extra work through the flash separator. A single
+multiplier on the work cannot represent that.
+
+*And structurally it was fatal for what comes next.* An isentropic machine is
+reversible, so an exergy balance across it returns **zero destruction**. The
+15 % of work the multiplier removed appeared nowhere as an irreversibility. A
+component-wise exergy map built on those state points would have shown perfect
+turbomachinery and handed the entire loss to the exchangers — inverting the
+conclusion it was built to test. This note exists because that map is the next
+KPI.
+
+**The change.** Three isentropic efficiencies now act on the state points:
+
+    h_5e = h_3e - eta_t (h_3e - h_5e_s)        turbines, leave HOTTER
+    h_2e = h_1e + (h_2e_s - h_1e) / eta_p      pumps, absorb MORE
+
+and the heat-pump suction is found by bisection so the discharge still lands on
+the dew line. `Turb_eff` and `Comp_eff` are retired and raise if named, since
+keeping them would double-count. `ElG_eff` and `ElH_eff` stay outside,
+correctly: they are electrical, not thermodynamic irreversibilities of the
+working fluid.
+
+**Setting all three to 1.0 reproduces the pre-v0.12 cycles to six decimals**
+(0.173787 and 2.759421), which is the regression test and is also the cheapest
+way for a reader to see what the machines cost.
+
+**What moved.**
+
+                          v0.11a      v0.12
+    eta_ORC reported     0.17379    0.14806    was the IDEAL cycle
+    COP reported          2.7594     2.4731    was the IDEAL cycle
+    N_wells              15.6592    15.6248    -0.2 %
+    eta_RTE              0.30033    0.31721    +5.6 %
+    UA total              2277.7     2253.3    -1.1 %
+    CSS deviation, thermal/well, rho_E         IDENTICAL
+
+The first two rows are not a degradation: they used to be the reversible
+cycle's numbers and are now the real machine's. The like-for-like row is
+`eta_RTE`, and it went **up**, because the old treatment over-penalised the
+heat pump.
+
+**Side effects worth knowing.** `epsilon_IHX_2` falls from 0.2247 to 0.1197 —
+less suction superheat is wanted, so the regenerator needs less effectiveness.
+`T_3e` moves 95.427 -> 95.093 C, because the turbine exit is hotter, which
+shifts the reheat stream and the regenerator split and therefore the composite
+curve the pinch is computed on. That last one is a genuine accuracy gain
+independent of exergy: the pinch was previously evaluated on the reversible
+cycle's curves.
+
+**Still idealised, and now stated correctly in the hypothesis list:** no
+pressure drop anywhere in either cycle; no mechanical loss distinct from the
+isentropic one; and the heat-pump discharge held exactly on the dew line, so
+its condenser carries no desuperheating duty. That last is a design choice
+(IHX-2 is sized to make it so) rather than an oversight, but it does mean the
+HTHP condenser composite has no desuperheat kink — which is why it pinches at
+its hot end while the ORC condenser does not (DN-18).

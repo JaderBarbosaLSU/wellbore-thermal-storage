@@ -35,7 +35,7 @@ ENTRY = ('Case', 'simulate_css_corrected', 'simulate_css', 'css_report',
 
 HEADER = '''"""THUMS -- latent heat storage in a repurposed wellbore.
 
-The live model, v0.11a. One formulation (enthalpy, "Formulation C"), one sizing
+The live model, v0.12. One formulation (enthalpy, "Formulation C"), one sizing
 framing (specify the hardware and march to cyclic steady state), no root
 finding anywhere.
 
@@ -158,6 +158,17 @@ def validate_case(case, verbose=True):
     # None of these is an error. Each is a place where the model quietly
     # assumes an infinite exchanger, and a parametric study that leans on it
     # will report an efficiency no hardware can reach.
+    for old, new in (('Turb_eff', 'eta_turb_s'), ('Comp_eff', 'eta_comp_s')):
+        if getattr(case, old, None) is not None:
+            err(f'{old} = {getattr(case, old)} was RETIRED at v0.12. It was '
+                f'the isentropic efficiency applied as a multiplier on the '
+                f'work AFTER an isentropic cycle; it is now applied inside '
+                f'the cycle, to the state points, as {new}. Setting both '
+                f'would double-count. Use {new} and leave {old} at None.')
+    for f in ('eta_turb_s', 'eta_pump_s', 'eta_comp_s', 'ElG_eff', 'ElH_eff'):
+        v = getattr(case, f)
+        if not (0.0 < v <= 1.0):
+            err(f'{f} = {v}; must be in (0, 1]')
     if getattr(case, 'DT_3A_13H', None) is not None:
         err(f'DT_3A_13H = {case.DT_3A_13H} was RETIRED at v0.9 and is now '
             f'ignored. It used to set the evaporating temperature '

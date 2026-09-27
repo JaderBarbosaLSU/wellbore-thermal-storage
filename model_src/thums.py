@@ -1,6 +1,6 @@
 """THUMS -- latent heat storage in a repurposed wellbore.
 
-The live model, v0.11a. One formulation (enthalpy, "Formulation C"), one sizing
+The live model, v0.12. One formulation (enthalpy, "Formulation C"), one sizing
 framing (specify the hardware and march to cyclic steady state), no root
 finding anywhere.
 
@@ -48,7 +48,7 @@ import pandas as pd
 # ==========================================================================
 
 
-def double_stage_rankine(fluid, T_1e, T_3e):
+def double_stage_rankine(fluid, T_1e, T_3e, eta_t=1.0, eta_p=1.0):
   """
   Calculates parameters for a two-stage Rankine cycle with regeneration/reheating
 
@@ -80,9 +80,15 @@ def double_stage_rankine(fluid, T_1e, T_3e):
 
   # State 5e: 1st stage turbine outlet
   p_5e = p_inte
-  s_5e = s_3e
-  h_5e = CP.PropsSI('H', 'S', s_5e, 'P', p_5e, fluid)/1000.
-  T_5e = CP.PropsSI('T', 'S', s_5e, 'P', p_5e, fluid)
+  # IRREVERSIBLE from v0.12. h_5e_s is where an isentropic machine would
+  # land; the real one recovers only eta_t of that drop and therefore leaves
+  # HOTTER, with more entropy. Everything downstream of 5e -- the reheat duty,
+  # the regenerator split y, the evaporator inlet 10e -- moves with it, which
+  # is exactly why a downstream multiplier on the work could not reproduce it.
+  h_5e_s = CP.PropsSI('H', 'S', s_3e, 'P', p_5e, fluid)/1000.
+  h_5e = h_3e - eta_t * (h_3e - h_5e_s)
+  s_5e = CP.PropsSI('S', 'H', h_5e*1000., 'P', p_5e, fluid)
+  T_5e = CP.PropsSI('T', 'H', h_5e*1000., 'P', p_5e, fluid)
 
   # State 6e: 2nd stage turbine inlet
   p_6e = p_5e
@@ -92,15 +98,18 @@ def double_stage_rankine(fluid, T_1e, T_3e):
 
   # State 4e: 2nd stage turbine outlet
   p_4e = p_conde
-  s_4e = s_6e
-  h_4e = CP.PropsSI('H', 'S', s_4e, 'P', p_4e, fluid)/1000.
-  T_4e = CP.PropsSI('T', 'S', s_4e, 'P', p_4e, fluid)
+  h_4e_s = CP.PropsSI('H', 'S', s_6e, 'P', p_4e, fluid)/1000.
+  h_4e = h_6e - eta_t * (h_6e - h_4e_s)
+  s_4e = CP.PropsSI('S', 'H', h_4e*1000., 'P', p_4e, fluid)
+  T_4e = CP.PropsSI('T', 'H', h_4e*1000., 'P', p_4e, fluid)
 
   # State 2e: Pump 1 outlet
   p_2e = p_evape
-  s_2e = s_1e
-  h_2e = CP.PropsSI('H', 'S', s_2e, 'P', p_2e, fluid)/1000.
-  T_2e = CP.PropsSI('T', 'S', s_2e, 'P', p_2e, fluid)
+  # a pump absorbs MORE than isentropic, so the divide goes the other way
+  h_2e_s = CP.PropsSI('H', 'S', s_1e, 'P', p_2e, fluid)/1000.
+  h_2e = h_1e + (h_2e_s - h_1e) / eta_p
+  s_2e = CP.PropsSI('S', 'H', h_2e*1000., 'P', p_2e, fluid)
+  T_2e = CP.PropsSI('T', 'H', h_2e*1000., 'P', p_2e, fluid)
 
   # State 7e: Pump 2 inlet
   p_7e = p_inte
@@ -110,9 +119,10 @@ def double_stage_rankine(fluid, T_1e, T_3e):
 
   # State 8e: Pump 2 outlet
   p_8e = p_evape
-  s_8e = s_7e
-  h_8e = CP.PropsSI('H', 'P', p_8e, 'S', s_8e, fluid)/1000.
-  T_8e = CP.PropsSI('T', 'P', p_8e, 'S', s_8e, fluid)
+  h_8e_s = CP.PropsSI('H', 'P', p_8e, 'S', s_7e, fluid)/1000.
+  h_8e = h_7e + (h_8e_s - h_7e) / eta_p
+  s_8e = CP.PropsSI('S', 'H', h_8e*1000., 'P', p_8e, fluid)
+  T_8e = CP.PropsSI('T', 'H', h_8e*1000., 'P', p_8e, fluid)
 
   # State 9e:
   p_9e = p_evape
@@ -158,7 +168,7 @@ def double_stage_rankine(fluid, T_1e, T_3e):
 # @title
 
 
-def two_stage_htheatpump_2regs(refrig, T_13h, T_2h, DT_sub):
+def two_stage_htheatpump_2regs(refrig, T_13h, T_2h, DT_sub, eta_c=1.0):
   """
   Calculates parameters for a two-stage high-temp heat pump with a liquid separator and 2 regenerators
 
@@ -194,17 +204,50 @@ def two_stage_htheatpump_2regs(refrig, T_13h, T_2h, DT_sub):
   p_inth = (p_evaph * p_condh)**(1./2.)
 #  p_inth = (p_evaph + p_condh)*(1./2.)
 
-  # State 1h: At T_1h and p_evaph (Evaporator Outlet)
-  s_1h = s_2h # Isentropic compression to 2h
+  # --- the compressions, IRREVERSIBLE from v0.12 ------------------------
+  # The closure runs BACKWARDS: state 2h is fixed on the dew line at T_2h
+  # (the condensing temperature the water demands), and the suction state is
+  # whatever lands there. With eta_c = 1 that inverts in closed form, which
+  # is what this used to do. With eta_c < 1 the same compression ends HOTTER,
+  # so to still land on the dew point the suction must carry LESS superheat,
+  # and the inversion is implicit -- h_2h_s depends on s_1h, which depends on
+  # h_1h. Two bisections, outer stage first.
+  #
+  # The design intent is unchanged and worth restating: IHX-2 is sized to
+  # deliver exactly the suction superheat that puts the discharge on the dew
+  # point, so the condenser has no desuperheating duty. epsilon_IHX_2 remains
+  # a reported OUTPUT, and it is what moves when eta_c does.
   p_1h = p_evaph
-  T_1h = CP.PropsSI('T', 'P', p_1h, 'S', s_1h, refrig)
-  h_1h = CP.PropsSI('H', 'T', T_1h, 'P', p_evaph, refrig)/1000.
-
-  # State 11h: Low pressure compressor outlet (p_inth, isentropic from 1h)
-  s_11h = s_1h # Isentropic compression
   p_11h = p_inth
-  T_11h = CP.PropsSI('T', 'S', s_11h, 'P', p_11h, refrig)
-  h_11h = CP.PropsSI('H', 'S', s_11h, 'P', p_11h, refrig)/1000.
+
+  def _suction_for(h_target, p_lo, p_hi):
+      """Enthalpy at p_lo whose eta_c compression to p_hi reaches h_target."""
+      lo = CP.PropsSI('H', 'P', p_lo, 'Q', 1, refrig)/1000. - 40.0
+      hi = h_target
+      for _ in range(90):
+          mid = 0.5*(lo + hi)
+          s_mid = CP.PropsSI('S', 'H', mid*1000., 'P', p_lo, refrig)
+          h_s = CP.PropsSI('H', 'S', s_mid, 'P', p_hi, refrig)/1000.
+          if mid + (h_s - mid)/eta_c < h_target:
+              lo = mid
+          else:
+              hi = mid
+      return 0.5*(lo + hi)
+
+  if abs(eta_c - 1.0) < 1e-12:
+      s_1h = s_2h                      # closed form, the pre-v0.12 path
+      T_1h = CP.PropsSI('T', 'P', p_1h, 'S', s_1h, refrig)
+      h_1h = CP.PropsSI('H', 'T', T_1h, 'P', p_evaph, refrig)/1000.
+      s_11h = s_1h
+      T_11h = CP.PropsSI('T', 'S', s_11h, 'P', p_11h, refrig)
+      h_11h = CP.PropsSI('H', 'S', s_11h, 'P', p_11h, refrig)/1000.
+  else:
+      h_11h = _suction_for(h_2h, p_inth, p_condh)      # HP stage inlet = 6h
+      h_1h = _suction_for(h_11h, p_evaph, p_inth)      # LP stage inlet
+      T_1h = CP.PropsSI('T', 'H', h_1h*1000., 'P', p_evaph, refrig)
+      s_1h = CP.PropsSI('S', 'H', h_1h*1000., 'P', p_evaph, refrig)
+      T_11h = CP.PropsSI('T', 'H', h_11h*1000., 'P', p_11h, refrig)
+      s_11h = CP.PropsSI('S', 'H', h_11h*1000., 'P', p_11h, refrig)
 
   # State 5h: Low Pressure Compressor outlet
   T_5h = T_11h
@@ -739,10 +782,30 @@ class Case:
     refrig: str = "cyclopentane"  # heat-pump refrigerant
     P: float = 1e6                # secondary-fluid pressure       [Pa]
     W_dot_el_out: float = 1000.0  # ORC net electrical output      [kW]
-    Turb_eff: float = 0.85
-    ElG_eff: float = 0.95
-    Comp_eff: float = 0.85
-    ElH_eff: float = 0.95
+    # ---- machine efficiencies -------------------------------------------
+    # ISENTROPIC efficiencies, applied INSIDE the cycles from v0.12: the
+    # expansions, compressions and pumpings move the state points themselves.
+    # Before v0.12 the state points were isentropic and 0.85 was applied as a
+    # multiplier on the work downstream. That is accurate for the efficiency
+    # -- 0.6 % at the design point -- but it leaves every state point ideal,
+    # so the turbine exit, the regenerator split, the composite curves and
+    # the evaporator pinch were all the reversible cycle's. It also makes a
+    # component-wise exergy balance impossible: an isentropic machine
+    # destroys nothing, so the lost work appears nowhere. See DN-21.
+    #
+    # Setting all three to 1.0 recovers the pre-v0.12 cycles exactly.
+    eta_turb_s: float = 0.85      # ORC turbines, isentropic
+    eta_pump_s: float = 0.85      # ORC pumps, isentropic
+    eta_comp_s: float = 0.85      # heat-pump compressors, isentropic
+    # ELECTRICAL / MECHANICAL, and correctly applied outside the working
+    # fluid: these are not thermodynamic irreversibilities of the cycle.
+    ElG_eff: float = 0.95         # ORC generator
+    ElH_eff: float = 0.95         # compressor motor
+    # RETIRED at v0.12. These were the isentropic efficiencies applied as
+    # downstream multipliers; keeping them would double-count. validate_case
+    # raises if a Case still names either.
+    Turb_eff: float = None
+    Comp_eff: float = None
     T_sink_C: float = 20.0
     # Approach at the ORC condenser, measured to the sink OUTLET. With
     # DT_sink_glide = 0 the sink is an infinite reservoir and outlet = inlet,
@@ -1648,12 +1711,14 @@ def feasible_rankine(case, T_1e, T_w_hot, T_w_cold):
     T_3e_hot_end = T_w_hot - case.DT_2D_3E
 
     def pinch_at(t):
-        return orc_pinch(double_stage_rankine(case.fluid, T_1e, t),
+        return orc_pinch(double_stage_rankine(case.fluid, T_1e, t,
+                                      case.eta_turb_s, case.eta_pump_s),
                          T_w_hot, T_w_cold, case.fluid, case.P)
 
     # is the hot-end value already pinch-feasible?
     if pinch_at(T_3e_hot_end) >= case.DT_pinch_ORC:
-        rank = double_stage_rankine(case.fluid, T_1e, T_3e_hot_end)
+        rank = double_stage_rankine(case.fluid, T_1e, T_3e_hot_end,
+                                    case.eta_turb_s, case.eta_pump_s)
         rank["T_3e_uncorrected"] = T_3e_hot_end
         rank["T_3e_hot_end"] = T_3e_hot_end
         rank["T_3e_binding"] = "hot-end approach DT_2D_3E"
@@ -1677,7 +1742,8 @@ def feasible_rankine(case, T_1e, T_w_hot, T_w_cold):
             lo = mid
         else:
             hi = mid
-    rank = double_stage_rankine(case.fluid, T_1e, lo)
+    rank = double_stage_rankine(case.fluid, T_1e, lo,
+                                case.eta_turb_s, case.eta_pump_s)
     rank["T_3e_uncorrected"] = T_3e_hot_end      # kept: reported in css_report
     rank["T_3e_hot_end"] = T_3e_hot_end
     rank["T_3e_binding"] = "evaporator pinch DT_pinch_ORC"
@@ -1901,7 +1967,7 @@ def cycle_state_points(case, T_2d=None):
     T["T_3e_hot_end_rule"] = T["T_3e"]
     T["T_3e"] = rank["T_3e"]
     hp = two_stage_htheatpump_2regs(case.refrig, T["T_13h"], T["T_2h"],
-                                    case.DT_sub)
+                                    case.DT_sub, case.eta_comp_s)
     for name, v in (("rank_eff", rank.get("rank_eff")),
                     ("hp_cop", hp.get("hp_cop"))):
         if v is None or not np.isfinite(v):
@@ -1911,13 +1977,16 @@ def cycle_state_points(case, T_2d=None):
 
 def energy_budget(case, rank_eff, hp_cop, T):
     """Work backwards from the specified electrical output to the charging duty."""
-    W_dot_T = case.W_dot_el_out / case.Turb_eff / case.ElG_eff
+    # rank_eff and hp_cop now ALREADY carry the machine losses, so only
+    # the electrical efficiencies remain here. Dividing by Turb_eff as
+    # well would double-count them.
+    W_dot_T = case.W_dot_el_out / case.ElG_eff
     Q_dot_in_ORC = W_dot_T / rank_eff
     D_E_in_ORC = Q_dot_in_ORC * case.t_dc * 3600.0                 # kJ
     D_E_out_HP = D_E_in_ORC * (1.0 + case.loss_surplus)
     Q_dot_out_HP = D_E_out_HP / case.t_ch / 3600.0
     W_dot_C_HP = Q_dot_out_HP / hp_cop
-    W_dot_el_in = W_dot_C_HP / case.Comp_eff / case.ElH_eff
+    W_dot_el_in = W_dot_C_HP / case.ElH_eff
 
     cp_w = CP.PropsSI("C", "T", 0.5 * (T["T_3c"] + T["T_2c"]), "P",
                       case.P, case.fluid2) / 1000.0
@@ -2138,12 +2207,11 @@ def performance_indices(case, r):
     # ---- what the field actually moved, per cycle ------------------------
     Q_dot_in_ORC = r["Q_discharge_kJ"] / t_dc_s          # kW, field
     Q_dot_out_HP = r["Q_charge_kJ"] / t_ch_s             # kW, field
-    rank_eff = Eb["Q_dot_in_ORC"] and (case.W_dot_el_out / case.Turb_eff
-                                       / case.ElG_eff / Eb["Q_dot_in_ORC"])
-    W_el_out = Q_dot_in_ORC * rank_eff * case.Turb_eff * case.ElG_eff
-    cop = Eb["Q_dot_out_HP"] / (Eb["W_dot_el_in"] * case.Comp_eff
-                                * case.ElH_eff)
-    W_el_in = Q_dot_out_HP / cop / case.Comp_eff / case.ElH_eff
+    rank_eff = Eb["Q_dot_in_ORC"] and (case.W_dot_el_out / case.ElG_eff
+                                       / Eb["Q_dot_in_ORC"])
+    W_el_out = Q_dot_in_ORC * rank_eff * case.ElG_eff
+    cop = Eb["Q_dot_out_HP"] / (Eb["W_dot_el_in"] * case.ElH_eff)
+    W_el_in = Q_dot_out_HP / cop / case.ElH_eff
 
     # ---- parasitics, at the realised temperatures ------------------------
     gv = case.geom_vector()
@@ -2435,6 +2503,17 @@ def validate_case(case, verbose=True):
     # None of these is an error. Each is a place where the model quietly
     # assumes an infinite exchanger, and a parametric study that leans on it
     # will report an efficiency no hardware can reach.
+    for old, new in (('Turb_eff', 'eta_turb_s'), ('Comp_eff', 'eta_comp_s')):
+        if getattr(case, old, None) is not None:
+            err(f'{old} = {getattr(case, old)} was RETIRED at v0.12. It was '
+                f'the isentropic efficiency applied as a multiplier on the '
+                f'work AFTER an isentropic cycle; it is now applied inside '
+                f'the cycle, to the state points, as {new}. Setting both '
+                f'would double-count. Use {new} and leave {old} at None.')
+    for f in ('eta_turb_s', 'eta_pump_s', 'eta_comp_s', 'ElG_eff', 'ElH_eff'):
+        v = getattr(case, f)
+        if not (0.0 < v <= 1.0):
+            err(f'{f} = {v}; must be in (0, 1]')
     if getattr(case, 'DT_3A_13H', None) is not None:
         err(f'DT_3A_13H = {case.DT_3A_13H} was RETIRED at v0.9 and is now '
             f'ignored. It used to set the evaporating temperature '

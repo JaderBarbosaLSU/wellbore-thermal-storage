@@ -44,10 +44,30 @@ class Case:
     refrig: str = "cyclopentane"  # heat-pump refrigerant
     P: float = 1e6                # secondary-fluid pressure       [Pa]
     W_dot_el_out: float = 1000.0  # ORC net electrical output      [kW]
-    Turb_eff: float = 0.85
-    ElG_eff: float = 0.95
-    Comp_eff: float = 0.85
-    ElH_eff: float = 0.95
+    # ---- machine efficiencies -------------------------------------------
+    # ISENTROPIC efficiencies, applied INSIDE the cycles from v0.12: the
+    # expansions, compressions and pumpings move the state points themselves.
+    # Before v0.12 the state points were isentropic and 0.85 was applied as a
+    # multiplier on the work downstream. That is accurate for the efficiency
+    # -- 0.6 % at the design point -- but it leaves every state point ideal,
+    # so the turbine exit, the regenerator split, the composite curves and
+    # the evaporator pinch were all the reversible cycle's. It also makes a
+    # component-wise exergy balance impossible: an isentropic machine
+    # destroys nothing, so the lost work appears nowhere. See DN-21.
+    #
+    # Setting all three to 1.0 recovers the pre-v0.12 cycles exactly.
+    eta_turb_s: float = 0.85      # ORC turbines, isentropic
+    eta_pump_s: float = 0.85      # ORC pumps, isentropic
+    eta_comp_s: float = 0.85      # heat-pump compressors, isentropic
+    # ELECTRICAL / MECHANICAL, and correctly applied outside the working
+    # fluid: these are not thermodynamic irreversibilities of the cycle.
+    ElG_eff: float = 0.95         # ORC generator
+    ElH_eff: float = 0.95         # compressor motor
+    # RETIRED at v0.12. These were the isentropic efficiencies applied as
+    # downstream multipliers; keeping them would double-count. validate_case
+    # raises if a Case still names either.
+    Turb_eff: float = None
+    Comp_eff: float = None
     T_sink_C: float = 20.0
     # Approach at the ORC condenser, measured to the sink OUTLET. With
     # DT_sink_glide = 0 the sink is an infinite reservoir and outlet = inlet,

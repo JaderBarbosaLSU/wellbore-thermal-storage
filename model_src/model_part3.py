@@ -121,12 +121,14 @@ def feasible_rankine(case, T_1e, T_w_hot, T_w_cold):
     T_3e_hot_end = T_w_hot - case.DT_2D_3E
 
     def pinch_at(t):
-        return orc_pinch(double_stage_rankine(case.fluid, T_1e, t),
+        return orc_pinch(double_stage_rankine(case.fluid, T_1e, t,
+                                      case.eta_turb_s, case.eta_pump_s),
                          T_w_hot, T_w_cold, case.fluid, case.P)
 
     # is the hot-end value already pinch-feasible?
     if pinch_at(T_3e_hot_end) >= case.DT_pinch_ORC:
-        rank = double_stage_rankine(case.fluid, T_1e, T_3e_hot_end)
+        rank = double_stage_rankine(case.fluid, T_1e, T_3e_hot_end,
+                                    case.eta_turb_s, case.eta_pump_s)
         rank["T_3e_uncorrected"] = T_3e_hot_end
         rank["T_3e_hot_end"] = T_3e_hot_end
         rank["T_3e_binding"] = "hot-end approach DT_2D_3E"
@@ -150,7 +152,8 @@ def feasible_rankine(case, T_1e, T_w_hot, T_w_cold):
             lo = mid
         else:
             hi = mid
-    rank = double_stage_rankine(case.fluid, T_1e, lo)
+    rank = double_stage_rankine(case.fluid, T_1e, lo,
+                                case.eta_turb_s, case.eta_pump_s)
     rank["T_3e_uncorrected"] = T_3e_hot_end      # kept: reported in css_report
     rank["T_3e_hot_end"] = T_3e_hot_end
     rank["T_3e_binding"] = "evaporator pinch DT_pinch_ORC"
@@ -374,7 +377,7 @@ def cycle_state_points(case, T_2d=None):
     T["T_3e_hot_end_rule"] = T["T_3e"]
     T["T_3e"] = rank["T_3e"]
     hp = two_stage_htheatpump_2regs(case.refrig, T["T_13h"], T["T_2h"],
-                                    case.DT_sub)
+                                    case.DT_sub, case.eta_comp_s)
     for name, v in (("rank_eff", rank.get("rank_eff")),
                     ("hp_cop", hp.get("hp_cop"))):
         if v is None or not np.isfinite(v):
@@ -384,13 +387,16 @@ def cycle_state_points(case, T_2d=None):
 
 def energy_budget(case, rank_eff, hp_cop, T):
     """Work backwards from the specified electrical output to the charging duty."""
-    W_dot_T = case.W_dot_el_out / case.Turb_eff / case.ElG_eff
+    # rank_eff and hp_cop now ALREADY carry the machine losses, so only
+    # the electrical efficiencies remain here. Dividing by Turb_eff as
+    # well would double-count them.
+    W_dot_T = case.W_dot_el_out / case.ElG_eff
     Q_dot_in_ORC = W_dot_T / rank_eff
     D_E_in_ORC = Q_dot_in_ORC * case.t_dc * 3600.0                 # kJ
     D_E_out_HP = D_E_in_ORC * (1.0 + case.loss_surplus)
     Q_dot_out_HP = D_E_out_HP / case.t_ch / 3600.0
     W_dot_C_HP = Q_dot_out_HP / hp_cop
-    W_dot_el_in = W_dot_C_HP / case.Comp_eff / case.ElH_eff
+    W_dot_el_in = W_dot_C_HP / case.ElH_eff
 
     cp_w = CP.PropsSI("C", "T", 0.5 * (T["T_3c"] + T["T_2c"]), "P",
                       case.P, case.fluid2) / 1000.0
@@ -970,12 +976,11 @@ def performance_indices(case, r):
     # ---- what the field actually moved, per cycle ------------------------
     Q_dot_in_ORC = r["Q_discharge_kJ"] / t_dc_s          # kW, field
     Q_dot_out_HP = r["Q_charge_kJ"] / t_ch_s             # kW, field
-    rank_eff = Eb["Q_dot_in_ORC"] and (case.W_dot_el_out / case.Turb_eff
-                                       / case.ElG_eff / Eb["Q_dot_in_ORC"])
-    W_el_out = Q_dot_in_ORC * rank_eff * case.Turb_eff * case.ElG_eff
-    cop = Eb["Q_dot_out_HP"] / (Eb["W_dot_el_in"] * case.Comp_eff
-                                * case.ElH_eff)
-    W_el_in = Q_dot_out_HP / cop / case.Comp_eff / case.ElH_eff
+    rank_eff = Eb["Q_dot_in_ORC"] and (case.W_dot_el_out / case.ElG_eff
+                                       / Eb["Q_dot_in_ORC"])
+    W_el_out = Q_dot_in_ORC * rank_eff * case.ElG_eff
+    cop = Eb["Q_dot_out_HP"] / (Eb["W_dot_el_in"] * case.ElH_eff)
+    W_el_in = Q_dot_out_HP / cop / case.ElH_eff
 
     # ---- parasitics, at the realised temperatures ------------------------
     gv = case.geom_vector()

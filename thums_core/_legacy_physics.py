@@ -107,7 +107,7 @@ def single_stage_htheatpump(refrig, T_1h, T_2h, DT_sub):
   }
 
 
-def two_stage_htheatpump_2regs(refrig, T_13h, T_2h, DT_sub):
+def two_stage_htheatpump_2regs(refrig, T_13h, T_2h, DT_sub, eta_c=1.0):
   """
   Calculates parameters for a two-stage high-temp heat pump with a liquid separator and 2 regenerators
 
@@ -143,17 +143,50 @@ def two_stage_htheatpump_2regs(refrig, T_13h, T_2h, DT_sub):
   p_inth = (p_evaph * p_condh)**(1./2.)
 #  p_inth = (p_evaph + p_condh)*(1./2.)
 
-  # State 1h: At T_1h and p_evaph (Evaporator Outlet)
-  s_1h = s_2h # Isentropic compression to 2h
+  # --- the compressions, IRREVERSIBLE from v0.12 ------------------------
+  # The closure runs BACKWARDS: state 2h is fixed on the dew line at T_2h
+  # (the condensing temperature the water demands), and the suction state is
+  # whatever lands there. With eta_c = 1 that inverts in closed form, which
+  # is what this used to do. With eta_c < 1 the same compression ends HOTTER,
+  # so to still land on the dew point the suction must carry LESS superheat,
+  # and the inversion is implicit -- h_2h_s depends on s_1h, which depends on
+  # h_1h. Two bisections, outer stage first.
+  #
+  # The design intent is unchanged and worth restating: IHX-2 is sized to
+  # deliver exactly the suction superheat that puts the discharge on the dew
+  # point, so the condenser has no desuperheating duty. epsilon_IHX_2 remains
+  # a reported OUTPUT, and it is what moves when eta_c does.
   p_1h = p_evaph
-  T_1h = CP.PropsSI('T', 'P', p_1h, 'S', s_1h, refrig)
-  h_1h = CP.PropsSI('H', 'T', T_1h, 'P', p_evaph, refrig)/1000.
-
-  # State 11h: Low pressure compressor outlet (p_inth, isentropic from 1h)
-  s_11h = s_1h # Isentropic compression
   p_11h = p_inth
-  T_11h = CP.PropsSI('T', 'S', s_11h, 'P', p_11h, refrig)
-  h_11h = CP.PropsSI('H', 'S', s_11h, 'P', p_11h, refrig)/1000.
+
+  def _suction_for(h_target, p_lo, p_hi):
+      """Enthalpy at p_lo whose eta_c compression to p_hi reaches h_target."""
+      lo = CP.PropsSI('H', 'P', p_lo, 'Q', 1, refrig)/1000. - 40.0
+      hi = h_target
+      for _ in range(90):
+          mid = 0.5*(lo + hi)
+          s_mid = CP.PropsSI('S', 'H', mid*1000., 'P', p_lo, refrig)
+          h_s = CP.PropsSI('H', 'S', s_mid, 'P', p_hi, refrig)/1000.
+          if mid + (h_s - mid)/eta_c < h_target:
+              lo = mid
+          else:
+              hi = mid
+      return 0.5*(lo + hi)
+
+  if abs(eta_c - 1.0) < 1e-12:
+      s_1h = s_2h                      # closed form, the pre-v0.12 path
+      T_1h = CP.PropsSI('T', 'P', p_1h, 'S', s_1h, refrig)
+      h_1h = CP.PropsSI('H', 'T', T_1h, 'P', p_evaph, refrig)/1000.
+      s_11h = s_1h
+      T_11h = CP.PropsSI('T', 'S', s_11h, 'P', p_11h, refrig)
+      h_11h = CP.PropsSI('H', 'S', s_11h, 'P', p_11h, refrig)/1000.
+  else:
+      h_11h = _suction_for(h_2h, p_inth, p_condh)      # HP stage inlet = 6h
+      h_1h = _suction_for(h_11h, p_evaph, p_inth)      # LP stage inlet
+      T_1h = CP.PropsSI('T', 'H', h_1h*1000., 'P', p_evaph, refrig)
+      s_1h = CP.PropsSI('S', 'H', h_1h*1000., 'P', p_evaph, refrig)
+      T_11h = CP.PropsSI('T', 'H', h_11h*1000., 'P', p_11h, refrig)
+      s_11h = CP.PropsSI('S', 'H', h_11h*1000., 'P', p_11h, refrig)
 
   # State 5h: Low Pressure Compressor outlet
   T_5h = T_11h
@@ -435,7 +468,7 @@ def single_stage_rankine(fluid, T_1e, T_3e):
   }
 
 
-def double_stage_rankine(fluid, T_1e, T_3e):
+def double_stage_rankine(fluid, T_1e, T_3e, eta_t=1.0, eta_p=1.0):
   """
   Calculates parameters for a two-stage Rankine cycle with regeneration/reheating
 
@@ -467,9 +500,15 @@ def double_stage_rankine(fluid, T_1e, T_3e):
 
   # State 5e: 1st stage turbine outlet
   p_5e = p_inte
-  s_5e = s_3e
-  h_5e = CP.PropsSI('H', 'S', s_5e, 'P', p_5e, fluid)/1000.
-  T_5e = CP.PropsSI('T', 'S', s_5e, 'P', p_5e, fluid)
+  # IRREVERSIBLE from v0.12. h_5e_s is where an isentropic machine would
+  # land; the real one recovers only eta_t of that drop and therefore leaves
+  # HOTTER, with more entropy. Everything downstream of 5e -- the reheat duty,
+  # the regenerator split y, the evaporator inlet 10e -- moves with it, which
+  # is exactly why a downstream multiplier on the work could not reproduce it.
+  h_5e_s = CP.PropsSI('H', 'S', s_3e, 'P', p_5e, fluid)/1000.
+  h_5e = h_3e - eta_t * (h_3e - h_5e_s)
+  s_5e = CP.PropsSI('S', 'H', h_5e*1000., 'P', p_5e, fluid)
+  T_5e = CP.PropsSI('T', 'H', h_5e*1000., 'P', p_5e, fluid)
 
   # State 6e: 2nd stage turbine inlet
   p_6e = p_5e
@@ -479,15 +518,18 @@ def double_stage_rankine(fluid, T_1e, T_3e):
 
   # State 4e: 2nd stage turbine outlet
   p_4e = p_conde
-  s_4e = s_6e
-  h_4e = CP.PropsSI('H', 'S', s_4e, 'P', p_4e, fluid)/1000.
-  T_4e = CP.PropsSI('T', 'S', s_4e, 'P', p_4e, fluid)
+  h_4e_s = CP.PropsSI('H', 'S', s_6e, 'P', p_4e, fluid)/1000.
+  h_4e = h_6e - eta_t * (h_6e - h_4e_s)
+  s_4e = CP.PropsSI('S', 'H', h_4e*1000., 'P', p_4e, fluid)
+  T_4e = CP.PropsSI('T', 'H', h_4e*1000., 'P', p_4e, fluid)
 
   # State 2e: Pump 1 outlet
   p_2e = p_evape
-  s_2e = s_1e
-  h_2e = CP.PropsSI('H', 'S', s_2e, 'P', p_2e, fluid)/1000.
-  T_2e = CP.PropsSI('T', 'S', s_2e, 'P', p_2e, fluid)
+  # a pump absorbs MORE than isentropic, so the divide goes the other way
+  h_2e_s = CP.PropsSI('H', 'S', s_1e, 'P', p_2e, fluid)/1000.
+  h_2e = h_1e + (h_2e_s - h_1e) / eta_p
+  s_2e = CP.PropsSI('S', 'H', h_2e*1000., 'P', p_2e, fluid)
+  T_2e = CP.PropsSI('T', 'H', h_2e*1000., 'P', p_2e, fluid)
 
   # State 7e: Pump 2 inlet
   p_7e = p_inte
@@ -497,9 +539,10 @@ def double_stage_rankine(fluid, T_1e, T_3e):
 
   # State 8e: Pump 2 outlet
   p_8e = p_evape
-  s_8e = s_7e
-  h_8e = CP.PropsSI('H', 'P', p_8e, 'S', s_8e, fluid)/1000.
-  T_8e = CP.PropsSI('T', 'P', p_8e, 'S', s_8e, fluid)
+  h_8e_s = CP.PropsSI('H', 'P', p_8e, 'S', s_7e, fluid)/1000.
+  h_8e = h_7e + (h_8e_s - h_7e) / eta_p
+  s_8e = CP.PropsSI('S', 'H', h_8e*1000., 'P', p_8e, fluid)
+  T_8e = CP.PropsSI('T', 'H', h_8e*1000., 'P', p_8e, fluid)
 
   # State 9e:
   p_9e = p_evape

@@ -1438,8 +1438,12 @@ they are worth knowing by name.
   implementation is self-consistent, not that it is right. This is the largest
   open item.
 
-\item \textbf{Idealised cycles.} The compressions and expansions carry no
-  isentropic efficiency, so the COP and $\eta_{\mathrm{ORC}}$ are optimistic.
+\item \textbf{Cycle idealisations that remain.} The expansions, compressions
+  and pumpings \emph{do} carry isentropic efficiencies from v0.12, and they act
+  on the state points rather than on the work. What is still idealised: no
+  pressure drop anywhere in either cycle, no mechanical loss distinct from the
+  isentropic one, and the heat-pump discharge held exactly on the dew line, so
+  its condenser has no desuperheating duty.
 
 \item \textbf{No volume change on melting}, and the melt-front shape around the
   fins is not modelled.

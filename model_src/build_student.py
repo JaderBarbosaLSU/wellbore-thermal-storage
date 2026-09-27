@@ -42,7 +42,7 @@ high-temperature heat pump melts a phase-change material during charging; an
 organic Rankine cycle recovers the energy during discharging; pressurised water
 circulates through finned hairpin tubes in the borehole.
 
-*Model version 0.11a · notebook built {STAMP}*
+*Model version 0.12 · notebook built {STAMP}*
 
 ---
 
@@ -316,6 +316,73 @@ N_lay ─────────┬───→ cascade spacing                
                                   η_ORC ──→ energy budget ──→ N_wells
 ```
 
+### 3.0.15 Where the machine losses act — and why this changed at v0.12
+
+Read this if you are comparing numbers against anything older than v0.12.
+
+**What the model used to do.** Every expansion and compression was
+*isentropic*: `s_5e = s_3e`, `s_1h = s_2h`, and so on. The 0.85 efficiencies
+were then applied as **multipliers on the work, downstream of the cycle**:
+
+$$\dot Q_{\rm in,ORC}=\frac{\dot W_{\rm el,out}}{\eta_{\rm ORC}\,\eta_{\rm turb}\,\eta_{\rm gen}}
+\qquad
+\dot W_{\rm el,in}=\frac{\dot Q_{\rm out,HP}}{{\rm COP}\,\eta_{\rm comp}\,\eta_{\rm mot}}$$
+
+So the efficiencies **were** in the model — but the *state points* were not
+affected by them.
+
+**Why that was not good enough.** Two reasons, one small and one fatal.
+
+*The small one.* For the ORC efficiency the approximation is good: the
+downstream multiplier gives 0.14772 against 0.14806 computed properly — 0.2 %.
+For the **heat pump** it is much worse, because the closure runs backwards from
+a fixed discharge state: 2.3455 against 2.4731, a **5.4 % under-estimate** of
+the COP. An irreversible compressor landing on the same discharge needs a
+*colder* suction, and the two-stage machine recovers part of the extra work
+through the flash separator — which a single multiplier cannot represent.
+
+*The fatal one.* An isentropic machine is **reversible**, so an exergy balance
+across it returns **zero destruction**. The 15 % of work the multiplier removed
+appeared nowhere as an irreversibility. A component-wise exergy map built on
+those state points would have shown perfect turbines and compressors and
+blamed the entire loss on the exchangers.
+
+**What changed.** The efficiencies now act on the state points:
+
+$$h_{5e}=h_{3e}-\eta_{t}\bigl(h_{3e}-h_{5e,s}\bigr)
+\qquad
+h_{2e}=h_{1e}+\frac{h_{2e,s}-h_{1e}}{\eta_{p}}$$
+
+A real turbine leaves **hotter** than an isentropic one; a real pump absorbs
+**more**. For the heat pump, the discharge is still held on the dew line at
+$T_{2h}$, so the suction state is now found by bisection — it carries less
+superheat than before (14.25 K against 26.53 K), and `epsilon_IHX_2` follows.
+
+**What moved, at the design point:**
+
+| | v0.11a | v0.12 | |
+|---|---|---|---|
+| $\eta_{\rm ORC}$ reported | 0.17379 | 0.14806 | was the *ideal* cycle |
+| COP reported | 2.7594 | 2.4731 | was the *ideal* cycle |
+| $N_{\rm wells}$ | 15.659 | 15.625 | −0.2 % |
+| **$\eta_{\rm RTE}$** | **0.30033** | **0.31721** | **+5.6 %** |
+| $UA$ total | 2277.7 | 2253.3 | −1.1 % |
+| CSS deviation | +4.527 % | +4.527 % | *identical* |
+| thermal/well, $\rho_E$ | — | — | *identical* |
+
+Two things to take from that table. First, the η_ORC and COP rows are **not**
+a degradation: they used to be the reversible cycle's numbers, and are now the
+real machine's. The like-for-like comparison is η_RTE. Second, η_RTE went
+**up**, because the old treatment over-penalised the heat pump.
+
+**Everything on the storage side is untouched to the last digit**, which is the
+check that this change stayed where it belongs.
+
+**Try it yourself.** Set `eta_turb_s = eta_pump_s = eta_comp_s = 1.0` in §3.1
+and re-run: you will recover 0.173787 and 2.759421 exactly — the reversible
+cycles, to six decimals. That round trip is the regression test for this
+change.
+
 ### 3.0.2 The plant side
 
 ```
@@ -444,6 +511,17 @@ case = CASE.with_(
     #                          ABOVE ~5 K the ORC condenser curves CROSS
     T_source_C = 60.0,       # heat-pump source                             [C]
     T_sink_C   = 20.0,       # ORC sink (the ocean, for THUMS)              [C]
+
+    # --- machine efficiencies ------------------------------------------------
+    #  ISENTROPIC, and applied INSIDE the cycles from v0.12: they move the
+    #  state points, not just the work.  Set all three to 1.0 to recover the
+    #  reversible cycles exactly (useful for seeing what they cost).
+    eta_turb_s = 0.85,       # ORC turbines, isentropic                     [-]
+    eta_pump_s = 0.85,       # ORC pumps, isentropic                        [-]
+    eta_comp_s = 0.85,       # heat-pump compressors, isentropic            [-]
+    #  ELECTRICAL / MECHANICAL -- correctly OUTSIDE the working fluid
+    ElG_eff = 0.95,          # ORC generator                                [-]
+    ElH_eff = 0.95,          # compressor motor                             [-]
 
     # --- windows -------------------------------------------------------------
     t_ch     = 10.0,         # charging window                              [h]
@@ -917,8 +995,12 @@ of these dominates.
 4. **No validation against experiment or a higher-fidelity model.** Energy
    closure is structural — it proves the implementation is consistent, not that
    it is right. This is the largest open item.
-5. **Idealised cycles.** The expansions and compressions carry no isentropic
-   efficiency, so COP and $\eta_{\rm ORC}$ are optimistic.
+5. **Cycle idealisations that remain.** The expansions, compressions and
+   pumpings *do* carry isentropic efficiencies as of v0.12 (§3.1), and they act
+   on the state points. What is still idealised: no pressure drop anywhere in
+   either cycle, no mechanical loss distinct from the isentropic one, and the
+   heat-pump discharge is held exactly on the dew line, so the condenser has no
+   desuperheating duty.
 6. **No volume change on melting**, and the melt-front shape around the fins is
    not modelled.
 
