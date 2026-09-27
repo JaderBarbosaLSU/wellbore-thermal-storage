@@ -23,7 +23,7 @@ import sys
 # after the physics had moved on. A version string that lags the code is
 # the first thing anyone checks when two runs disagree, so the build
 # refuses to proceed if the generators disagree with this.
-VERSION = "0.11"
+VERSION = "0.11a"
 
 HERE = pathlib.Path(__file__).parent
 BUILD = pathlib.Path('/tmp/build')
@@ -80,9 +80,60 @@ def check_names(path):
     whole class -- a `src(...)` list that forgot a dependency -- in about a
     tenth of a second.
     """
+    import ast
     import builtins
     import json
     import symtable
+
+    def loop_only_names(text):
+        """Module-level for/comprehension targets never bound by `=`.
+
+        These are SCRATCH, not API. A plotting cell writing
+
+            for c_, k in zip(cmap, ks):
+
+        leaks `k` into the notebook namespace as an int, and a later cell
+        writing k['UA_total_kW_K'] then RESOLVES statically and dies at
+        run time with "'int' object is not subscriptable". That is exactly
+        what shipped in v0.11. Static name resolution cannot see the type,
+        but it can decline to treat a loop variable as an export.
+        """
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            return set()
+        targets, assigned = set(), set()
+        SCOPED = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef,
+                  ast.Lambda)
+
+        def names(node):
+            return {n.id for n in ast.walk(node) if isinstance(n, ast.Name)}
+
+        def visit(node):
+            """Recurse through MODULE scope, not descending into functions.
+
+            The loop that leaked `k` was nested inside another loop, so
+            looking only at tree.body missed it -- which is why the first
+            version of this check still passed the bug.
+            """
+            nonlocal targets, assigned
+            for child in ast.iter_child_nodes(node):
+                if isinstance(child, SCOPED):
+                    continue                        # its own scope
+                if isinstance(child, (ast.For, ast.AsyncFor)):
+                    targets |= names(child.target)
+                elif isinstance(child, ast.comprehension):
+                    targets |= names(child.target)
+                elif isinstance(child, (ast.Assign, ast.AnnAssign,
+                                        ast.AugAssign)):
+                    tgt = child.targets if isinstance(child, ast.Assign) \
+                        else [child.target]
+                    for t in tgt:
+                        assigned |= names(t)
+                visit(child)
+
+        visit(tree)
+        return targets - assigned
 
     def scan(tab, defined, needed):
         """Walk a symbol table and its nested scopes.
@@ -128,7 +179,7 @@ def check_names(path):
         defined, needed = set(), set()
         scan(tab, defined, needed)
         missing += [(i, n) for n in sorted(needed - known - defined)]
-        known |= defined
+        known |= defined - loop_only_names(text)
 
     if missing:
         lines = [f'  cell {i}: {n}' for i, n in missing]

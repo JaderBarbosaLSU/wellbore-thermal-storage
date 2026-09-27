@@ -943,3 +943,66 @@ Report UA beside `eta_RTE` always.
 an assumed overall coefficient per exchanger type, which the model does not
 carry. `cost_per_kWh` sits unused in `Case` and would be the obvious hook for a
 levelised-cost KPI once UA can be priced.
+
+---
+
+## DN-20 — Two guards that were wrong, and what that says about guards
+
+Both were added in the last three versions, both looked reasonable, and both
+were wrong in ways only a user hitting them would reveal.
+
+### The cascade-span check was an ERROR and should have been a WARNING
+
+DN-18 added a check that the cascade span must exceed `glide - DT_4C_M`,
+reasoning that below it the approach at the far end of the well inverts. The
+arithmetic is right; the conclusion is not. The margin is computed on a
+**linear glide against melting temperatures** — i.e. it assumes the PCM sits
+at `T_m`. Under Formulation C it does not: the store superheats and subcools,
+`conduction_shell` takes the heat-flow direction from `sign(T_j - T_pcm)`
+segment by segment, and water arriving on the "wrong" side of `T_m` simply
+exchanges with the sensible branch, or briefly in reverse.
+
+The check blocked `DT_M_1D = 6`, which runs perfectly well:
+
+    DT_M_1D   far-end margin   deviation    eps_dc    converged
+      6.0        -0.111 K       -2.111 %    0.1131      True
+      8.0        +1.889 K       +1.501 %    0.0748      True
+     10.0        +3.889 K       +4.538 %    0.0409      True
+
+Worse, it blocked `DT_M_1D = DT_3C_2C/N_lay = 6.111` — the retired v0.5
+closure, margin exactly zero, which is one of the frozen verification
+fixtures and has been run dozens of times. **A guard that rejects the
+project's own regression case is wrong by inspection.** Demoted to a warning
+that says what it actually means.
+
+### `check_names` had a hole, and it took a user to find it
+
+DN-18's postscript added `check_names` after a `NameError` shipped. v0.11
+then shipped a `TypeError` through it: the sweep referenced `k`, which a
+plotting cell four cells earlier had leaked as a loop variable —
+
+    for c_, k in zip(cmap, ks):
+
+so `k['UA_total_kW_K']` **resolved statically** and died at run time with
+`'int' object is not subscriptable`. Static name resolution sees that a name
+exists; it cannot see what it holds.
+
+Fixed by not treating module-level `for`/comprehension targets as exports
+unless also bound by `=`. The first attempt at that fix **still passed the
+bug**, because it walked only `tree.body` and the offending loop was nested
+inside another loop. The working version recurses through module scope
+without descending into function bodies.
+
+### The pattern
+
+Three guards in three versions, each of which passed the very bug it was
+written for:
+
+* `check_version` passed a stale stamp for two releases (DN-16 postscript);
+* the cascade check rejected a case the model handles correctly;
+* `check_names` passed a leaked loop variable.
+
+The discipline that follows is simple and is now the rule here: **a guard is
+not finished until it has been watched to fail.** Reintroduce the bug,
+confirm the guard fires and names the right thing, then restore. Every guard
+in this build has now been through that, including the two repaired above.

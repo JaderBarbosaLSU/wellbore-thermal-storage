@@ -1,6 +1,6 @@
 """THUMS -- latent heat storage in a repurposed wellbore.
 
-The live model, v0.11. One formulation (enthalpy, "Formulation C"), one sizing
+The live model, v0.11a. One formulation (enthalpy, "Formulation C"), one sizing
 framing (specify the hardware and march to cyclic steady state), no root
 finding anywhere.
 
@@ -2459,29 +2459,39 @@ def validate_case(case, verbose=True):
             f'below the sink at {case.T_sink_C:.2f} C; there is no lift left '
             f'to speak of. Reduce DT_3A_4A or DT_pinch_HPE.')
 
-    # --- the cascade span is bounded BELOW, not above ---------------------
-    # The approach between the water and the layer it is working on is
-    # DT_4C_M at the leading face of every layer only when the span matches
-    # the glide. Shrink the span and the approach at the FAR end of the well
-    # closes; below the bound it inverts.
+    # --- how hard the far end of the well is driven -----------------------
+    # NOT an error, and an earlier version of this check wrongly made it one.
+    # The margin below is computed on a LINEAR GLIDE against melting
+    # temperatures, i.e. it assumes the PCM sits at T_m. Under Formulation C
+    # it does not: the store superheats and subcools, so water arriving on
+    # the "wrong" side of T_m still exchanges heat, and `conduction_shell`
+    # takes the direction from sign(T_j - T_pcm) segment by segment. The
+    # model handles a negative margin correctly and reports the consequence
+    # through eps and the deviation. DT_M_1D = DT_3C_2C/N_lay -- the retired
+    # v0.5 closure, margin exactly zero -- runs and is one of the frozen
+    # verification fixtures. See DN-20.
     span = case.cascade_span
     g_ch, g_dc = case.DT_3C_2C, case.glide_dc_spec
-    for gl, appr, name, half in ((g_ch, case.DT_4C_M, 'DT_4C_M', 'charging'),
-                                 (g_dc, case.DT_M_1D, 'DT_M_1D', 'discharging')):
+    for gl, appr, name, half, far in (
+            (g_ch, case.DT_4C_M, 'DT_4C_M', 'charging', 'coldest'),
+            (g_dc, case.DT_M_1D, 'DT_M_1D', 'discharging', 'hottest')):
         margin = span - (gl - appr)
         if margin <= 0.0:
-            err(f'the cascade span {span:.3f} K is too NARROW for the '
-                f'{half} glide: the approach at the far end of the well is '
-                f'{margin:.3f} K, so the driving difference inverts there. '
-                f'The span must exceed glide - {name} = {gl - appr:.3f} K. '
-                f'Raise DT_cascade, widen {name}, or narrow the glide. '
-                f'(A span LARGER than the glide is always safe; it is the '
-                f'small-span direction that fails.)')
+            warn(f'under a linear glide the {half} water would reach the '
+                 f'{far} layer {-margin:.3f} K on the wrong side of its '
+                 f'melting point (span {span:.3f} K, glide {gl:.3f} K, '
+                 f'{name} {appr:.3f} K). This is NOT infeasible -- the PCM '
+                 f'leaves T_m under Formulation C and the march takes the '
+                 f'heat-flow direction per segment -- but that end of the '
+                 f'store is being driven by the sensible branch, or briefly '
+                 f'in reverse, rather than melting or freezing as intended. '
+                 f'Expect a lower cycled fraction. Raise DT_cascade or '
+                 f'{name}, or narrow the glide, to restore the margin.')
         elif margin < 2.0:
-            warn(f'the {half} approach at the far end of the well is only '
+            warn(f'the {half} margin at the {far} layer is only '
                  f'{margin:.3f} K (span {span:.3f} K against a glide of '
-                 f'{gl:.3f} K less {name} = {appr:.3f} K). Workable, but '
-                 f'that end of the store is being driven very softly')
+                 f'{gl:.3f} K less {name} = {appr:.3f} K); that end of the '
+                 f'store is driven very softly')
 
     if case.DT_cascade is not None:
         msgs.append(('info',

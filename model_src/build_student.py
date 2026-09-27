@@ -42,7 +42,7 @@ high-temperature heat pump melts a phase-change material during charging; an
 organic Rankine cycle recovers the energy during discharging; pressurised water
 circulates through finned hairpin tubes in the borehole.
 
-*Model version 0.11 · notebook built {STAMP}*
+*Model version 0.11a · notebook built {STAMP}*
 
 ---
 
@@ -815,6 +815,7 @@ def sweep(field, values, base=None, N=None, correct_once=True,
         if bad:
             print(f'  {field}={v}: SKIPPED -- {bad[0]}');  continue
         r = simulate_css(c, N=N, T_2d=T_2d_fixed, n_cycles=n_cycles)
+        kpi_v = performance_indices(c, r)
         if not r['converged']:
             print(f'  {field}={v}: *** NOT CONVERGED *** at n_cycles='
                   f'{n_cycles}, drift {r["history"][-1]["drift"]:.1e}.'
@@ -825,9 +826,10 @@ def sweep(field, values, base=None, N=None, correct_once=True,
                      'deviation_%':  100*r['deviation'],
                      'MWe':          r['W_el_out_implied']/1000.0,
                      'glide_dc_K':   r['glide_dc'],
-                     'UA_tot_kW_K':  k['UA_total_kW_K'],
-                     'UA_orce_kW_K': k['UA_orce_kW_K'],
-                     'pinch_min_K':  k['pinch_min_K'],
+                     'eta_RTE':      kpi_v['eta_RTE'],
+                     'UA_tot_kW_K':  kpi_v['UA_total_kW_K'],
+                     'UA_orce_kW_K': kpi_v['UA_orce_kW_K'],
+                     'pinch_min_K':  kpi_v['pinch_min_K'],
                      'T_2d_real_C':  r['T_2d_realised']-273.15,
                      'eps_end_ch':   r['charge']['eps_local'].mean(),
                      'eps_end_dc':   r['discharge']['eps_local'].mean(),
