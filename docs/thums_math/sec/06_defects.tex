@@ -716,6 +716,24 @@ $\Delta T_{3A,4A}$ a genuine trade rather than a free choice.
 version & date & change \\
 \midrule
 \endhead
+\textbf{0.12} & 2026-09 &
+  The isentropic efficiencies move from multipliers on the work into the state
+  points (\S\ref{sec:cycles:machines}). They were always applied --- the
+  hypothesis list wrongly said otherwise --- but the state points were the
+  reversible cycle's, so the composite curves and the pinch were computed on a
+  cycle nobody was building, and an exergy balance across any machine returned
+  zero destruction. $\eta_{\mathrm{ORC}}$ $0.1738\to0.1481$ and $\mathrm{COP}$
+  $2.7594\to2.4731$ are now the real machines'; $\eta_{\mathrm{RTE}}$
+  $0.3003\to0.3172$ \emph{rises}, because the old downstream form
+  over-penalised the heat pump by \SI{5.4}{\percent}. Setting all three
+  efficiencies to unity reproduces the previous cycles to six decimals. \\
+0.11 & 2026-09 &
+  $UA$ per exchanger from the composite curves (\S\ref{sec:network}), so the
+  approach temperatures are no longer free. The ORC condenser needs more
+  conductance than the other three together. No physics. \\
+0.10 & 2026-09 &
+  Every approach and glide written out in the case cell; a build gate that
+  fails on any notebook name used before it is defined. No physics. \\
 \textbf{0.9} & 2026-09 &
   Both thermodynamic cycles repaired. The ORC evaporating temperature is set by
   a composite-curve pinch on the whole evaporator rather than by its hot end

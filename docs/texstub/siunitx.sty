@@ -1,0 +1,33 @@
+% Minimal local stand-in for siunitx, for OFFLINE preview compilation only.
+% Overleaf has the real package; nothing here is ever shipped.
+%
+% Design note. Unit macros are defined GLOBALLY so that \SI survives inside
+% moving arguments such as \caption. The three names that collide with
+% existing control sequences -- \bar (the math accent) and \year, \day (TeX
+% primitives used by pgfmath) -- are the exception: those are bound only
+% inside the group opened by \si / \SI. Defining them globally has broken
+% this build before.
+\ProvidesPackage{siunitx}[2026/09/27 offline stub]
+\newcommand{\sisetup}[1]{}
+\newcommand{\DeclareSIUnit}[2]{}
+\newcommand{\num}[1]{\ensuremath{#1}}
+\newcommand{\ang}[1]{\ensuremath{#1^{\circ}}}
+\makeatletter
+\def\percent{\%}\def\meter{m}\def\metre{m}\def\second{s}\def\kelvin{K}%
+\def\kilogram{kg}\def\gram{g}\def\watt{W}\def\joule{J}\def\newton{N}%
+\def\pascal{Pa}\def\hour{h}\def\minute{min}\def\volt{V}\def\ampere{A}%
+\def\celsius{\ensuremath{^{\circ}}C}\def\degreeCelsius{\ensuremath{^{\circ}}C}%
+\def\mole{mol}\def\litre{L}\def\liter{L}\def\hertz{Hz}\def\radian{rad}%
+\def\kilo{k}\def\mega{M}\def\giga{G}\def\milli{m}\def\micro{\ensuremath{\mu}}%
+\def\nano{n}\def\centi{c}\def\deci{d}\def\hecto{h}\def\tera{T}%
+\def\squared{\ensuremath{^{2}}}\def\cubed{\ensuremath{^{3}}}%
+\def\per{/}\def\tothe#1{\ensuremath{^{#1}}}\def\raiseto#1{\ensuremath{^{#1}}}%
+\def\kilowatt{kW}\def\kilojoule{kJ}\def\megawatt{MW}\def\kilometre{km}%
+\def\kilometer{km}\def\watthour{Wh}\def\kilowatthour{kWh}%
+\newcommand{\sistub@risky}{\def\bar{bar}\def\year{yr}\def\day{d}\def\month{mo}}
+\newcommand{\si}[1]{{\sistub@risky\ensuremath{\mathrm{#1}}}}
+\newcommand{\SI}[3][]{{\sistub@risky\ensuremath{#2\,\mathrm{#3}}}}
+\newcommand{\SIrange}[4][]{{\sistub@risky\ensuremath{#2\text{--}#3\,\mathrm{#4}}}}
+\newcommand{\numrange}[3][]{\ensuremath{#2\text{--}#3}}
+\newcommand{\numlist}[2][]{\ensuremath{#2}}
+\makeatother

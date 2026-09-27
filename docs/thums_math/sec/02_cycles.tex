@@ -227,10 +227,10 @@ cascade raises $T_{m,\mathrm{bottom}}$ and lets the ORC boil hotter:
 span [\si{\kelvin}] & $T_{m,\mathrm{bot}}$ [\si{\celsius}] & deviation
  & $\varepsilon$ end dc & $\eta_{\mathrm{RTE}}$ \\
 \midrule
-26.7 & 123.3 & \SI{-32.56}{\percent} & 0.196 & \textbf{0.3508} \\
-35.6 & 114.4 & \SI{-17.19}{\percent} & 0.108 & 0.3335 \\
-43.5 & 106.5 & \SI{-4.00}{\percent}  & 0.041 & 0.3149 \\
-\textbf{48.9} & \textbf{101.1} & \SI{+4.53}{\percent} & \textbf{0.012} & 0.3003 \\
+26.7 & 123.3 & \SI{-32.56}{\percent} & 0.196 & \textbf{0.3712} \\
+35.6 & 114.4 & \SI{-17.19}{\percent} & 0.108 & 0.3527 \\
+43.5 & 106.5 & \SI{-4.00}{\percent}  & 0.041 & 0.3328 \\
+\textbf{48.9} & \textbf{101.1} & \SI{+4.53}{\percent} & \textbf{0.012} & 0.3172 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -250,9 +250,9 @@ and lifts $\eta_{\mathrm{RTE}}$ --- until the store cannot keep up:
 $\Delta T_{3D,2D}$ [\si{\kelvin}] & deviation & $\varepsilon$ end dc
  & $\eta_{\mathrm{RTE}}$ \\
 \midrule
-40 & \SI{+6.41}{\percent} & 0.000 & 0.2764 \\
-55 & \SI{+4.53}{\percent} & 0.012 & 0.3003 \\
-65 & \SI{-8.51}{\percent} & 0.227 & \textbf{0.3041} \\
+40 & \SI{+6.41}{\percent} & 0.000 & 0.2923 \\
+55 & \SI{+4.53}{\percent} & 0.012 & 0.3172 \\
+65 & \SI{-8.51}{\percent} & 0.227 & \textbf{0.3211} \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -306,15 +306,71 @@ follow from enthalpies evaluated by CoolProp at those points.
 \emph{Source:} \code{\_legacy\_physics.double\_stage\_rankine},
 \code{two\_stage\_htheatpump\_2regs}; assembled in \code{system.\_cycles}.
 
+%---------------------------------------------------------------------
+\subsection{Where the machine losses act}
+\label{sec:cycles:machines}
+
+Until v0.12 every expansion and compression in both cycles was \emph{isentropic}
+--- $s_{5e}=s_{3e}$, $s_{1h}=s_{2h}$, $s_{2e}=s_{1e}$ --- and the isentropic
+efficiencies were applied as multipliers on the \emph{work}, downstream of the
+cycle:
+\begin{equation}
+  \dot Q_{\mathrm{in,ORC}}
+  = \frac{\dot W_{\mathrm{el,out}}}
+         {\eta_{\mathrm{ORC}}\,\eta_{\mathrm{turb}}\,\eta_{\mathrm{gen}}},
+  \qquad
+  \dot W_{\mathrm{el,in}}
+  = \frac{\dot Q_{\mathrm{out,HP}}}
+         {\mathrm{COP}\,\eta_{\mathrm{comp}}\,\eta_{\mathrm{mot}}} .
+  \label{eq:old-multipliers}
+\end{equation}
+The efficiencies were therefore present --- $\eta_{\mathrm{RTE}}$ carried all
+four --- but the \emph{state points} were the reversible cycle's. Three
+consequences followed, and only the first is small.
+
+\emph{The ORC efficiency was barely affected.} Recomputing with genuinely
+irreversible expansions gives $0.14806$ against the multiplier's $0.14772$, a
+difference of \SI{0.2}{\percent}.
+
+\emph{The heat-pump COP was not.} $2.4731$ against $2.3455$, a
+\SI{5.4}{\percent} under-estimate. The closure runs backwards from a discharge
+fixed on the dew line at $T_{2h}$, so an irreversible compressor landing there
+requires a \emph{colder} suction --- \SI{14.25}{\kelvin} of superheat against
+\SI{26.53}{\kelvin} --- and the two-stage machine recovers part of the extra
+work through the flash separator. A single multiplier cannot represent that.
+
+\emph{And an isentropic machine is reversible}, so an exergy balance across it
+returns \textbf{zero destruction}. The \SI{15}{\percent} of work removed by
+Eq.~\eqref{eq:old-multipliers} appeared nowhere as an irreversibility, which
+makes a component-wise exergy accounting impossible: it would show perfect
+turbomachinery and attribute the entire loss to the exchangers.
+
+The efficiencies now act on the state points,
+\begin{equation}
+  h_{5e} = h_{3e} - \eta_{t}\left(h_{3e}-h_{5e,s}\right),
+  \qquad
+  h_{2e} = h_{1e} + \frac{h_{2e,s}-h_{1e}}{\eta_{p}},
+  \label{eq:isentropic-eff}
+\end{equation}
+so a real turbine leaves \emph{hotter} and a real pump absorbs \emph{more}. The
+heat-pump suction is found by bisection so that the discharge still lands on the
+dew line. $\eta_{\mathrm{turb}}$ and $\eta_{\mathrm{comp}}$ are retired as
+multipliers --- keeping both would double-count --- while $\eta_{\mathrm{gen}}$
+and $\eta_{\mathrm{mot}}$ remain outside, correctly: they are electrical losses,
+not irreversibilities of the working fluid.
+
+Setting $\eta_{t}=\eta_{p}=\eta_{c}=1$ reproduces the pre-v0.12 cycles to six
+decimals ($0.173787$ and $2.759421$), which is both the regression test and the
+cheapest way to see what the machines cost.
+
 \medskip
-\noindent\textbf{Caveat, stated here because it bounds every efficiency in this
-document.} The expansion and compression steps are evaluated between the
-prescribed state points without isentropic efficiencies. $\eta_{\mathrm{ORC}}$
-and $\mathrm{COP}$ are therefore idealised, and the round-trip efficiencies of
-\S\ref{sec:hydraulics:kpi} inherit that idealisation. Only the electrical and
-mechanical efficiencies $\eta_{T}$, $\eta_{G}$, $\eta_{C}$, $\eta_{H}$ of
-Eq.~\eqref{eq:budget} appear. This is a property of the model as built, not a
-simplification introduced by this document.
+\noindent\textbf{What remains idealised, stated accurately.} There is no
+pressure drop anywhere in either cycle; no mechanical loss distinct from the
+isentropic one; and the heat-pump discharge is held exactly on the dew line, so
+its condenser carries no desuperheating duty. That last is a design choice ---
+IHX-2 is sized to deliver exactly the suction superheat that achieves it --- but
+it is why the heat-pump condenser composite has no desuperheat kink and pinches
+at its hot end, where the ORC condenser does not (\S\ref{sec:defects:hpe}).
 
 %---------------------------------------------------------------------
 \subsection{Energy budget}

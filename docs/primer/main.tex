@@ -154,8 +154,8 @@ which takes a few tens of seconds.
 
 \node[blk, below=of in] (cyc) {%
   \textbf{1. Thermodynamic cycles}\hfill\emph{plant, once}\\[2pt]
-  heat pump (two stage, two regenerators) $\Rightarrow \mathrm{COP}=2.759$;
-  ORC (double stage) $\Rightarrow \eta_{\mathrm{ORC}}=0.174$};
+  heat pump (two stage, two regenerators) $\Rightarrow \mathrm{COP}=2.473$;
+  ORC (double stage) $\Rightarrow \eta_{\mathrm{ORC}}=0.148$};
 
 \node[blk, below=of cyc] (bud) {%
   \textbf{2. Energy budget for one cycle}\hfill\emph{field}\\[2pt]
@@ -938,7 +938,7 @@ rather than with the physics.
 \label{tab:design}
 \begin{tabular}{@{}l r l@{}}
 \toprule
-$\Nwells$ & 15.659 & from latent heat alone, not solved \\
+$\Nwells$ & 15.625 & from latent heat alone, not solved \\
 $\md^{\mathrm{ch}}$, $\md^{\mathrm{dc}}$ & 0.966, 0.971 &
   \si{\kilogram\per\second} per leg-pair \\
 cycles to convergence & 71 & \\
@@ -969,11 +969,11 @@ question.
 \toprule
  & meaning & value & what moves it \\
 \midrule
-$\eta_T$ & discharge thermal $\to$ net electric & 0.1410 &
+$\eta_T$ & discharge thermal $\to$ net electric & 0.1413 &
   the power block alone \\
-$\eta_{T,\mathrm{eff}}$ & the same, less discharge pumping & 0.1362 &
+$\eta_{T,\mathrm{eff}}$ & the same, less discharge pumping & 0.1365 &
   tube bore, flow, well depth \\
-$\eta_{\mathrm{RTE}}$ & round trip, both parasitics & 0.3003 &
+$\eta_{\mathrm{RTE}}$ & round trip, both parasitics & 0.3172 &
   COP, $\eta_{\mathrm{ORC}}$, parasitics \\
 $\varepsilon_{\mathrm{RTE}}$ & $\eta_{\mathrm{RTE}}\times$ cycled fraction &
   0.2882 & anything leaving PCM unused \\
@@ -981,7 +981,7 @@ $\varepsilon_{\mathrm{RTE}}$ & $\eta_{\mathrm{RTE}}\times$ cycled fraction &
 $\Delta E_{\mathrm{therm}}$ & thermal energy per well & \SI{4734}{\kilo\watt\hour} &
   $\hm$, $\rho$, $V_{\mathrm{well}}$ \\
 $\Delta E_{\mathrm{elec}}$ & net electric energy per well &
-  \SI{645}{\kilo\watt\hour} & the above $\times\ \eta_{T,\mathrm{eff}}$ \\
+  \SI{646}{\kilo\watt\hour} & the above $\times\ \eta_{T,\mathrm{eff}}$ \\
 $\rho_E$ & thermal energy density &
   \SI{171.0}{\kilo\watt\hour\per\meter\cubed} & $\hm$, $\rho$ \\
 \midrule

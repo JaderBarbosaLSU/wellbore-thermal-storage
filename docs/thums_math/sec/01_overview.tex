@@ -42,7 +42,7 @@ figures throughout --- the cycles are untouched by any of this. What the storage
 model determines is how much hardware the cycle needs, not how efficiently it
 runs.
 
-\subsection*{Headline results, version 0.9}
+\subsection*{Headline results, version 0.12}
 
 That last sentence held for as long as the cycles were believed. At v0.9
 \emph{three} defects in them came to light, all in the direction that matters
@@ -51,16 +51,20 @@ That last sentence held for as long as the cycles were believed. At v0.9
 fifths of its surface; the heat pump was creating \SI{4.8}{\percent} of its own
 condenser duty in a regenerator; and its evaporator had no approach temperature
 at all, only the difference of two free parameters that happened to be equal.
+At v0.12 the isentropic efficiencies moved from a multiplier on the work into
+the state points themselves (\S\ref{sec:cycles:machines}), which is why the two
+cycle efficiencies below are now the real machines' and not the reversible
+cycles'.
 
 \begin{center}
 \begin{tabular}{@{}l r r l@{}}
 \toprule
- & v0.8 & \textbf{v0.9} & \\
+ & v0.8 & \textbf{v0.12} & \\
 \midrule
-$\eta_{\mathrm{ORC}}$        & 0.2320 & \textbf{0.1738} & pinch, not hot end \\
-$\mathrm{COP}$               & 2.9563 & \textbf{2.7594} & IHX-2 split; HPE approach \\
-$\Nwells$                    & 11.632 & \textbf{15.659} & consequence of both \\
-$\eta_{\mathrm{RTE}}$        & 0.4367 & \textbf{0.3003} & consequence of all three \\
+$\eta_{\mathrm{ORC}}$        & 0.2320 & \textbf{0.1481} & pinch; real machines \\
+$\mathrm{COP}$               & 2.9563 & \textbf{2.4731} & IHX-2 split; HPE approach; real machines \\
+$\Nwells$                    & 11.632 & \textbf{15.625} & consequence of all \\
+$\eta_{\mathrm{RTE}}$        & 0.4367 & \textbf{0.3172} & consequence of all \\
 \midrule
 CSS deviation                & \SI{+4.527}{\percent} & \SI{+4.527}{\percent}
   & \emph{unchanged} \\
@@ -76,7 +80,7 @@ The lower block is the evidence that the repair is confined to the cycles: not
 one storage quantity moves, in any digit carried. Nor does anything on the
 discharge side --- $\eta_{T}$ and the net electric energy per well are also
 unchanged, because the heat pump buys electricity \emph{in}, not out. The upper block is the cost of
-having believed them. \textbf{Read $\eta_{\mathrm{RTE}}=0.30$, not $0.44$}, and
+having believed them. \textbf{Read $\eta_{\mathrm{RTE}}=0.32$, not $0.44$}, and
 read the earlier tables in this document as the record of how the storage model
 was arrived at rather than as current performance.
 
