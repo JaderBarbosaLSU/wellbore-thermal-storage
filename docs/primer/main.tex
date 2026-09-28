@@ -978,12 +978,22 @@ $\eta_{\mathrm{RTE}}$ & round trip, both parasitics & 0.3172 &
 $\varepsilon_{\mathrm{RTE}}$ & $\eta_{\mathrm{RTE}}\times$ cycled fraction &
   0.2882 & anything leaving PCM unused \\
 \midrule
-$\Delta E_{\mathrm{therm}}$ & thermal energy per well & \SI{4734}{\kilo\watt\hour} &
+\multicolumn{4}{@{}l}{\emph{second law, new at v0.13}} \\
+$\psi$ & $W_{\mathrm{out}}/(W_{\mathrm{in}}+\mathcal{E}_{\mathrm{geo}})$,
+  whole resource charged & 0.2459 & $\Delta T_{3A4A}$, everything above \\
+$\psi_{\mathrm{stripped}}$ & only what the evaporator takes & 0.2889 &
+  as above \\
+$N_{\mathrm{geo}}$ & geothermal producers & 8.07 & $\Delta T_{3A4A}$,
+  $\dot m_{\mathrm{geo,well}}$ \\
+wells per MW\textsubscript{e} & storage \emph{and} geothermal & 22.7 &
+  everything \\
+\midrule
+$\Delta E_{\mathrm{therm}}$ & thermal energy per well & \SI{4731}{\kilo\watt\hour} &
   $\hm$, $\rho$, $V_{\mathrm{well}}$ \\
 $\Delta E_{\mathrm{elec}}$ & net electric energy per well &
   \SI{646}{\kilo\watt\hour} & the above $\times\ \eta_{T,\mathrm{eff}}$ \\
 $\rho_E$ & thermal energy density &
-  \SI{171.0}{\kilo\watt\hour\per\meter\cubed} & $\hm$, $\rho$ \\
+  \SI{170.9}{\kilo\watt\hour\per\meter\cubed} & $\hm$, $\rho$ \\
 \midrule
 cycled fraction & $\varepsilon_{\mathrm{ch}}-\varepsilon_{\mathrm{dc}}$ & 0.9599 &
   \\

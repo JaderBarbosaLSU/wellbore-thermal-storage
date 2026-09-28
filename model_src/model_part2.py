@@ -144,6 +144,42 @@ class Case:
     DT_cascade: float = None      # cascade grading parameter      [K]
     t_ch: float = 10.0            # charging duration              [h]
     t_dc: float = 10.0            # discharging duration           [h]
+
+    # ---- the geothermal resource (new at v0.13) --------------------------
+    # Until v0.13 the 60 C source was effectively unlimited: the model drew
+    # whatever flow the duty needed and no output recorded how much that was.
+    # The exergy audit makes it a priced resource, so the flow is now reported
+    # and converted into a well count.
+    #
+    # m_geo is NOT an input. It is DERIVED, exactly as N_wells is:
+    #     m_geo = Q_src / (h(T_source) - h(T_source - DT_3A_4A))
+    # and the uncertainty is carried by the per-well yield below, which is a
+    # field-measured quantity, rather than by a plant-level flow that nobody
+    # has ever measured. See DN-22.
+    #
+    # PROVISIONAL DEFAULT. 12.5 kg/s is the producer in the 4500 m / 206 C
+    # repurposed-well case study, which is a hotter and deeper well than ours;
+    # the published range for repurposed oil and gas wells runs from about
+    # 1 kg/s up to that figure, and co-produced water from depleted fields can
+    # exceed it. Treat N_geo as proportional to this number, not as a result.
+    m_dot_geo_well: float = 12.5  # per producing well             [kg/s]
+    # Lower bound on the reinjection temperature, T_4a = T_source - DT_3A_4A.
+    # This is what bounds DT_3A_4A from ABOVE, and the second law wants to run
+    # against that bound: raising DT_3A_4A cuts m_geo far faster than it cuts
+    # COP. The default is deliberately slack -- it is a placeholder for a
+    # formation constraint (silica scaling, injectivity) that the project does
+    # not yet have a number for. validate_case warns, it does not raise.
+    T_reinject_min_C: float = 25.0
+    # Which exergy is charged for the geothermal stream.
+    #   'resource'  everything the well lifts, relative to T_sink, with the
+    #               reinjected stream booked as a named LOSS attributed to no
+    #               component. The right convention for a dedicated well, which
+    #               is paid for whether or not its exergy is used.
+    #   'stripped'  only what the evaporator removes; reinjection is free.
+    # The two give OPPOSITE guidance on DT_3A_4A: 'stripped' falls monotonically
+    # and pushes the design toward the largest possible well count, 'resource'
+    # has an interior optimum near 20 K. See DN-23.
+    exergy_convention: str = "resource"
     loss_surplus: float = 0.05    # assumed storage loss, lambda
     N_lay: int = 9                # PCM layers along the well
 

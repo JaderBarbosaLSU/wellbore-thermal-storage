@@ -30,12 +30,14 @@ ENTRY = ('Case', 'simulate_css_corrected', 'simulate_css', 'css_report',
          'T_m_bottom', 'layer_map', 'march_h', 'pcm_state', 'pcm_capacities',
          'segment_profile', 'unmirror_march', 'mixed_mean_outlet',
          'orc_pinch', 'feasible_rankine', 'exchanger_UA', 'ua_report',
+         'water_h', 'water_s', 'stream_exergy_rate',
+         'geothermal_resource', 'exergy_audit', 'exergy_report',
          'conduction_shell', 'bulk_shape_factor', 'bulk_equivalent_delta',
          'delta_from_area', 'calculate_pressure_drop')
 
 HEADER = '''"""THUMS -- latent heat storage in a repurposed wellbore.
 
-The live model, v0.12. One formulation (enthalpy, "Formulation C"), one sizing
+The live model, v0.13. One formulation (enthalpy, "Formulation C"), one sizing
 framing (specify the hardware and march to cyclic steady state), no root
 finding anywhere.
 
@@ -179,6 +181,30 @@ def validate_case(case, verbose=True):
             f'evaporating temperature is now derived, '
             f'T_13h = T_source_C - DT_3A_4A - DT_pinch_HPE. Set '
             f'DT_pinch_HPE instead, and leave DT_3A_13H at None.')
+    # ---- the geothermal resource, new at v0.13 --------------------------
+    if case.exergy_convention not in ('resource', 'stripped'):
+        err(f"exergy_convention = {case.exergy_convention!r}; must be "
+            f"'resource' (charge everything the well lifts, book the "
+            f"reinjected stream as a loss) or 'stripped' (charge only what "
+            f"the evaporator removes). They give OPPOSITE guidance on "
+            f"DT_3A_4A, so the choice is not cosmetic. See DN-23.")
+    if case.m_dot_geo_well <= 0:
+        err(f'm_dot_geo_well = {case.m_dot_geo_well} kg/s; N_geo is directly '
+            f'proportional to it and it must be positive.')
+    T_rei = case.T_source_C - case.DT_3A_4A
+    if T_rei < case.T_reinject_min_C:
+        warn(f'reinjection at {T_rei:.1f} C is below T_reinject_min_C = '
+             f'{case.T_reinject_min_C:.1f} C. DT_3A_4A = {case.DT_3A_4A} K '
+             f'draws the source down further than the formation constraint '
+             f'allows. This is a WARNING and not an error only because the '
+             f'default limit is a placeholder: the project has no measured '
+             f'value for it yet. The second law pushes DT_3A_4A UP -- it '
+             f'cuts m_geo far faster than it cuts COP -- so this bound is '
+             f'the one that will bind in an optimisation.')
+    if T_rei <= case.T_sink_C:
+        err(f'reinjection at {T_rei:.1f} C is at or below the sink '
+            f'({case.T_sink_C} C), which is the dead state. The source would '
+            f'carry no exergy worth taking and the audit would go negative.')
     if case.DT_pinch_HPE <= 0:
         err(f'DT_pinch_HPE = {case.DT_pinch_HPE} K; the refrigerant must '
             f'evaporate BELOW the source outlet or the evaporator runs heat '

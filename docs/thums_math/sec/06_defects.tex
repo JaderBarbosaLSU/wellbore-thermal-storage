@@ -716,6 +716,23 @@ $\Delta T_{3A,4A}$ a genuine trade rather than a free choice.
 version & date & change \\
 \midrule
 \endhead
+\textbf{0.13} & 2026-09 &
+  Exergy destruction by component (\S\ref{sec:exergy}), and with it the
+  \SI{60}{\celsius} geothermal source as a \emph{finite, priced} resource
+  rather than an unlimited one. $\psi=0.2459$ against
+  $\eta_{\mathrm{RTE}}=0.3172$; \num{8.07} geothermal producers alongside
+  \num{15.62} storage wells, so the field is \num{23.7} boreholes and not
+  \num{15.6}. Three findings worth the version on their own: the heat
+  exchangers destroy \SI{49.4}{\percent} of the work against
+  \SI{19.0}{\percent} for the machines; the throttle into the separator
+  destroys more than either compressor; and \SI{57.4}{\percent} of the
+  geothermal exergy is discarded at reinjection. The audit also caught a
+  $c_p$ linearisation in the water flow rates, written twice and live in one
+  place (DN-24), whose repair moves $\eta_{\mathrm{RTE}}$ by
+  \SI{+0.0044}{\percent}. A larger change to the discharge flow was measured
+  and declined (DN-25). The first version of the global closure check was an
+  algebraic identity that could not fail; it was replaced by two per-machine
+  gates that have been watched to fail (DN-26). \\
 \textbf{0.12} & 2026-09 &
   The isentropic efficiencies move from multipliers on the work into the state
   points (\S\ref{sec:cycles:machines}). They were always applied --- the

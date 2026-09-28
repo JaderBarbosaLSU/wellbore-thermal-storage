@@ -1722,6 +1722,42 @@ class Case:
     DT_cascade: float = None      # cascade grading parameter      [K]
     t_ch: float = 10.0            # charging duration              [h]
     t_dc: float = 10.0            # discharging duration           [h]
+
+    # ---- the geothermal resource (new at v0.13) --------------------------
+    # Until v0.13 the 60 C source was effectively unlimited: the model drew
+    # whatever flow the duty needed and no output recorded how much that was.
+    # The exergy audit makes it a priced resource, so the flow is now reported
+    # and converted into a well count.
+    #
+    # m_geo is NOT an input. It is DERIVED, exactly as N_wells is:
+    #     m_geo = Q_src / (h(T_source) - h(T_source - DT_3A_4A))
+    # and the uncertainty is carried by the per-well yield below, which is a
+    # field-measured quantity, rather than by a plant-level flow that nobody
+    # has ever measured. See DN-22.
+    #
+    # PROVISIONAL DEFAULT. 12.5 kg/s is the producer in the 4500 m / 206 C
+    # repurposed-well case study, which is a hotter and deeper well than ours;
+    # the published range for repurposed oil and gas wells runs from about
+    # 1 kg/s up to that figure, and co-produced water from depleted fields can
+    # exceed it. Treat N_geo as proportional to this number, not as a result.
+    m_dot_geo_well: float = 12.5  # per producing well             [kg/s]
+    # Lower bound on the reinjection temperature, T_4a = T_source - DT_3A_4A.
+    # This is what bounds DT_3A_4A from ABOVE, and the second law wants to run
+    # against that bound: raising DT_3A_4A cuts m_geo far faster than it cuts
+    # COP. The default is deliberately slack -- it is a placeholder for a
+    # formation constraint (silica scaling, injectivity) that the project does
+    # not yet have a number for. validate_case warns, it does not raise.
+    T_reinject_min_C: float = 25.0
+    # Which exergy is charged for the geothermal stream.
+    #   'resource'  everything the well lifts, relative to T_sink, with the
+    #               reinjected stream booked as a named LOSS attributed to no
+    #               component. The right convention for a dedicated well, which
+    #               is paid for whether or not its exergy is used.
+    #   'stripped'  only what the evaporator removes; reinjection is free.
+    # The two give OPPOSITE guidance on DT_3A_4A: 'stripped' falls monotonically
+    # and pushes the design toward the largest possible well count, 'resource'
+    # has an interior optimum near 20 K. See DN-23.
+    exergy_convention: str = "resource"
     loss_surplus: float = 0.05    # assumed storage loss, lambda
     N_lay: int = 9                # PCM layers along the well
 
@@ -2904,6 +2940,31 @@ def cycle_state_points(case, T_2d=None):
     return rank, hp, T
 
 
+def water_h(case, T_K):
+    """Specific enthalpy of the heat-transfer water, kJ/kg."""
+    return CP.PropsSI("H", "T", T_K, "P", case.P, case.fluid2) / 1000.0
+
+
+def water_s(case, T_K):
+    """Specific entropy of the heat-transfer water, kJ/kg-K."""
+    return CP.PropsSI("S", "T", T_K, "P", case.P, case.fluid2) / 1000.0
+
+
+def stream_exergy_rate(case, m_dot, T_hot, T_cold):
+    """Exergy given up by a water stream cooling from T_hot to T_cold, kW.
+
+        m_dot [ (h_hot - h_cold) - T_0 (s_hot - s_cold) ],   T_0 = T_sink
+
+    Positive when T_hot > T_cold >= T_0. Used for the process water and for
+    the geothermal stream, which are the same fluid at the same pressure.
+    Passing T_cold = T_0 gives the stream's exergy relative to the dead
+    state, which is what the 'resource' convention charges for.
+    """
+    T_0 = case.T_sink_C + 273.15
+    return m_dot * ((water_h(case, T_hot) - water_h(case, T_cold))
+                    - T_0 * (water_s(case, T_hot) - water_s(case, T_cold)))
+
+
 def energy_budget(case, rank_eff, hp_cop, T):
     """Work backwards from the specified electrical output to the charging duty."""
     # rank_eff and hp_cop now ALREADY carry the machine losses, so only
@@ -2917,9 +2978,16 @@ def energy_budget(case, rank_eff, hp_cop, T):
     W_dot_C_HP = Q_dot_out_HP / hp_cop
     W_dot_el_in = W_dot_C_HP / case.ElH_eff
 
-    cp_w = CP.PropsSI("C", "T", 0.5 * (T["T_3c"] + T["T_2c"]), "P",
-                      case.P, case.fluid2) / 1000.0
-    m_dot_w_ch = Q_dot_out_HP / cp_w / case.DT_3C_2C
+    # v0.13: the ENTHALPY difference, not c_p at the mean temperature times
+    # the glide. Over the 105 -> 160 C charging rise c_p varies about 3 %, so
+    # the linearised form gives a flow rate 0.096 % inconsistent with the
+    # model's own CoolProp data. That is invisible in the energy balance --
+    # both sides use the same wrong flow -- but it fabricates 7.17 kW of
+    # exergy and stopped `exergy_audit` closing. The identical formula was
+    # written a SECOND time in `run_cycle`, where it is live; see the note
+    # there. DN-24.
+    m_dot_w_ch = Q_dot_out_HP / (water_h(case, T["T_3c"])
+                                 - water_h(case, T["T_2c"]))
     return dict(Q_dot_in_ORC=Q_dot_in_ORC, D_E_in_ORC=D_E_in_ORC,
                 D_E_out_HP=D_E_out_HP, Q_dot_out_HP=Q_dot_out_HP,
                 W_dot_el_in=W_dot_el_in, m_dot_w_ch=m_dot_w_ch)
@@ -3381,12 +3449,28 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False, T_2d=None):
     # ---- hardware and flows: all SPECIFIED, none solved -------------------
     if N is None:
         N = Eb["D_E_out_HP"] * 1000.0 / (case.rho_latent * case.V_well * case.h_m)
-    cp_ch = CP.PropsSI("C", "T", 0.5 * (T["T_3c"] + T["T_2c"]), "P",
-                       case.P, case.fluid2) / 1000.0
-    cp_dc = CP.PropsSI("C", "T", 0.5 * (T["T_2d"] + T["T_3d"]), "P",
-                       case.P, case.fluid2) / 1000.0
-    m1_ch = Eb["Q_dot_out_HP"] / cp_ch / case.DT_3C_2C / (N * case.num_tubes)
-    m1_dc = Eb["Q_dot_in_ORC"] / cp_dc / case.glide_dc_spec / (N * case.num_tubes)
+    # v0.13: enthalpy differences, not c_p at the mean temperature times the
+    # glide. This is the LIVE copy of the formula fixed in `energy_budget`;
+    # the two were written independently and both were wrong the same way,
+    # which is why patching only one of them produced an encouraging no-op
+    # and left the defect in place. See DN-24.
+    m1_ch = (Eb["Q_dot_out_HP"] / (water_h(case, T["T_3c"])
+                                   - water_h(case, T["T_2c"]))
+             / (N * case.num_tubes))
+    # NOTE the discharge flow stays pinned by the SPECIFIED glide, as it has
+    # been since v0.6, and not by the realised T_2d that the correction pass
+    # knows about. Using the realised outlet here is tempting -- it cuts the
+    # reported deviation from +4.46 % to +1.45 % and lifts eta_RTE by 0.28 %
+    # -- but that is partly circular: feeding last pass's outlet into this
+    # pass's flow definition drives the delivered energy toward the target by
+    # construction, without iterating to a fixed point. It would also change
+    # the model's SPECIFICATION ("the flow is pinned by the glide"), which is
+    # a different decision from fixing a linearisation. Measured and left
+    # alone. See DN-25.
+    m1_dc = (Eb["Q_dot_in_ORC"]
+             / (water_h(case, T["T_3d"] + case.glide_dc_spec)
+                - water_h(case, T["T_3d"]))
+             / (N * case.num_tubes))
 
     # ---- march until the state repeats -----------------------------------
     def cycle(E0, rec=False):
@@ -3448,6 +3532,255 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False, T_2d=None):
         # no `T_m_seg_dc`: the discharge is returned in depth indexing, where
         # the cascade is the same physical object as on charge. The mirrored
         # copy is an internal detail of the march and does not leave here.
+
+
+def geothermal_resource(case, r):
+    """The 60 C source as a FINITE, priced resource.
+
+    Until v0.13 the source was effectively unlimited: `DT_3A_4A` said how far
+    the stream was cooled, the flow followed from the duty, and no output ever
+    recorded how much flow that was. Nothing in the model objected to a design
+    that quietly demanded five times the geothermal field.
+
+    The flow is DERIVED, not prescribed -- the same choice already made for
+    `N_wells`. Prescribing a plant-level flow would put the uncertainty in a
+    quantity nobody has measured; deriving it puts the uncertainty in the
+    per-well yield, which is field data. See DN-22.
+
+    Note that the exergy of the source is homogeneous of degree one in the
+    flow, and m_geo = Q_src / (c_p dT), so BOTH conventions below reduce to
+    the duty, the glide and the two temperatures. Deriving the flow rather
+    than prescribing it costs the second-law analysis nothing.
+    """
+    hp, T = r["hp"], r["T"]
+    T_0 = case.T_sink_C + 273.15
+    T_src = case.T_source_C + 273.15
+    T_rei = T["T_4a"]                          # T_source - DT_3A_4A
+
+    x = hp["x_8h"]
+    m_ref = r["budget"]["Q_dot_out_HP"] / (hp["h_2h"] - hp["h_3h"])
+    Q_src = m_ref * (1.0 - x) * (hp["h_13h"] - hp["h_4h"])          # kW
+    m_geo = Q_src / (water_h(case, T_src) - water_h(case, T_rei))   # kg/s
+
+    ex_full = stream_exergy_rate(case, m_geo, T_src, T_0)
+    ex_rei = stream_exergy_rate(case, m_geo, T_rei, T_0)
+    ex_stripped = stream_exergy_rate(case, m_geo, T_src, T_rei)
+
+    N_geo = m_geo / case.m_dot_geo_well
+    return dict(
+        Q_src_kW=Q_src, m_geo=m_geo, m_ref=m_ref,
+        T_reinject_C=T_rei - 273.15,
+        Ex_full_kW=ex_full, Ex_reinject_kW=ex_rei, Ex_stripped_kW=ex_stripped,
+        utilisation=ex_stripped / ex_full if ex_full else float("nan"),
+        N_geo=N_geo, N_geo_per_MWe=N_geo / (case.W_dot_el_out / 1000.0),
+        # which of the two the audit will charge for
+        Ex_charged_kW=(ex_full if case.exergy_convention == "resource"
+                       else ex_stripped),
+        Ex_loss_kW=(ex_rei if case.exergy_convention == "resource" else 0.0),
+        convention=case.exergy_convention)
+
+
+def exergy_audit(case, r):
+    """Exergy destruction by component over one cycle at CSS, in kWh.
+
+    THE DEAD STATE is T_0 = T_sink. It is the lowest temperature in the
+    system, so every exergy is positive, and the heat dumped at the ORC
+    condenser is genuinely unrecoverable. It is NOT the heat-pump evaporator
+    source: that is the 60 C geothermal stream, a second and quite separate
+    reservoir, which is why `geothermal_resource` has to price it.
+
+    THE CLOSURE, and why this function is a gate rather than a report:
+
+        W_el_in + Ex_geo  =  W_el_out + Ex_reinject + sum(I_j)
+
+    The left and right sides are computed from DIFFERENT things. The boundary
+    terms come from four stream states. Every I_j comes from the entropy
+    generated inside one component, from its own state points and flow
+    fractions. If the cycle state points, the flow splits and the duties are
+    mutually consistent, the two agree to machine precision; if any one of
+    them is wrong, they do not. That is what caught the c_p linearisation in
+    the water flow rates (DN-24), which was invisible to every energy balance
+    in the model because both sides of those balances used the same wrong
+    flow.
+
+    WHAT IS A DESTRUCTION AND WHAT IS A LOSS. The reinjected geothermal
+    stream leaves the boundary intact -- its exergy is not destroyed, it is
+    discarded. It is reported on its own line and attributed to NO component,
+    because no component is responsible for it; the decision to size the
+    field this way is. Under the 'stripped' convention it is not charged at
+    all and the line is zero.
+
+    THE BOREHOLE is one bucket here, obtained from the difference of the two
+    water-stream exergies over a full cycle. That is exact at CSS -- the PCM
+    returns to its own initial state, so its net exergy change is zero, and no
+    PCM entropy function is needed. It does not say WHERE in the well or WHEN
+    the destruction happens; that needs s(E') and is the next step.
+    """
+    T_0 = case.T_sink_C + 273.15
+    hp, rank, T, Eb = r["hp"], r["rank"], r["T"], r["budget"]
+    t_ch, t_dc = case.t_ch, case.t_dc                       # hours
+    geo = geothermal_resource(case, r)
+    m_ref = geo["m_ref"]
+    x = hp["x_8h"]
+
+    # ---- heat pump, per kg of condenser flow ------------------------------
+    s = lambda k: hp["s_" + k] / 1000.0                     # kJ/kg-K
+    h = lambda k: hp["h_" + k]
+    gen = {}
+    gen["HTHP compressor HP"] = 1.0 * (s("2h") - s("6h"))
+    gen["HTHP compressor LP"] = (1.0 - x) * (s("5h") - s("1h"))
+    gen["HTHP throttle 7h-8h"] = 1.0 * (s("8h") - s("7h"))
+    gen["HTHP throttle 9h-4h"] = (1.0 - x) * (s("4h") - s("9h"))
+    gen["HTHP flash separator"] = (x * s("10h") + (1.0 - x) * s("9h")
+                                   - s("8h"))
+    gen["HTHP IHX-1"] = 1.0 * (s("12h") - s("3h")) + x * (s("11h") - s("10h"))
+    gen["HTHP IHX-2"] = (1.0 * (s("7h") - s("12h"))
+                         + (1.0 - x) * (s("1h") - s("13h")))
+    m_w_ch = Eb["m_dot_w_ch"]
+    gen["HTHP condenser"] = (1.0 * (s("3h") - s("2h"))
+                             + m_w_ch * (water_s(case, T["T_3c"])
+                                         - water_s(case, T["T_2c"])) / m_ref)
+    gen["HTHP evaporator"] = ((1.0 - x) * (s("13h") - s("4h"))
+                              + geo["m_geo"]
+                              * (water_s(case, T["T_4a"])
+                                 - water_s(case, case.T_source_C + 273.15))
+                              / m_ref)
+    I = {k: T_0 * m_ref * v * t_ch for k, v in gen.items()}     # kWh/cycle
+
+    W_comp = m_ref * ((h("2h") - h("6h")) + (1.0 - x) * (h("5h") - h("1h")))
+    W_el_in = Eb["W_dot_el_in"]
+    I["HTHP motor"] = (W_el_in - W_comp) * t_ch
+
+    # ---- ORC, per kg through the first turbine stage ----------------------
+    y = rank["y_frac"]
+    se = lambda k: rank["s_" + k] / 1000.0
+    he = lambda k: rank["h_" + k]
+    m_orc = Eb["Q_dot_in_ORC"] / ((he("3e") - he("10e"))
+                                  + y * (he("6e") - he("5e")))
+    ge = {}
+    ge["ORC turbine 1"] = 1.0 * (se("5e") - se("3e"))
+    ge["ORC turbine 2"] = y * (se("4e") - se("6e"))
+    ge["ORC pump 1"] = y * (se("2e") - se("1e"))
+    ge["ORC pump 2"] = (1.0 - y) * (se("8e") - se("7e"))
+    ge["ORC regenerator"] = ((1.0 - y) * (se("7e") - se("5e"))
+                             + y * (se("9e") - se("2e")))
+    ge["ORC mixer"] = se("10e") - (y * se("9e") + (1.0 - y) * se("8e"))
+    m_w_dc = Eb["Q_dot_in_ORC"] / (water_h(case, T["T_2d"])
+                                   - water_h(case, T["T_3d"]))
+    ge["ORC evaporator"] = ((1.0 * (se("3e") - se("10e"))
+                             + y * (se("6e") - se("5e")))
+                            + m_w_dc * (water_s(case, T["T_3d"])
+                                        - water_s(case, T["T_2d"])) / m_orc)
+    # the sink is AT the dead state, so the rejected heat carries no exergy
+    # and the whole of it is destroyed in the condenser
+    Q_rej = m_orc * y * (he("4e") - he("1e"))
+    ge["ORC condenser"] = y * (se("1e") - se("4e")) + Q_rej / T_0 / m_orc
+    for k, v in ge.items():
+        I[k] = T_0 * m_orc * v * t_dc
+
+    W_turb = m_orc * ((he("3e") - he("5e")) + y * (he("6e") - he("4e"))
+                      - y * (he("2e") - he("1e"))
+                      - (1.0 - y) * (he("8e") - he("7e")))
+    I["ORC generator"] = (W_turb - case.W_dot_el_out) * t_dc
+
+    # ---- THE TWO GATES THAT CAN ACTUALLY FAIL -----------------------------
+    # Each machine bucket is summed from entropy generated INSIDE its
+    # components and checked against a boundary balance built from stream
+    # states only. These are independent computations and they are what
+    # caught DN-24.
+    I_hp = sum(v for k, v in I.items() if k.startswith("HTHP"))
+    I_orc = sum(v for k, v in I.items() if k.startswith("ORC"))
+    dEx_ch = stream_exergy_rate(case, m_w_ch, T["T_3c"], T["T_2c"]) * t_ch
+    dEx_dc = stream_exergy_rate(case, m_w_dc, T["T_2d"], T["T_3d"]) * t_dc
+    bnd_hp = (W_comp * t_ch + geo["Ex_stripped_kW"] * t_ch - dEx_ch
+              + (W_el_in - W_comp) * t_ch)
+    bnd_orc = dEx_dc - W_turb * t_dc + (W_turb - case.W_dot_el_out) * t_dc
+    gates = {"HTHP": (I_hp, bnd_hp), "ORC": (I_orc, bnd_orc)}
+
+    # ---- borehole: BY DIFFERENCE, and therefore not a gate ----------------
+    # T_3c = T_4c and T_2d/T_3d are shared with the surface exchangers, so
+    # this term is algebraically the residual of the water loop: it cancels
+    # the two exchanger terms exactly and the GLOBAL sum below is an
+    # identity, not a test. An earlier draft printed that identity as a
+    # closure check reading 0.00e+00 and called it a pass. It cannot fail,
+    # so it cannot pass. The independent value comes from the resolved
+    # integral over z and t once s(E') exists; until then this number is
+    # correct but unverified.
+    I["borehole"] = dEx_ch - dEx_dc
+
+    # The water loop does NOT in fact close at CSS: the well returns water at
+    # T_2c_realised, not at the T_2c the condenser assumes, and likewise on
+    # discharge. Reported rather than absorbed silently.
+    mism = float("nan")
+    if r.get("T_2c_realised") is not None:
+        mism = (stream_exergy_rate(case, m_w_ch, T["T_3c"],
+                                   r["T_2c_realised"]) * t_ch - dEx_ch
+                - (stream_exergy_rate(case, m_w_dc, r["T_2d_realised"],
+                                      T["T_3d"]) * t_dc - dEx_dc))
+
+    W_in = W_el_in * t_ch
+    W_out = case.W_dot_el_out * t_dc
+    Ex_geo = geo["Ex_charged_kW"] * t_ch
+    Ex_loss = geo["Ex_loss_kW"] * t_ch
+    boundary = W_in + Ex_geo - W_out - Ex_loss
+    total = sum(I.values())
+
+    return dict(
+        T_0=T_0, components_kWh=I, total_kWh=total, boundary_kWh=boundary,
+        gates={k: dict(sum_kWh=a, boundary_kWh=b, residual_kWh=a - b,
+                       residual_rel=abs(a - b) / abs(b) if b else float("nan"))
+               for k, (a, b) in gates.items()},
+        gates_pass=all(abs(a - b) <= 1e-9 * abs(b) for a, b in gates.values()),
+        global_is_identity=True,
+        loop_mismatch_kWh=mism,
+        W_el_in_kWh=W_in, W_el_out_kWh=W_out,
+        Ex_geo_kWh=Ex_geo, Ex_reinject_kWh=Ex_loss,
+        eta_RTE=W_out / W_in,
+        psi=W_out / (W_in + Ex_geo),
+        psi_stripped=W_out / (W_in + geo["Ex_stripped_kW"] * t_ch),
+        shares={k: v / total for k, v in I.items()},
+        geo=geo)
+
+
+def exergy_report(case, r, a=None):
+    """Print the destruction table, largest first, and the closure check."""
+    a = exergy_audit(case, r) if a is None else a
+    g = a["geo"]
+    print(f"EXERGY AUDIT   dead state T_0 = {a['T_0'] - 273.15:.1f} C "
+          f"(the sink), convention '{g['convention']}'")
+    print(f"  IN   electrical           {a['W_el_in_kWh']:10.1f} kWh")
+    print(f"  IN   geothermal           {a['Ex_geo_kWh']:10.1f} kWh   "
+          f"({g['m_geo']:.1f} kg/s, {g['N_geo']:.2f} producers)")
+    print(f"  OUT  electrical           {a['W_el_out_kWh']:10.1f} kWh")
+    print(f"  OUT  reinjected (LOSS)    {a['Ex_reinject_kWh']:10.1f} kWh   "
+          f"at {g['T_reinject_C']:.1f} C, "
+          f"{100 * (1 - g['utilisation']):.1f} % of the resource discarded")
+    print(f"  {'-' * 56}")
+    for k, v in sorted(a["components_kWh"].items(), key=lambda kv: -kv[1]):
+        print(f"    {k:<26}{v:10.1f} kWh{100 * a['shares'][k]:7.1f} %")
+    print(f"  {'-' * 56}")
+    print(f"    {'SUM of components':<26}{a['total_kWh']:10.1f} kWh")
+    print(f"    {'boundary balance':<26}{a['boundary_kWh']:10.1f} kWh"
+          "   (identity -- see below)")
+    print("\n  GATES. Only these can fail. Each sums the entropy generated "
+          "inside\n  one machine's components and checks it against a "
+          "balance built from\n  stream states alone.")
+    for k, g in a["gates"].items():
+        ok = g["residual_rel"] <= 1e-9
+        print(f"    {k:<8}{g['sum_kWh']:11.2f} vs {g['boundary_kWh']:11.2f} "
+              f"kWh   rel {g['residual_rel']:.2e}   "
+              f"{'OK' if ok else '*** FAIL ***'}")
+    print("    borehole  by difference -- the water-loop residual. It cancels"
+          "\n              the two exchanger terms exactly, so the global sum"
+          "\n              above is an IDENTITY and cannot fail. Verified only"
+          "\n              when the resolved s(E') integral lands.")
+    if a["loop_mismatch_kWh"] == a["loop_mismatch_kWh"]:
+        print(f"    loop      {a['loop_mismatch_kWh']:+.1f} kWh between the "
+              "outlets the surface assumes\n              and the outlets the "
+              "well actually delivers at CSS")
+    print(f"\n  eta_RTE {a['eta_RTE']:.4f}    psi (resource) {a['psi']:.4f}"
+          f"    psi (stripped) {a['psi_stripped']:.4f}")
+    return a
 
 
 def performance_indices(case, r):
@@ -3543,6 +3876,30 @@ def performance_indices(case, r):
                          ("ORC evaporator", "orce"), ("ORC condenser", "orcc")):
             out[f"UA_{tag}_kW_K"] = ua[key]["UA_kW_per_K"]
             out[f"dTeff_{tag}_K"] = ua[key]["dT_eff_K"]
+
+        # ---- second law, and the resource the first law books as free ----
+        # eta_RTE treats the 60 C geothermal stream as costless. It is not:
+        # a dedicated producer is drilled and paid for whether or not its
+        # exergy is used. psi prices it, and comes out well BELOW eta_RTE.
+        # The well count is the number the operator actually cares about,
+        # and until v0.13 the model reported only half of it.
+        ex = exergy_audit(case, r)
+        out["psi"] = ex["psi"]
+        out["psi_stripped"] = ex["psi_stripped"]
+        out["I_total_kWh"] = ex["total_kWh"]
+        out["Ex_reinject_kWh"] = ex["Ex_reinject_kWh"]
+        out["resource_utilisation"] = ex["geo"]["utilisation"]
+        out["m_geo_kg_s"] = ex["geo"]["m_geo"]
+        out["N_geo"] = ex["geo"]["N_geo"]
+        out["T_reinject_C"] = ex["geo"]["T_reinject_C"]
+        N_st = r.get("N_wells")
+        if N_st is not None:
+            out["N_wells_total"] = N_st + ex["geo"]["N_geo"]
+            out["wells_per_MWe"] = ((N_st + ex["geo"]["N_geo"])
+                                    / (W_el_out / 1000.0))
+        for name, v in ex["components_kWh"].items():
+            out["I_" + name.replace(" ", "_").replace("-", "")] = v
+        out["exergy_gates_pass"] = ex["gates_pass"]
     return out
 
 

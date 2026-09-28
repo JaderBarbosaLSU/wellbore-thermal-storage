@@ -551,6 +551,8 @@ now says it actually is.
 cells.append(code(src('_orc_cold_composite', 'orc_pinch', 'feasible_rankine',
                       '_stream_curve', '_water_curve', '_UA_from_curves',
                       'exchanger_UA', 'ua_report',
+                      'water_h', 'water_s', 'stream_exergy_rate',
+                      'geothermal_resource', 'exergy_audit', 'exergy_report',
                       'T_m_bottom', 'cycle_state_points', 'energy_budget',
                       'melting_temperatures')))
 

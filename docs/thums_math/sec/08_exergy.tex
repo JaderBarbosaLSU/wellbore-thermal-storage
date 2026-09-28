@@ -1,0 +1,308 @@
+\section{Exergy: where the work is actually lost}
+\label{sec:exergy}
+
+The first law says this store is perfect. At cyclic steady state the PCM
+returns to its own initial state, so $\eta_{\mathrm{storage}} \equiv 1$ by
+construction: every joule that goes down the well comes back up. That is not
+a modelling triumph, it is a statement that the energy balance cannot see
+what the store costs. The whole of that cost is a degradation of temperature,
+and only the second law prices it.
+
+This section sets out the audit added at v0.13, what it found, and --- just
+as importantly --- which parts of it are checks that can fail and which are
+bookkeeping identities that cannot.
+
+\subsection{The dead state, and why there are two reservoirs}
+\label{sec:exergy:deadstate}
+
+The plant exchanges heat with two quite separate reservoirs, and an earlier
+draft of this analysis wrongly treated them as one. The ORC condenser rejects
+to the sink at $T_{\mathrm{sink}} = \SI{20}{\celsius}$. The heat-pump
+evaporator does \emph{not} draw from the sink: its source is geothermal water
+at $T_{\mathrm{source}} = \SI{60}{\celsius}$, produced from wells elsewhere in
+the cluster.
+
+We take $T_0 = T_{\mathrm{sink}}$. It is the lowest temperature in the system,
+so every exergy in the audit is positive, and the heat dumped at the ORC
+condenser is genuinely unrecoverable, which is what a dead state should mean.
+The consequence is that the geothermal stream is not free: it enters the
+balance as a second input,
+%
+\begin{equation}
+  W_{\mathrm{el,in}} + \mathcal{E}_{\mathrm{geo}}
+  \;=\; W_{\mathrm{el,out}} + \mathcal{E}_{\mathrm{reinj}}
+        + \sum_j I_j .
+  \label{eq:exergy:balance}
+\end{equation}
+
+\subsection{The geothermal source is finite, and its flow is derived}
+\label{sec:exergy:resource}
+
+Until v0.13 the \SI{60}{\celsius} source was effectively unlimited. The model
+drew whatever flow the duty required, no output recorded how much that was,
+and nothing objected to a design quietly demanding five times the geothermal
+field. The flow is now reported, and converted into a well count.
+
+It is \emph{derived}, not prescribed --- the same choice already made for
+$N_{\mathrm{wells}}$:
+%
+\begin{equation}
+  \dot m_{\mathrm{geo}}
+  = \frac{\dot Q_{\mathrm{src}}}
+         {h(T_{\mathrm{source}}) - h(T_{\mathrm{source}} - \Delta T_{3A4A})},
+  \qquad
+  N_{\mathrm{geo}} = \frac{\dot m_{\mathrm{geo}}}{\dot m_{\mathrm{geo,well}}} .
+  \label{eq:exergy:mgeo}
+\end{equation}
+%
+Prescribing a plant-level flow would put the uncertainty in a quantity nobody
+has measured. Deriving it moves the uncertainty into the per-well yield
+$\dot m_{\mathrm{geo,well}}$, which is field data. Note also that the source
+exergy is homogeneous of degree one in $\dot m_{\mathrm{geo}}$, and
+\eqref{eq:exergy:mgeo} makes that flow proportional to the duty; both
+conventions below therefore reduce to the duty, the glide and the two
+temperatures. Deriving the flow rather than prescribing it costs the
+second-law analysis nothing.
+
+The default $\dot m_{\mathrm{geo,well}} = \SI{12.5}{\kilo\gram\per\second}$ is
+\emph{provisional}. It is the producer in a \SI{4500}{\metre},
+\SI{206}{\celsius} repurposed-well case study, which is a hotter and deeper
+well than ours; published yields for repurposed oil and gas wells run from
+about \SI{1}{\kilo\gram\per\second} up to that figure, while co-produced water
+from depleted fields can exceed it. $N_{\mathrm{geo}}$ is directly
+proportional to it and should be read as a scaling result, not a prediction.
+
+\subsection{Two conventions, and why the choice is not cosmetic}
+\label{sec:exergy:convention}
+
+What should the plant be charged for?
+
+\begin{description}
+  \item[\texttt{stripped}] only the exergy the evaporator removes between
+    $T_{\mathrm{source}}$ and the reinjection temperature. Reinjection is
+    free.
+  \item[\texttt{resource}] everything the well lifts, relative to $T_0$, with
+    the reinjected stream booked as a named \emph{loss} attributed to no
+    component --- it leaves the boundary intact and is not destroyed inside
+    it.
+\end{description}
+
+For a dedicated producer, drilled and paid for whether or not its exergy is
+used, \texttt{resource} is the honest convention, and it is the default. The
+choice matters because the two give \emph{opposite} guidance on
+$\Delta T_{3A4A}$, as Table~\ref{tab:exergy:dt3a4a} shows. Under
+\texttt{stripped} the second-law efficiency falls monotonically and the
+optimiser is pushed toward the smallest possible glide --- which is exactly
+the configuration that needs the most geothermal wells. Under
+\texttt{resource} there is an interior optimum near \SI{20}{\kelvin}.
+
+\begin{table}[htbp]
+  \centering
+  \caption{The source-side trade. $\Delta T_{3A4A}$ was a quiet approach
+  parameter before v0.13; it is the central design variable of the source
+  side. Cycle-level values.}
+  \label{tab:exergy:dt3a4a}
+  \begin{tabular}{rrrrrrr}
+    \toprule
+    $\Delta T_{3A4A}$ & $T_{13h}$ & COP & $\eta_{\mathrm{RTE}}$ &
+    $\dot m_{\mathrm{geo}}$ & resource & $\psi$ \\
+    (K) & (\si{\celsius}) & & & (rel.) & used & (\texttt{resource}) \\
+    \midrule
+     5 & 50.0 & 2.582 & 0.345 & 1.000 & \SI{22.6}{\percent} & 0.197 \\
+    10 & 45.0 & 2.473 & 0.330 & 0.466 & \SI{42.6}{\percent} & 0.245 \\
+    15 & 40.0 & 2.373 & 0.317 & 0.289 & \SI{59.7}{\percent} & 0.260 \\
+    20 & 35.0 & 2.280 & 0.305 & 0.202 & \SI{73.9}{\percent} & \textbf{0.264} \\
+    25 & 30.0 & 2.194 & 0.293 & 0.151 & \SI{85.2}{\percent} & 0.263 \\
+    30 & 25.0 & 2.114 & 0.283 & 0.117 & \SI{93.3}{\percent} & 0.260 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The design point sits at $\Delta T_{3A4A} = \SI{10}{\kelvin}$, and
+Table~\ref{tab:exergy:dt3a4a} says that is badly placed for the resource.
+Moving to \SI{20}{\kelvin} costs \SI{7.8}{\percent} of COP and the same of
+$\eta_{\mathrm{RTE}}$, but cuts the geothermal flow to \SI{43}{\percent} of
+its present value and the geothermal well count with it. At plant level that
+is not a close call. What bounds the move is a constraint the model did not
+previously represent at all: the minimum reinjection temperature the
+formation will tolerate. \texttt{T\_reinject\_min\_C} now exists for it,
+deliberately slack, and warns rather than raising, because the project has no
+measured value yet.
+
+\subsection{What can fail, and what cannot}
+\label{sec:exergy:gates}
+
+Equation~\eqref{eq:exergy:balance} looks like a closure check, and the
+temptation is to print its residual and call a small number a pass. That
+would be worthless here, and it is worth saying why.
+
+Each machine bucket \emph{is} a genuine test. The destruction in the heat
+pump is summed from the entropy generated inside each of its nine components,
+from their own state points and flow fractions, and compared against a
+boundary balance built only from stream states. Those are independent
+computations, and they agree to $\sim\!10^{-15}$ relative. Reintroducing the
+defect of \S\ref{sec:exergy:defect} makes the heat-pump gate fire at
+$4.5\times10^{-3}$, which is how we know it can.
+
+The \emph{global} sum cannot fail. Because $T_{3c} = T_{4c}$ --- the water
+leaves the condenser and enters the borehole with no state change between ---
+and because the discharge stream is likewise shared, the borehole term, taken
+as the difference of the two water-stream exergies, cancels the two exchanger
+terms exactly. The identity is then $W_{\mathrm{el,in}} +
+\mathcal{E}_{\mathrm{stripped}} - W_{\mathrm{el,out}}$ on both sides. An
+earlier draft printed this as a closure check reading exactly
+\texttt{0.00e+00} and reported it as a pass. A residual of exactly zero over
+twenty terms of order $10^{3}$ is not a triumph, it is a tell.
+
+So the borehole number below is correct but \emph{unverified}. Its independent
+value requires the resolved integral over $z$ and $t$, which needs an entropy
+constitutive curve $s(E')$ alongside the existing $E'(T)$; that is the next
+step and is not in v0.13.
+
+\subsection{The defect the gate caught}
+\label{sec:exergy:defect}
+
+The heat-pump gate did not close on first construction. It sat at
+$5\times10^{-3}$, and the cause was the water mass flow rate, set as
+$\dot Q / (c_p \Delta T)$ with $c_p$ evaluated at the mean temperature. Over
+the \SIrange{105}{160}{\celsius} charging rise $c_p$ varies about
+\SI{3}{\percent}, so the flow was \SI{0.096}{\percent} inconsistent with the
+model's own enthalpy data. That is invisible to every energy balance in the
+model, because both sides of those balances use the same wrong flow; it is
+visible to the exergy audit, which fabricated \SI{7.17}{\kilo\watt} out of it.
+
+There was a trap in the repair. The formula appears twice, written
+independently. Fixing the copy in \texttt{energy\_budget} alone changed no
+reported number at all --- an encouraging no-op that would have been taken as
+confirmation, and was nothing of the kind, because the live copy is in
+\texttt{run\_cycle} and was untouched. Both are now enthalpy differences. The
+effect on reported results is small: $\eta_{\mathrm{RTE}}$ moves
+\SI{+0.0044}{\percent}, the largest single move is \SI{-0.27}{\percent} in
+pumping power.
+
+A second and larger change was measured and then \emph{declined}. Using the
+realised $T_{2d}$ rather than the specified glide to set the discharge flow
+cuts the reported deviation from \SI{+4.46}{\percent} to
+\SI{+1.45}{\percent} and lifts $\eta_{\mathrm{RTE}}$ by \SI{0.28}{\percent}.
+It is not adopted, for two reasons: it changes the model's specification
+(``the flow is pinned by the glide'') rather than fixing an approximation,
+and it is partly circular, since feeding one pass's outlet into the next
+pass's flow definition drives the delivered energy toward the target by
+construction without iterating to a fixed point. It is recorded in DN-25 as a
+candidate, with its measured effect, rather than smuggled in under cover of
+an exergy release.
+
+\subsection{The destruction table}
+\label{sec:exergy:table}
+
+Table~\ref{tab:exergy:components} is the audit at the design point, per cycle.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Exergy destruction by component, one cycle at CSS,
+  $T_0 = \SI{20}{\celsius}$, \texttt{resource} convention. Inputs
+  \SI{30121}{\kilo\watt\hour} electrical and \SI{10549}{\kilo\watt\hour}
+  geothermal; outputs \SI{10000}{\kilo\watt\hour} electrical and
+  \SI{6056}{\kilo\watt\hour} reinjected.}
+  \label{tab:exergy:components}
+  \begin{tabular}{lrr}
+    \toprule
+    Component & $I$ (kWh) & share \\
+    \midrule
+    HTHP condenser        & 4388.8 & \SI{17.8}{\percent} \\
+    ORC evaporator        & 3662.3 & \SI{14.9}{\percent} \\
+    HTHP throttle 7h--8h  & 2904.9 & \SI{11.8}{\percent} \\
+    HTHP compressor HP    & 1833.2 & \SI{7.4}{\percent} \\
+    borehole\footnotemark[1] & 1666.0 & \SI{6.8}{\percent} \\
+    HTHP motor            & 1506.1 & \SI{6.1}{\percent} \\
+    ORC condenser         & 1250.0 & \SI{5.1}{\percent} \\
+    HTHP evaporator       & 1180.8 & \SI{4.8}{\percent} \\
+    HTHP compressor LP    & 1169.9 & \SI{4.8}{\percent} \\
+    ORC turbine 2         & 1162.8 & \SI{4.7}{\percent} \\
+    HTHP throttle 9h--4h  & 1118.4 & \SI{4.5}{\percent} \\
+    ORC regenerator       &  794.8 & \SI{3.2}{\percent} \\
+    HTHP IHX-2            &  642.5 & \SI{2.6}{\percent} \\
+    ORC generator         &  526.3 & \SI{2.1}{\percent} \\
+    ORC turbine 1         &  489.2 & \SI{2.0}{\percent} \\
+    HTHP IHX-1            &  306.7 & \SI{1.2}{\percent} \\
+    pumps, mixer, flash separator & 11.7 & \SI{0.0}{\percent} \\
+    \midrule
+    total                 & 24614.3 & \\
+    \bottomrule
+  \end{tabular}
+
+  \footnotesize\footnotemark[1]\,By difference, not independently verified;
+  see \S\ref{sec:exergy:gates}.
+\end{table}
+
+Three readings, two of them not what we expected.
+
+\paragraph{The exchangers beat the machines.} The condenser, the two
+evaporators, the ORC condenser and the borehole together account for
+\SI{49.4}{\percent} of all destruction. The compressors and turbines account for
+\SI{19}{\percent}. This is a heat-transfer plant, not a turbomachinery plant
+--- which is convenient, because heat transfer is what this model resolves and
+turbomachinery is what it stipulates.
+
+\paragraph{A valve destroys more than the high-pressure compressor.} The
+throttle into the separator, at \SI{11.8}{\percent}, is the third-largest
+single item and exceeds either compressor. That is a design signal rather than
+a modelling artefact: an expander, or a different flash arrangement, is worth
+more here than any plausible improvement in compressor efficiency.
+
+\paragraph{The borehole is only \SI{6.8}{\percent}.} It is fourth on the list,
+and it is the part of the plant nobody else has modelled, so it earns its
+place. But the honest reading is that the store is not where this system
+bleeds. The case for the cascade and for tight approach temperatures has to be
+made on well count and on hardware, not on lost work.
+
+\subsection{What the second law says about the headline number}
+\label{sec:exergy:psi}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Three efficiencies at the design point. The spread is the result.}
+  \label{tab:exergy:psi}
+  \begin{tabular}{llr}
+    \toprule
+    $\eta_{\mathrm{RTE}} = W_{\mathrm{out}}/W_{\mathrm{in}}$
+      & source treated as free & 0.3172 \\
+    $\psi_{\mathrm{stripped}}$
+      & source priced at what was taken & 0.2889 \\
+    $\psi$
+      & source priced at what the well delivers & 0.2459 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+$\eta_{\mathrm{RTE}}$ books the \SI{60}{\celsius} heat as costless. It is not.
+Charging only the exergy the evaporator strips already takes the efficiency
+down to \SI{0.289}{}; charging the whole resource the well lifts takes it to
+\SI{0.246}{}. A referee will ask about this, so it is better that we publish
+it.
+
+The most uncomfortable number in the audit is not in
+Table~\ref{tab:exergy:components} at all. The reinjected stream carries
+\SI{6056}{\kilo\watt\hour} of exergy out of the plant every cycle, against an
+electrical output of \SI{10000}{\kilo\watt\hour}. We discard
+\SI{57.4}{\percent} of the geothermal exergy at the wellhead --- more than we
+use. Table~\ref{tab:exergy:dt3a4a} says the remedy is not hotter wells but
+deeper cooling of the wells we have, and that the obstacle is the reinjection
+limit, which we cannot yet quantify.
+
+\subsection{Wells, which is the number an operator asks for}
+\label{sec:exergy:wells}
+
+Because the geothermal side is now counted, the model reports the whole field
+for the first time: \num{15.62} storage wells and \num{8.07} geothermal
+producers, \num{23.69} in total, or \num{22.7} wells per MW\textsubscript{e}.
+Until v0.13 we reported \num{15.62} and called it the well count. The
+geothermal side is not a minor appendage: it is a third of the boreholes.
+
+One caution carries over from \S\ref{sec:exergy:resource}. Because
+$\dot m_{\mathrm{geo}}$ is derived rather than capped, nothing now stops a
+parametric study from demanding an arbitrarily large geothermal flow to buy
+COP. $N_{\mathrm{geo}}$ must therefore be carried as a reported indicator with
+the same standing as $N_{\mathrm{wells}}$, not as a diagnostic. A factorial
+study that ranks designs on $\eta_{\mathrm{RTE}}$ alone will find the
+free-source corner and recommend it.

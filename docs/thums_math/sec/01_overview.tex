@@ -59,30 +59,51 @@ cycles'.
 \begin{center}
 \begin{tabular}{@{}l r r l@{}}
 \toprule
- & v0.8 & \textbf{v0.12} & \\
+ & v0.8 & \textbf{v0.13} & \\
 \midrule
 $\eta_{\mathrm{ORC}}$        & 0.2320 & \textbf{0.1481} & pinch; real machines \\
 $\mathrm{COP}$               & 2.9563 & \textbf{2.4731} & IHX-2 split; HPE approach; real machines \\
 $\Nwells$                    & 11.632 & \textbf{15.625} & consequence of all \\
 $\eta_{\mathrm{RTE}}$        & 0.4367 & \textbf{0.3172} & consequence of all \\
 \midrule
-CSS deviation                & \SI{+4.527}{\percent} & \SI{+4.527}{\percent}
-  & \emph{unchanged} \\
-thermal per well [\si{\kilo\watt\hour}] & 4734.26 & 4734.26 & \emph{unchanged} \\
-$\rho_{E}$ [\si{\kilo\watt\hour\per\meter\cubed}] & 171.02 & 171.02
-  & \emph{unchanged} \\
+CSS deviation                & \SI{+4.527}{\percent} & \SI{+4.458}{\percent}
+  & \emph{essentially unchanged} \\
+thermal per well [\si{\kilo\watt\hour}] & 4734.26 & 4731.13
+  & \emph{essentially unchanged} \\
+$\rho_{E}$ [\si{\kilo\watt\hour\per\meter\cubed}] & 171.02 & 170.90
+  & \emph{essentially unchanged} \\
+\midrule
+\multicolumn{4}{@{}l}{\emph{new at v0.13 --- the second law, and the resource
+the first law books as free}} \\
+$\psi$                       & --- & \textbf{0.2459} & whole geothermal
+  resource charged \\
+$\psi_{\mathrm{stripped}}$   & --- & 0.2889 & only what the evaporator takes \\
+$N_{\mathrm{geo}}$           & --- & \textbf{8.07} &
+  \SI{100.8}{\kilo\gram\per\second} of \SI{60}{\celsius} water \\
+wells per MW\textsubscript{e} & --- & \textbf{22.7} & storage \emph{and}
+  geothermal \\
 \bottomrule
 \end{tabular}
 \end{center}
 
 \noindent
-The lower block is the evidence that the repair is confined to the cycles: not
-one storage quantity moves, in any digit carried. Nor does anything on the
-discharge side --- $\eta_{T}$ and the net electric energy per well are also
-unchanged, because the heat pump buys electricity \emph{in}, not out. The upper block is the cost of
-having believed them. \textbf{Read $\eta_{\mathrm{RTE}}=0.32$, not $0.44$}, and
-read the earlier tables in this document as the record of how the storage model
-was arrived at rather than as current performance.
+The middle block is the evidence that the v0.12 repair was confined to the
+cycles: no storage quantity moves by more than \SI{0.07}{\percent}, all of it
+from the enthalpy-based water flow rates of v0.13 (\S\ref{sec:exergy:defect}).
+Nor does anything on the discharge side --- $\eta_{T}$ and the net electric
+energy per well are also unchanged, because the heat pump buys electricity
+\emph{in}, not out. The upper block is the cost of having believed the v0.8
+cycles. \textbf{Read $\eta_{\mathrm{RTE}}=0.32$, not $0.44$}, and read the
+earlier tables in this document as the record of how the storage model was
+arrived at rather than as current performance.
+
+The bottom block is new, and it says something the first law cannot. The
+\SI{60}{\celsius} geothermal source that drives the heat pump is not free:
+priced as exergy, the round-trip efficiency of \num{0.32} becomes a
+second-law efficiency of \num{0.246}, and the field needs \num{8.07}
+geothermal producers alongside its \num{15.62} storage wells --- a third of
+the boreholes, previously uncounted. \S\ref{sec:exergy} is the audit;
+\textbf{read the well count as \num{23.7}, not \num{15.6}}.
 
 %---------------------------------------------------------------------
 \subsection{The structure of the model}

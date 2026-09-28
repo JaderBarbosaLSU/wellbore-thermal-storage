@@ -1092,3 +1092,126 @@ its condenser carries no desuperheating duty. That last is a design choice
 (IHX-2 is sized to make it so) rather than an oversight, but it does mean the
 HTHP condenser composite has no desuperheat kink — which is why it pinches at
 its hot end while the ORC condenser does not (DN-18).
+
+## DN-22 — The geothermal source became finite, and its flow is derived
+
+Until v0.13 the 60 °C source was effectively unlimited. `DT_3A_4A` said how
+far the stream was cooled, the flow followed from the duty, and **no output
+recorded how much flow that was**. Nothing in the model objected to a design
+quietly demanding five times the geothermal field.
+
+The flow is now reported and converted into a well count. It is *derived*,
+not prescribed — the same choice already made for `N_wells`. Prescribing a
+plant-level ṁ_geo would put the uncertainty in a quantity nobody has
+measured; deriving it moves the uncertainty into the per-well yield, which is
+field data.
+
+The second law loses nothing by this. Both conventions of DN-23 are
+homogeneous of degree one in ṁ_geo, and ṁ_geo = Q_src/(c_p ΔT), so both
+reduce to the duty, the glide and the two temperatures.
+
+`m_dot_geo_well = 12.5 kg/s` is **provisional**: a 4500 m / 206 °C
+repurposed-well case study, hotter and deeper than ours. Published yields for
+repurposed oil and gas wells run from about 1 kg/s to that. N_geo is directly
+proportional to it — a scaling result, not a prediction.
+
+At the design point: 100.8 kg/s, 8.07 producers, against 15.62 storage wells.
+**23.69 wells in total, 22.7 per MWe.** We previously reported 15.62 and
+called it the well count.
+
+The cost of deriving rather than capping: nothing stops a parametric study
+demanding an arbitrarily large geothermal flow to buy COP. N_geo must be
+carried as a reported indicator with the standing of N_wells, or a factorial
+study ranking on η_RTE alone will find the free-source corner.
+
+## DN-23 — Two exergy conventions that give opposite design guidance
+
+`exergy_convention` selects what the plant is charged for.
+
+- `'stripped'` — only what the evaporator removes. Reinjection free.
+- `'resource'` — everything the well lifts relative to T₀, with the reinjected
+  stream booked as a named **loss** attributed to no component. It leaves the
+  boundary intact; it is not destroyed inside it.
+
+`'resource'` is the default: a dedicated producer is paid for whether or not
+its exergy is used.
+
+This is not a presentational choice. The two disagree about `DT_3A_4A`:
+
+| DT_3A_4A | COP | η_RTE | ṁ_geo rel. | used | ψ_stripped | ψ_resource |
+|---|---|---|---|---|---|---|
+| 5 | 2.582 | 0.345 | 1.000 | 22.6 % | 0.295 | 0.197 |
+| 10 | 2.473 | 0.330 | 0.466 | 42.6 % | 0.288 | 0.245 |
+| 15 | 2.373 | 0.317 | 0.289 | 59.7 % | 0.281 | 0.260 |
+| 20 | 2.280 | 0.305 | 0.202 | 73.9 % | 0.274 | **0.264** |
+| 25 | 2.194 | 0.293 | 0.151 | 85.2 % | 0.267 | 0.263 |
+| 30 | 2.114 | 0.283 | 0.117 | 93.3 % | 0.261 | 0.260 |
+
+`'stripped'` falls monotonically and drives the design toward the smallest
+glide — the configuration needing the most wells. `'resource'` has an interior
+optimum near 20 K. The design point at 10 K is badly placed: moving to 20 K
+costs 7.8 % of COP and halves the geothermal well count.
+
+What bounds the move is `T_reinject_min_C`, a constraint the model had no
+representation of. Deliberately slack, warns rather than raises, because the
+project has no measured value.
+
+## DN-24 — A c_p linearisation, and the encouraging no-op that hid it
+
+The water flow rate was `Q/(c_p ΔT)` with c_p at the mean temperature. Over
+the 105 → 160 °C charging rise c_p varies ~3 %, so the flow was 0.096 %
+inconsistent with the model's own enthalpy data.
+
+**Invisible to every energy balance in the model**, because both sides of
+those balances use the same wrong flow. Visible to the exergy audit, which
+fabricated 7.17 kW out of it and would not close.
+
+The trap: the formula is written **twice**, independently. Patching the copy
+in `energy_budget` changed no reported number at all — a clean-looking no-op
+that would have been read as confirmation and was nothing of the kind, because
+the live copy is in `run_cycle`. Both are now enthalpy differences.
+
+Effect: η_RTE +0.0044 %, pumping power −0.27 % (largest), N_wells 15.6248 →
+15.6247.
+
+The general lesson, and it is the third time this project has met it: *a
+change that moves nothing is evidence only if you have established that the
+thing you changed was live.*
+
+## DN-25 — Measured, and declined: the discharge flow from the realised outlet
+
+While fixing DN-24 I also changed `m1_dc` to use the realised `T_2d` instead
+of the specified glide. Effect: deviation +4.46 % → +1.45 %, η_RTE +0.28 %.
+
+**Reverted.** Two reasons:
+
+1. It changes the model's *specification* — "the flow is pinned by the glide",
+   which `sizing_report` prints — rather than fixing an approximation. That is
+   a separate decision and should be taken on its own merits.
+2. It is partly circular. Feeding one pass's outlet into the next pass's flow
+   definition drives the delivered energy toward the target by construction,
+   without iterating to a fixed point. The improved deviation is therefore
+   not straightforward evidence that the model got better.
+
+Recorded here with its measured effect rather than smuggled in under cover of
+an exergy release. It may well be the right change; it has not been argued.
+
+## DN-26 — A closure check that read exactly zero, and why that was the tell
+
+The first exergy audit printed a global residual of `0.00e+00` and called it
+a pass. Over twenty terms of order 10³ summing to 2.5×10⁴, a residual of
+*exactly* zero is not machine precision — it is an algebraic identity.
+
+It was. `T_3c = T_4c`, and the discharge stream is likewise shared between
+the ORC evaporator and the borehole, so the borehole term — taken as the
+difference of the two water-stream exergies — cancels the two exchanger terms
+exactly. Both sides reduce to `W_in + Ex_stripped − W_out`. The check could
+not fail, so it could not pass.
+
+What replaced it: two **per-machine gates** that are genuine independent
+computations (entropy generated inside each component vs a boundary balance
+from stream states alone). They close at ~1e-15 and have been **watched to
+fail** at 4.5e-3 with the DN-24 defect reinstated.
+
+The borehole number stands as correct-but-unverified until the resolved
+s(E′) integral over z and t provides an independent value.

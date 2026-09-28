@@ -42,7 +42,7 @@ high-temperature heat pump melts a phase-change material during charging; an
 organic Rankine cycle recovers the energy during discharging; pressurised water
 circulates through finned hairpin tubes in the borehole.
 
-*Model version 0.12 · notebook built {STAMP}*
+*Model version 0.13 · notebook built {STAMP}*
 
 ---
 
@@ -504,6 +504,14 @@ case = CASE.with_(
     DT_pinch_HPE = 5.0,      # HTHP evaporator, cold-end approach           [K]
     #                          T_13h = T_source - DT_3A_4A - this
     DT_3A_4A = 10.0,         # how far the SOURCE is cooled                 [K]
+    #                          PROMOTED at v0.13. This was a quiet approach
+    #                          parameter; it is now the central design
+    #                          variable of the source side. It sets BOTH the
+    #                          evaporating temperature (so COP falls as it
+    #                          rises) and the geothermal flow (which falls
+    #                          much faster). Raising it 10 -> 20 K costs 7.8 %
+    #                          of COP and halves the number of geothermal
+    #                          wells. See the exergy table in section 4.3.
     DT_2H_3C = 10.0,         # HTHP condenser, hot-end approach             [K]
     DT_sub   = 2.0,          # refrigerant subcooling at condenser exit     [K]
     DT_E_sink = 5.0,         # ORC condenser approach, to the sink OUTLET   [K]
@@ -522,6 +530,39 @@ case = CASE.with_(
     #  ELECTRICAL / MECHANICAL -- correctly OUTSIDE the working fluid
     ElG_eff = 0.95,          # ORC generator                                [-]
     ElH_eff = 0.95,          # compressor motor                             [-]
+
+    # --- the geothermal resource (new at v0.13) ------------------------------
+    #  The 60 C source is a FINITE geothermal flow from producing wells in the
+    #  cluster, not an unlimited reservoir. The flow itself is NOT an input --
+    #  it is derived, exactly as N_wells is:
+    #      m_geo = Q_src / (h(T_source) - h(T_source - DT_3A_4A))
+    #  and then divided by the per-well yield below to give N_geo. That puts
+    #  the uncertainty in a field-measured quantity instead of in a
+    #  plant-level flow rate nobody has measured.
+    m_dot_geo_well = 12.5,   # yield of one geothermal producer          [kg/s]
+    #                          PROVISIONAL. From a 4500 m / 206 C repurposed
+    #                          well -- hotter and deeper than ours. Published
+    #                          values for repurposed oil and gas wells run
+    #                          from about 1 kg/s to this. N_geo is directly
+    #                          proportional to it, so treat N_geo as a scaling
+    #                          result and not as a prediction.
+    T_reinject_min_C = 25.0, # lower bound on the reinjection temperature   [C]
+    #                          This is what bounds DT_3A_4A from ABOVE. The
+    #                          default is slack on purpose: it is a
+    #                          placeholder for a formation constraint we do
+    #                          not yet have a number for. WARNS, never raises.
+    exergy_convention = 'resource',
+    #                          'resource': charge all the exergy the well
+    #                              lifts; the reinjected stream is booked as a
+    #                              LOSS attributed to no component. Right for
+    #                              a dedicated well, which is paid for whether
+    #                              or not its exergy is used.
+    #                          'stripped': charge only what the evaporator
+    #                              removes; reinjection is free.
+    #                          They give OPPOSITE guidance on DT_3A_4A --
+    #                          'stripped' falls monotonically and pushes the
+    #                          design toward the largest possible well count;
+    #                          'resource' has an interior optimum near 20 K.
 
     # --- windows -------------------------------------------------------------
     t_ch     = 10.0,         # charging window                              [h]
