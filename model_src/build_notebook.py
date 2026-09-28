@@ -2030,6 +2030,148 @@ print(f"CSS delivers {100*css['deviation']:+.2f} % against the 1 MWe target,")
 print(f"i.e. {css['W_el_out_implied']/1000:.4f} MWe at N = {css['N_wells']:.4f}.")
 """))
 
+# ======================================================================
+cells.append(md(r"""
+## 17. Exergy destruction by component
+
+The first law is blind here. At CSS the PCM returns to its own initial state,
+so $\eta_{\rm storage}\equiv1$ **by construction** and the energy balance says
+the store is free. Its whole cost is a degradation of temperature; only the
+second law prices it.
+
+Dead state $T_0 = T_{\rm sink}$, and note there are **two** reservoirs — the
+heat-pump evaporator draws from the 60 °C geothermal stream, not from the
+sink, so that stream is a second input:
+
+$$W_{\rm el,in} + \mathcal{E}_{\rm geo}
+  = W_{\rm el,out} + \mathcal{E}_{\rm reinj} + \sum_j I_j$$
+"""))
+cells.append(code(r"""
+case_x = Case()
+css_x  = simulate_css_corrected(case_x)
+ex     = exergy_report(case_x, css_x)
+"""))
+
+cells.append(md(r"""
+### 17.1 The gates, and the identity that is not one
+
+`exergy_report` prints a global sum and two **gates**. Only the gates are
+tests.
+
+Each gate sums the entropy generated *inside* one machine's components, from
+their own state points and flow fractions, and compares it against a boundary
+balance built from stream states alone. Independent computations; they agree to
+$\sim10^{-15}$.
+
+The global line **cannot fail**. Because $T_{3c}=T_{4c}$ and the discharge
+stream is likewise shared, the borehole term — taken as the difference of the
+two water-stream exergies — cancels the two exchanger terms exactly. The first
+version of this audit printed that identity as a closure check reading
+`0.00e+00` and it was reported as a pass. A residual of *exactly* zero over
+twenty terms of order $10^3$ is not machine precision; it is an algebraic
+identity wearing a lab coat.
+
+The cell below demonstrates both halves: that the identity holds trivially,
+and that the gates do fire when the model is wrong.
+"""))
+cells.append(code(r"""
+# (i) the global "closure" is an identity -- show the cancellation explicitly
+mch = css_x['budget']['m_dot_w_ch']
+mdc = css_x['budget']['Q_dot_in_ORC'] / (water_h(case_x, css_x['T']['T_2d'])
+                                         - water_h(case_x, css_x['T']['T_3d']))
+A = stream_exergy_rate(case_x, mch, css_x['T']['T_3c'], css_x['T']['T_2c'])
+B = stream_exergy_rate(case_x, mch, css_x['T']['T_4c'], css_x['T']['T_2c'])
+print(f"T_3c == T_4c            : {css_x['T']['T_3c'] == css_x['T']['T_4c']}")
+print(f"condenser water gain    : {A:.9f} kW")
+print(f"borehole charge-side    : {B:.9f} kW   identical: {A == B}")
+print("-> the borehole term is the water-loop residual; it cancels the two")
+print("   exchanger terms, so the global sum is an identity and cannot fail.\n")
+
+# (ii) the gates CAN fail -- reinstate the v0.12 c_p linearisation (DN-24)
+import copy
+bad = copy.deepcopy(css_x)
+cp  = CP.PropsSI('C', 'T', 0.5*(bad['T']['T_3c'] + bad['T']['T_2c']),
+                 'P', case_x.P, case_x.fluid2) / 1000.
+bad['budget']['m_dot_w_ch'] = (bad['budget']['Q_dot_out_HP'] / cp
+                               / case_x.DT_3C_2C)
+a_bad = exergy_audit(case_x, bad)
+g = a_bad['gates']['HTHP']
+print("with the v0.12 c_p linearisation reinstated:")
+print(f"  HTHP gate   {g['sum_kWh']:.2f} vs {g['boundary_kWh']:.2f} kWh"
+      f"   residual {g['residual_kWh']:+.2f}   rel {g['residual_rel']:.2e}")
+print(f"  gates_pass = {a_bad['gates_pass']}"
+      f"   <- {'the gate fires' if not a_bad['gates_pass'] else 'PROBLEM'}")
+"""))
+
+cells.append(md(r"""
+The flow rate was 0.096 % inconsistent with the model's own enthalpies — c_p at
+the mean temperature over a 55 K rise. **Invisible to every energy balance**,
+because both sides of those balances use the same wrong flow. Visible here,
+because the audit builds its two sides differently.
+
+The formula was written **twice**, independently. Patching the copy in
+`energy_budget` moved no reported number at all — which looked like
+confirmation and meant nothing, because the live copy was in `run_cycle`. See
+DN-24 and DN-26.
+
+The borehole number therefore stands as **correct but unverified**. Its
+independent value needs $s(E')$ and an integral over $z$ and $t$.
+
+### 17.2 The source-side trade
+
+`DT_3A_4A` is promoted at v0.13 from a quiet approach parameter to the central
+design variable of the source side: it sets the evaporating temperature *and*
+the geothermal flow, and they pull in opposite directions.
+"""))
+cells.append(code(r"""
+rows = []
+for dt in (5., 10., 15., 20., 25., 30.):
+    c_ = Case(DT_3A_4A=dt)
+    rk, hp_, T_ = cycle_state_points(c_)
+    cop  = hp_['hp_cop']
+    # cycle-level eta_RTE: the ORC side does not depend on DT_3A_4A, so this
+    # is exactly proportional to COP
+    eta  = rk['rank_eff'] * cop * c_.ElG_eff * c_.ElH_eff
+    T0_  = c_.T_sink_C + 273.15
+    Tsrc = c_.T_source_C + 273.15
+    # per unit COMPRESSOR work: Q_src = (COP - 1), and the source flow that
+    # carries it follows from the ENTHALPY drop, not from dt
+    dh   = water_h(c_, Tsrc) - water_h(c_, Tsrc - dt)
+    m_   = (cop - 1.) / dh
+    exa  = m_ * stream_exergy_rate(c_, 1.0, Tsrc, Tsrc - dt)   # stripped
+    exb  = m_ * stream_exergy_rate(c_, 1.0, Tsrc, T0_)         # whole resource
+    # per unit GRID electricity: W_comp = ElH_eff * W_el_in
+    rows.append({'DT_3A_4A': dt, 'T_13h': hp_['T_13h'] - 273.15, 'COP': cop,
+                 'eta_RTE': eta, 'm_geo rel': m_,
+                 'resource used': exa / exb,
+                 'psi_strip': eta / (1. + exa * c_.ElH_eff),
+                 'psi': eta / (1. + exb * c_.ElH_eff)})
+df_src = pd.DataFrame(rows).set_index('DT_3A_4A')
+df_src['m_geo rel'] /= df_src['m_geo rel'].iloc[0]
+print(df_src.to_string(float_format=lambda v: f'{v:8.4f}'))
+print()
+i_a, i_b = df_src['psi_strip'].idxmax(), df_src['psi'].idxmax()
+print(f"psi_strip is maximised at DT_3A_4A = {i_a:.0f} K, psi at {i_b:.0f} K.")
+print("'stripped' charges only what the evaporator took, so it always rewards")
+print("taking less -- which is the configuration needing the MOST geothermal")
+print("wells. 'resource' charges the whole well and has an INTERIOR optimum.")
+print("The two conventions disagree about the design, which is why")
+print("exergy_convention is not a cosmetic setting.")
+"""))
+
+cells.append(md(r"""
+**The design point at 10 K is badly placed for the resource.** Moving to 20 K
+costs 7.8 % of COP and cuts the geothermal flow to 43 % of its present value —
+halving the producer count. What stops you is `T_reinject_min_C`, a formation
+constraint the project has no measured value for, which is why it warns rather
+than raises.
+
+**The trap to carry into the DoE.** $\dot m_{\rm geo}$ is *derived*, not
+capped, so nothing stops a study buying COP with an arbitrarily large
+geothermal flow. Report `N_geo` and `wells_per_MWe` in every table: a design
+ranked on `eta_RTE` alone will find the free-source corner and recommend it.
+"""))
+
 nb = {"cells": cells,
       "metadata": {"kernelspec": {"display_name": "Python 3", "language": "python",
                                   "name": "python3"},

@@ -119,7 +119,9 @@ from thums import (CASE, validate_case, cycle_state_points, energy_budget,
                    simulate_css, simulate_css_corrected, css_report,
                    march_h, pcm_capacities, pcm_state, unmirror_march,
                    performance_indices, kpi_report, calculate_pressure_drop,
-                   exchanger_UA, ua_report)
+                   exchanger_UA, ua_report,
+                   exergy_audit, exergy_report, geothermal_resource,
+                   water_h, water_s, stream_exergy_rate)
 plt.rcParams.update({'figure.dpi': 110, 'font.size': 9})
 pd.set_option('display.width', 200, 'display.max_columns', 30)
 print('thums loaded ·', len(open('thums.py').read().splitlines()), 'lines')
@@ -777,6 +779,149 @@ wins on efficiency alone may simply be one that specified a bigger exchanger.
 """))
 
 cells.append(md(r"""
+### 4.2.3 Where the work is actually lost
+
+Everything above is the **first law**, and the first law cannot see what the
+store costs. At cyclic steady state the PCM returns to its own initial state,
+so
+
+$$\eta_{\rm storage} \;\equiv\; 1$$
+
+*by construction*. Every joule that goes down the well comes back up. That is
+not a result — it is a statement that the energy balance is blind here. The
+store's whole cost is a **degradation of temperature**, and only the second
+law prices it.
+
+Two things you need before the table makes sense.
+
+**The dead state is the sink, $T_0 = T_{\rm sink} = 20$ °C.** It is the lowest
+temperature in the system, so every exergy comes out positive and the heat
+dumped at the ORC condenser is genuinely unrecoverable — which is what a dead
+state should mean.
+
+**There are *two* reservoirs, not one.** The ORC condenser rejects to the sink.
+The heat-pump evaporator does **not** draw from the sink: its source is the
+60 °C geothermal water. So the geothermal stream is a second *input*, and the
+balance the audit checks is
+
+$$W_{\rm el,in} + \mathcal{E}_{\rm geo}
+  \;=\; W_{\rm el,out} + \mathcal{E}_{\rm reinj} + \sum_j I_j$$
+"""))
+
+cells.append(code(r"""
+ex = exergy_report(case, css)
+"""))
+
+cells.append(md(r"""
+#### Reading that output
+
+**The three efficiencies at the bottom are the headline.** $\eta_{\rm RTE}$
+books the geothermal heat as free. It is not — a dedicated producer is drilled
+and paid for whether or not you use its exergy. Price it and 0.317 becomes
+$\psi = 0.246$. Report both.
+
+**Three readings of the table, two of them not what we expected.**
+
+*The exchangers beat the machines.* Condenser, evaporators, ORC condenser and
+borehole together are **49.4 %** of all destruction; the compressors and
+turbines are **19.0 %**. This is a heat-transfer plant, not a turbomachinery
+plant — convenient, because heat transfer is what this model resolves and
+turbomachinery is what it merely stipulates.
+
+*A valve destroys more than the high-pressure compressor.* The throttle into
+the separator is third on the list, above either compressor. That is a design
+signal: an expander is worth more here than any plausible gain in compressor
+efficiency.
+
+*The borehole is only 6.8 %.* Fourth, and lower than we guessed. The case for
+the cascade and for tight approach temperatures rests on **well count and
+hardware**, not on lost work. Do not oversell the store.
+
+#### Two things about the check itself — read these
+
+**The GATES are the test; the global sum is not.** Each machine's destruction
+is summed from entropy generated *inside* its components and checked against a
+boundary balance built from stream states alone. Those are independent, and
+they agree to $\sim10^{-15}$.
+
+The *global* line is an **identity**. Because $T_{3c} = T_{4c}$, the borehole
+term — taken as the difference of the two water-stream exergies — cancels the
+two exchanger terms exactly, and both sides reduce to the same expression. The
+first version of this audit printed that identity as a closure check reading
+`0.00e+00` and it was reported as a pass. **A residual of exactly zero over
+twenty terms of order $10^3$ is not machine precision; it is a tell.** A check
+that cannot fail cannot pass.
+
+So the borehole number is correct but **unverified**. Its independent value
+needs an entropy curve $s(E')$ alongside the existing $E'(T)$ and an integral
+over $z$ and $t$. That is the next piece of work and it is not in v0.13.
+
+**What the gate caught.** It did not close on first construction. The water
+mass flow was set as $\dot Q/(c_p\,\Delta T)$ with $c_p$ at the mean
+temperature; over a 55 K rise that is 0.096 % inconsistent with the model's own
+enthalpies. Invisible to every energy balance — *both sides use the same wrong
+flow* — but it fabricated 7.17 kW of exergy. And the formula was written
+**twice**: patching one copy changed no reported number at all, which looked
+like confirmation and meant nothing, because the live copy was elsewhere.
+"""))
+
+cells.append(md(r"""
+### 4.2.4 The geothermal side, which we were not counting
+
+The 60 °C source is a **finite** flow from producing wells in the cluster. Until
+v0.13 the model drew whatever it needed and no output recorded how much.
+
+The flow is **derived**, not prescribed — the same choice already made for
+`N_wells`:
+
+$$\dot m_{\rm geo}
+ = \frac{\dot Q_{\rm src}}{h(T_{\rm source}) - h(T_{\rm source}-\Delta T_{3A4A})},
+ \qquad
+ N_{\rm geo} = \dot m_{\rm geo}\,/\,\dot m_{\rm geo,well}$$
+
+Prescribing a plant-level flow would put the uncertainty in a number nobody has
+measured. Deriving it moves the uncertainty into the **per-well yield**, which
+is field data. The second law loses nothing by this: the source exergy is
+homogeneous of degree one in $\dot m_{\rm geo}$, so it cancels.
+
+`m_dot_geo_well = 12.5` kg/s is **provisional** — read `N_geo` as a scaling
+result, not a prediction.
+
+**`DT_3A_4A` is now the central design variable of the source side.** It sets
+both the evaporating temperature (so COP falls as it rises) *and* the
+geothermal flow (which falls much faster):
+
+| `DT_3A_4A` | COP | $\eta_{\rm RTE}$ | $\dot m_{\rm geo}$ rel. | resource used | $\psi_{\rm stripped}$ | $\psi$ |
+|---|---|---|---|---|---|---|
+| 5 K | 2.582 | 0.345 | 1.000 | 22.6 % | 0.295 | 0.197 |
+| **10 K** | **2.473** | **0.330** | **0.466** | **42.6 %** | **0.288** | **0.245** |
+| 15 K | 2.373 | 0.317 | 0.289 | 59.7 % | 0.281 | 0.260 |
+| 20 K | 2.280 | 0.305 | 0.202 | 73.9 % | 0.274 | **0.264** |
+| 25 K | 2.194 | 0.293 | 0.151 | 85.2 % | 0.267 | 0.263 |
+| 30 K | 2.114 | 0.283 | 0.117 | 93.3 % | 0.261 | 0.260 |
+
+**The two exergy conventions give opposite advice.** `'stripped'` falls
+monotonically — take as little $\Delta T$ as possible — which is exactly the
+configuration needing the *most* geothermal wells. `'resource'` has an interior
+optimum near 20 K. The default is `'resource'`, because a dedicated well is
+paid for either way.
+
+**The design point at 10 K is badly placed.** Moving to 20 K costs 7.8 % of COP
+and cuts the geothermal flow to 43 % of its present value. At plant level that
+is not a close call. What stops you is `T_reinject_min_C` — a formation
+constraint we have no measured value for yet, which is why it warns rather than
+raises.
+
+**One trap.** Because $\dot m_{\rm geo}$ is derived rather than capped, nothing
+stops a parametric study buying COP with an arbitrarily large geothermal flow.
+**Carry `N_geo` and `wells_per_MWe` in every DoE table.** A study that ranks on
+`eta_RTE` alone will find the free-source corner and recommend it.
+
+**Try it yourself.** Set `DT_3A_4A = 20.0` in §3.1 and re-run §4.2–4.2.4. Watch
+`eta_RTE` fall, `psi` rise, and `N_geo` halve.
+"""))
+
+cells.append(md(r"""
 | indicator | meaning | what moves it |
 |---|---|---|
 | $\eta_T$ | discharge thermal $\to$ net electric | the power block only: $\eta_{\rm ORC}\eta_{\rm turb}\eta_{\rm gen}$. The store cannot change it |
@@ -1071,6 +1216,9 @@ frac dfrac tfrac begin end cases dcases align aligned text textbf emph mathrm
 mathbf mathcal boxed left right bigl bigr Bigl Bigr big Big quad qquad
 rho eta varepsilon epsilon delta Delta lambda mu pi sigma tau theta phi omega
 alpha beta gamma Gamma Omega Phi Psi Sigma Lambda
+psi chi xi nu kappa zeta iota upsilon varphi vartheta varrho varsigma
+Theta Xi Upsilon Pi
+
 dot ddot hat bar tilde vec overline underline sqrt sum prod int oint lim
 max min inf sup log ln exp sin cos tan
 approx equiv propto sim simeq cong neq ne le leq ge geq ll gg
