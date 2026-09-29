@@ -89,9 +89,15 @@ def check_version():
                 f're-run with THUMS_STAMP_VERSION=1.\n'
                 f'  This is the check that v0.9, v0.14 and v0.14a all got '
                 f'past by agreeing on a stale value.')
+    # The report's TITLE PAGE was outside this check until v0.14 and had
+    # been reading "Model version 0.8" since 2026-09-19 -- six versions
+    # stale, in 48-point type, on the first page of the PDF. It is the most
+    # visible version string in the project and it was the only one nothing
+    # was watching.
     want = {
         'build_student.py': f'*Model version {VERSION} \u00b7 notebook built',
         'make_thums.py': f'The live model, v{VERSION}.',
+        'tex_v04/main.tex': f'Model version {VERSION} ',
     }
     bad = []
     for name, needle in want.items():
