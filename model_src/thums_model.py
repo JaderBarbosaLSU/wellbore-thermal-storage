@@ -3580,131 +3580,6 @@ def geothermal_resource(case, r):
         convention=case.exergy_convention)
 
 
-def _T_lm(T_hot, T_cold):
-    """Thermodynamic mean (log-mean) temperature of a gliding stream.
-
-    The temperature a reservoir would need to exchange the same heat with the
-    same entropy. Reduces to T itself when the glide vanishes.
-    """
-    if abs(T_hot - T_cold) < 1e-12:
-        return 0.5 * (T_hot + T_cold)
-    return (T_hot - T_cold) / np.log(T_hot / T_cold)
-
-
-def lorenz_reference(case, r):
-    """Each machine against ITS OWN reversible limit, given its temperatures.
-
-    WHY LORENZ AND NOT CARNOT. Every stream in this plant glides: the
-    charging water by 55 K, the geothermal source by 10 K, the discharge
-    water by the discharge glide. A Carnot reference built on single
-    temperatures would be comparing the real machine against an ideal one
-    that was handed an easier problem, and would flatter it. The Lorenz
-    reference uses the thermodynamic mean temperature of each stream, which
-    is the correct reversible bound for a gliding source and sink.
-
-    WHY THIS IS NOT A PLANT-LEVEL NUMBER. There is no useful Carnot bound on
-    the round trip. Treated as a pure electricity store, the reversible
-    round-trip efficiency is exactly 1, so eta_RTE / 1 is just eta_RTE again.
-    The meaningful comparison is per machine.
-
-    WHAT IT ADDS OVER `exergy_audit`, WHICH IS LESS THAN IT LOOKS. The
-    destruction table already says, rigorously, where the work goes. These
-    ratios carry no information it does not. What they add is a
-    NORMALISATION: a machine asked for a large temperature lift will destroy
-    a great deal of exergy and may still be excellent for the job it was
-    given. I_j answers "how much was lost here"; the ratio answers "how close
-    to its own ideal was this machine". Report both, and do not present the
-    ratio as independent evidence.
-    """
-    hp, rank, T = r["hp"], r["rank"], r["T"]
-    T_0 = case.T_sink_C + 273.15
-
-    # heat pump: rejects to the charging water, absorbs from the geothermal
-    T_H_hp = _T_lm(T["T_3c"], T["T_2c"])
-    T_L_hp = _T_lm(case.T_source_C + 273.15, T["T_4a"])
-    cop_lorenz = T_H_hp / (T_H_hp - T_L_hp)
-
-    # ORC: takes heat from the discharge water, rejects to the sink stream
-    T_H_orc = _T_lm(T["T_2d"], T["T_3d"])
-    T_L_orc = _T_lm(T_0 + case.DT_sink_glide, T_0)
-    eta_lorenz = 1.0 - T_L_orc / T_H_orc
-
-    cop, eta = hp["hp_cop"], rank["rank_eff"]
-    out = dict(
-        T_lm_hp_hot=T_H_hp, T_lm_hp_cold=T_L_hp,
-        T_lm_orc_hot=T_H_orc, T_lm_orc_cold=T_L_orc,
-        COP_lorenz=cop_lorenz, eta_ORC_lorenz=eta_lorenz,
-        COP_ratio=cop / cop_lorenz, eta_ORC_ratio=eta / eta_lorenz)
-
-    # ---- A WEAK GUARD, AND IT IS LABELLED WEAK ON PURPOSE ----------------
-    # This is the only check in the model that has NOT been watched to fail
-    # on a realistic perturbation, and the reader should know that.
-    #
-    # The obvious check is "ratio <= 1", a machine beating its own reversible
-    # bound. It is nearly worthless here: at ratios of 0.47 and 0.59 this
-    # design is so far from reversible that a wrong reference still lands
-    # comfortably inside (0, 1]. Adding ordering checks did not rescue it.
-    # Four deliberate corruptions were tried and NONE fired:
-    #
-    #   * the sink used as the heat-pump source  -- undetectable, because the
-    #     guard reads the same T_4a that was corrupted;
-    #   * the charging stream's two endpoints swapped -- a no-op, not a bug:
-    #     `_T_lm` is symmetric, so the value does not change;
-    #   * the ORC's cold end put above its hot end -- produces a different but
-    #     still internally valid reference;
-    #   * the refrigerant's T_2h used in place of the water it rejects into,
-    #     which is the most plausible future edit -- the resulting mean lands
-    #     inside the permitted band because the two temperatures are close.
-    #
-    # The reason is structural: the reference is built from the same state
-    # points any check would have to test it against, so the guard can only
-    # confirm internal consistency, never the choice of streams. Catching
-    # that would mean computing the reference a second, independent way,
-    # which is not worth it for a diagnostic that adds no information to
-    # `exergy_audit`.
-    #
-    # What survives below binds only on gross errors -- a sign slip, an
-    # inverted machine, an arithmetic fault in `_T_lm`. Treat the two ratios
-    # as indicative. The destruction table is the load-bearing result.
-    def _between(v, a, b, what):
-        lo, hi = (a, b) if a <= b else (b, a)
-        if not (lo - 1e-9 <= v <= hi + 1e-9):
-            raise RuntimeError(
-                f"lorenz_reference: {what} = {v - 273.15:.2f} C does not lie "
-                f"between its own endpoints [{lo - 273.15:.2f}, "
-                f"{hi - 273.15:.2f}] C. The mean temperature is being built "
-                f"from the wrong pair of states.")
-
-    _between(T_H_hp, T["T_2c"], T["T_3c"], "T_lm_hp_hot")
-    _between(T_L_hp, T["T_4a"], case.T_source_C + 273.15, "T_lm_hp_cold")
-    _between(T_H_orc, T["T_3d"], T["T_2d"], "T_lm_orc_hot")
-
-    if T_H_hp <= T_L_hp:
-        raise RuntimeError(
-            f"lorenz_reference: the heat pump's hot mean "
-            f"({T_H_hp - 273.15:.2f} C) is not above its cold mean "
-            f"({T_L_hp - 273.15:.2f} C). A heat pump rejects above what it "
-            f"absorbs; the two streams are the wrong way round.")
-    if T_H_orc <= T_L_orc:
-        raise RuntimeError(
-            f"lorenz_reference: the ORC's hot mean "
-            f"({T_H_orc - 273.15:.2f} C) is not above its cold mean "
-            f"({T_L_orc - 273.15:.2f} C), so there is no temperature "
-            f"difference to run an engine on.")
-    # The ordering checks above make this the redundant belt to their braces.
-    # Kept because it costs nothing and would catch an arithmetic slip that
-    # leaves the orderings intact.
-    for name, v in (("COP_ratio", out["COP_ratio"]),
-                    ("eta_ORC_ratio", out["eta_ORC_ratio"])):
-        if not (0.0 < v <= 1.0):
-            raise RuntimeError(
-                f"lorenz_reference: {name} = {v:.6g} is outside (0, 1]. A "
-                f"machine cannot beat its own Lorenz bound; this is a defect "
-                f"in the reference temperatures or the state points, not a "
-                f"design result.")
-    return out
-
-
 def exergy_audit(case, r):
     """Exergy destruction by component over one cycle at CSS, in kWh.
 
@@ -3973,27 +3848,13 @@ def performance_indices(case, r):
     eta_T_eff = eta_T - pumping_dc / Q_dot_in_ORC
     eta_RTE = ((W_el_out - pumping_dc) * case.t_dc
                / ((W_el_in + pumping_ch) * case.t_ch))
-    # ---- the store that never cycles, decomposed ------------------------
-    # eps_cycled alone hides WHICH end of the cycle is wasting the material,
-    # and the two failures have opposite remedies. The FLOOR is PCM still
-    # molten when discharge ends: it never gives its latent heat back, so it
-    # is capacity paid for and not used. The HEADROOM is PCM never melted at
-    # the end of charge: it never stores in the first place. A cascade
-    # redesign moves the floor; a longer charge or a hotter inlet moves the
-    # headroom. Reporting only the difference lets a design trade one for the
-    # other and look unchanged.
-    eps_ch_end = float(r["charge"]["eps_local"].mean())
-    eps_dc_end = float(r["discharge"]["eps_local"].mean())
-    eps_cycled = eps_ch_end - eps_dc_end
-    eps_floor = eps_dc_end                       # never refreezes
-    eps_headroom = 1.0 - eps_ch_end              # never melts
+    eps_cycled = float(r["charge"]["eps_local"].mean()
+                       - r["discharge"]["eps_local"].mean())
     dE_therm = r["Q_discharge_kJ"] / 3600.0 / N          # kWh per well
     out = dict(
         eta_T=eta_T, eta_T_eff=eta_T_eff,
         eta_RTE=eta_RTE, eps_RTE=eta_RTE * eps_cycled,
         eps_cycled=eps_cycled,
-        eps_floor=eps_floor, eps_headroom=eps_headroom,
-        eps_residual=eps_floor + eps_headroom,
         dE_therm_kWh=dE_therm, dE_elec_kWh=dE_therm * eta_T_eff,
         pumping_ch_kW=pumping_ch, pumping_dc_kW=pumping_dc,
         f_pump=(pumping_ch + pumping_dc) / W_el_out,
@@ -4029,13 +3890,6 @@ def performance_indices(case, r):
             # throws it away, and a design can move the binding one without
             # the minimum changing at all.
             out[f"pinch_{tag}_K"] = ua[key]["pinch_K"]
-
-        # ---- each machine against its OWN reversible limit ---------------
-        lz = lorenz_reference(case, r)
-        out["COP_lorenz"] = lz["COP_lorenz"]
-        out["COP_ratio"] = lz["COP_ratio"]
-        out["eta_ORC_lorenz"] = lz["eta_ORC_lorenz"]
-        out["eta_ORC_ratio"] = lz["eta_ORC_ratio"]
 
         # ---- second law, and the resource the first law books as free ----
         # eta_RTE treats the 60 C geothermal stream as costless. It is not:
@@ -4084,15 +3938,9 @@ def kpi_report(case, r, k=None):
     print("      discharge window; a store with twice the energy density and")
     print("      half the rate is a different machine, not a better one.")
     print()
-    print(f"  cycled fraction of the store   {k['eps_cycled']:8.4f}")
-    print(f"      floor    {k['eps_floor']:8.4f}  still molten when discharge"
-          f" ends -- never gives its heat back")
-    print(f"      headroom {k['eps_headroom']:8.4f}  never melted at end of"
-          f" charge -- never stores at all")
-    print(f"      residual {k['eps_residual']:8.4f}  = 1 - cycled. The two"
-          f" halves have OPPOSITE remedies,")
-    print( "                          so a design can trade one for the other"
-          " and look unchanged.")
+    print(f"  cycled fraction of the store   {k['eps_cycled']:8.4f}"
+          f"   (melted {r['charge']['eps_local'].mean():.4f},"
+          f" residual {r['discharge']['eps_local'].mean():.4f})")
     print(f"  pumping, charge / discharge    {k['pumping_ch_kW']:8.2f}"
           f" / {k['pumping_dc_kW']:.2f} kW"
           f"   = {100*k['f_pump']:.2f} % of gross output")
@@ -4115,18 +3963,6 @@ def kpi_report(case, r, k=None):
         print( "                         that the minimum alone throws away.")
         print("      Read UA beside eta_RTE. Every approach temperature is")
         print("      bought here; `ua_report` breaks it down.")
-    if "COP_ratio" in k:
-        print()
-        print("  against each machine's OWN Lorenz limit (gliding streams,")
-        print("  so Lorenz and not Carnot):")
-        print(f"      heat pump  COP {k['COP_lorenz']:7.4f} reversible"
-              f"  -> ratio {k['COP_ratio']:7.4f}")
-        print(f"      ORC        eta {k['eta_ORC_lorenz']:7.4f} reversible"
-              f"  -> ratio {k['eta_ORC_ratio']:7.4f}")
-        print("      These add NO information the destruction table does not")
-        print("      already carry. What they add is a normalisation: a")
-        print("      machine given a big lift destroys more and may still be")
-        print("      excellent. Do not cite them as independent evidence.")
     print()
     print("  eta_RTE is independent of the deviation: a field that delivers")
     print("  1 % above target also drew 1 % more in. The deviation is a")

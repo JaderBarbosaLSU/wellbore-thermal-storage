@@ -120,7 +120,7 @@ from thums import (CASE, validate_case, cycle_state_points, energy_budget,
                    march_h, pcm_capacities, pcm_state, unmirror_march,
                    performance_indices, kpi_report, calculate_pressure_drop,
                    exchanger_UA, ua_report,
-                   exergy_audit, exergy_report, geothermal_resource, lorenz_reference,
+                   exergy_audit, exergy_report, geothermal_resource,
                    water_h, water_s, stream_exergy_rate)
 plt.rcParams.update({'figure.dpi': 110, 'font.size': 9})
 pd.set_option('display.width', 200, 'display.max_columns', 30)

@@ -1216,74 +1216,79 @@ fail** at 4.5e-3 with the DN-24 defect reinstated.
 The borehole number stands as correct-but-unverified until the resolved
 s(E′) integral over z and t provides an independent value.
 
-## DN-27 — The last four KPIs, and one guard that failed its own standard
+## DN-27 — The last KPIs: two kept, two built and removed
 
-**The four pinches individually.** `exchanger_UA` always computed them;
+**Kept: the four pinches individually.** `exchanger_UA` always computed them;
 `performance_indices` exported only the minimum. Which exchanger is tightest
 is design information, and a design can move the binding one without the
 minimum changing at all. At the design point: HTHP evap 5.00, **HTHP cond
-10.00**, ORC evap 5.01, ORC cond 5.00 — three are hard against their
-specified pinch, and `DT_2H_3C` is the one loose approach in the plant.
+10.00**, ORC evap 5.01, ORC cond 5.00 — three hard against their specified
+pinch, and `DT_2H_3C` is the one loose approach in the plant.
 
-**Power density beside energy density.** ρ_E = 170.9 kWh/m³ says how much a
-cubic metre holds; it says nothing about how fast. ρ_P = 2.415 kW/m³, and
-0.0439 kW per metre of well — 44 W/m of borehole. The two are traded against
-each other by the discharge window, so a store with twice the energy density
-and half the rate is a *different machine*, not a better one. Reported per
-metre as well because drilling is priced by the metre.
+**Kept: power density beside energy density.** ρ_E = 170.9 kWh/m³ says how
+much a cubic metre holds; it says nothing about how fast. ρ_P = 2.415 kW/m³,
+and 0.0439 kW per metre of well — 44 W/m of borehole. The two are traded
+against each other by the discharge window, so a store with twice the energy
+density and half the rate is a *different machine*, not a better one. Reported
+per metre as well because drilling is priced by the metre.
 
-**The residual, decomposed.** `eps_cycled = 0.9595` hides which end of the
-cycle wastes the material:
+### Built, measured, and then removed
 
-  - **floor 0.0109** — still molten when discharge ends, never gives its
-    latent heat back. Capacity paid for and not used.
-  - **headroom 0.0296** — never melted at end of charge, never stores at all.
+Both of the following were implemented, run and verified before being taken
+out. They are recorded here because the findings are worth keeping even
+though the code is not, and because someone will otherwise propose them
+again.
 
-The headroom is nearly **three times** the floor, so the waste is at the cold
-end of the cascade, and the remedy is charge duration or inlet temperature —
-not the discharge side. The two have opposite remedies, so reporting only
-their difference lets a design trade one for the other and look unchanged.
+**The residual, decomposed.** `eps_cycled = 0.9595` splits into a *floor* of
+0.0109 (still molten when discharge ends, never gives its latent heat back)
+and a *headroom* of 0.0296 (never melted at end of charge, never stores at
+all). The headroom is nearly **three times** the floor, so the waste is at
+the cold end of the cascade and the remedy is charge duration or inlet
+temperature, not the discharge side. Removed to keep the KPI surface small
+for the factorial study; `eps_cycled` and the two means it is built from
+remain in `kpi_report`, so the split can be recovered by hand.
 
-**Lorenz, and why it is weaker than it looks.** Every stream glides, so
-Carnot would compare the real machine against an ideal one handed an easier
-problem. Using thermodynamic mean temperatures: heat pump 2.4731 against
-5.2667 reversible (**ratio 0.470**), ORC 0.1487 against 0.2527 (**ratio
-0.589**).
+**Lorenz reference.** Every stream glides, so Carnot would compare the real
+machine against an ideal one handed an easier problem. Using thermodynamic
+mean temperatures: heat pump 2.4731 against 5.2667 reversible (ratio 0.470),
+ORC 0.1487 against 0.2527 (ratio 0.589). **The heat pump is further from its
+own ideal than the ORC**, despite both carrying 0.85 isentropic machines —
+consistent with the two throttles, 16.3 % of all destruction, which have no
+ORC counterpart.
 
-The finding: *the heat pump is further from its own ideal than the ORC*,
-despite both carrying 0.85 isentropic machines. Consistent with the two
-throttles, which are 16.3 % of all destruction and have no ORC counterpart.
-
-There is **no useful plant-level Carnot bound**. As a pure electricity store
-the reversible round trip is exactly 1, so η_RTE/1 is η_RTE again. The
+Note there is no useful *plant-level* Carnot bound: as a pure electricity
+store the reversible round trip is exactly 1, so η_RTE/1 is η_RTE again. The
 comparison is only meaningful per machine.
 
-These ratios add **no information** `exergy_audit` does not already carry.
-What they add is a normalisation — I_j says how much was lost, the ratio says
-how close to its own ideal a machine got given the job it was handed.
+Removed for two reasons. The ratios add **no information** `exergy_audit`
+does not already carry — what they add is a normalisation, and the
+destruction table is the load-bearing result. And its guard failed this
+project's own standard.
 
-### The guard that did not meet the project's standard
+### The guard that could not be watched to fail
 
-The rule here has been: *a guard is not finished until it has been watched to
-fail.* This one has not, and it ships labelled as such.
+The rule has been: *a guard is not finished until it has been watched to
+fail.* This one never was.
 
 The natural check is `ratio <= 1`. It is nearly worthless at ratios of 0.47
-and 0.59 — there is so much margin that a wrong reference still lands inside
-(0, 1]. Adding ordering checks did not rescue it. **Four deliberate
-corruptions were tried and none fired:**
+and 0.59 — so much margin that a wrong reference still lands inside (0, 1].
+Adding ordering checks did not rescue it. **Four deliberate corruptions were
+tried and none fired:**
 
 | corruption | why it was not caught |
 |---|---|
 | sink used as the HP source | the guard reads the same `T_4a` that was corrupted |
-| charging stream's endpoints swapped | a no-op, not a bug: `_T_lm` is symmetric |
+| charging stream's endpoints swapped | a no-op, not a bug: the log-mean is symmetric |
 | ORC cold end above its hot end | yields a different but internally valid reference |
 | refrigerant `T_2h` in place of the water | the two temperatures are close, so the mean lands inside the band |
 
 The reason is structural: the reference is built from the same state points
-any check would test it against, so the guard can confirm internal
+any check would have to test it against, so a guard can confirm internal
 consistency but never the *choice of streams*. Catching that would mean
-computing the reference a second, independent way — not worth it for a
-diagnostic that adds no information to the destruction table.
+computing the reference a second, independent way.
 
-Recorded rather than quietly shipped, because a guard that looks like the
-exergy gates and is nothing like them is worse than no guard.
+The lesson generalises past this function. **A derived diagnostic cannot be
+guarded by a bound computed from its own inputs.** The exergy gates work
+precisely because their two sides are built from different things — component
+entropy on one, stream states on the other. Where that separation does not
+exist, no amount of range-checking substitutes for it.
