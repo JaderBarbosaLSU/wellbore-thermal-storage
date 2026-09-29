@@ -306,3 +306,90 @@ COP. $N_{\mathrm{geo}}$ must therefore be carried as a reported indicator with
 the same standing as $N_{\mathrm{wells}}$, not as a diagnostic. A factorial
 study that ranks designs on $\eta_{\mathrm{RTE}}$ alone will find the
 free-source corner and recommend it.
+
+\subsection{Two indicators added with the audit}
+\label{sec:exergy:kpi}
+
+Two things the exergy work made it obvious we were not reporting.
+
+\paragraph{The four pinches, individually.} \texttt{exchanger\_UA} has
+computed all four since v0.11, but only their minimum was exported. Which
+exchanger is tightest is design information, and a design can move the
+binding one without the minimum changing at all:
+
+\begin{center}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+ & HTHP evap & HTHP cond & ORC evap & ORC cond \\
+\midrule
+pinch [\si{\kelvin}] & 5.00 & \textbf{10.00} & 5.01 & 5.00 \\
+$UA$ [\si{\kilo\watt\per\kelvin}] & 463.1 & 241.9 & 413.2 & 1135.1 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Three of the four sit hard against the pinch they were given, so
+$\Delta T_{\mathrm{pinch,ORC}}$, $\Delta T_{\mathrm{pinch,HPE}}$ and
+$\Delta T_{E,\mathrm{sink}}$ are all binding. $\Delta T_{2H3C}$ is the one
+loose approach in the plant, and the only one with room to be tightened
+without an immediate area penalty.
+
+\paragraph{Power density beside energy density.} $\rho_E$ says how much
+energy a cubic metre of store holds and nothing about how fast it can be
+delivered; the two are traded against each other by the discharge window. At
+the design point
+
+\[
+  \rho_E = \SI{170.9}{\kilo\watt\hour\per\meter\cubed},
+  \qquad
+  \rho_P = \SI{2.415}{\kilo\watt\per\meter\cubed}
+  \;=\; \SI{0.0439}{\kilo\watt\per\meter}\ \text{of borehole,}
+\]
+
+the last figure being \SI{44}{\watt} per metre of well. Reported per metre as
+well as per cubic metre because drilling is priced by the metre, and because
+it is the number that invites comparison with a conventional borehole heat
+exchanger. A store with twice the energy density and half the rate is a
+different machine, not a better one, and $\rho_E$ alone cannot tell the two
+apart.
+
+\subsection{Two indicators built, measured and removed}
+\label{sec:exergy:removed}
+
+Both were implemented and run before being taken out of the reported set. The
+findings are kept here because they are worth having on record.
+
+\paragraph{The residual, decomposed.} The cycled fraction $0.9595$ splits into
+a \emph{floor} of $0.0109$ --- PCM still molten when discharge ends, which
+never returns its latent heat --- and a \emph{headroom} of $0.0296$ --- PCM
+never melted at the end of charge, which never stores at all. The headroom is
+nearly three times the floor, so the unused material is at the cold end of
+the cascade, and the remedy is charge duration or inlet temperature rather
+than anything on the discharge side. Removed to keep the indicator set small
+for the factorial study; the cycled fraction and the two means it is built
+from remain, so the split can be recovered by hand.
+
+\paragraph{A Lorenz reference.} Every stream in this plant glides, so a
+Carnot reference would compare the real machine against an ideal one handed
+an easier problem; the thermodynamic mean temperature is the correct bound.
+On that basis the heat pump achieves $2.4731$ against $5.2667$ reversible, a
+ratio of $0.470$, and the ORC $0.1487$ against $0.2527$, a ratio of $0.589$.
+\emph{The heat pump sits further from its own ideal than the ORC}, despite
+both carrying \num{0.85} isentropic machines --- consistent with its two
+throttles, which are \SI{16.3}{\percent} of all destruction and have no ORC
+counterpart.
+
+There is no useful \emph{plant-level} Carnot bound to report alongside these:
+treated as a pure electricity store, the reversible round trip is exactly
+unity, so $\eta_{\mathrm{RTE}}$ divided by it is $\eta_{\mathrm{RTE}}$ again.
+
+It was removed for two reasons. The ratios carry no information
+Table~\ref{tab:exergy:components} does not already have --- what they add is
+a normalisation, not evidence. And the guard written for them could not be
+made to work: at ratios of $0.47$ and $0.59$ the design is far enough from
+reversible that a wrong reference still satisfies $\psi\le1$, and four
+deliberate corruptions of the reference all failed to trip it. The reason is
+structural and worth stating, because it applies well beyond this function:
+\textbf{a derived diagnostic cannot be guarded by a bound computed from its
+own inputs}. The gates of \S\ref{sec:exergy:gates} work precisely because
+their two sides are built from different things.

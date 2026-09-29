@@ -716,6 +716,20 @@ $\Delta T_{3A,4A}$ a genuine trade rather than a free choice.
 version & date & change \\
 \midrule
 \endhead
+\textbf{0.14} & 2026-09 &
+  Two indicators added, two built and removed
+  (\S\ref{sec:exergy:kpi}, \S\ref{sec:exergy:removed}). Added: the four
+  pinches individually, which show three exchangers hard against their
+  specified approach and $\Delta T_{2H3C}$ as the one loose one; and
+  $\rho_P$ beside $\rho_E$, \SI{44}{\watt} per metre of borehole.
+  Removed after measurement: the floor/headroom split of the residual, and
+  a Lorenz reference whose guard could not be made to fire. Also a third
+  repeat of the stale-version-stamp defect --- v0.9, v0.14 and v0.14a all
+  shipped stamped with the previous version, because \texttt{check\_version}
+  compared three hand-edited strings to each other and could only ever catch
+  disagreement. It now also compares a hash of the physics sources against
+  the hash recorded when the version was last cut, which is an independent
+  input; that half has been watched to fail. \\
 \textbf{0.13} & 2026-09 &
   Exergy destruction by component (\S\ref{sec:exergy}), and with it the
   \SI{60}{\celsius} geothermal source as a \emph{finite, priced} resource

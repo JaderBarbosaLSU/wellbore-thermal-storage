@@ -13,6 +13,8 @@
 Both notebooks are generated from the same model sources, so a change cannot
 land in one and miss the other. Run this, not the individual scripts.
 """
+import hashlib
+import os
 import pathlib
 import re
 import subprocess
@@ -23,7 +25,7 @@ import sys
 # after the physics had moved on. A version string that lags the code is
 # the first thing anyone checks when two runs disagree, so the build
 # refuses to proceed if the generators disagree with this.
-VERSION = "0.13"
+VERSION = "0.14"
 
 HERE = pathlib.Path(__file__).parent
 BUILD = pathlib.Path('/tmp/build')
@@ -49,7 +51,44 @@ def run(script):
 
 
 def check_version():
-    """Every generator must agree with VERSION, or the build stops."""
+    """Every generator must agree with VERSION -- AND VERSION must be current.
+
+    The first half of this check has existed since v0.7 and it has now failed
+    to catch the same thing THREE times: v0.9 physics shipped stamped 0.8,
+    and v0.14 and v0.14a both shipped stamped 0.13. Each time the check
+    passed, because all the generators agreed -- on a stale value.
+
+    That is a guard reading only its own inputs, which is the failure mode
+    DN-27 describes for the Lorenz reference. Agreement between three strings
+    I edit by hand can only catch disagreement; it can never catch the case
+    where I changed the physics and forgot to touch any of them.
+
+    So the second half compares a HASH of the physics sources against the
+    hash recorded when VERSION was last set. If the sources moved and VERSION
+    did not, the build stops. That is an independent input, and it is what
+    makes this a gate rather than a consistency check.
+
+    To cut a version: bump VERSION, run with THUMS_STAMP_VERSION=1 to record
+    the new hash, and commit `.version_hash` alongside.
+    """
+    src = b''.join(sorted(
+        (HERE / f).read_bytes() for f in ('model_part2.py', 'model_part3.py')))
+    digest = hashlib.sha256(src).hexdigest()[:16]
+    stamp = HERE / '.version_hash'
+    if os.environ.get('THUMS_STAMP_VERSION'):
+        stamp.write_text(f'{VERSION} {digest}\n')
+        print(f'recorded {VERSION} at physics hash {digest}')
+    elif stamp.exists():
+        was_v, was_d = stamp.read_text().split()
+        if was_d != digest and was_v == VERSION:
+            raise SystemExit(
+                f'the physics sources changed but VERSION is still '
+                f'{VERSION!r}.\n'
+                f'  recorded hash {was_d}, current {digest}\n'
+                f'  Bump VERSION (and the two generator strings), then '
+                f're-run with THUMS_STAMP_VERSION=1.\n'
+                f'  This is the check that v0.9, v0.14 and v0.14a all got '
+                f'past by agreeing on a stale value.')
     want = {
         'build_student.py': f'*Model version {VERSION} \u00b7 notebook built',
         'make_thums.py': f'The live model, v{VERSION}.',
