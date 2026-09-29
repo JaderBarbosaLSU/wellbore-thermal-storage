@@ -1292,3 +1292,54 @@ guarded by a bound computed from its own inputs.** The exergy gates work
 precisely because their two sides are built from different things — component
 entropy on one, stream states on the other. Where that separation does not
 exist, no amount of range-checking substitutes for it.
+
+## DN-28 — psi and eta_RTE were not on the same basis, and the manuscript found it
+
+`exergy_audit` evaluated every term on the **target** duties out of
+`energy_budget` and charged **no** parasitics. `eta_RTE` in
+`performance_indices` does neither: it uses the energy the field actually
+moved, and it charges the borehole pumping with the charge pump added to the
+input and the discharge pump subtracted from the output.
+
+So the two were computed over different control volumes on different bases,
+and the headline claim repeated in three documents — *"0.317 becomes 0.246"* —
+compared two numbers that were not comparable.
+
+**The rebase.** At CSS the storage efficiency is identically 1 and lambda is
+forced to zero, so Q_charge = Q_discharge and D_E_out_HP = D_E_in_ORC: both
+half-cycles scale by the same factor and the correction is one multiplication,
+1.0446 here. The parasitics then enter with eta_RTE's own sign convention,
+and because they are work dissipated as friction in the well they appear
+**both** as an input and as a destruction — 703 kWh per cycle, 2.7 % of the
+total, on its own line.
+
+| | before | after |
+|---|---|---|
+| psi (resource) | 0.2459 | **0.2356** |
+| psi (stripped) | 0.2889 | **0.2764** |
+| total destroyed | 24614 kWh | 26415 kWh |
+
+**A third gate.** eta_RTE is now computed inside the audit from the scaled
+budget plus parasitics, and in `performance_indices` from the marched field,
+and the two are asserted equal. They agree to 0.00e+00. It is the only gate
+that spans two functions, and it can hold only while psi and eta_RTE share a
+boundary — which is the point of it.
+
+**`borehole_pumping`** was briefly written twice while doing this, once in
+each caller. That is the DN-24 trap exactly, so it is now one function called
+by both.
+
+### How this was found, which is the part worth keeping
+
+Not by the code, and not by any check in it. It was found while writing the
+manuscript's exergy section — by asking, in prose, what control volume each
+efficiency referred to, and discovering the answer differed. The draft
+carried the discrepancy as an explicit `\chk{}` marker with both numbers in
+it, 0.246 and 0.235, before the code knew anything was wrong.
+
+**A definition written out in prose has to name its boundary. A definition
+written in code does not.** That is an argument for writing the paper
+alongside the model rather than after it, and it is the second time in this
+project that the document has caught something the test suite could not — the
+first being the stale version stamp on the title page, which was visible on
+page one of a PDF nobody was reading.

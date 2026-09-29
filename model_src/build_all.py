@@ -25,7 +25,7 @@ import sys
 # after the physics had moved on. A version string that lags the code is
 # the first thing anyone checks when two runs disagree, so the build
 # refuses to proceed if the generators disagree with this.
-VERSION = "0.14"
+VERSION = "0.15"
 
 HERE = pathlib.Path(__file__).parent
 BUILD = pathlib.Path('/tmp/build')

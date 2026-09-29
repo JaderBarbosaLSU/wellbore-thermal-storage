@@ -1,0 +1,298 @@
+%=======================================================================
+\section{Results}
+\label{sec:results}
+%=======================================================================
+% SKELETON. Subsections mirror the IHTC-18 paper. The numbers in
+% Table~\ref{tab:ref-results} were produced with thums.py v0.13 at the case of
+% Table~\ref{tab:conditions} (n_s = 100, which the code flags); regenerate
+% them with the final numerics before use.
+
+\subsection{Power-to-heat-to-power cycle analysis}
+\label{sec:res-cycles}
+
+\todo{$T$--$s$ diagram of both cycles at the reference case; table of state
+points, pressures, $y$, $x_\mathrm{8h}$, $\varepsilon_\mathrm{R1}$,
+$\varepsilon_\mathrm{R2}$, $\etaORC$, $\COP$, duties and flow rates.}
+\todo{ORC evaporator composite curves showing the interior pinch at the onset
+of boiling, with the hot-end rule overlaid: in the first pass $T_\mathrm{3e}$
+falls from \SI{134.1}{\celsius} to \SI{95.1}{\celsius} and $\etaORC$ from 0.198
+to 0.148 (v0.12, irreversible machines; the corresponding reversible values are
+0.232 and 0.174).}
+\todo{Cost of machine irreversibility: rerun with
+$\eta_{s,t}=\eta_{s,p}=\eta_{s,c}=1$ (recovers $\etaORC=0.1738$, $\COP=2.759$)
+and report the change in RTE; basis for a component-wise exergy balance.}
+\todo{$UA$ of the four plant exchangers; the ORC condenser dominates.}
+
+\subsection{Thermal analysis of the borehole regenerator at cyclic steady state}
+\label{sec:res-BB}
+
+\begin{table}[htbp]
+\centering
+\caption{Reference case at cyclic steady state (model v0.13, provisional).}
+\label{tab:ref-results}
+\small
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}l r l@{}}
+\toprule
+quantity & value & note \\
+\midrule
+$\COP$ / $\etaORC$ & 2.473 / 0.1487 & irreversible machines; corrected pass \\
+$T_\mathrm{3e}$ & \SI{95.5}{\celsius} & pinch-limited (hot-end rule: \SI{136.5}{\celsius}) \\
+$x_\mathrm{8h}$ / $y$ & 0.436 / 0.805 & \\
+$\varepsilon_\mathrm{R1}$ / $\varepsilon_\mathrm{R2}$ & 0.205 / 0.120 & required, Eq.~\eqref{eq:eps-R} \\
+HTHP suction superheat $T_\mathrm{1h}-T_\mathrm{13h}$ & \SI{14.3}{\kelvin} & \SI{26.5}{\kelvin} if isentropic \\
+$\Nw$ & 15.62 & latent inventory, Eq.~\eqref{eq:Nwell} \\
+$\md_\mathrm{ch}$ / $\md_\mathrm{dc}$ per hairpin & 0.965 / \SI{0.971}{\kilo\gram\per\second} & pinned by the glides, Eq.~\eqref{eq:mdot} \\
+cycles to CSS & 73 & from a fully solid store \\
+$\eta_\mathrm{storage}$ & 1.000000 & Eq.~\eqref{eq:css-unity} \\
+deviation $\mathcal D$ & $+\SI{4.46}{\percent}$ & Eq.~\eqref{eq:deviation} \\
+$\overline{T}_\mathrm{2d}$ / $\overline{T}_\mathrm{2c}$ & \SI{148.5}{\celsius} / \SI{102.5}{\celsius} & nominal 146.1 / 105.0 \\
+$\bar\varepsilon_\mathrm{ch}$ / $\bar\varepsilon_\mathrm{dc}$ & 0.9704 / 0.0109 & cycled fraction 0.9595 \\
+$\eta_T$ / $\eta_{T,\mathrm{eff}}$ & 0.1413 / 0.1365 & \\
+RTE / $\varepsilon_\mathrm{RTE}$ & 0.3172 / 0.3044 & v0.11 (multipliers): 0.3003 \\
+$\psi$ / $\psi_\mathrm{str}$ & 0.2356 / 0.2764 & Eq.~\eqref{eq:psi}, with pumping \\
+$\md_\mathrm{geo}$ / $N_\mathrm{geo}$ & \SI{100.8}{\kilo\gram\per\second} / 8.07 & Eq.~\eqref{eq:mgeo}; $\md_\mathrm{geo,well}=\SI{12.5}{\kilo\gram\per\second}$ \\
+$(\Nw+N_\mathrm{geo})/\dot W_\mathrm{el,out}$ & \SI{22.7}{\per\mega\watt} & storage plus geothermal wells \\
+$\Delta E_\mathrm{therm}$ / $\Delta E_\mathrm{elec}$ per well & 4731 / \SI{646}{\kilo\watt\hour} & \\
+$\rho_E$ & \SI{170.9}{\kilo\watt\hour\per\meter\cubed} & \\
+pumping, charge / discharge & 34.9 / \SI{35.4}{\kilo\watt} & \SI{6.73}{\percent} of gross output \\
+$UA$, four plant exchangers & \SI{2253}{\kilo\watt\per\kelvin} & ORC condenser 1135 \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\chk{Grid sensitivity, v0.12 (not yet repeated on v0.13): with $n_s=99$ (layer boundaries on segment
+boundaries) the deviation is $+\SI{4.44}{\percent}$ instead of
+$+\SI{4.53}{\percent}$, $\bar\varepsilon_\mathrm{ch}$ is 0.980 instead of 0.972,
+and the residual $\bar\varepsilon_\mathrm{dc}$ doubles, 0.025 instead of 0.012,
+while RTE is unchanged to four figures. The residual melted fraction is the
+diagnostic used to separate rate from inventory limitation, so the final runs
+must use a layer-conforming grid and a convergence check.}
+
+\todo{Profiles along the well at CSS (depth coordinate): $T$, $\Tpcm$ against
+the $T_m$ staircase, $\eloc$ at several times in each half-cycle, $\Ui$ and
+$\NTU$. Emphasise the sawtooth imposed by the cascade and where the PCM is
+superheated or subcooled.}
+\todo{Convergence to CSS: charged and discharged energy per cycle and state
+drift versus cycle number.}
+\todo{Decomposition of the energy per half-cycle into plateau and sensible
+branches; peak superheat and subcooling.}
+\todo{Resistance budget of $\Ui$ (convection, fouling, wall, PCM side) over a
+half-cycle.}
+
+\subsection{Exergy analysis}
+\label{sec:res-exergy}
+
+Table~\ref{tab:exergy} gives the exergy audit of the reference case over one
+cycle. It is evaluated on the same basis as the round-trip efficiency: the
+energy the field actually moved at cyclic steady state, with the borehole
+parasitics charged as both an input and a destruction, so that $\psi$ and RTE
+differ only in the charge made for the geothermal stream. Earlier drafts
+evaluated it on the target duties and excluded the parasitics, which made the
+two incomparable; the code was corrected to match this definition, not the
+reverse. Three features stand out.
+
+\begin{table}[htbp]
+\centering
+\caption{Exergy audit of the reference case over one cycle at CSS, resource
+convention, $T_0=\SI{20}{\celsius}$ (model v0.13, provisional).}
+\label{tab:exergy}
+\small
+\begin{tabular}{@{}l r r@{}}
+\toprule
+ & \si{\kilo\watt\hour} & share of $\sum I_j$ [\si{\percent}] \\
+\midrule
+\multicolumn{3}{@{}l}{\emph{inputs}}\\
+electrical, $W_\mathrm{el,in}$ (incl.\ charge pumping) & 31813 & \\
+geothermal, $\Ex_\mathrm{geo}$ (\SI{100.8}{\kilo\gram\per\second}) & 11019 & \\
+\multicolumn{3}{@{}l}{\emph{outputs and loss}}\\
+electrical, $W_\mathrm{el,out}$ & 10000 & \\
+reinjected at \SI{50}{\celsius}, $\Ex_\mathrm{reinj}$ & 6326 & ($u_\mathrm{geo}=0.426$) \\
+\midrule
+\multicolumn{3}{@{}l}{\emph{destruction}}\\
+HTHP condenser & 4584 & 17.4 \\
+ORC evaporator & 3825 & 14.5 \\
+HTHP throttle 7h$\to$8h & 3034 & 11.5 \\
+HTHP compressor, high stage & 1915 & 7.3 \\
+borehole field, Eq.~\eqref{eq:I-BB} & 1740 & 6.6 \\
+HTHP motor & 1573 & 6.0 \\
+ORC condenser & 1306 & 4.9 \\
+HTHP evaporator & 1233 & 4.7 \\
+HTHP compressor, low stage & 1222 & 4.6 \\
+ORC turbine, low pressure & 1215 & 4.6 \\
+HTHP throttle 9h$\to$4h & 1168 & 4.4 \\
+ORC feed heater & 830 & 3.1 \\
+borehole pumping & 703 & 2.7 \\
+HTHP regenerator R2 & 671 & 2.5 \\
+ORC generator & 550 & 2.1 \\
+ORC turbine, high pressure & 511 & 1.9 \\
+HTHP regenerator R1 & 320 & 1.2 \\
+ORC pumps, mixer, flash separator & 12 & $<0.1$ \\
+\midrule
+$\sum I_j$ & 26415 & 100.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+First, heat transfer dominates. The five heat exchangers that carry the
+process duty (HTHP condenser and evaporator, ORC evaporator and condenser, and
+the borehole field) account for \SI{48.0}{\percent} of the destruction, the
+compressors and turbines for \SI{18.5}{\percent}, and the motor and generator
+for \SI{8.2}{\percent}. Second, the throttle between the condenser and the flash
+separator destroys more exergy than either compressor stage, which indicates
+that an expander in place of that valve is worth more than any plausible gain
+in compressor efficiency. Third, the borehole field is responsible for only
+\SI{6.8}{\percent} of the destruction; the case for the cascade and for tight
+approach temperatures rests on the well count and the hardware rather than on
+lost work \chk{$I_\mathrm{BB}$ is not yet independently verified}.
+
+Pricing the geothermal stream lowers the headline efficiency from RTE $=0.317$
+to $\psi=0.236$; under the stripped convention $\psi_\mathrm{str}=0.276$. The
+geothermal flow required is \SI{100.8}{\kilo\gram\per\second}, i.e.\ 8.1
+producers at the provisional yield, against 15.6 storage wells, and
+\SI{57}{\percent} of the exergy lifted is reinjected.
+
+\paragraph{Cooling of the source} $\Delta T_\mathrm{3A,4A}$ sets both the HTHP
+evaporating temperature, and hence $\COP$, and the geothermal flow, which falls
+much faster. Table~\ref{tab:dt3a4a} shows the consequence: the stripped
+efficiency decreases monotonically, favouring the smallest cooling and the
+largest geothermal flow, whereas the resource efficiency has an interior
+maximum near \SI{20}{\kelvin}. At \SI{20}{\kelvin} the COP falls by
+\SI{7.8}{\percent} relative to the reference case, while the geothermal flow
+falls to \SI{47}{\percent} of its value: $N_\mathrm{geo}$ drops from
+\num{8.07} to \num{3.80} and the whole field from \num{22.7} to
+\SI{19.4}{\per\mega\watt}, for an RTE of \num{0.293}. The reference
+value of \SI{10}{\kelvin} is therefore poorly placed, and the upper limit on
+$\Delta T_\mathrm{3A,4A}$ is set by the formation constraint
+$T_\mathrm{reinj,min}$, for which no measured value is yet available.
+
+\begin{table}[htbp]
+\centering
+\caption{Effect of the cooling of the geothermal source. Every row is a
+full cyclic-steady-state run on the basis of Eq.~\eqref{eq:psi}, with the
+parasitics charged, so the rows are directly comparable with
+Table~\ref{tab:ref-results}.}
+\label{tab:dt3a4a}
+\small
+\begin{tabular}{@{}r r r r r r r@{}}
+\toprule
+$\Delta T_\mathrm{3A,4A}$ [K] & $\COP$ & RTE & $\md_\mathrm{geo}/\md_\mathrm{geo}^{(5\,\mathrm{K})}$ &
+$u_\mathrm{geo}$ & $\psi_\mathrm{str}$ & $\psi$ \\
+\midrule
+5  & 2.582 & 0.3310 & 1.000 & 0.227 & 0.2833 & 0.1899 \\
+10 & 2.473 & 0.3172 & 0.486 & 0.426 & 0.2764 & 0.2356 \\
+15 & 2.373 & 0.3045 & 0.315 & 0.597 & 0.2698 & 0.2505 \\
+20 & 2.280 & 0.2927 & 0.229 & 0.739 & 0.2634 & \textbf{0.2544} \\
+25 & 2.194 & 0.2818 & 0.178 & 0.852 & 0.2571 & 0.2533 \\
+30 & 2.114 & 0.2716 & 0.144 & 0.933 & 0.2511 & 0.2498 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Parametric assessment}
+\label{sec:res-param}
+
+\todo{Following the IHTC-18 paper: $\Nlay$ and the glide. Report RTE,
+$\Nw$ (or $\mathcal D$ at fixed $\Nw$), $\bar\varepsilon_\mathrm{dc}$ and total
+$UA$ on common axes. Expected interior optimum in $\Delta T_\mathrm{3D,2D}$
+from the pinch, Eq.~\eqref{eq:pinch-necessary}, and in
+$\Delta T_\mathrm{casc}$ subject to Eq.~\eqref{eq:span-bound}.}
+\todo{$\mathcal D$ and $\bar\varepsilon_\mathrm{dc}$ versus $\Nw$ to separate
+rate from inventory limitation.}
+\todo{Carry $\psi$, $N_\mathrm{geo}$ and $(\Nw+N_\mathrm{geo})/\dot
+W_\mathrm{el,out}$ in every parametric table; a study ranked on RTE alone
+selects the free-source corner.}
+
+\subsection{Limitations}
+\label{sec:limitations}
+
+\todo{Quantify, at least by estimate:}
+(i)~H3 is at its limit at the reference case: the fronts of adjacent legs
+meet over most of the well, so the residual solid in the corners between legs
+is reached through a longer and narrower path than the annulus represents,
+and the PCM-side resistance is understated;
+(ii)~H9 neglects conduction between the two legs of a hairpin, which differ
+by up to the cascade span at the wellhead;
+(iii)~H6 neglects heat exchange with the formation, so the storage efficiency
+is unity by construction and the store appears in the exergy audit only through
+its internal destruction;
+(iv)~the cycles have no pressure drop or heat loss in the exchangers and a
+zero-approach ORC feed heater, and the isentropic efficiencies are constant;
+(v)~the model has not been validated against experiment or against a
+higher-fidelity (two-dimensional) conduction calculation. Items (i) and (ii)
+are geometric questions about the cell boundary and would be settled together
+by a two-dimensional conduction model of the real cross-section.
+
+%=======================================================================
+\section{Conclusions}
+\label{sec:conclusions}
+%=======================================================================
+\todo{After Section~\ref{sec:results}.}
+
+\section*{Acknowledgements}
+\todo{Funding.}
+
+%=======================================================================
+\section*{Nomenclature}
+%=======================================================================
+\begingroup\small
+\begin{longtable}{@{}p{0.16\linewidth}p{0.62\linewidth}p{0.16\linewidth}@{}}
+$A$ & area; PCM cross-section per unit length & \si{\meter\squared}\\
+$\Aav$ & PCM cross-section per hairpin per unit developed length & \si{\meter\squared}\\
+$\Amelt$ & melted cross-section & \si{\meter\squared}\\
+$C_s$, $C_l$ & sensible capacity per unit length & \si{\joule\per\meter\per\kelvin}\\
+$c_p$ & specific heat & \si{\joule\per\kilogram\per\kelvin}\\
+$D$ & diameter & \si{\meter}\\
+$\mathcal D$ & deviation of delivered energy from target & --\\
+$E'$ & PCM enthalpy per unit length & \si{\joule\per\meter}\\
+$\Elat$, $\Eeq$ & latent capacity; equilibrium enthalpy per unit length & \si{\joule\per\meter}\\
+$\Delta E$ & energy per cycle & \si{\joule}, \si{\kilo\watt\hour}\\
+$f$ & Darcy friction factor & --\\
+$h$ & specific enthalpy & \si{\joule\per\kilogram}\\
+$h_i$, $h_e$ & internal, PCM-shell heat transfer coefficient & \si{\watt\per\meter\squared\per\kelvin}\\
+$\hm$ & latent heat of fusion & \si{\joule\per\kilogram}\\
+$K$ & segment conductance per unit length & \si{\watt\per\meter\per\kelvin}\\
+$k$ & thermal conductivity & \si{\watt\per\meter\per\kelvin}\\
+$L$ & length & \si{\meter}\\
+$\md$ & mass flow rate per hairpin & \si{\kilogram\per\second}\\
+$n_f$, $n_s$, $n_t$ & fins per leg, segments, hairpins per well & --\\
+$\Nlay$, $\Nw$ & PCM layers, wells & --\\
+$P_T$ & finned outer perimeter & \si{\meter}\\
+$p$ & pressure & \si{\pascal}\\
+$\dot Q$, $q'$ & heat rate; heat rate per unit length & \si{\watt}, \si{\watt\per\meter}\\
+$R''_{f,i}$ & internal fouling resistance & \si{\meter\squared\kelvin\per\watt}\\
+$r_i$, $r_e$, $r_\mathrm{cell}$ & tube inner, outer, and cell radius & \si{\meter}\\
+$S$ & mean-to-surface shape factor & --\\
+$s$ & developed coordinate; specific entropy & \si{\meter}; \si{\joule\per\kilogram\per\kelvin}\\
+$T$ & temperature & \si{\kelvin}\\
+$t$ & time; fin thickness & \si{\second}; \si{\meter}\\
+$\Ui$ & overall coefficient on the inner area & \si{\watt\per\meter\squared\per\kelvin}\\
+$UA$ & exchanger conductance & \si{\watt\per\kelvin}\\
+$V$ & volume & \si{\meter\cubed}\\
+$\dot W$, $W$ & power; work or electrical energy per cycle & \si{\watt}; \si{\kilo\watt\hour}\\
+$\Ex$, $\Exd$ & exergy per cycle; exergy rate & \si{\kilo\watt\hour}; \si{\watt}\\
+$I$ & exergy destruction per cycle & \si{\kilo\watt\hour}\\
+$N_\mathrm{geo}$ & geothermal producing wells & --\\
+$s_\mathrm{gen}$ & specific entropy generation & \si{\joule\per\kilogram\per\kelvin}\\
+$T_0$ & dead-state temperature, $T_\mathrm{sink}$ & \si{\kelvin}\\
+$u_\mathrm{geo}$ & fraction of the geothermal exergy used & --\\
+$x_\mathrm{8h}$ & vapour fraction leaving the flash valve & --\\
+$y$ & ORC reheat mass fraction & --\\[3pt]
+\multicolumn{3}{@{}l}{\emph{Greek}}\\
+$\beta$ & $r_\mathrm{cell}/r_e$ & --\\
+$\Delta s$ & segment length & \si{\meter}\\
+$\delta$ & shell thickness & \si{\meter}\\
+$\varepsilon$ & melted fraction; effectiveness & --\\
+$\eta$ & efficiency; $\eta_{s,t}$, $\eta_{s,p}$, $\eta_{s,c}$ isentropic efficiency of turbines, pumps, compressors & --\\
+$\lambda$ & storage-loss allowance & --\\
+$\rho$, $\rho_E$ & density; thermal energy density & \si{\kilogram\per\meter\cubed}; \si{\kilo\watt\hour\per\meter\cubed}\\
+$\tau$ & relaxation time $C/K$ & \si{\second}\\
+$\phi$ & fraction of ORC heat absorbed isothermally & --\\
+$\psi$, $\psi_\mathrm{str}$ & exergetic efficiency, resource and stripped conventions & --\\[3pt]
+\multicolumn{3}{@{}l}{\emph{Subscripts}}\\
+\multicolumn{3}{@{}p{0.95\linewidth}@{}}{a source stream;
+c, d secondary water during charging, discharging; ch, dc charging,
+discharging; e ORC working fluid; geo geothermal; h HTHP refrigerant; l liquid;
+m melting; reinj reinjected; s solid; w water; wf working fluid.}\\
+\end{longtable}
+\endgroup

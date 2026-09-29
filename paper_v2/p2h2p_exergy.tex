@@ -1,0 +1,210 @@
+%-----------------------------------------------------------------------
+\subsection{Exergy analysis}
+\label{sec:exergy}
+%-----------------------------------------------------------------------
+
+At cyclic steady state the store returns every unit of energy it absorbs,
+Eq.~\eqref{eq:css-unity}, so the first law cannot express what the store, or
+any other component, costs. The cost of each component is the exergy it
+destroys, and the analysis below allocates the exergy input of the plant over
+one complete cycle to the net electrical output, to a discarded stream and to
+the destruction in each component.
+
+\subsubsection{Dead state and reservoirs}
+
+The dead state is taken as the ORC heat sink, $T_0=T_\mathrm{sink}$, at the
+pressure of each stream. It is the lowest temperature in the system, so all
+stream exergies are non-negative, and the heat rejected in the ORC condenser
+carries no exergy. The plant exchanges heat with two reservoirs: the sink, at
+the dead state, and the geothermal stream that supplies the HTHP evaporator.
+The latter is not at the dead state and is an exergy input to the plant. The
+exergy given up by a stream of water cooling from $T_a$ to $T_b$ at
+$p_\mathrm{w}$ is
+\begin{equation}
+  \Exd_\mathrm{w}(T_a,T_b)=\md\left[h_\mathrm{w}(T_a)-h_\mathrm{w}(T_b)
+     -T_0\left(s_\mathrm{w}(T_a)-s_\mathrm{w}(T_b)\right)\right],
+  \label{eq:ex-stream}
+\end{equation}
+and $\Exd_\mathrm{w}(T_a,T_0)$ is the exergy of the stream relative to the
+dead state.
+
+\subsubsection{The geothermal source as a finite resource}
+\label{sec:geo}
+
+The heat-pump source is co-produced or geothermal water drawn from producing
+wells at $T_\mathrm{source}$ and reinjected at
+$T_\mathrm{4a}=T_\mathrm{source}-\Delta T_\mathrm{3A,4A}$. Its flow rate is not
+prescribed but derived from the evaporator duty, in the same way as $\Nw$ is
+derived from the storage duty. With
+$\md_\mathrm{ref}=\dot Q_\mathrm{out,HP}/(h_\mathrm{2h}-h_\mathrm{3h})$ the
+refrigerant flow through the condenser,
+\begin{gather}
+  \dot Q_\mathrm{src}=\md_\mathrm{ref}\left(1-x_\mathrm{8h}\right)
+     \left(h_\mathrm{13h}-h_\mathrm{4h}\right),
+  \notag\\
+  \md_\mathrm{geo}=\frac{\dot Q_\mathrm{src}}
+     {h_\mathrm{w}(T_\mathrm{source})-h_\mathrm{w}(T_\mathrm{4a})},
+  \qquad
+  N_\mathrm{geo}=\frac{\md_\mathrm{geo}}{\md_\mathrm{geo,well}},
+  \label{eq:mgeo}
+\end{gather}
+where $\md_\mathrm{geo,well}$ is the yield of one producing well. Deriving
+$\md_\mathrm{geo}$ places the uncertainty in the per-well yield, which is a
+field-measured quantity, rather than in a plant-level flow rate; since the
+source exergy is homogeneous of degree one in $\md_\mathrm{geo}$, the choice
+does not affect the exergetic efficiencies below. $\Delta T_\mathrm{3A,4A}$ is
+bounded above by a minimum reinjection temperature
+$T_\mathrm{reinj,min}$, which represents formation constraints such as scaling
+and injectivity.
+
+Two conventions are possible for the exergy charged to the plant for the
+geothermal stream. Under the \emph{resource} convention adopted here, the plant
+is charged with the full exergy of the produced stream relative to the dead
+state, and the exergy still carried by the reinjected stream is booked as a
+loss attributed to no component:
+\begin{gather}
+  \Exd_\mathrm{geo}=\Exd_\mathrm{w}\!\left(T_\mathrm{source},T_0\right),
+  \qquad
+  \Exd_\mathrm{reinj}=\Exd_\mathrm{w}\!\left(T_\mathrm{4a},T_0\right),
+  \notag\\
+  u_\mathrm{geo}=1-\frac{\Exd_\mathrm{reinj}}{\Exd_\mathrm{geo}},
+  \label{eq:ex-geo}
+\end{gather}
+where both terms are evaluated with $\md_\mathrm{geo}$ and $u_\mathrm{geo}$ is
+the fraction of the resource that the plant uses. Under the alternative
+\emph{stripped} convention, only the exergy removed in the evaporator,
+$\Exd_\mathrm{geo}-\Exd_\mathrm{reinj}=\Exd_\mathrm{w}(T_\mathrm{source},
+T_\mathrm{4a})$, is charged and reinjection is free. The resource convention is
+appropriate for a dedicated producer, which is drilled, completed and operated
+whether or not the exergy it lifts is used. The distinction is not cosmetic:
+the two conventions give opposite guidance on $\Delta T_\mathrm{3A,4A}$
+(Section~\ref{sec:res-exergy}). Under the stripped convention the exergetic
+efficiency decreases monotonically with $\Delta T_\mathrm{3A,4A}$, which drives
+the design toward the smallest cooling of the source and hence the largest
+geothermal flow and well count; under the resource convention it has an
+interior maximum.
+
+\subsubsection{Exergy balance over a cycle}
+
+Over one cycle at CSS the exergy of the store returns to its initial value, and
+the balance for the whole plant reads
+\begin{equation}
+  W_\mathrm{el,in}+\Ex_\mathrm{geo}
+  =W_\mathrm{el,out}+\Ex_\mathrm{reinj}+\sum_{j}I_{j},
+  \label{eq:ex-balance}
+\end{equation}
+with $W_\mathrm{el,in}=\dot W_\mathrm{el,in}t_\mathrm{ch}$,
+$W_\mathrm{el,out}=\dot W_\mathrm{el,out}t_\mathrm{dc}$,
+$\Ex_\mathrm{geo}=\Exd_\mathrm{geo}t_\mathrm{ch}$ and
+$\Ex_\mathrm{reinj}=\Exd_\mathrm{reinj}t_\mathrm{ch}$, all evaluated on the
+energy the field actually moves at cyclic steady state rather than on the
+target duties. The
+destruction in component $j$ follows from the Gouy--Stodola theorem,
+$I_j=T_0\,S_{\mathrm{gen},j}$, with the entropy generation computed from the
+state points and flow fractions of that component alone.
+
+\paragraph{Heat pump} Per unit mass through the condenser, and with the water
+flow rates referred to $\md_\mathrm{ref}$,
+\begin{align}
+  s_{\mathrm{gen,C,HP}}&=s_\mathrm{2h}-s_\mathrm{6h},\notag\\
+  s_{\mathrm{gen,C,LP}}&=\left(1-x_\mathrm{8h}\right)\left(s_\mathrm{5h}-s_\mathrm{1h}\right),
+  \notag\\
+  s_{\mathrm{gen,V,7-8}}&=s_\mathrm{8h}-s_\mathrm{7h},\notag\\
+  s_{\mathrm{gen,V,9-4}}&=\left(1-x_\mathrm{8h}\right)\left(s_\mathrm{4h}-s_\mathrm{9h}\right),
+  \notag\\
+  s_{\mathrm{gen,sep}}&=x_\mathrm{8h}s_\mathrm{10h}+\left(1-x_\mathrm{8h}\right)s_\mathrm{9h}-s_\mathrm{8h},\notag\\
+  s_{\mathrm{gen,R1}}&=\left(s_\mathrm{12h}-s_\mathrm{3h}\right)+x_\mathrm{8h}\left(s_\mathrm{11h}-s_\mathrm{10h}\right),
+  \notag\\
+  s_{\mathrm{gen,R2}}&=\left(s_\mathrm{7h}-s_\mathrm{12h}\right)+\left(1-x_\mathrm{8h}\right)\left(s_\mathrm{1h}-s_\mathrm{13h}\right),\notag\\
+  s_{\mathrm{gen,cond}}&=\left(s_\mathrm{3h}-s_\mathrm{2h}\right)
+     +\frac{\md_\mathrm{w,ch}^\mathrm{tot}}{\md_\mathrm{ref}}
+      \left[s_\mathrm{w}(T_\mathrm{3c})-s_\mathrm{w}(T_\mathrm{2c})\right],
+  \notag\\
+  s_{\mathrm{gen,evap}}&=\left(1-x_\mathrm{8h}\right)\left(s_\mathrm{13h}-s_\mathrm{4h}\right)
+     +\frac{\md_\mathrm{geo}}{\md_\mathrm{ref}}
+      \left[s_\mathrm{w}(T_\mathrm{4a})-s_\mathrm{w}(T_\mathrm{source})\right],
+  \label{eq:sgen-hp}
+\end{align}
+where $\md_\mathrm{w,ch}^\mathrm{tot}=\Nw n_t\md_\mathrm{ch}$ is the total
+water flow, and $I_j=T_0\md_\mathrm{ref}s_{\mathrm{gen},j}t_\mathrm{ch}$. The
+motor loss is
+$I_\mathrm{mot}=(\dot W_\mathrm{el,in}-\dot W_\mathrm{C})t_\mathrm{ch}$, with
+$\dot W_\mathrm{C}=\md_\mathrm{ref}[(h_\mathrm{2h}-h_\mathrm{6h})
++(1-x_\mathrm{8h})(h_\mathrm{5h}-h_\mathrm{1h})]$ the shaft power of the two
+compressors.
+
+\paragraph{Organic Rankine cycle} Per unit mass through the high-pressure
+turbine, whose flow rate is
+$\md_\mathrm{orc}=\dot Q_\mathrm{in,ORC}/[(h_\mathrm{3e}-h_\mathrm{10e})
++y(h_\mathrm{6e}-h_\mathrm{5e})]$,
+\begin{align}
+  s_{\mathrm{gen,T1}}&=s_\mathrm{5e}-s_\mathrm{3e},\notag\\
+  s_{\mathrm{gen,T2}}&=y\left(s_\mathrm{4e}-s_\mathrm{6e}\right),
+  \notag\\
+  s_{\mathrm{gen,P1}}&=y\left(s_\mathrm{2e}-s_\mathrm{1e}\right),\notag\\
+  s_{\mathrm{gen,P2}}&=\left(1-y\right)\left(s_\mathrm{8e}-s_\mathrm{7e}\right),
+  \notag\\
+  s_{\mathrm{gen,FH}}&=\left(1-y\right)\left(s_\mathrm{7e}-s_\mathrm{5e}\right)
+     +y\left(s_\mathrm{9e}-s_\mathrm{2e}\right),\notag\\
+  s_{\mathrm{gen,mix}}&=s_\mathrm{10e}-y\,s_\mathrm{9e}-\left(1-y\right)s_\mathrm{8e},
+  \notag\\
+  s_{\mathrm{gen,evap}}&=\left(s_\mathrm{3e}-s_\mathrm{10e}\right)
+     +y\left(s_\mathrm{6e}-s_\mathrm{5e}\right)
+     +\frac{\md_\mathrm{w,dc}^\mathrm{tot}}{\md_\mathrm{orc}}
+      \left[s_\mathrm{w}(T_\mathrm{3d})-s_\mathrm{w}(T_\mathrm{2d})\right],\notag\\
+  s_{\mathrm{gen,cond}}&=y\left(s_\mathrm{1e}-s_\mathrm{4e}\right)
+     +\frac{y\left(h_\mathrm{4e}-h_\mathrm{1e}\right)}{T_0},
+  \label{eq:sgen-orc}
+\end{align}
+with $I_j=T_0\md_\mathrm{orc}s_{\mathrm{gen},j}t_\mathrm{dc}$. Because the sink
+is at the dead state, the whole exergy of the heat rejected in the condenser is
+destroyed there. The generator loss is
+$I_\mathrm{gen}=(\dot W_\mathrm{T}-\dot W_\mathrm{el,out})t_\mathrm{dc}$, with
+$\dot W_\mathrm{T}$ the net shaft power of the turbines less the pumps.
+
+\paragraph{Borehole field} The destruction in the borehole field is obtained as
+the difference between the exergy the water gives up during charging and the
+exergy it recovers during discharging,
+\begin{equation}
+  I_\mathrm{BB}=\Exd_\mathrm{w}^\mathrm{tot}\!\left(T_\mathrm{3c},T_\mathrm{2c}\right)t_\mathrm{ch}
+   -\Exd_\mathrm{w}^\mathrm{tot}\!\left(T_\mathrm{2d},T_\mathrm{3d}\right)t_\mathrm{dc},
+  \label{eq:I-BB}
+\end{equation}
+evaluated with the total water flow of each half-cycle. The expression is exact
+at CSS, because the exergy of the PCM returns to its initial value over the
+cycle and no entropy function of the PCM is required. It aggregates the
+destruction over the depth and duration of the cycle and does not locate it;
+resolving it in $s$ and $t$ requires an entropy relation $s(E')$ consistent
+with Eq.~\eqref{eq:enth-curve}. \todo{independent evaluation of $I_\mathrm{BB}$
+from $s(E')$ integrated over the march.}
+
+\subsubsection{Exergetic efficiencies}
+
+The round-trip efficiency, Eq.~\eqref{eq:rte}, books the geothermal source as
+free. The exergetic efficiency under the resource convention charges it, and
+the stripped value is reported alongside for comparison:
+\begin{equation}
+  \psi=\frac{W_\mathrm{el,out}-W_\mathrm{f,dc}}
+            {W_\mathrm{el,in}+W_\mathrm{f,ch}+\Ex_\mathrm{geo}},
+  \qquad
+  \psi_\mathrm{str}=\frac{W_\mathrm{el,out}-W_\mathrm{f,dc}}
+            {W_\mathrm{el,in}+W_\mathrm{f,ch}+\Ex_\mathrm{geo}-\Ex_\mathrm{reinj}},
+  \label{eq:psi}
+\end{equation}
+where $W_\mathrm{f}=\dot W_\mathrm{f}t$ are the pumping energies of the
+borehole field, so that $\psi$ and RTE share the same boundary and differ only
+in the charge for the geothermal stream. The geothermal well count
+$N_\mathrm{geo}$, Eq.~\eqref{eq:mgeo}, is reported together with $\Nw$, and the
+total number of wells per unit of net output,
+$(\Nw+N_\mathrm{geo})/\dot W_\mathrm{el,out}$, is carried as a design indicator:
+a comparison based on RTE alone favours designs that buy COP with an
+arbitrarily large geothermal flow.
+
+Including the pumping terms is what makes $\psi$ and RTE share a control
+volume, and it is not a small correction: in the reference case $\psi$ is
+\num{0.246} if they are omitted and \num{0.236} if they are charged. The code
+was brought onto this definition at v0.15, and a build-time check now asserts
+that the RTE computed inside the audit and the RTE computed from the marched
+field agree to the last bit --- a cross-check that exists because this
+discrepancy was found while writing the present section rather than by any
+test in the code.

@@ -1,0 +1,73 @@
+=== v0.15 DESIGN POINT — AUTHORITATIVE ===
+-- gates --
+  HTHP       rel 1.21e-15  OK
+  ORC        rel 1.15e-15  OK
+  eta_RTE    rel 0.00e+00  OK
+-- cycles (unchanged from v0.14) --
+  eta_ORC                         0.148064  
+  COP                             2.473095  
+  T_3e                              95.093  C
+  T_4a                              50.000  C
+-- field --
+  N_wells                          15.6247  
+  deviation                        +4.4579  %
+  N_geo                             8.0656  
+  m_geo                            100.820  kg/s
+  N_wells_total                    23.6903  
+  wells_per_MWe                     22.679  
+-- efficiencies --
+  eta_T                           0.141307  
+  eta_T_eff                       0.136516  
+  eta_RTE                         0.317219  
+  eps_RTE                         0.304370  
+  eps_cycled                      0.959497  
+  psi                             0.235609  
+  psi_stripped                    0.276435  
+  resource_utilisation            0.425928  
+  f_pump                          0.067303  
+-- densities --
+  dE_therm_kWh                   4731.1299  kWh
+  dE_elec_kWh                     645.8734  kWh
+  rho_E_kWh_m3                    170.9048  kWh/m3
+  rho_P_kW_m3                       2.4150  kW/m3
+  rho_P_kW_per_m                    0.0439  kW/m
+-- UA and pinches --
+  UA_total_kW_K                  2253.2259  
+  UA_per_MWe                     2157.0654  
+  UA_hpe_kW_K                     463.0590  
+  UA_hpc_kW_K                     241.8703  
+  UA_orce_kW_K                    413.1599  
+  UA_orcc_kW_K                   1135.1366  
+  pinch_hpe_K                       5.0000  
+  pinch_hpc_K                      10.0000  
+  pinch_orce_K                      5.0126  
+  pinch_orcc_K                      5.0000  
+-- exergy, kWh per cycle (REALISED basis, pumping charged) --
+  W_el_in (incl pump_ch)           31812.7  
+  Ex_geo (resource)                11019.3  
+  W_el_out (less pump_dc)          10091.6  
+  Ex_reinject (loss)                6325.9  
+  total destroyed                  26414.6  
+    HTHP condenser              4584.4 kWh  17.36 %
+    ORC evaporator              3825.5 kWh  14.48 %
+    HTHP throttle 7h-8h         3034.4 kWh  11.49 %
+    HTHP compressor HP          1915.0 kWh   7.25 %
+    borehole                    1740.3 kWh   6.59 %
+    HTHP motor                  1573.2 kWh   5.96 %
+    ORC condenser               1305.7 kWh   4.94 %
+    HTHP evaporator             1233.4 kWh   4.67 %
+    HTHP compressor LP          1222.1 kWh   4.63 %
+    ORC turbine 2               1214.6 kWh   4.60 %
+    HTHP throttle 9h-4h         1168.3 kWh   4.42 %
+    ORC regenerator              830.2 kWh   3.14 %
+    borehole pumping             703.0 kWh   2.66 %
+    HTHP IHX-2                   671.2 kWh   2.54 %
+    ORC generator                549.8 kWh   2.08 %
+    ORC turbine 1                511.0 kWh   1.93 %
+    HTHP IHX-1                   320.3 kWh   1.21 %
+    ORC pump 1                    11.0 kWh   0.04 %
+    ORC pump 2                     1.2 kWh   0.00 %
+    ORC mixer                      0.0 kWh   0.00 %
+    HTHP flash separator          -0.0 kWh  -0.00 %
+    exchangers+bore 48.04 %   machines 18.46 %   throttles 15.91 %
+DONE

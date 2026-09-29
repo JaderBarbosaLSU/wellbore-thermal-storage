@@ -552,7 +552,9 @@ cells.append(code(src('_orc_cold_composite', 'orc_pinch', 'feasible_rankine',
                       '_stream_curve', '_water_curve', '_UA_from_curves',
                       'exchanger_UA', 'ua_report',
                       'water_h', 'water_s', 'stream_exergy_rate',
+                      'calculate_pressure_drop',
                       'geothermal_resource', 'exergy_audit', 'exergy_report',
+                      'borehole_pumping',
                       'T_m_bottom', 'cycle_state_points', 'energy_budget',
                       'melting_temperatures')))
 
@@ -571,7 +573,7 @@ with $K_{\text{tot}} = 0.5 + 2(2.2) + 1.0 = 5.9$ for an entrance, two 180°
 bends and an exit. Those three coefficients are hard-coded literals the source
 itself calls example values, and the tube is assumed smooth.
 """))
-cells.append(code(src('calculate_pressure_drop')))
+cells.append(md('`calculate_pressure_drop` is defined in the exergy block above, because\n`borehole_pumping` calls it and the audit needs the parasitics. Its source is\nthere, unchanged.'))
 
 # ---------------------------------------------------------------- 10. sizing
 cells.append(md(r"""

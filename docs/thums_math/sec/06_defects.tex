@@ -716,6 +716,20 @@ $\Delta T_{3A,4A}$ a genuine trade rather than a free choice.
 version & date & change \\
 \midrule
 \endhead
+\textbf{0.15} & 2026-09 &
+  $\psi$ and $\eta_{\mathrm{RTE}}$ are made to share a control volume
+  (\S\ref{sec:exergy:basis}). The exergy audit had been evaluated on the
+  \emph{target} duties and charged no parasitics, while $\eta_{\mathrm{RTE}}$
+  uses the energy the field actually moved and charges the borehole pumping;
+  the two were therefore not comparable, and the headline claim that
+  \num{0.317} becomes \num{0.246} compared different boundaries. Rebased to
+  the realised duty (one factor, \num{1.0446}, because both half-cycles scale
+  together at CSS) with the parasitics charged as both an input and a
+  destruction: $\psi = \num{0.236}$, $\psi_{\mathrm{stripped}} =
+  \num{0.276}$. A third gate now asserts that $\eta_{\mathrm{RTE}}$ computed
+  inside the audit equals the one computed in
+  \texttt{performance\_indices}; it agrees to the last bit. The defect was
+  found while writing the manuscript, not by any check in the code. \\
 \textbf{0.14} & 2026-09 &
   Two indicators added, two built and removed
   (\S\ref{sec:exergy:kpi}, \S\ref{sec:exergy:removed}). Added: the four

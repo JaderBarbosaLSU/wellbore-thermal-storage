@@ -1,6 +1,6 @@
 """THUMS -- latent heat storage in a repurposed wellbore.
 
-The live model, v0.14. One formulation (enthalpy, "Formulation C"), one sizing
+The live model, v0.15. One formulation (enthalpy, "Formulation C"), one sizing
 framing (specify the hardware and march to cyclic steady state), no root
 finding anywhere.
 
@@ -2292,6 +2292,23 @@ def geothermal_resource(case, r):
         convention=case.exergy_convention)
 
 
+def borehole_pumping(case, r):
+    """Field pumping power for both half-cycles, kW, at the realised flows.
+
+    ONE copy, called by `performance_indices` and by `exergy_audit`. It was
+    briefly written twice -- which is the DN-24 trap exactly, a formula
+    duplicated so that a later fix can land in one copy and miss the other.
+    """
+    gv = case.geom_vector()
+    N, T = r["N_wells"], r["T"]
+    _, pp_dc = calculate_pressure_drop(gv, r["m1_dc"], case.fluid2,
+                                       r["T_2d_realised"], T["T_3d"], case.P)
+    _, pp_ch = calculate_pressure_drop(gv, r["m1_ch"], case.fluid2,
+                                       T["T_4c"], r["T_2c_realised"], case.P)
+    f = case.num_tubes * N / 1000.0
+    return pp_ch * f, pp_dc * f
+
+
 def exergy_audit(case, r):
     """Exergy destruction by component over one cycle at CSS, in kWh.
 
@@ -2430,15 +2447,59 @@ def exergy_audit(case, r):
                 - (stream_exergy_rate(case, m_w_dc, r["T_2d_realised"],
                                       T["T_3d"]) * t_dc - dEx_dc))
 
-    W_in = W_el_in * t_ch
-    W_out = case.W_dot_el_out * t_dc
-    Ex_geo = geo["Ex_charged_kW"] * t_ch
-    Ex_loss = geo["Ex_loss_kW"] * t_ch
+    # ---- REALISED BASIS, and the same boundary as eta_RTE ----------------
+    # Until v0.15 this function evaluated the whole audit on the TARGET
+    # duties out of `energy_budget`, and charged no pumping. `eta_RTE` in
+    # `performance_indices` does neither: it uses the energy the field
+    # actually moved, and it charges the borehole parasitics. So psi and
+    # eta_RTE were computed on different bases and different boundaries, and
+    # quoting "0.317 becomes 0.246" compared two things that were not
+    # like for like. The manuscript caught this before the code did.
+    #
+    # At CSS the storage efficiency is identically 1 and lambda is forced to
+    # zero, so Q_charge = Q_discharge and D_E_out_HP = D_E_in_ORC: both half
+    # cycles scale by the SAME factor, and the rebase is one multiplication.
+    scale = r["Q_discharge_kJ"] / Eb["D_E_in_ORC"]
+    for key in I:
+        I[key] *= scale
+    W_in = W_el_in * t_ch * scale
+    W_out = case.W_dot_el_out * t_dc * scale
+    Ex_geo = geo["Ex_charged_kW"] * t_ch * scale
+    Ex_loss = geo["Ex_loss_kW"] * t_ch * scale
+
+    # The borehole parasitics are work in, dissipated as friction in the
+    # well, so they are an input AND a destruction. Charged with eta_RTE's
+    # sign convention: the charge pump adds to the input, the discharge pump
+    # subtracts from the output. They are computed at the realised flows
+    # already, so they are not scaled.
+    pump_ch, pump_dc = borehole_pumping(case, r)
+    P_ch, P_dc = pump_ch * t_ch, pump_dc * t_dc
+    I["borehole pumping"] = P_ch + P_dc
+    W_in += P_ch
+    W_out -= P_dc
+
     boundary = W_in + Ex_geo - W_out - Ex_loss
     total = sum(I.values())
 
+    # A THIRD GATE, and the only one that spans two functions. eta_RTE is
+    # computed here from the scaled budget plus the parasitics, and in
+    # `performance_indices` from the energy the field actually moved. Two
+    # routes, one answer. It is what would have caught the basis mismatch
+    # that the manuscript found before the code did, and it can only hold
+    # while psi and eta_RTE share a boundary -- which is the point.
+    # Recomputed the way `performance_indices` does it -- from the energy the
+    # field moved and the same parasitics -- rather than from the budget.
+    Q_in_ORC = r["Q_discharge_kJ"] / (t_dc * 3600.0)
+    Q_out_HP = r["Q_charge_kJ"] / (t_ch * 3600.0)
+    rk_eff = case.W_dot_el_out / case.ElG_eff / Eb["Q_dot_in_ORC"]
+    cop_r = Eb["Q_dot_out_HP"] / (Eb["W_dot_el_in"] * case.ElH_eff)
+    W_out_pi = (Q_in_ORC * rk_eff * case.ElG_eff - pump_dc) * t_dc
+    W_in_pi = (Q_out_HP / cop_r / case.ElH_eff + pump_ch) * t_ch
+    gates["eta_RTE"] = (W_out / W_in * W_in_pi, W_out_pi)
+
     return dict(
         T_0=T_0, components_kWh=I, total_kWh=total, boundary_kWh=boundary,
+        scale=scale, pumping_ch_kWh=P_ch, pumping_dc_kWh=P_dc,
         gates={k: dict(sum_kWh=a, boundary_kWh=b, residual_kWh=a - b,
                        residual_rel=abs(a - b) / abs(b) if b else float("nan"))
                for k, (a, b) in gates.items()},
@@ -2449,7 +2510,7 @@ def exergy_audit(case, r):
         Ex_geo_kWh=Ex_geo, Ex_reinject_kWh=Ex_loss,
         eta_RTE=W_out / W_in,
         psi=W_out / (W_in + Ex_geo),
-        psi_stripped=W_out / (W_in + geo["Ex_stripped_kW"] * t_ch),
+        psi_stripped=W_out / (W_in + geo["Ex_stripped_kW"] * t_ch * scale),
         shares={k: v / total for k, v in I.items()},
         geo=geo)
 
@@ -2547,13 +2608,7 @@ def performance_indices(case, r):
     W_el_in = Q_dot_out_HP / cop / case.ElH_eff
 
     # ---- parasitics, at the realised temperatures ------------------------
-    gv = case.geom_vector()
-    _, pp_dc = calculate_pressure_drop(gv, r["m1_dc"], case.fluid2,
-                                       r["T_2d_realised"], T["T_3d"], case.P)
-    _, pp_ch = calculate_pressure_drop(gv, r["m1_ch"], case.fluid2,
-                                       T["T_4c"], r["T_2c_realised"], case.P)
-    pumping_dc = pp_dc * case.num_tubes * N / 1000.0     # kW, field
-    pumping_ch = pp_ch * case.num_tubes * N / 1000.0
+    pumping_ch, pumping_dc = borehole_pumping(case, r)
 
     # ---- the indicators --------------------------------------------------
     eta_T = W_el_out / Q_dot_in_ORC

@@ -1,0 +1,1111 @@
+%=======================================================================
+\section{Modelling}
+\label{sec:model}
+%=======================================================================
+
+The system comprises three subsystems connected in series by a closed loop of
+pressurised water (the secondary fluid): the HTHP, which operates during the
+charging period of duration $t_\mathrm{ch}$; the ORC, which operates during
+the discharging period of duration $t_\mathrm{dc}$; and a field of $\Nw$
+identical borehole batteries, through which the water flows in one direction
+while charging and in the opposite direction while discharging. The two
+thermodynamic cycles are modelled as steady-flow cycles evaluated once per
+design point (Section~\ref{sec:cycles}); the borehole batteries are modelled
+as a transient, one-dimensional heat exchanger marched through repeated
+charge--discharge cycles (Sections~\ref{sec:BB}--\ref{sec:pumping}). The two
+models exchange the temperatures and mass flow rates of the secondary fluid
+and a small number of scalar efficiencies.
+
+%-----------------------------------------------------------------------
+\subsection{P2H2P thermodynamic cycles}
+\label{sec:cycles}
+%-----------------------------------------------------------------------
+
+The P2H2P cycles consist of a two-stage ORC with vapour reheating and
+regeneration and a two-stage HTHP with a flash-gas separator and two
+internal heat exchangers (regenerators), Fig.~\ref{fig:layout}. Both operate
+with cyclopentane, a dry fluid whose saturated-vapour line has a positive
+slope on the $T$--$s$ diagram. State points are labelled with a numeral and a
+suffix identifying the stream: \textsf{e} for the ORC working fluid,
+\textsf{h} for the HTHP refrigerant, \textsf{c} and \textsf{d} for the
+secondary water during charging and discharging, and \textsf{a} for the
+heat-pump source stream.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}{0.85\linewidth}\centering
+    \figorbox{\linewidth}{Block_diag_ch.png}
+    \subcaption{Charging period}
+  \end{subfigure}\\[4pt]
+  \begin{subfigure}{0.85\linewidth}\centering
+    \figorbox{\linewidth}{Block_diag_dc.png}
+    \subcaption{Discharging period}
+  \end{subfigure}
+  \caption{Components and state points of the two-stage P2H2P energy
+  conversion system. \chk{the IHTC-18 diagrams show $T_\mathrm{2d}$ and
+  $T_\mathrm{3d}$ with the old discharge closure; relabel the borehole inlet
+  and outlet if needed, and add the ORC evaporator composite curves as an
+  inset or separate figure.}}
+  \label{fig:layout}
+\end{figure}
+
+The following idealisations apply to both cycles. Heat exchangers and
+connecting lines are free of pressure drop and heat loss, throttling is
+isenthalpic, and the thermophysical properties of all fluids are obtained from
+CoolProp \cite{CoolProp}. Compression, pumping and expansion are adiabatic but
+irreversible, and are characterised by isentropic efficiencies applied to the
+state points themselves: for an expansion from state $a$ to pressure $p_b$
+and for a compression (or pumping) from state $a$ to pressure $p_b$,
+respectively,
+\begin{equation}
+  h_b=h_a-\eta_{s,t}\left(h_a-h_{b,s}\right),
+  \qquad
+  h_b=h_a+\frac{h_{b,s}-h_a}{\eta_{s}},
+  \qquad
+  h_{b,s}=h\left(p_b,s_a\right),
+  \label{eq:eta-s}
+\end{equation}
+where $h_{b,s}$ is the enthalpy at the end of the isentropic process and
+$\eta_{s}$ stands for $\eta_{s,p}$ (ORC pumps) or $\eta_{s,c}$ (HTHP
+compressors). $\etaORC$ and $\COP$ are therefore the efficiencies of the
+irreversible cycles, and only the electrical conversion efficiencies of the
+generator and the motor are applied outside the working fluid
+(Section~\ref{sec:budget}). Applying the isentropic efficiencies to the state
+points, rather than as multipliers on the work of an internally reversible
+cycle, has two consequences. First, the states downstream of each machine
+move: the turbine exhausts are hotter, which changes the reheat duty, the
+feed-heater split and the evaporator composite curve, and the HTHP suction
+states change as described in Section~\ref{sec:hthp}. Second, the entropy
+generated in each machine appears in the state points, which is a
+prerequisite for a component-wise exergy balance; an isentropic machine
+destroys no exergy by construction. \chk{v0.12 reference case: the
+multiplier treatment underestimates $\COP$ by \SI{5.4}{\percent} (2.346
+against 2.473) and $\eta_\mathrm{ORC}\eta_\mathrm{turb}$ by
+\SI{0.2}{\percent}; state this if the comparison with Ref.~\cite{KoIHTC2026}
+is discussed.}
+
+\subsubsection{Organic Rankine cycle}
+\label{sec:orc}
+
+The ORC (Fig.~\ref{fig:layout}b) combines vapour reheating, which raises the
+mean temperature of heat addition and the specific work, with a closed
+regenerative feed heater supplied by a bleed from the high-pressure turbine,
+which reduces the external heat required in the evaporator. Its state points
+are defined as follows. The condensing temperature $T_\mathrm{1e}$ and the
+evaporating temperature $T_\mathrm{3e}$ fix the two pressure levels,
+\begin{equation}
+  p_\mathrm{cond,e}=p_\mathrm{sat}(T_\mathrm{1e}),\qquad
+  p_\mathrm{evap,e}=p_\mathrm{sat}(T_\mathrm{3e}),\qquad
+  p_\mathrm{int,e}=\tfrac12\left(p_\mathrm{evap,e}+p_\mathrm{cond,e}\right),
+  \label{eq:orc-p}
+\end{equation}
+where the intermediate (reheat and bleed) pressure $p_\mathrm{int,e}$ is taken
+as the arithmetic mean of the two. State~3e is saturated vapour at
+$p_\mathrm{evap,e}$ (high-pressure turbine inlet); 5e is the outlet of the
+expansion of 3e to $p_\mathrm{int,e}$ with efficiency $\eta_{s,t}$,
+Eq.~\eqref{eq:eta-s}; 6e is the reheated vapour at $p_\mathrm{int,e}$ and
+$T_\mathrm{6e}=T_\mathrm{3e}$ (reheat to the live-steam temperature); 4e is the
+outlet of the expansion of 6e to $p_\mathrm{cond,e}$ with efficiency
+$\eta_{s,t}$; 1e is saturated liquid at $p_\mathrm{cond,e}$; 2e is the outlet
+of pump~1, compressing 1e to $p_\mathrm{evap,e}$ with efficiency
+$\eta_{s,p}$; 7e is saturated liquid at $p_\mathrm{int,e}$ (drain of the feed
+heater); 8e is the outlet of pump~2, compressing 7e to $p_\mathrm{evap,e}$
+with efficiency $\eta_{s,p}$; and 9e is the feed liquid leaving the heater at
+$p_\mathrm{evap,e}$ and $T_\mathrm{9e}=T_\mathrm{7e}$, i.e.\ with zero
+terminal approach \chk{the feed-heater duty is therefore an upper bound}.
+
+Per unit mass flowing through the evaporator, a fraction $1-y$ is bled at
+state~5e and condensed in the feed heater, and the complementary fraction $y$
+is reheated, expanded to the condenser and returned by pump~1. An energy
+balance on the feed heater, $y\,(h_\mathrm{9e}-h_\mathrm{2e})
+=(1-y)(h_\mathrm{5e}-h_\mathrm{7e})$, gives
+\begin{equation}
+  y=\frac{h_\mathrm{5e}-h_\mathrm{7e}}
+         {\left(h_\mathrm{9e}-h_\mathrm{2e}\right)
+          +\left(h_\mathrm{5e}-h_\mathrm{7e}\right)},
+  \label{eq:orc-y}
+\end{equation}
+and adiabatic mixing of the two liquid streams gives the evaporator inlet,
+\begin{equation}
+  h_\mathrm{10e}=y\,h_\mathrm{9e}+(1-y)\,h_\mathrm{8e}.
+  \label{eq:orc-h10}
+\end{equation}
+The heat input per unit evaporator flow is supplied in the main evaporator
+($\mathrm{10e}\to\mathrm{3e}$) and in the reheater
+($\mathrm{5e}\to\mathrm{6e}$, fraction $y$), and the heat rejected is that of
+fraction $y$ in the condenser ($\mathrm{4e}\to\mathrm{1e}$). By an energy
+balance on the whole cycle, the net specific work is the difference between the
+two, and the thermal efficiency of the cycle is
+\begin{equation}
+  \etaORC=\frac{\left(h_\mathrm{3e}-h_\mathrm{10e}\right)
+     +y\left(h_\mathrm{6e}-h_\mathrm{5e}\right)
+     -y\left(h_\mathrm{4e}-h_\mathrm{1e}\right)}
+    {\left(h_\mathrm{3e}-h_\mathrm{10e}\right)
+     +y\left(h_\mathrm{6e}-h_\mathrm{5e}\right)},
+  \label{eq:eta-orc}
+\end{equation}
+in which the turbine and pump irreversibilities enter through
+$h_\mathrm{4e}$, $h_\mathrm{5e}$ (and hence $y$), $h_\mathrm{2e}$ and
+$h_\mathrm{8e}$, and the pump work is accounted for implicitly.
+
+\paragraph{Condensing temperature} The condenser rejects heat to a sink at
+$T_\mathrm{sink}$, which may rise by $\Delta T_\mathrm{sink,gl}$ across the
+condenser; the condensing temperature is set by an approach to the sink
+outlet,
+\begin{equation}
+  T_\mathrm{1e}=T_\mathrm{sink}+\Delta T_\mathrm{sink,gl}+\Delta T_\mathrm{E,sink}.
+  \label{eq:T1e}
+\end{equation}
+With $\Delta T_\mathrm{sink,gl}=0$ the sink is an infinite reservoir.
+
+\paragraph{Evaporating temperature: a pinch constraint}
+The evaporator transfers heat from the secondary water, which cools from the
+borehole outlet temperature $T_\mathrm{2d}$ to the borehole inlet temperature
+$T_\mathrm{3d}$, to two cold streams in parallel: the main stream
+($\mathrm{10e}\to\mathrm{3e}$ at $p_\mathrm{evap,e}$: liquid preheating
+followed by isothermal boiling at $T_\mathrm{3e}$) and the reheat stream
+($\mathrm{5e}\to\mathrm{6e}$ at $p_\mathrm{int,e}$, superheated vapour). The
+cold composite curve $T_\mathrm{wf}(Q)$ is constructed from the enthalpies of
+both streams as a function of the cumulative duty $Q$ measured from the cold
+end, and the hot composite $T_\mathrm{w}(Q)$ from the enthalpy of water at the
+loop pressure $p_\mathrm{w}$, scaled to the same total duty. Both are built on
+real enthalpy: the boiling plateau is a horizontal segment in $(Q,T)$, and
+the specific heat of water varies appreciably over a glide of tens of
+kelvin. The minimum temperature difference in the exchanger is
+\begin{equation}
+  \Delta T_\mathrm{pinch}\left(T_\mathrm{3e}\right)=
+  \min_{0\le Q\le Q_\mathrm{tot}}
+  \left[T_\mathrm{w}(Q)-T_\mathrm{wf}(Q;T_\mathrm{3e})\right],
+  \label{eq:pinch}
+\end{equation}
+and the evaporating temperature is the largest value that satisfies both a
+minimum hot-end approach and a minimum pinch,
+\begin{equation}
+  T_\mathrm{3e}=\min\Bigl(T_\mathrm{2d}-\Delta T_\mathrm{2D,3E},\;
+  \max\bigl\{T:\Delta T_\mathrm{pinch}(T)\ge\Delta T_\mathrm{pinch,ORC}\bigr\}
+  \Bigr).
+  \label{eq:T3e}
+\end{equation}
+The hot-end condition alone, which is the natural one to write and the one
+used in Ref.~\cite{KoIHTC2026}, is sufficient only when the two streams have
+comparable heat-capacity curves. A subcritical cycle with a dry fluid absorbs
+the larger part of its heat isothermally, so the pinch lies in the interior of
+the exchanger, at the onset of boiling. If a fraction $\phi$ of the cycle heat
+input is absorbed at $T_\mathrm{3e}$, and the water specific heat is taken as
+constant, the water can supply that heat only from the part of its glide lying
+above $T_\mathrm{3e}$, which gives the necessary condition
+\begin{equation}
+  \frac{T_\mathrm{2d}-T_\mathrm{3e}}{T_\mathrm{2d}-T_\mathrm{3d}}\;\ge\;\phi.
+  \label{eq:pinch-necessary}
+\end{equation}
+Equation~\eqref{eq:pinch-necessary} shows that the evaporating temperature,
+and with it $\etaORC$, falls approximately in proportion to the width of the
+discharging glide. This couples a storage-side design variable to the power
+cycle and is the origin of the interior optimum in the glide discussed in
+Section~\ref{sec:results}. The maximisation in Eq.~\eqref{eq:T3e} is performed
+by bisection on $T_\mathrm{3e}$ between $T_\mathrm{1e}+\SI{10}{\kelvin}$ and
+the hot-end limit.
+
+\subsubsection{High-temperature heat pump}
+\label{sec:hthp}
+
+The HTHP (Fig.~\ref{fig:layout}a) is a two-stage vapour-compression cycle with
+a flash-gas separator at an intermediate pressure and two regenerators, R1 and
+R2. The condensing and evaporating temperatures fix
+\begin{equation}
+  p_\mathrm{cond,h}=p_\mathrm{sat}(T_\mathrm{2h}),\qquad
+  p_\mathrm{evap,h}=p_\mathrm{sat}(T_\mathrm{13h}),\qquad
+  p_\mathrm{int,h}=\sqrt{p_\mathrm{evap,h}\,p_\mathrm{cond,h}},
+  \label{eq:hp-p}
+\end{equation}
+with the intermediate pressure taken as the geometric mean. State~2h, the
+high-stage compressor outlet, is saturated vapour at $p_\mathrm{cond,h}$.
+State~3h, the condenser outlet, is subcooled liquid at $p_\mathrm{cond,h}$
+and $T_\mathrm{3h}=T_\mathrm{2h}-\Delta T_\mathrm{sub}$. State~13h, the
+evaporator outlet, is saturated vapour at $p_\mathrm{evap,h}$. States~9h and
+10h are the saturated liquid and saturated vapour leaving the separator at
+$p_\mathrm{int,h}$.
+
+Because cyclopentane is a dry fluid, compression from saturated vapour can
+terminate inside the two-phase region. The design therefore fixes the
+discharge of each stage and determines its suction state backwards, so that the
+high-stage compressor discharges exactly on the dew line at $T_\mathrm{2h}$ and
+the condenser has no desuperheating duty. The high-stage suction state
+$\mathrm{6h}\equiv\mathrm{11h}$ at $p_\mathrm{int,h}$ is the state whose
+compression to $p_\mathrm{cond,h}$ with efficiency $\eta_{s,c}$ ends at
+$h_\mathrm{2h}$, and the low-stage suction state~1h at $p_\mathrm{evap,h}$ is
+the state whose compression to $p_\mathrm{int,h}$ ends at $h_\mathrm{11h}$, so
+that the low-stage discharge coincides with state~11h ($\mathrm{5h}\equiv
+\mathrm{11h}$):
+\begin{equation}
+  h_\mathrm{11h}+\frac{h\left(p_\mathrm{cond,h},s_\mathrm{11h}\right)-h_\mathrm{11h}}{\eta_{s,c}}
+  =h_\mathrm{2h},
+  \qquad
+  h_\mathrm{1h}+\frac{h\left(p_\mathrm{int,h},s_\mathrm{1h}\right)-h_\mathrm{1h}}{\eta_{s,c}}
+  =h_\mathrm{11h},
+  \label{eq:hp-suction}
+\end{equation}
+with $s=s(p,h)$ at the respective suction pressure. For $\eta_{s,c}=1$ the
+relations reduce to $s_\mathrm{11h}=s_\mathrm{1h}=s_\mathrm{2h}$ and are
+explicit; for $\eta_{s,c}<1$ they are implicit in the suction enthalpy and are
+solved by bisection, the high stage first. An irreversible compression
+ending at the same discharge state requires a colder suction, so the suction
+superheat decreases as $\eta_{s,c}$ decreases \chk{\SI{14.3}{\kelvin} at
+$\eta_{s,c}=0.85$ against \SI{26.5}{\kelvin} for isentropic compression, v0.12
+reference case}. The superheat at 1h and 11h is supplied by the two
+regenerators, which cool the condensate on its way to the expansion valves:
+
+\begin{itemize}[leftmargin=1.8em,itemsep=1pt]
+\item R1 cools the full condensate flow from 3h to 12h and heats the flashed
+  vapour, of mass fraction $x_\mathrm{8h}$, from 10h to 11h;
+\item R2 cools the condensate further from 12h to 7h and heats the suction
+  flow, of mass fraction $1-x_\mathrm{8h}$, from 13h to 1h.
+\end{itemize}
+
+\noindent
+The condensate is then throttled from 7h into the separator
+($h_\mathrm{8h}=h_\mathrm{7h}$), and the separator liquid is throttled from 9h
+into the evaporator ($h_\mathrm{4h}=h_\mathrm{9h}$). Per unit mass of
+refrigerant through the condenser, the energy balances on R1, R2 and the
+separator are
+\begin{align}
+  h_\mathrm{12h}&=h_\mathrm{3h}-x_\mathrm{8h}\left(h_\mathrm{11h}-h_\mathrm{10h}\right),
+  \label{eq:R1}\\
+  h_\mathrm{7h}&=h_\mathrm{12h}-\left(1-x_\mathrm{8h}\right)
+                 \left(h_\mathrm{1h}-h_\mathrm{13h}\right),
+  \label{eq:R2}\\
+  x_\mathrm{8h}&=\frac{h_\mathrm{7h}-h_\mathrm{9h}}{h_\mathrm{10h}-h_\mathrm{9h}}.
+  \label{eq:flash}
+\end{align}
+Equations~\eqref{eq:R1}--\eqref{eq:flash} are linear in $x_\mathrm{8h}$ once
+the pressure levels are fixed and are solved by fixed-point iteration, which
+contracts strongly and converges to $10^{-12}$ in a few iterations. It is
+emphasised that the regenerators are closed by energy rather than by
+prescribed effectivenesses: the effectiveness each regenerator requires,
+\begin{equation}
+  \varepsilon_\mathrm{R1}=\frac{T_\mathrm{11h}-T_\mathrm{10h}}{T_\mathrm{3h}-T_\mathrm{10h}},
+  \qquad
+  \varepsilon_\mathrm{R2}=\frac{T_\mathrm{1h}-T_\mathrm{13h}}{T_\mathrm{12h}-T_\mathrm{13h}},
+  \label{eq:eps-R}
+\end{equation}
+is an output of the cycle and a feasibility check (a value above unity would
+indicate a regenerator that cannot exist). \chk{Earlier versions used the
+evaporator-inlet quality $x_\mathrm{4h}$ in place of the flow split
+$1-x_\mathrm{8h}$ in Eq.~\eqref{eq:R2}; this violated the energy balance by
+\SI{4.8}{\percent} and inflated the COP. State in the paper that the IHTC-18
+COP is superseded, or leave implicit.}
+
+The low-stage compressor handles the fraction $1-x_\mathrm{8h}$ from 1h to
+5h, and the high-stage compressor the full flow from 6h to 2h, with
+$h_\mathrm{6h}=h_\mathrm{5h}$. The heating coefficient of performance of the
+cycle is therefore
+\begin{equation}
+  \COP=\frac{h_\mathrm{2h}-h_\mathrm{3h}}
+  {\left(h_\mathrm{2h}-h_\mathrm{1h}\right)
+   -x_\mathrm{8h}\left(h_\mathrm{5h}-h_\mathrm{1h}\right)}.
+  \label{eq:cop}
+\end{equation}
+
+\paragraph{Evaporating and condensing temperatures}
+The heat pump draws heat from a source stream (e.g.\ co-produced water) that
+enters at $T_\mathrm{3a}=T_\mathrm{source}$ and is cooled by
+$\Delta T_\mathrm{3A,4A}$. The evaporating temperature is set by a cold-end
+approach to the cooled source, and the condensing temperature by a hot-end
+approach to the water leaving the condenser:
+\begin{equation}
+  T_\mathrm{13h}=T_\mathrm{source}-\Delta T_\mathrm{3A,4A}-\Delta T_\mathrm{pinch,HPE},
+  \qquad
+  T_\mathrm{2h}=T_\mathrm{3c}+\Delta T_\mathrm{2H,3C}.
+  \label{eq:hp-T}
+\end{equation}
+
+\subsubsection{Secondary-fluid loop and temperature closure}
+\label{sec:closure-T}
+
+The secondary fluid is liquid water at $p_\mathrm{w}=\SI{1}{\mega\pascal}$,
+which keeps it subcooled over the full operating range. During charging it is
+heated in the HTHP condenser from $T_\mathrm{2c}$ to $T_\mathrm{3c}$ and
+enters the borehole field directly, so that the borehole charging inlet is
+$T_\mathrm{4c}=T_\mathrm{3c}$ and the borehole charging outlet is
+$T_\mathrm{2c}$. During discharging it enters the field at $T_\mathrm{3d}$,
+leaves at $T_\mathrm{2d}$, and is cooled in the ORC evaporator back to
+$T_\mathrm{3d}$.
+
+Of the four exchanger terminal temperatures of the borehole field, only the
+two \emph{inlets} are boundary conditions of the borehole model; the two
+outlets are results of the heat transfer and cannot be prescribed without
+over-determining the problem. The inlets are set by approaches to the
+melting temperatures of the first PCM layer each half-cycle meets,
+\begin{equation}
+  T_\mathrm{4c}=T_{m}^\mathrm{top}+\Delta T_\mathrm{4C,M},
+  \qquad
+  T_\mathrm{3d}=T_{m}^\mathrm{bot}-\Delta T_\mathrm{M,1D},
+  \label{eq:inlets}
+\end{equation}
+where $T_{m}^\mathrm{top}$ and $T_{m}^\mathrm{bot}$ are the highest and lowest
+melting temperatures of the cascade (Section~\ref{sec:cascade}); the charging
+superheat $\Delta T_\mathrm{4C,M}$ drives melting and the discharging
+subcooling $\Delta T_\mathrm{M,1D}$ drives freezing.
+
+Three temperature spans of similar magnitude appear in the loop, and they are
+not equally free. The charging glide $\Delta T_\mathrm{3C,2C}
+=T_\mathrm{3c}-T_\mathrm{2c}$ across the HTHP condenser is specified, and
+since nothing lies between the condenser and the borehole the water falls by
+the same amount across the field during charging; the discharging glide
+$\Delta T_\mathrm{3D,2D}=T_\mathrm{2d}-T_\mathrm{3d}$ across the ORC evaporator
+is specified independently and is likewise equal to the rise across the field
+during discharging. The cascade span (Section~\ref{sec:cascade}) is a third,
+independent specification. The first two fix the two mass flow rates
+(Section~\ref{sec:budget}); the outlet temperatures that the field actually
+produces are reported and compared with them (Section~\ref{sec:css}).
+
+Because $T_\mathrm{3e}$ depends on $T_\mathrm{2d}$ through
+Eq.~\eqref{eq:T3e}, and $T_\mathrm{2d}$ is a result of the borehole model, the
+ORC is first evaluated at the provisional outlet
+$T_\mathrm{2d}^{(0)}=T_\mathrm{3d}+\Delta T_\mathrm{3D,2D}$ and then once more
+at the flow-averaged outlet that the store produces
+(Section~\ref{sec:procedure}). Table~\ref{tab:closure} collects the closure
+relations.
+
+\begin{table}[htbp]
+\centering
+\caption{Temperature closure of the ORC, HTHP and secondary-fluid loop.}
+\label{tab:closure}
+\small
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}l l l@{}}
+\toprule
+parameter & relation & role \\
+\midrule
+$\Delta T_\mathrm{E,sink}$, $\Delta T_\mathrm{sink,gl}$ &
+  $T_\mathrm{1e}=T_\mathrm{sink}+\Delta T_\mathrm{sink,gl}+\Delta T_\mathrm{E,sink}$ &
+  ORC condensing temperature\\
+$\Delta T_\mathrm{pinch,ORC}$, $\Delta T_\mathrm{2D,3E}$ &
+  Eq.~\eqref{eq:T3e} & ORC evaporating temperature\\
+$\Delta T_\mathrm{M,1D}$ &
+  $T_\mathrm{3d}=T_{m}^\mathrm{bot}-\Delta T_\mathrm{M,1D}$ &
+  borehole discharging inlet\\
+$\Delta T_\mathrm{3D,2D}$ &
+  $T_\mathrm{2d}^{(0)}=T_\mathrm{3d}+\Delta T_\mathrm{3D,2D}$ &
+  discharging flow; provisional outlet\\
+$\Delta T_\mathrm{4C,M}$ &
+  $T_\mathrm{4c}=T_\mathrm{3c}=T_{m}^\mathrm{top}+\Delta T_\mathrm{4C,M}$ &
+  borehole charging inlet\\
+$\Delta T_\mathrm{3C,2C}$ &
+  $T_\mathrm{2c}=T_\mathrm{3c}-\Delta T_\mathrm{3C,2C}$ &
+  charging flow; nominal outlet\\
+$\Delta T_\mathrm{2H,3C}$ &
+  $T_\mathrm{2h}=T_\mathrm{3c}+\Delta T_\mathrm{2H,3C}$ &
+  HTHP condensing temperature\\
+$\Delta T_\mathrm{sub}$ &
+  $T_\mathrm{3h}=T_\mathrm{2h}-\Delta T_\mathrm{sub}$ &
+  condensate subcooling\\
+$\Delta T_\mathrm{3A,4A}$, $\Delta T_\mathrm{pinch,HPE}$ &
+  $T_\mathrm{13h}=T_\mathrm{source}-\Delta T_\mathrm{3A,4A}-\Delta T_\mathrm{pinch,HPE}$ &
+  HTHP evaporating temperature\\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\subsubsection{Energy budget and performance indicators}
+\label{sec:budget}
+
+For a specified net electrical output $\dot W_\mathrm{el,out}$ over
+$t_\mathrm{dc}$, the heat rate and energy the ORC requires from the field are
+\begin{equation}
+  \dot Q_\mathrm{in,ORC}=\frac{\dot W_\mathrm{el,out}}
+     {\etaORC\,\eta_\mathrm{gen}},
+  \qquad
+  \Delta E_\mathrm{in,ORC}=\dot Q_\mathrm{in,ORC}\,t_\mathrm{dc},
+  \label{eq:E-orc}
+\end{equation}
+where $\eta_\mathrm{gen}$ is the generator efficiency. The isentropic
+efficiencies of the machines are already contained in $\etaORC$ and $\COP$
+through Eq.~\eqref{eq:eta-s}, and applying them again here would count them
+twice. The energy
+the HTHP must deliver to the field over $t_\mathrm{ch}$, and the
+corresponding heat rate, are
+\begin{equation}
+  \Delta E_\mathrm{out,HP}=\left(1+\lambda\right)\Delta E_\mathrm{in,ORC},
+  \qquad
+  \dot Q_\mathrm{out,HP}=\frac{\Delta E_\mathrm{out,HP}}{t_\mathrm{ch}},
+  \label{eq:E-hp}
+\end{equation}
+and the electrical power drawn by the compressors is
+\begin{equation}
+  \dot W_\mathrm{el,in}=\frac{\dot Q_\mathrm{out,HP}}
+    {\COP\,\eta_\mathrm{mot}},
+  \label{eq:W-in}
+\end{equation}
+with $\eta_\mathrm{mot}$ the efficiency of the compressor motors. The storage-loss allowance $\lambda$
+was set to \SI{5}{\percent} in Ref.~\cite{KoIHTC2026}; in the present model
+the store is adiabatic and at cyclic steady state it returns exactly the
+energy it absorbs, so $\lambda=0$ (Section~\ref{sec:css}).
+
+The mass flow rates of water per hairpin follow from the prescribed glides,
+\begin{gather}
+  \md_\mathrm{ch}=\frac{\dot Q_\mathrm{out,HP}}
+     {\left[h_\mathrm{w}(T_\mathrm{3c})-h_\mathrm{w}(T_\mathrm{2c})\right]\Nw\,n_{t}},
+  \notag\\
+  \md_\mathrm{dc}=\frac{\dot Q_\mathrm{in,ORC}}
+     {\left[h_\mathrm{w}(T_\mathrm{3d}+\Delta T_\mathrm{3D,2D})-h_\mathrm{w}(T_\mathrm{3d})\right]\Nw\,n_{t}},
+  \label{eq:mdot}
+\end{gather}
+where $n_t$ is the number of hairpins per well and $h_\mathrm{w}(T)$ is the
+specific enthalpy of water at $T$ and $p_\mathrm{w}$. Enthalpy differences are
+used rather than a mean specific heat multiplied by the glide: over the
+\SI{55}{\kelvin} charging rise the linearised form is \SI{0.1}{\percent}
+inconsistent with the water enthalpies used elsewhere in the model. The
+inconsistency is invisible to every energy balance, because both sides use the
+same flow, but it generates a spurious exergy source of several kilowatts and
+was detected by the exergy audit of Section~\ref{sec:exergy}.
+
+The performance of the system is characterised by the indicators below, all
+evaluated at cyclic steady state from the energies the field actually
+transfers, $\Delta E_\mathrm{ch}$ and $\Delta E_\mathrm{dc}$, rather than from
+the target values. The net electrical outputs are
+\begin{equation}
+  \dot W_\mathrm{el,out}^{*}=\frac{\Delta E_\mathrm{dc}}{t_\mathrm{dc}}\,
+     \etaORC\,\eta_\mathrm{gen},
+  \qquad
+  \dot W_\mathrm{el,in}^{*}=\frac{\Delta E_\mathrm{ch}}{t_\mathrm{ch}\,
+     \COP\,\eta_\mathrm{mot}},
+  \label{eq:W-star}
+\end{equation}
+and, with $\dot W_\mathrm{f,ch}$ and $\dot W_\mathrm{f,dc}$ the pumping powers
+of the whole field (Section~\ref{sec:pumping}),
+\begin{align}
+  \eta_{T}&=\frac{\dot W_\mathrm{el,out}^{*}\,t_\mathrm{dc}}{\Delta E_\mathrm{dc}}
+           =\etaORC\,\eta_\mathrm{gen},
+  &
+  \eta_{T,\mathrm{eff}}&=\eta_{T}-\frac{\dot W_\mathrm{f,dc}\,t_\mathrm{dc}}
+           {\Delta E_\mathrm{dc}},
+  \label{eq:etaT}\\
+  \mathrm{RTE}&=\frac{\left(\dot W_\mathrm{el,out}^{*}-\dot W_\mathrm{f,dc}\right)t_\mathrm{dc}}
+                     {\left(\dot W_\mathrm{el,in}^{*}+\dot W_\mathrm{f,ch}\right)t_\mathrm{ch}},
+  &
+  \varepsilon_\mathrm{RTE}&=\mathrm{RTE}\left(\bar\varepsilon_\mathrm{ch}
+           -\bar\varepsilon_\mathrm{dc}\right),
+  \label{eq:rte}
+\end{align}
+where $\bar\varepsilon_\mathrm{ch}$ and $\bar\varepsilon_\mathrm{dc}$ are the
+mean melted fractions of the store at the end of charging and of discharging
+(Section~\ref{sec:state}). $\eta_{T}$ is a property of the power block alone;
+$\eta_{T,\mathrm{eff}}$ charges the discharging pumping power against it;
+RTE is the round-trip efficiency with both pumping parasitics; and
+$\varepsilon_\mathrm{RTE}$ weights RTE by the fraction of the PCM inventory
+that actually cycles, which penalises PCM that never changes phase. Weighting
+by the cycled fraction rather than by the melted fraction at the end of
+charging is necessary under the present formulation, because the melted
+fraction saturates at unity once a segment is fully molten while further heat
+continues to enter it as superheat. The thermal and net electrical energies
+delivered per well and cycle, and the thermal energy density of the store, are
+\begin{equation}
+  \Delta E_\mathrm{therm}=\frac{\Delta E_\mathrm{dc}}{\Nw},\qquad
+  \Delta E_\mathrm{elec}=\eta_{T,\mathrm{eff}}\,\Delta E_\mathrm{therm},\qquad
+  \rho_{E}=\frac{\Delta E_\mathrm{therm}}{\Vwell}.
+  \label{eq:dE}
+\end{equation}
+
+\paragraph{Exchanger conductance}
+Every approach temperature in Table~\ref{tab:closure} improves an efficiency
+at the expense of heat-exchanger area. To make that cost visible, the overall
+conductance required by each of the four plant exchangers is evaluated from
+its composite curves,
+\begin{equation}
+  UA=\int_{0}^{Q_\mathrm{tot}}\frac{\mathrm{d}Q}{\Delta T(Q)},
+  \qquad
+  \Delta T_\mathrm{eff}=\frac{Q_\mathrm{tot}}{UA},
+  \label{eq:UA}
+\end{equation}
+where $\Delta T(Q)$ is the local hot-minus-cold temperature difference. For a
+counterflow exchanger with two sensible streams of constant specific heat,
+$\Delta T_\mathrm{eff}$ reduces to the logarithmic mean temperature
+difference; with a phase change on one side it is its correct generalisation.
+
+%-----------------------------------------------------------------------
+\subsection{Borehole thermal regenerator}
+\label{sec:BB}
+%-----------------------------------------------------------------------
+
+\subsubsection{Geometry and PCM cascade}
+\label{sec:cascade}
+
+Each well of depth $\Lwell$ and diameter $D_\mathrm{well}$ contains $n_t$
+hairpins of finned tube, so that $2n_t$ tube legs run the full depth
+(Fig.~\ref{fig:bb_geom}). The tubes have inner and outer radii $r_i$ and $r_e$
+and carry $n_f$ longitudinal rectangular fins per leg, of radial length $L_f$
+and thickness $t_f$. The developed length of one hairpin is
+$\Ltube=2\Lwell$, and the coordinate $s\in[0,\Ltube]$ runs along it in the
+direction of the charging flow. The remainder of the borehole is filled with
+PCM, of volume
+\begin{equation}
+  \Vwell=\frac{\pi D_\mathrm{well}^{2}}{4}\Lwell
+    -2n_t\left(\pi r_e^{2}+n_f t_f L_f\right)\Lwell .
+  \label{eq:Vwell}
+\end{equation}
+The PCM belonging to one hairpin per unit developed length, and the radius of
+the equivalent cylindrical cell owned by one tube leg, are
+\begin{equation}
+  \Aav=\frac{\Vwell}{n_t\,\Ltube},
+  \qquad
+  r_\mathrm{cell}=\frac{D_\mathrm{well}/2}{\sqrt{2n_t}} .
+  \label{eq:Aav}
+\end{equation}
+$r_\mathrm{cell}$ is the radius at which the phase-change fronts of adjacent
+legs meet, and $\delta_\mathrm{merge}=r_\mathrm{cell}-r_e$ is the largest
+front thickness for which the annular representation of
+Section~\ref{sec:network} is geometrically meaningful.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}{0.42\linewidth}\centering
+    \figorbox{\linewidth}{multilayer_BB_ch.png}
+    \subcaption{Charging}
+  \end{subfigure}\hfill
+  \begin{subfigure}{0.42\linewidth}\centering
+    \figorbox{\linewidth}{multilayer_BB_dc.png}
+    \subcaption{Discharging}
+  \end{subfigure}
+  \caption{PCM layering in the borehole battery and the direction of the
+  secondary-fluid flow in each half-cycle.}
+  \label{fig:bb_geom}
+\end{figure}
+
+The PCM is divided along $s$ into $\Nlay$ layers of equal developed length,
+each with its own melting temperature. During charging the water enters at
+$s=0$, meets the layer of highest melting temperature first, and cools as it
+proceeds; during discharging it enters at $s=\Ltube$, meets the layer of
+lowest melting temperature first, and warms as it proceeds. The layers are
+graded so that, for a linear water glide, each layer sits
+$\Delta T_\mathrm{4C,M}$ below the charging water at its own leading face.
+With a cascade parameter $\Delta T_\mathrm{casc}$ (equal to
+$\Delta T_\mathrm{3C,2C}$ unless specified otherwise), the layer melting
+temperatures and the coldest one are
+\begin{gather}
+  T_{m,k}=T_{m}^\mathrm{top}-(k-1)\frac{\Delta T_\mathrm{casc}}{\Nlay},
+  \quad k=1,\ldots,\Nlay,
+  \notag\\
+  T_{m}^\mathrm{bot}\equiv T_{m,\Nlay}
+  =T_{m}^\mathrm{top}-\Delta T_\mathrm{casc}\,\frac{\Nlay-1}{\Nlay}.
+  \label{eq:cascade}
+\end{gather}
+The span of melting temperatures is one layer width short of
+$\Delta T_\mathrm{casc}$, because the last layer is referenced to the water
+entering it rather than leaving the well. Within each layer the local
+superheat of the charging water therefore decays from
+$\Delta T_\mathrm{4C,M}$ at the leading face to
+$\Delta T_\mathrm{4C,M}-\Delta T_\mathrm{casc}/\Nlay$ at the trailing face.
+The driving margin at the far end of the well, evaluated for a linear glide
+against the melting temperatures, is positive only if
+\begin{equation}
+  \Delta T_\mathrm{casc}\frac{\Nlay-1}{\Nlay}
+  >\Delta T_\mathrm{3C,2C}-\Delta T_\mathrm{4C,M}
+  \label{eq:span-bound}
+\end{equation}
+during charging, and analogously with $\Delta T_\mathrm{3D,2D}$ and
+$\Delta T_\mathrm{M,1D}$ during discharging. Equation~\eqref{eq:span-bound} is
+a design guideline rather than a feasibility condition. It assumes that the
+PCM sits at its melting temperature; under the enthalpy formulation of
+Section~\ref{sec:state} the PCM superheats and subcools, the direction of heat
+transfer is taken segment by segment from the sign of $T_j-\Tpcm$, and a
+negative margin is handled consistently. Its consequence is that the far end
+of the store is driven through a sensible branch, or briefly in reverse,
+rather than through the phase change, which lowers the cycled fraction of the
+inventory.
+
+\subsubsection{Hypotheses}
+\label{sec:hypotheses}
+
+The borehole model rests on the following hypotheses.
+
+\begin{description}[leftmargin=2.2em,itemsep=2pt,font=\normalfont\bfseries]
+\item[H1] \emph{Lumped segment state.} The PCM belonging to a segment of
+  length $\Delta s$ is represented by one enthalpy; its temperature is not
+  resolved radially except through the closures of
+  Section~\ref{sec:network}.
+\item[H2] \emph{Quasi-steady conduction in the PCM.} The conduction
+  resistance of the PCM is that of the steady profile for the instantaneous
+  geometry. The approximation is controlled by the Stefan number
+  $\mathrm{Ste}=c_{p}\Delta T/\hm$.
+\item[H3] \emph{Concentric fronts.} The phase-change front about each leg is a
+  concentric cylinder of radius $r_e+\delta$, unaffected by the fins and by
+  the fronts of neighbouring legs, $\delta\le\delta_\mathrm{merge}$.
+\item[H4] \emph{Conduction only.} Natural convection in the liquid PCM is
+  neglected, consistent with a macro-encapsulated PCM, and there is no mixing
+  between layers.
+\item[H5] \emph{One front per segment.} A segment contains at most one
+  solid--liquid interface.
+\item[H6] \emph{Adiabatic store.} There is no heat exchange with the
+  formation and no axial conduction in the PCM or the tube wall; segments
+  interact only through the water.
+\item[H7] \emph{Quasi-steady secondary fluid.} The water is an incompressible
+  single-phase liquid whose heat capacity within the tube is negligible
+  compared with the PCM; its temperature profile is established
+  instantaneously at each time level. Viscous dissipation is neglected.
+\item[H8] \emph{Developed-length cascade.} The layers are laid along the
+  developed length of the hairpin, so the downward and upward legs carry
+  different melting temperatures at the same depth.
+\item[H9] \emph{Thermally independent legs.} No heat is exchanged between the
+  two legs of a hairpin, or between hairpins.
+\item[H10] \emph{Constant PCM volume.} The volume change on melting is
+  neglected; the latent inventory is referred to the solid density $\rho_s$
+  in both directions, so that the melted fraction is a mass fraction and the
+  energy banked on charging equals that available on discharging.
+\end{description}
+
+\noindent
+H3, H6 and H9 are the hypotheses most likely to affect the quantitative
+results and are assessed in Section~\ref{sec:limitations}.
+
+\subsubsection{Enthalpy state and constitutive relation}
+\label{sec:state}
+
+Let $E'$ denote the enthalpy of the PCM belonging to one segment, per unit
+developed tube length, measured from a datum of fully solid material at that
+segment's melting temperature $T_{m}$. The latent capacity and the two
+sensible capacities per unit length are
+\begin{equation}
+  \Elat=\rho_s\hm\Aav,\qquad
+  C_{s}=\rho_s c_{p,s}\Aav,\qquad
+  C_{l}=\rho_s c_{p,l}\Aav .
+  \label{eq:caps}
+\end{equation}
+The PCM temperature follows from $E'$ through the piecewise-linear
+constitutive relation
+\begin{equation}
+  \Tpcm(E')=
+  \begin{dcases}
+    T_{m}+E'/C_{s}, & E'<0 \quad\text{(subcooled solid)},\\[2pt]
+    T_{m},          & 0\le E'\le\Elat \quad\text{(two-phase)},\\[2pt]
+    T_{m}+\left(E'-\Elat\right)/C_{l}, & E'>\Elat \quad\text{(superheated liquid)},
+  \end{dcases}
+  \label{eq:enth-curve}
+\end{equation}
+and the melted area and local melted fraction from
+\begin{equation}
+  \Amelt=\frac{\min\left(\max(E',0),\,\Elat\right)}{\rho_s\hm},
+  \qquad
+  \eloc=\frac{\Amelt}{\Aav}\in[0,1].
+  \label{eq:amelt}
+\end{equation}
+
+Equation~\eqref{eq:enth-curve}, read as $E'(T)$, is multivalued at $T_m$,
+which is why temperature cannot serve as the state variable; read as
+$T(E')$, the direction used here, it is single-valued everywhere
+(Fig.~\ref{fig:enthalpy-curve}). The saturation in Eq.~\eqref{eq:amelt} is
+not a limiter added to suppress unphysical values but a consequence of the
+definition: a segment cannot melt PCM it does not contain, and any further
+energy is stored as superheat. The bound $\eloc\in[0,1]$ is therefore
+satisfied by construction, and no heat delivered by the network is ever
+discarded. A formulation that carries $\Amelt$ (or $\delta$) as its state
+cannot represent the two sensible branches: once a segment has melted
+completely it must either continue to melt non-existent material or discard
+the heat it receives.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[>=Stealth, scale=0.9]
+  \draw[->,thick] (0,0) -- (9.6,0) node[right] {$\Tpcm$};
+  \draw[->,thick] (0,0) -- (0,5.8) node[above] {$E'$};
+  \draw[dashed,gray] (4.9,0) -- (4.9,5.4);
+  \node[below] at (4.9,0) {$T_{m}$};
+  \draw[dashed,gray] (0,1.5) -- (4.9,1.5) node[pos=0,left] {$0$};
+  \draw[dashed,gray] (0,3.5) -- (4.9,3.5) node[pos=0,left] {$\Elat$};
+  \draw[very thick] (1.2,0.05) -- (4.9,1.5);
+  \draw[very thick] (4.9,1.5) -- (4.9,3.5);
+  \draw[very thick] (4.9,3.5) -- (8.9,5.05);
+  \node[align=left,font=\small,anchor=west] at (0.85,2.65)
+    {subcooled solid\\[1pt] slope $C_{s}$};
+  \node[align=center,font=\small] at (7.0,5.35)
+    {superheated liquid\\[1pt] slope $C_{l}$};
+  \draw[<->,thick,black!60] (4.55,1.5) -- (4.55,3.5);
+  \node[font=\small,align=right,anchor=east,black!70] at (4.4,1.95)
+    {latent\\$\rho_s\hm\Aav$};
+  \filldraw (4.9,2.6) circle (1.6pt);
+  \draw[->,black!60] (5.9,1.75) -- (4.99,2.53);
+  \node[font=\small,align=left,anchor=west,black!70] at (5.95,1.6)
+    {$\eloc=E'/\Elat$};
+\end{tikzpicture}
+\caption{Constitutive relation of the segment state, Eq.~\eqref{eq:enth-curve}.
+Read as $T(E')$ it is single-valued; position along the vertical segment is
+the melted fraction.}
+\label{fig:enthalpy-curve}
+\end{figure}
+
+\subsubsection{Segment energy balances and closure}
+\label{sec:segment}
+
+The developed length is divided into $n_s$ segments of length
+$\Delta s=\Ltube/n_s$. For segment $j$, spanning $[s_j,s_{j+1}]$, two control
+volumes share the tube wall (Fig.~\ref{fig:cv}): CV1, the PCM belonging to the
+segment, which is closed and stationary; and CV2, the water within the tube
+over the same interval, which enters at $T_j$ and leaves at $T_{j+1}$. Let
+$q'_j$ denote the heat rate per unit length crossing from CV2 into CV1.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[>=Stealth, font=\small, scale=1.0]
+  % PCM annulus (CV1)
+  \fill[black!8] (0,1.1) rectangle (8,2.2);
+  \fill[black!8] (0,-2.2) rectangle (8,-1.1);
+  \draw[dashed] (0,1.1) rectangle (8,2.2);
+  \draw[dashed] (0,-2.2) rectangle (8,-1.1);
+  % melt shell
+  \fill[orange!25] (0,1.1) rectangle (8,1.55);
+  \fill[orange!25] (0,-1.55) rectangle (8,-1.1);
+  % tube wall
+  \fill[black!45] (0,0.85) rectangle (8,1.1);
+  \fill[black!45] (0,-1.1) rectangle (8,-0.85);
+  % water (CV2)
+  \draw[thick,blue!60!black,dashed] (0,-0.8) rectangle (8,0.8);
+  \draw[->,thick,blue!60!black] (-1.2,0) -- (-0.1,0) node[midway,above] {$\md,\,T_j$};
+  \draw[->,thick,blue!60!black] (8.1,0) -- (9.3,0) node[midway,above] {$T_{j+1}$};
+  \node[blue!60!black] at (4,0.25) {CV2: water};
+  \node[blue!60!black] at (4,-0.3) {$\md c_p\,\mathrm{d}T/\mathrm{d}s=-q'$};
+  \node at (4,1.9) {CV1: PCM, state $E'_j$, $\Tpcm(E'_j)$};
+  \node at (4,-1.9) {CV1};
+  \draw[->,thick,red!70!black] (2,0.55) -- (2,1.35) node[right,pos=0.7] {$q'_j$};
+  \draw[->,thick,red!70!black] (6,-0.55) -- (6,-1.35) node[right,pos=0.7] {$q'_j$};
+  % dimensions
+  \draw[<->] (0,2.5) -- (8,2.5) node[midway,above] {$\Delta s$};
+  \draw[<->] (8.4,0) -- (8.4,0.85);  \node[right] at (8.45,0.45) {$r_i$};
+  \draw[<->] (9.2,0) -- (9.2,1.1);   \node[right] at (9.25,0.95) {$r_e$};
+  \node[right,orange!70!black] at (8.1,1.4) {shell $\delta$};
+  \draw[<->] (10.2,0) -- (10.2,2.2); \node[right] at (10.25,1.9) {$r_\mathrm{cell}$};
+  \node[anchor=west] at (0,-2.55) {adiabatic at $r_\mathrm{cell}$ (H6, H9); no axial conduction (H6)};
+\end{tikzpicture}
+\caption{Control volumes of segment $j$ (axial section of one leg; fins not
+shown). CV1 is the PCM belonging to the segment, CV2 the water over the same
+interval. The shaded shell adjacent to the tube is the conduction path of
+Eq.~\eqref{eq:shell-choice}.}
+\label{fig:cv}
+\end{figure}
+
+\paragraph{PCM balance} CV1 does no work and, by H6, exchanges heat only
+through the tube wall, so the first law reduces to
+\begin{equation}
+  \frac{\mathrm{d}E'_j}{\mathrm{d}t}=q'_j .
+  \label{eq:pcm-balance}
+\end{equation}
+
+\paragraph{Water balance} For incompressible single-phase flow without
+viscous dissipation, the energy equation per unit tube length is
+\begin{equation}
+  \rho_\mathrm{w}A_\mathrm{flow}c_{p}\frac{\partial T}{\partial t}
+  +\md c_{p}\frac{\partial T}{\partial s}=-q'(s),
+  \label{eq:fluid-pde}
+\end{equation}
+with $A_\mathrm{flow}=\pi r_i^{2}$. Hypothesis H7 drops the storage term. The
+approximation rests on the separation between the transit time of the water
+through the hairpin, $\Ltube\rho_\mathrm{w}A_\mathrm{flow}/\md$, and the time
+over which the PCM state evolves, $t_\mathrm{ch}$ or $t_\mathrm{dc}$, and on
+the ratio of the energy held in the water to the latent inventory,
+$\rho_\mathrm{w}A_\mathrm{flow}c_{p}\Delta T/\Elat$; both are quantified for
+the reference case in Section~\ref{sec:conditions}. Its cost is that the
+start-up transient of about one transit time at the beginning of each
+half-cycle is not resolved.
+
+The local heat flux is closed on the resistance network of
+Section~\ref{sec:network}, referred to the inner tube area,
+\begin{equation}
+  q'(s)=2\pi r_i\,\Ui\left[T(s)-\Tpcm\right],
+  \label{eq:local-flux}
+\end{equation}
+where CV1 presents the single temperature $\Tpcm(E'_j)$ over the whole
+segment (H1). The perimeter is the inner perimeter $2\pi r_i$ because $\Ui$ is
+referred to the inner area and already contains the finned outer surface.
+
+\paragraph{Integration across the segment} With $\Tpcm$ and $\Ui$ held
+constant over the segment, the steady form of Eq.~\eqref{eq:fluid-pde} with
+Eq.~\eqref{eq:local-flux} is a linear ordinary differential equation in $s$
+whose solution is the single-stream exchanger result
+\begin{equation}
+  T_{j+1}=\Tpcm+\left(T_j-\Tpcm\right)e^{-\NTU_j},
+  \qquad
+  \NTU_j=\frac{2\pi r_i\,\Ui\,\Delta s}{\md c_{p}} .
+  \label{eq:ntu}
+\end{equation}
+The water is a stream of finite capacity rate $\md c_p$ exchanging heat with
+an isothermal reservoir; the effectiveness is $1-e^{-\NTU}$.
+
+\paragraph{Closure} The heat given up by the water over the segment is the
+enthalpy it loses, $\md c_p(T_j-T_{j+1})=q'_j\Delta s$, so that
+\begin{equation}
+  q'_j=K_j\left(T_j-\Tpcm\right),
+  \qquad
+  K_j=\frac{\md c_{p}\left(1-e^{-\NTU_j}\right)}{\Delta s},
+  \label{eq:K}
+\end{equation}
+and substituting into Eq.~\eqref{eq:pcm-balance} gives the segment equation
+\begin{equation}
+  \frac{\mathrm{d}E'_j}{\mathrm{d}t}=K_j\left[T_j-\Tpcm(E'_j)\right],
+  \label{eq:ode}
+\end{equation}
+with one unknown per segment; $T_j$ is handed down by the upstream segment and
+$K_j$ depends on the state through $\Ui$. The water temperature is then
+advanced by
+\begin{equation}
+  T_{j+1}=T_j-\frac{q'_j\,\Delta s}{\md c_{p}} .
+  \label{eq:T-march}
+\end{equation}
+
+The closure of Eq.~\eqref{eq:K} is not the product
+$2\pi r_i\Ui$ that results from evaluating Eq.~\eqref{eq:local-flux} at the
+segment inlet. The ratio of the two is
+\begin{equation}
+  \frac{K_j}{2\pi r_i\Ui}=\frac{1-e^{-\NTU_j}}{\NTU_j}\le 1 .
+  \label{eq:K-ratio}
+\end{equation}
+As $\NTU\to0$ the ratio tends to unity; as $\NTU\to\infty$, $K\to\md
+c_p/\Delta s$, a limit set by the capacity rate of the water rather than by the
+wall. The product form has no such limit and permits $T_{j+1}<\Tpcm$, i.e.\
+heat transfer from cold to hot, at a rate that increases without bound as the
+wall conductance improves. The discrepancy is largest where the phase-change
+shell is thin and the exchanger most effective.
+
+\subsubsection{Thermal resistance network}
+\label{sec:network}
+
+The overall heat transfer coefficient referred to the inner tube area is the
+series combination of internal convection, internal fouling, wall conduction
+and the PCM-side resistance of the finned outer surface,
+\begin{equation}
+  \frac{1}{\Ui}=\frac{1}{h_i}+R''_{f,i}+\frac{r_i}{k_\mathrm{wall}}\ln\frac{r_e}{r_i}
+  +\frac{2\pi r_i}{P_T\,\etao\,h_e},
+  \qquad
+  h_e=\frac{k}{r_e\ln\left(1+\delta/r_e\right)},
+  \label{eq:Ui}
+\end{equation}
+where $h_e$ is the conductance of a cylindrical PCM shell of thickness $\delta$
+and conductivity $k$, referred to the outer tube surface, and the factor
+$2\pi r_i/(P_T\etao)$ transfers it to the inner area.
+
+\paragraph{Internal convection} The coefficient $h_i$ is evaluated locally at
+the bulk water temperature $T_j$ of each segment and at each time level. For
+$\mathrm{Re}=4\md/(\pi D_i\mu)\ge2300$ the Gnielinski correlation
+\cite{Gnielinski1976} is used with the Petukhov friction factor,
+\begin{equation}
+  \mathrm{Nu}=\frac{(f/8)(\mathrm{Re}-1000)\mathrm{Pr}}
+    {1+12.7\sqrt{f/8}\left(\mathrm{Pr}^{2/3}-1\right)},
+  \qquad
+  f=\left(0.79\ln\mathrm{Re}-1.64\right)^{-2},
+  \label{eq:gnielinski}
+\end{equation}
+and $\mathrm{Nu}=3.66$ otherwise, with $h_i=\mathrm{Nu}\,k_\mathrm{w}/D_i$, where $k_\mathrm{w}$ is the conductivity of water. Properties are evaluated at $T_j$ and $p_\mathrm{w}$.
+
+\paragraph{Fins} With $n_f$ longitudinal fins per leg, the finned perimeter,
+the fin efficiency and the overall surface efficiency are
+\begin{gather}
+  P_T=2\pi r_e+2n_fL_f,
+  \qquad
+  \etao=1-\frac{n_fA_f}{A_t}\left(1-\etaf\right),
+  \label{eq:fins}\\
+  \etaf=\frac{\tanh(mL_c)}{mL_c},
+  \qquad m=\sqrt{\frac{2h_e}{k_\mathrm{fin}t_f}},
+  \qquad L_c=L_f+\frac{t_f}{2},
+  \label{eq:fin-eff}
+\end{gather}
+with $A_f=(2L_f+t_f)\Delta s$ the surface of one fin and $A_t=P_T\Delta s$
+the total outer surface of the segment \cite{Incropera}. The fin conductivity
+is taken equal to that of the tube wall, $k_\mathrm{fin}=k_\mathrm{wall}$.
+
+\paragraph{Shell thickness from the melted area}
+The fin metal occupies part of the annulus about the tube, so the melted area
+and the shell thickness are related by
+\begin{equation}
+  A=\pi\left[(r_e+\delta)^{2}-r_e^{2}\right]-n_ft_f\min(\delta,L_f),
+  \label{eq:area-fins}
+\end{equation}
+which is inverted in closed form on each branch:
+\begin{align}
+  \delta\le L_f:&\quad
+    \pi\delta^{2}+\left(2\pi r_e-n_ft_f\right)\delta-A=0,
+  \label{eq:delta-in}\\
+  \delta>L_f:&\quad
+    \pi\delta^{2}+2\pi r_e\delta-\left(A+n_ft_fL_f\right)=0 .
+  \label{eq:delta-out}
+\end{align}
+
+\paragraph{Conduction path: which shell the heat crosses}
+The PCM-side term in Eq.~\eqref{eq:Ui} is the resistance of a shell growing
+outward from the tube wall, so the model must specify the material of which
+that shell consists. Because the tube is the driven boundary in both
+half-cycles, the phase-change front always originates at the wall and moves
+outward. During melting the shell is liquid and its area is the melted area;
+during freezing the shell is the newly frozen solid and its area is the solid
+area, the remaining liquid being displaced beyond the front and out of the
+conduction path. For a segment in the two-phase branch,
+\begin{equation}
+  \left(A,\,k\right)=
+  \begin{cases}
+    \left(\Amelt,\;k_{l}\right), & T_j>\Tpcm\quad\text{(melting)},\\[3pt]
+    \left(\Aav-\Amelt,\;k_{s}\right), & T_j<\Tpcm\quad\text{(freezing)},
+  \end{cases}
+  \label{eq:shell-choice}
+\end{equation}
+and $\delta$ follows from Eqs.~\eqref{eq:delta-in}--\eqref{eq:delta-out}. The
+direction is taken from the sign of the driving temperature difference, which
+is known before the conductance is formed. Equation~\eqref{eq:shell-choice}
+gives the correct limits without special treatment: a fully solid segment
+beginning to melt and a fully liquid segment beginning to freeze both have
+$\delta=0$. Using the melted area in both directions, as in a formulation
+written for melting and not revisited, reverses the freezing half-cycle in
+time: a segment frozen solid is assigned zero resistance where the physical
+resistance is greatest.
+
+\paragraph{Single-phase segments: a mean-to-surface resistance}
+A segment in either sensible branch contains no front, and
+Eq.~\eqref{eq:shell-choice} does not apply. In that case $\Tpcm$ is the
+volume-mean temperature of the cell, because the state is the cell's total
+enthalpy, and the resistance consistent with a mean temperature is the
+mean-to-surface resistance. Consider the cell as an annulus
+$r_e\le r\le r_\mathrm{cell}$, adiabatic at $r_\mathrm{cell}$ (a symmetry
+surface with the neighbouring cell), storing sensible heat at a uniform
+volumetric rate $\dot s$. Under quasi-steady conditions (H2) the heat crossing
+radius $r$ is that stored beyond it,
+$-k\,2\pi r\,\mathrm{d}T/\mathrm{d}r=\dot s\pi(r_\mathrm{cell}^{2}-r^{2})$,
+which integrates to
+\begin{equation}
+  T(r_e)-T(r)=\frac{\dot s}{2k}
+  \left[r_\mathrm{cell}^{2}\ln\frac{r}{r_e}-\frac{r^{2}-r_e^{2}}{2}\right].
+  \label{eq:bulk-profile}
+\end{equation}
+Averaging over the cell volume and dividing by
+$Q'=\dot s\pi(r_\mathrm{cell}^{2}-r_e^{2})$ gives
+$R'_\mathrm{bulk}=S/(2\pi k)$, with the geometric shape factor
+\begin{equation}
+  S=\frac{4\beta^{4}\ln\beta-3\beta^{4}+4\beta^{2}-1}
+         {4\left(\beta^{2}-1\right)^{2}},
+  \qquad \beta=\frac{r_\mathrm{cell}}{r_e}.
+  \label{eq:shape-factor}
+\end{equation}
+The conductivity cancels, so the same $S$ serves both phases. For a thin
+annulus of thickness $L=r_\mathrm{cell}-r_e\ll r_e$, $S\to L/(3r_e)$ and
+$R'_\mathrm{bulk}\to L/(3kA)$ with $A=2\pi r_e$ per unit length, which is the
+mean-to-surface resistance of a plane slab with uniform generation. The
+resistance enters Eq.~\eqref{eq:Ui} as an equivalent thickness
+$\delta_\mathrm{eq}=r_e\left(e^{S}-1\right)$, with $k=k_s$ for subcooled
+solid and $k=k_l$ for superheated liquid, so that the fin relations apply
+unchanged.
+
+The PCM-side resistance is consequently discontinuous at the branch
+boundaries. As $\eloc\to1^{-}$ during melting the front approaches
+$r_\mathrm{cell}$ and $R'\to\ln\beta/(2\pi k_l)$, whereas once the segment is
+superheated $R'=S/(2\pi k_l)$. The discontinuity reflects the change in the
+reference temperature, from the front to the volume mean, rather than a
+physical event, and the heat flux remains bounded because $K$ is limited by the
+capacity rate, Eq.~\eqref{eq:K}.
+
+\paragraph{Limitation of a single front} After the first half-cycle from a
+uniformly solid store, the phase distribution within a cell is in general
+three-region: at cyclic steady state a charge begins with residual liquid in
+the outer part of the cell, so that melting produces liquid at the tube, solid
+in the middle and liquid beyond it. Equation~\eqref{eq:shell-choice} is the
+better of the two single-front approximations, not a resolution of this
+geometry; this is the content of H5.
+
+%-----------------------------------------------------------------------
+\subsection{Charging period}
+\label{sec:BB_ch}
+%-----------------------------------------------------------------------
+
+During charging the water enters every hairpin at $s=0$ with temperature
+$T_\mathrm{4c}$, Eq.~\eqref{eq:inlets}, and mass flow rate $\md_\mathrm{ch}$,
+Eq.~\eqref{eq:mdot}, and the segment equations
+\eqref{eq:ode}--\eqref{eq:T-march} are marched in the direction of increasing
+$s$ against the cascade of Eq.~\eqref{eq:cascade}. Segments in which
+$T_j>\Tpcm$ melt through a liquid shell of conductivity $k_l$; segments that
+have completed melting superheat, their driving difference $T_j-\Tpcm$
+decreases, and the heat they no longer absorb is carried downstream. The
+energy absorbed by the field over the charging period and the melted fraction
+of the store at its end are
+\begin{gather}
+  \Delta E_\mathrm{ch}=\Nw\,n_t\int_{0}^{t_\mathrm{ch}}\sum_{j=1}^{n_s}
+     q'_j(t)\,\Delta s\,\mathrm{d}t
+   =\Nw\,n_t\,\Delta s\sum_{j=1}^{n_s}\left[E'_j(t_\mathrm{ch})-E'_j(0)\right],
+  \label{eq:Ech}\\
+  \bar\varepsilon_\mathrm{ch}=\frac1{n_s}\sum_{j=1}^{n_s}
+     \varepsilon_{\mathrm{loc},j}(t_\mathrm{ch}),
+  \label{eq:eps-ch}
+\end{gather}
+where the second equality holds exactly under the integrator of
+Section~\ref{sec:integration}. The water leaves the field at the
+time-dependent temperature $T_{n_s+1}(t)$; its flow-averaged value,
+\begin{equation}
+  \overline{T}_\mathrm{2c}=\frac{1}{t_\mathrm{ch}}\int_{0}^{t_\mathrm{ch}}
+     T_{n_s+1}(t)\,\mathrm{d}t,
+  \label{eq:Tout-mean}
+\end{equation}
+is the temperature at which the water returns to the HTHP condenser and is
+reported alongside the nominal value $T_\mathrm{2c}$ of
+Table~\ref{tab:closure}. At constant $\md$ and $c_p$ the flow average reduces
+to the time average; on a logarithmic time grid it must be weighted by the
+step length.
+
+%-----------------------------------------------------------------------
+\subsection{Discharging period}
+\label{sec:BB_dc}
+%-----------------------------------------------------------------------
+
+During discharging the flow reverses. The water enters at $s=\Ltube$ with
+temperature $T_\mathrm{3d}$, Eq.~\eqref{eq:inlets}, and mass flow rate
+$\md_\mathrm{dc}$, and meets the layer of lowest melting temperature first.
+The governing equations are those of the charging period, with two
+differences. First, in segments where $T_j<\Tpcm$ the conduction path is the
+frozen shell with conductivity $k_s$, Eq.~\eqref{eq:shell-choice}. Second, the
+march proceeds in the direction of decreasing $s$, so both the melting
+temperatures and the initial state, which is the state at the end of the
+preceding charge, are mirrored with the march index; since $E'$ is measured
+from a datum at each segment's own $T_m$, mirroring the cascade without
+mirroring the state would displace the datum by up to the full cascade span.
+The energy released by the field and the residual melted fraction are
+\begin{equation}
+  \Delta E_\mathrm{dc}=-\Nw\,n_t\,\Delta s\sum_{j=1}^{n_s}
+     \left[E'_j(t_\mathrm{dc})-E'_j(0)\right],
+  \qquad
+  \bar\varepsilon_\mathrm{dc}=\frac1{n_s}\sum_{j=1}^{n_s}
+     \varepsilon_{\mathrm{loc},j}(t_\mathrm{dc}),
+  \label{eq:Edc}
+\end{equation}
+and the flow-averaged outlet $\overline{T}_\mathrm{2d}$, defined as in
+Eq.~\eqref{eq:Tout-mean}, is the temperature at which the water reaches the ORC
+evaporator.
+
+Idle periods between the half-cycles, if any, leave the state unchanged under
+H6, since the store is adiabatic and carries no axial conduction.
+
+%-----------------------------------------------------------------------
+\subsection{Pressure drop and pumping power}
+\label{sec:pumping}
+%-----------------------------------------------------------------------
+
+The pressure drop over one hairpin is the sum of distributed friction over the
+developed length and local losses at the entrance, the return bends and the
+exit,
+\begin{equation}
+  \Delta p_f=\left(f\,\frac{\Ltube}{D_i}+\sum K_\mathrm{loc}\right)
+            \frac{\rho_\mathrm{w}\bar u^{2}}{2},
+  \qquad
+  \bar u=\frac{\md}{\rho_\mathrm{w}\pi r_i^{2}},
+  \label{eq:dp}
+\end{equation}
+with $\sum K_\mathrm{loc}=0.5+2(2.2)+1.0$ \chk{one 180$^\circ$ return per
+hairpin, or two?} and the Darcy friction factor of a smooth tube:
+$f=64/\mathrm{Re}$ for $\mathrm{Re}<2000$; $f=0.3164\,\mathrm{Re}^{-1/4}$
+(Blasius) for $\mathrm{Re}\le10^{5}$; and
+$f=0.0032+0.221\,\mathrm{Re}^{-0.237}$ for $10^{5}<\mathrm{Re}\le10^{6}$.
+\chk{Ref.~\cite{KoIHTC2026} states Haaland \cite{Haaland1983}; the code uses the
+smooth-tube forms above. Choose one and make paper and code agree.} Water
+properties are evaluated at the loop pressure and the mean of the inlet and
+the flow-averaged outlet temperatures. The hydraulic pumping power of the
+field in each half-cycle is
+\begin{equation}
+  \dot W_{f}=\Nw\,n_t\,\frac{\md}{\rho_\mathrm{w}}\,\Delta p_f ,
+  \label{eq:Wf}
+\end{equation}
+\chk{no pump efficiency is applied; add $\eta_\mathrm{pump}$ or state it.}
+evaluated with $\md_\mathrm{ch}$ and $\md_\mathrm{dc}$ respectively and
+entering Eqs.~\eqref{eq:etaT}--\eqref{eq:rte}. Hydrostatic contributions
+cancel over a closed hairpin.
+

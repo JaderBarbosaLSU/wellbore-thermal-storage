@@ -100,29 +100,32 @@ the configuration that needs the most geothermal wells. Under
   \centering
   \caption{The source-side trade. $\Delta T_{3A4A}$ was a quiet approach
   parameter before v0.13; it is the central design variable of the source
-  side. Cycle-level values.}
+  side. Every row is a full cyclic-steady-state run on the plant basis of
+  \S\ref{sec:exergy:basis}, so these are directly comparable with
+  Table~\ref{tab:exergy:psi}.}
   \label{tab:exergy:dt3a4a}
-  \begin{tabular}{rrrrrrr}
+  \begin{tabular}{rrrrrrrr}
     \toprule
     $\Delta T_{3A4A}$ & $T_{13h}$ & COP & $\eta_{\mathrm{RTE}}$ &
-    $\dot m_{\mathrm{geo}}$ & resource & $\psi$ \\
-    (K) & (\si{\celsius}) & & & (rel.) & used & (\texttt{resource}) \\
+    $\dot m_{\mathrm{geo}}$ & resource & $\psi_{\mathrm{str}}$ & $\psi$ \\
+    (K) & (\si{\celsius}) & & & (rel.) & used & & \\
     \midrule
-     5 & 50.0 & 2.582 & 0.345 & 1.000 & \SI{22.6}{\percent} & 0.197 \\
-    10 & 45.0 & 2.473 & 0.330 & 0.466 & \SI{42.6}{\percent} & 0.245 \\
-    15 & 40.0 & 2.373 & 0.317 & 0.289 & \SI{59.7}{\percent} & 0.260 \\
-    20 & 35.0 & 2.280 & 0.305 & 0.202 & \SI{73.9}{\percent} & \textbf{0.264} \\
-    25 & 30.0 & 2.194 & 0.293 & 0.151 & \SI{85.2}{\percent} & 0.263 \\
-    30 & 25.0 & 2.114 & 0.283 & 0.117 & \SI{93.3}{\percent} & 0.260 \\
+     5 & 50.0 & 2.582 & 0.3310 & 1.000 & \SI{22.7}{\percent} & 0.2833 & 0.1899 \\
+    10 & 45.0 & 2.473 & 0.3172 & 0.486 & \SI{42.6}{\percent} & 0.2764 & 0.2356 \\
+    15 & 40.0 & 2.373 & 0.3045 & 0.315 & \SI{59.7}{\percent} & 0.2698 & 0.2505 \\
+    20 & 35.0 & 2.280 & 0.2927 & 0.229 & \SI{73.9}{\percent} & 0.2634 & \textbf{0.2544} \\
+    25 & 30.0 & 2.194 & 0.2818 & 0.178 & \SI{85.2}{\percent} & 0.2571 & 0.2533 \\
+    30 & 25.0 & 2.114 & 0.2716 & 0.144 & \SI{93.3}{\percent} & 0.2511 & 0.2498 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 The design point sits at $\Delta T_{3A4A} = \SI{10}{\kelvin}$, and
 Table~\ref{tab:exergy:dt3a4a} says that is badly placed for the resource.
-Moving to \SI{20}{\kelvin} costs \SI{7.8}{\percent} of COP and the same of
-$\eta_{\mathrm{RTE}}$, but cuts the geothermal flow to \SI{43}{\percent} of
-its present value and the geothermal well count with it. At plant level that
+Moving to \SI{20}{\kelvin} costs \SI{7.8}{\percent} of COP and
+\SI{7.7}{\percent} of $\eta_{\mathrm{RTE}}$, but cuts the geothermal flow to
+\SI{47}{\percent} of its present value --- from \num{8.07} producers to
+\num{3.80}, and the whole field from \num{23.7} wells to \num{19.4}. At plant level that
 is not a close call. What bounds the move is a constraint the model did not
 previously represent at all: the minimum reinjection temperature the
 formation will tolerate. \texttt{T\_reinject\_min\_C} now exists for it,
@@ -144,6 +147,13 @@ computations, and they agree to $\sim\!10^{-15}$ relative. Reintroducing the
 defect of \S\ref{sec:exergy:defect} makes the heat-pump gate fire at
 $4.5\times10^{-3}$, which is how we know it can.
 
+A third gate was added at v0.15 and is the only one that spans two functions.
+$\eta_{\mathrm{RTE}}$ is computed inside the audit from the scaled budget and
+the parasitics, and independently in \texttt{performance\_indices} from the
+energy the field actually moved; the two agree to the last bit. It exists
+because the manuscript, not the code, caught the defect of
+\S\ref{sec:exergy:basis}, and this is the check that would have caught it.
+
 The \emph{global} sum cannot fail. Because $T_{3c} = T_{4c}$ --- the water
 leaves the condenser and enters the borehole with no state change between ---
 and because the discharge stream is likewise shared, the borehole term, taken
@@ -158,6 +168,43 @@ So the borehole number below is correct but \emph{unverified}. Its independent
 value requires the resolved integral over $z$ and $t$, which needs an entropy
 constitutive curve $s(E')$ alongside the existing $E'(T)$; that is the next
 step and is not in v0.13.
+
+\subsection{Two bases that had to be made one}
+\label{sec:exergy:basis}
+
+Until v0.15 this audit and $\eta_{\mathrm{RTE}}$ were computed on different
+bases and over different boundaries, and the comparison between them --- the
+central claim of \S\ref{sec:exergy:psi} --- was not like for like.
+
+$\eta_{\mathrm{RTE}}$, as defined in \S\ref{sec:cyclic}, uses the energy the
+field \emph{actually moved} and charges the borehole pumping: the charge pump
+adds to the input, the discharge pump subtracts from the output. The exergy
+audit did neither. It evaluated every term on the \emph{target} duties of the
+energy budget, and charged no parasitics at all. Quoting
+``$\num{0.317}$ becomes $\num{0.246}$'' therefore compared two numbers that
+did not share a control volume.
+
+The audit is now rebased. At cyclic steady state the storage efficiency is
+identically unity and $\lambda$ is forced to zero, so
+$\Delta E_{\mathrm{charge}} = \Delta E_{\mathrm{discharge}}$ and
+$\Delta E_{\mathrm{out,HP}} = \Delta E_{\mathrm{in,ORC}}$: both half-cycles
+scale by the same factor and the rebase is a single multiplication, here
+$\num{1.0446}$. The parasitics are then charged with
+$\eta_{\mathrm{RTE}}$'s own sign convention, and because they are work
+dissipated as friction in the well they appear \emph{both} as an input and as
+a destruction --- \SI{703}{\kilo\watt\hour} per cycle, \SI{2.7}{\percent} of
+the total, on its own line in Table~\ref{tab:exergy:components}.
+
+With that done the two share a boundary exactly, which is what the third gate
+of \S\ref{sec:exergy:gates} now asserts. The second-law efficiency moves from
+$\num{0.246}$ to $\num{0.236}$, and the stripped value from $\num{0.289}$ to
+$\num{0.276}$.
+
+It is worth recording how this was found. It was not found by the code, or by
+any check in it: it was found while writing the manuscript, by asking what
+control volume $\psi$ and $\eta_{\mathrm{RTE}}$ each referred to and
+discovering that the answer differed. A definition written out in prose has to
+name its boundary; a definition written in code does not.
 
 \subsection{The defect the gate caught}
 \label{sec:exergy:defect}
@@ -201,33 +248,34 @@ Table~\ref{tab:exergy:components} is the audit at the design point, per cycle.
   \centering
   \caption{Exergy destruction by component, one cycle at CSS,
   $T_0 = \SI{20}{\celsius}$, \texttt{resource} convention. Inputs
-  \SI{30121}{\kilo\watt\hour} electrical and \SI{10549}{\kilo\watt\hour}
+  \SI{31813}{\kilo\watt\hour} electrical and \SI{11019}{\kilo\watt\hour}
   geothermal; outputs \SI{10000}{\kilo\watt\hour} electrical and
-  \SI{6056}{\kilo\watt\hour} reinjected.}
+  \SI{6326}{\kilo\watt\hour} reinjected.}
   \label{tab:exergy:components}
   \begin{tabular}{lrr}
     \toprule
     Component & $I$ (kWh) & share \\
     \midrule
-    HTHP condenser        & 4388.8 & \SI{17.8}{\percent} \\
-    ORC evaporator        & 3662.3 & \SI{14.9}{\percent} \\
-    HTHP throttle 7h--8h  & 2904.9 & \SI{11.8}{\percent} \\
-    HTHP compressor HP    & 1833.2 & \SI{7.4}{\percent} \\
-    borehole\footnotemark[1] & 1666.0 & \SI{6.8}{\percent} \\
-    HTHP motor            & 1506.1 & \SI{6.1}{\percent} \\
-    ORC condenser         & 1250.0 & \SI{5.1}{\percent} \\
-    HTHP evaporator       & 1180.8 & \SI{4.8}{\percent} \\
-    HTHP compressor LP    & 1169.9 & \SI{4.8}{\percent} \\
-    ORC turbine 2         & 1162.8 & \SI{4.7}{\percent} \\
-    HTHP throttle 9h--4h  & 1118.4 & \SI{4.5}{\percent} \\
-    ORC regenerator       &  794.8 & \SI{3.2}{\percent} \\
-    HTHP IHX-2            &  642.5 & \SI{2.6}{\percent} \\
-    ORC generator         &  526.3 & \SI{2.1}{\percent} \\
-    ORC turbine 1         &  489.2 & \SI{2.0}{\percent} \\
-    HTHP IHX-1            &  306.7 & \SI{1.2}{\percent} \\
-    pumps, mixer, flash separator & 11.7 & \SI{0.0}{\percent} \\
+    HTHP condenser        & 4584.4 & \SI{17.4}{\percent} \\
+    ORC evaporator        & 3825.5 & \SI{14.5}{\percent} \\
+    HTHP throttle 7h--8h  & 3034.4 & \SI{11.5}{\percent} \\
+    HTHP compressor HP    & 1915.0 & \SI{7.3}{\percent} \\
+    borehole\footnotemark[1] & 1740.3 & \SI{6.6}{\percent} \\
+    HTHP motor            & 1573.2 & \SI{6.0}{\percent} \\
+    ORC condenser         & 1305.7 & \SI{4.9}{\percent} \\
+    HTHP evaporator       & 1233.4 & \SI{4.7}{\percent} \\
+    HTHP compressor LP    & 1222.1 & \SI{4.6}{\percent} \\
+    ORC turbine 2         & 1214.6 & \SI{4.6}{\percent} \\
+    HTHP throttle 9h--4h  & 1168.3 & \SI{4.4}{\percent} \\
+    ORC regenerator       &  830.2 & \SI{3.1}{\percent} \\
+    \textbf{borehole pumping} &  703.0 & \SI{2.7}{\percent} \\
+    HTHP IHX-2            &  671.2 & \SI{2.5}{\percent} \\
+    ORC generator         &  549.8 & \SI{2.1}{\percent} \\
+    ORC turbine 1         &  511.0 & \SI{1.9}{\percent} \\
+    HTHP IHX-1            &  320.3 & \SI{1.2}{\percent} \\
+    ORC pumps, mixer, separator & 12.2 & \SI{0.0}{\percent} \\
     \midrule
-    total                 & 24614.3 & \\
+    total                 & 26414.6 & \\
     \bottomrule
   \end{tabular}
 
@@ -239,18 +287,18 @@ Three readings, two of them not what we expected.
 
 \paragraph{The exchangers beat the machines.} The condenser, the two
 evaporators, the ORC condenser and the borehole together account for
-\SI{49.4}{\percent} of all destruction. The compressors and turbines account for
-\SI{19}{\percent}. This is a heat-transfer plant, not a turbomachinery plant
+\SI{48.0}{\percent} of all destruction. The compressors and turbines account for
+\SI{18.5}{\percent}. This is a heat-transfer plant, not a turbomachinery plant
 --- which is convenient, because heat transfer is what this model resolves and
 turbomachinery is what it stipulates.
 
 \paragraph{A valve destroys more than the high-pressure compressor.} The
-throttle into the separator, at \SI{11.8}{\percent}, is the third-largest
+throttle into the separator, at \SI{11.5}{\percent}, is the third-largest
 single item and exceeds either compressor. That is a design signal rather than
 a modelling artefact: an expander, or a different flash arrangement, is worth
 more here than any plausible improvement in compressor efficiency.
 
-\paragraph{The borehole is only \SI{6.8}{\percent}.} It is fourth on the list,
+\paragraph{The borehole is only \SI{6.6}{\percent}.} It is fourth on the list,
 and it is the part of the plant nobody else has modelled, so it earns its
 place. But the honest reading is that the store is not where this system
 bleeds. The case for the cascade and for tight approach temperatures has to be
@@ -268,23 +316,23 @@ made on well count and on hardware, not on lost work.
     $\eta_{\mathrm{RTE}} = W_{\mathrm{out}}/W_{\mathrm{in}}$
       & source treated as free & 0.3172 \\
     $\psi_{\mathrm{stripped}}$
-      & source priced at what was taken & 0.2889 \\
+      & source priced at what was taken & 0.2764 \\
     $\psi$
-      & source priced at what the well delivers & 0.2459 \\
+      & source priced at what the well delivers & 0.2356 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 $\eta_{\mathrm{RTE}}$ books the \SI{60}{\celsius} heat as costless. It is not.
 Charging only the exergy the evaporator strips already takes the efficiency
-down to \SI{0.289}{}; charging the whole resource the well lifts takes it to
-\SI{0.246}{}. A referee will ask about this, so it is better that we publish
+down to \num{0.276}; charging the whole resource the well lifts takes it to
+\num{0.236}. A referee will ask about this, so it is better that we publish
 it.
 
 The most uncomfortable number in the audit is not in
 Table~\ref{tab:exergy:components} at all. The reinjected stream carries
-\SI{6056}{\kilo\watt\hour} of exergy out of the plant every cycle, against an
-electrical output of \SI{10000}{\kilo\watt\hour}. We discard
+\SI{6326}{\kilo\watt\hour} of exergy out of the plant every cycle, against an
+net electrical output of \SI{10092}{\kilo\watt\hour}. We discard
 \SI{57.4}{\percent} of the geothermal exergy at the wellhead --- more than we
 use. Table~\ref{tab:exergy:dt3a4a} says the remedy is not hotter wells but
 deeper cooling of the wells we have, and that the obstacle is the reinjection

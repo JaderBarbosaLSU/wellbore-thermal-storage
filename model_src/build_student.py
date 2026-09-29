@@ -42,7 +42,7 @@ high-temperature heat pump melts a phase-change material during charging; an
 organic Rankine cycle recovers the energy during discharging; pressurised water
 circulates through finned hairpin tubes in the borehole.
 
-*Model version 0.14 · notebook built {STAMP}*
+*Model version 0.15 · notebook built {STAMP}*
 
 ---
 

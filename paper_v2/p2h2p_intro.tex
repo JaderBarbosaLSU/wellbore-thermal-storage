@@ -1,0 +1,102 @@
+%=======================================================================
+\section{Introduction}
+\label{sec:intro}
+%=======================================================================
+% Paragraphs 1--4 are carried over from the IHTC-18 paper with light edits.
+% Paragraphs 5--7 are new and state what this paper adds.
+
+The expansion of variable renewable energy (VRE) sources is worsening
+temporal mismatches between electricity supply and demand. Grid operators
+increasingly face renewable curtailment during periods of peak generation and
+the underutilisation of assets owing to inadequate long-duration energy
+storage (LDES) \cite{denholm2021,iea2020}. Ensuring grid reliability while
+meeting decarbonisation targets therefore requires firm, dispatchable,
+low-emission technologies alongside VRE, including enhanced geothermal
+systems (EGS) and subsurface storage technologies such as compressed air
+energy storage (CAES), gravitational energy storage (GES) and thermal energy
+storage (TES). Although EGS holds long-term promise, high upfront costs,
+drilling risk and long development timelines constrain near-term deployment
+\cite{doe2006,doe2019}.
+
+Repurposing idle and mature oil and gas wells for LDES offers a near-term
+pathway that leverages existing infrastructure while reducing environmental
+liabilities. Borehole-based TES stores surplus electricity during
+over-generation and releases it during peak demand \cite{bartling2025}.
+Reusing existing wells avoids the most capital-intensive element of
+geothermal development, new drilling, and thereby lowers the levelised cost
+of storage \cite{santos2022,higgins2024}. Idle and orphaned wells are also a
+significant source of fugitive methane \cite{kang2014,williams2021,Santos2025};
+integrating them into closed-loop storage mitigates that risk and defers
+abandonment costs.
+
+Several authors have proposed legacy wells for energy storage. Zhang
+\textit{et al.}\ \cite{Zhang2025} evaluated geothermal-assisted CAES in
+plugged wells and reported round-trip efficiencies of about \SI{61}{\percent}
+for an output of about \SI{37}{\mega\watt} over a \SI{4}{\hour} discharge, a
+system requiring of the order of 100 wells. Jaquez \cite{Jaquez2021} proposed
+plugged wells as sealed shafts for GES, and drivetrain studies of that concept
+reported round-trip efficiencies of up to \SI{85.9}{\percent}
+\cite{Sundeep}.
+
+In a preceding conference paper \cite{KoIHTC2026} the authors proposed a
+power-to-heat-to-power (P2H2P) Carnot battery in which a plugged,
+hydraulically isolated well is filled with a phase-change material (PCM) and
+equipped with finned hairpin tubes (the ``borehole battery'', BB). A
+high-temperature heat pump (HTHP) charges the BB; an organic Rankine cycle
+(ORC) discharges it. The principal novelty was an axial \emph{cascade} of PCM
+layers of decreasing melting temperature, arranged so that the secondary
+fluid meets material whose melting point tracks its own temperature glide.
+PCM-enhanced borehole heat exchangers have been studied for ground-source heat
+pumps \cite{Qi2016,Zhou2025}, but not, to the authors' knowledge, as the
+storage element of a Carnot battery with a graded melting temperature.
+
+The borehole model of Ref.~\cite{KoIHTC2026} advanced a melt-layer thickness
+from a closed-form quasi-steady Stefan solution with a prescribed wall
+temperature, evaluated a single charge from a fully solid store, and sized the
+field by root-finding on the number of wells until the charged energy matched
+the heat-pump output. Three features of that formulation limit its use for a
+storage system operated on a repeating daily schedule, and they motivate the
+present work.
+
+\begin{enumerate}[leftmargin=1.8em,itemsep=2pt]
+\item \textbf{State variable.} A melt thickness (or melted area) encodes only
+  how much PCM has changed phase. Once a segment has melted completely the
+  resistance network continues to report a heat flow, and the model must
+  either melt material that does not exist or discard the heat. Neither is
+  acceptable in a cascaded store, where the segments nearest the inlet of each
+  layer saturate early.
+\item \textbf{Single cycle.} A store operated daily does not start each
+  charge from a cold, fully solid state. The operating point is the cyclic
+  steady state (CSS) reached after many cycles, and first-cycle results are
+  not representative of it.
+\item \textbf{Plant--store coupling.} The ORC evaporating temperature was
+  set by a fixed approach below the hot end of the water stream. For a
+  working fluid that absorbs most of its heat isothermally against a water
+  stream with a glide of several tens of kelvin, the binding constraint is an
+  interior pinch, and the hot-end rule overstates the cycle efficiency.
+\end{enumerate}
+
+This paper reformulates the model to remove these limitations. The
+contributions are: (i)~a lumped \emph{enthalpy} state for each exchanger
+segment, in the tradition of the enthalpy method for phase-change problems
+\cite{Voller1987,Alexiades1993}, which represents subcooled, two-phase and
+superheated states with one invertible constitutive relation; (ii)~the
+derivation of the segment conductance from control-volume balances, which
+yields an effectiveness--NTU closure rather than the product of the overall
+coefficient and the perimeter; (iii)~a time integrator that is exact within
+each branch of the constitutive relation and therefore unconditionally stable
+on the logarithmic grids natural to diffusion-limited problems; (iv)~a
+direction-dependent conduction path for melting and freezing, and a
+mean-to-surface resistance for single-phase segments; (v)~irreversible cycle models in
+which the isentropic efficiencies act on the state points, a pinch-constrained
+coupling of the store to the ORC evaporator and an energy-consistent closure
+of the HTHP regenerators; (vi)~a reformulation of sizing as a simulation
+to cyclic steady state, which is necessary because the storage efficiency of
+an adiabatic store is identically unity at CSS; and (vii)~a component-wise
+exergy audit, verified machine by machine against independent boundary
+balances, in which the low-temperature geothermal source of the heat pump is
+treated as a finite, priced resource rather than as a free reservoir. The model is described in
+Section~\ref{sec:model}, its numerical implementation in
+Section~\ref{sec:implementation}, and results for a
+\SI{1}{\mega\watt}$_\mathrm{e}$, \SI{10}{\hour} pilot configuration in
+Section~\ref{sec:results}.

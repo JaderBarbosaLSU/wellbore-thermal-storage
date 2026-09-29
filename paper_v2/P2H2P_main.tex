@@ -1,0 +1,149 @@
+%=======================================================================
+%  Thermal analysis of a power-to-heat-to-power system with cascaded
+%  latent heat storage in repurposed oil and gas wells.
+%
+%  Elsevier elsarticle class (preprint layout).
+%  Structure follows the IHTC-18 paper (Ko & Barbosa, "Thermal analysis of
+%  a power-to-heat-to-power system using repurposed oil wells for energy
+%  storage"); the model content follows P2H2P_model.ipynb, model v0.13
+%  (isentropic efficiencies on the state points; exergy audit with the
+%  geothermal source priced under the 'resource' convention).
+%
+%  Files:
+%     P2H2P_main.tex            this file (front matter, packages, macros)
+%     p2h2p_intro.tex           1  Introduction
+%     p2h2p_model.tex           2  Modelling (2.1-2.5)
+%     p2h2p_exergy.tex          2.6 Exergy analysis
+%     p2h2p_implementation.tex  3  Mathematical implementation
+%     p2h2p_results.tex         4  Results (skeleton) and 5 Conclusions
+%     p2h2p_refs.bib            bibliography
+%  Figures reused from the IHTC-18 project (upload to this project to
+%  replace the placeholder frames):
+%     Block_diag_ch.png, Block_diag_dc.png, multilayer_BB_ch.png,
+%     multilayer_BB_dc.png
+%=======================================================================
+\documentclass[preprint,12pt]{elsarticle}
+
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{mathtools}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{siunitx}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usetikzlibrary{arrows.meta,positioning,calc,decorations.pathreplacing}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,
+            urlcolor=blue!50!black]{hyperref}
+
+\sisetup{per-mode=symbol,detect-weight=true}
+
+% ---------- editorial markers (remove before submission) ----------
+\newcommand{\todo}[1]{\textcolor{red!70!black}{\textbf{[TODO:} #1\textbf{]}}}
+\newcommand{\chk}[1]{\textcolor{orange!80!black}{\textbf{[CHECK:} #1\textbf{]}}}
+
+% ---------- figure placeholder when an image file is not yet uploaded ----
+\newcommand{\figorbox}[2]{%
+  \IfFileExists{#2}{\includegraphics[width=#1]{#2}}{%
+    \fbox{\parbox[c][0.28#1][c]{#1}{\centering\small
+      upload \texttt{\detokenize{#2}}}}}}
+
+% ---------- symbols ----------
+\newcommand{\md}{\ensuremath{\dot m}}
+\newcommand{\Ui}{\ensuremath{U_{i}}}
+\newcommand{\hm}{\ensuremath{h_{m}}}
+\newcommand{\Tm}{\ensuremath{T_{m}}}
+\newcommand{\Tpcm}{\ensuremath{T_{\mathrm{pcm}}}}
+\newcommand{\Aav}{\ensuremath{A_{\mathrm{av}}}}
+\newcommand{\Amelt}{\ensuremath{A_{\mathrm{melt}}}}
+\newcommand{\Elat}{\ensuremath{E'_{\mathrm{lat}}}}
+\newcommand{\Eeq}{\ensuremath{E'_{\mathrm{eq}}}}
+\newcommand{\Nw}{\ensuremath{N_{\mathrm{well}}}}
+\newcommand{\Nlay}{\ensuremath{N_{\mathrm{lay}}}}
+\newcommand{\etao}{\ensuremath{\eta_{o}}}
+\newcommand{\etaf}{\ensuremath{\eta_{f}}}
+\newcommand{\eloc}{\ensuremath{\varepsilon_{\mathrm{loc}}}}
+\newcommand{\NTU}{\ensuremath{\mathrm{NTU}}}
+\newcommand{\COP}{\ensuremath{\mathrm{COP}_{\mathrm{HP}}}}
+\newcommand{\etaORC}{\ensuremath{\eta_{\mathrm{ORC}}}}
+\newcommand{\Ltube}{\ensuremath{L_{\mathrm{tube}}}}
+\newcommand{\Lwell}{\ensuremath{L_{\mathrm{well}}}}
+\newcommand{\Vwell}{\ensuremath{V_{\mathrm{well}}}}
+\newcommand{\Ex}{\ensuremath{\mathit{Ex}}}
+\newcommand{\Exd}{\ensuremath{\dot{\mathit{Ex}}}}
+
+\journal{Applied Thermal Engineering}  % \chk{target journal}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{Thermal analysis of a power-to-heat-to-power system with cascaded
+latent heat storage in repurposed oil and gas wells: an enthalpy-based
+cyclic-steady-state model}
+
+\author[lsu]{Y.~Ko}
+\author[lsu]{J.~R.~Barbosa~Jr.\corref{cor1}}
+\ead{jrb@polo.ufsc.br}
+\cortext[cor1]{Corresponding author.}
+\address[lsu]{Craft \& Hawkins Department of Petroleum Engineering,
+Louisiana State University, Baton Rouge, LA 70803, USA}
+
+\begin{abstract}
+% PROVISIONAL. Rewrite once Section 4 is populated.
+A thermal model is presented for a power-to-heat-to-power (P2H2P) system in
+which a two-stage high-temperature heat pump (HTHP) charges, and a two-stage
+organic Rankine cycle (ORC) discharges, a phase-change material (PCM) packed
+around finned hairpin tubes in the annulus of repurposed oil and gas wells.
+The PCM is graded axially into layers of decreasing melting temperature so
+that the pressurised water loop that connects the plant to the wells sweeps
+a prescribed temperature glide at small local driving differences. The
+borehole thermal regenerator is represented by a one-dimensional march of
+lumped segments whose state variable is the PCM enthalpy per unit tube
+length, so that subcooled solid, two-phase and superheated liquid states are
+represented by a single, invertible constitutive relation. Each segment is
+closed by an effectiveness--NTU conductance derived from energy balances on
+the PCM and on the water, and integrated in time by a scheme that is exact
+within each branch of the constitutive relation and unconditionally stable.
+Both cycles are irreversible, with isentropic efficiencies applied to the
+state points rather than to the cycle work. The ORC evaporating temperature is
+fixed by a pinch constraint on the full composite curves rather than by a
+hot-end approach, and the HTHP suction states and regenerators are closed by
+exact enthalpy balances. Since the first law cannot see what an adiabatic
+store costs, a component-wise exergy audit is performed with the ORC sink as
+dead state; the geothermal stream that feeds the heat pump is treated as a
+priced resource, its full exergy charged as an input and the reinjected
+stream booked as a loss. Because an adiabatic store returns
+to its own state at cyclic steady state, the stored and recovered energies
+coincide identically and cannot be used to size the well field; the field is
+therefore specified and marched to cyclic steady state, and the deviation of
+the delivered energy from the target output is reported as a result.
+\todo{results sentence(s): RTE and resource-based exergetic efficiency,
+storage and geothermal well counts, deviation, dominant destruction.}
+\end{abstract}
+
+\begin{keyword}
+Carnot battery \sep power-to-heat-to-power \sep latent heat thermal energy
+storage \sep phase-change material \sep repurposed oil and gas wells \sep
+enthalpy method \sep cyclic steady state \sep exergy analysis
+\end{keyword}
+
+\end{frontmatter}
+
+\input{p2h2p_intro}
+\input{p2h2p_model}
+\input{p2h2p_exergy}
+\input{p2h2p_implementation}
+\input{p2h2p_results}
+
+\bibliographystyle{elsarticle-num}
+\bibliography{p2h2p_refs}
+
+\end{document}

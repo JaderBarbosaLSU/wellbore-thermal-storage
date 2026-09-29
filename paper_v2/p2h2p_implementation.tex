@@ -1,0 +1,447 @@
+%=======================================================================
+\section{Mathematical implementation}
+\label{sec:implementation}
+%=======================================================================
+
+\subsection{Time integration}
+\label{sec:integration}
+
+The segment equation~\eqref{eq:ode} is nonlinear, because $\Tpcm(E')$ is
+piecewise, but it is affine within each branch of
+Eq.~\eqref{eq:enth-curve}. Over a time step $\Delta t$ the upstream water
+temperature $T_j$ and the conductance $K_j$ are held at their values at the
+beginning of the step, which are obtained by marching
+Eqs.~\eqref{eq:Ui}, \eqref{eq:ntu}, \eqref{eq:K} and \eqref{eq:T-march} from
+the inlet with the state frozen. The distinction between the branches governs
+the choice of integrator.
+
+\paragraph{Explicit stepping} On the latent plateau $\Tpcm=T_m$ does not depend
+on $E'$, the segment behaves as though its heat capacity were infinite, and
+Eq.~\eqref{eq:ode} reduces to $\mathrm{d}E'/\mathrm{d}t=K(T_j-T_m)$, for which
+an explicit Euler step is exact. A model whose state is the melted area
+occupies this regime permanently, which is why explicit stepping is adequate
+for such models. On the sensible branches Eq.~\eqref{eq:ode} is a linear
+relaxation with time constant $\tau=C/K$, and explicit Euler is stable only
+for $\Delta t<2\tau$ and monotone only for $\Delta t<\tau$. The time grid
+used here is logarithmic, which is the natural choice for a process
+controlled by a growing conduction resistance, and its late steps exceed
+$\tau$ by up to an order of magnitude \chk{ratio 7.7 at the last step of the
+reference case, first segment; regenerate for the final grid}; an explicit
+update diverges there.
+
+\paragraph{Branchwise-exact scheme} Each branch is instead integrated in
+closed form. With $T_j$ and $K$ fixed over the step,
+\begin{equation}
+  E'(t+\Delta t)=
+  \begin{dcases}
+    E'+K\left(T_j-T_m\right)\Delta t, & 0\le E'\le\Elat,\\[4pt]
+    \Eeq+\left(E'-\Eeq\right)e^{-K\Delta t/C}, & \text{sensible branches},
+  \end{dcases}
+  \label{eq:exact}
+\end{equation}
+with the capacity and equilibrium enthalpy of the branch,
+\begin{equation}
+  \left(C,\,\Eeq\right)=
+  \begin{cases}
+    \left(C_s,\;C_s\left(T_j-T_m\right)\right), & E'<0,\\[3pt]
+    \left(C_l,\;\Elat+C_l\left(T_j-T_m\right)\right), & E'>\Elat .
+  \end{cases}
+  \label{eq:Eeq}
+\end{equation}
+$\Eeq$ is the enthalpy at which the segment would be in equilibrium with the
+water; the exponential approaches it monotonically and cannot overshoot it for
+any $\Delta t$, so the scheme is unconditionally stable.
+
+\paragraph{Branch crossings} If the state would leave its branch within the
+step, the step is split at the crossing. With $E'_b\in\{0,\Elat\}$ the
+boundary approached, the crossing time is
+\begin{equation}
+  t^{*}=
+  \begin{dcases}
+    \frac{E'_b-E'}{K\left(T_j-T_m\right)}, & \text{from the plateau},\\[6pt]
+    \frac{C}{K}\ln\frac{E'-\Eeq}{E'_b-\Eeq}, & \text{from a sensible branch};
+  \end{dcases}
+  \label{eq:crossing}
+\end{equation}
+the state is advanced to $E'_b$, the remaining $\Delta t-t^{*}$ is integrated
+in the adjacent branch, and the test is repeated (Table~\ref{tab:alg-segment}).
+When the state is placed on a boundary it is displaced into the adjacent
+branch by $\epsilon=10^{-9}\max(\Elat,1)$. Without that displacement a state
+lying exactly on $\Elat$ is classified as two-phase by a closed-interval test,
+the plateau branch returns $t^{*}=0$, and the segment remains pinned at the
+boundary with zero superheat indefinitely.
+
+\begin{table}[htbp]
+\centering
+\caption{Advance of one segment over one time step.}
+\label{tab:alg-segment}
+\small
+\begin{tabular}{@{}r l@{}}
+\toprule
+1 & $t_\mathrm{left}\leftarrow\Delta t$;\quad $E'_{0}\leftarrow E'$\\
+2 & \textbf{while} $t_\mathrm{left}>0$:\\
+3 & \quad identify the branch of Eq.~\eqref{eq:enth-curve} containing $E'$\\
+4 & \quad compute $t^{*}$ toward the boundary in the direction of $T_j-\Tpcm$, Eq.~\eqref{eq:crossing}\\
+5 & \quad \textbf{if} $t^{*}\ge t_\mathrm{left}$: advance by Eq.~\eqref{eq:exact} over $t_\mathrm{left}$; \textbf{stop}\\
+6 & \quad \textbf{else}: $E'\leftarrow E'_b\pm\epsilon$;\quad $t_\mathrm{left}\leftarrow t_\mathrm{left}-t^{*}$\\
+7 & \textbf{return} $E'$ and $q'=(E'-E'_{0})/\Delta t$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Energy closure} The heat rate passed to the water is not evaluated
+from Eq.~\eqref{eq:K} independently of the state update; it is the
+step-averaged value returned by the integrator,
+$q'_j=(E'^{\,n+1}_j-E'^{\,n}_j)/\Delta t$, and the water temperature is reduced
+by exactly that amount through Eq.~\eqref{eq:T-march}. The energy gained by
+the PCM therefore equals that lost by the water to round-off, and the second
+equalities in Eqs.~\eqref{eq:Ech} and~\eqref{eq:Edc} are exact. This is a
+consistency property of the implementation and not evidence of its
+correctness. The integrator itself was verified against an explicit
+integration of Eq.~\eqref{eq:ode} with $2\times10^{5}$ substeps over a full
+charge and discharge, including branch crossings, to a relative difference of
+$3\times10^{-13}$ \chk{re-run on v0.12 before quoting}.
+
+%-----------------------------------------------------------------------
+\subsection{Cyclic steady state and the sizing problem}
+\label{sec:css}
+%-----------------------------------------------------------------------
+
+A store operated on a daily schedule does not begin each charge from a fully
+solid state. The charge--discharge pair is therefore repeated, each charge
+starting from the state left by the preceding discharge, until the store
+returns to its own initial state,
+\begin{equation}
+  \max_{j}\left|E'_j\big|_{\text{end of cycle }n}-E'_j\big|_{\text{start of cycle }n}\right|
+  <\epsilon_\mathrm{CSS},
+  \label{eq:css-test}
+\end{equation}
+with $\epsilon_\mathrm{CSS}=\SI{e-9}{\joule\per\meter}$. The first cycle
+starts from a fully solid store at the melting temperature of each layer,
+$E'_j=0$.
+
+At cyclic steady state the enthalpy change of the store over a complete cycle
+is zero by definition, and under H6 the store exchanges heat only with the
+water. Hence
+\begin{equation}
+  \eta_\mathrm{storage}\equiv\frac{\Delta E_\mathrm{dc}}{\Delta E_\mathrm{ch}}=1
+  \label{eq:css-unity}
+\end{equation}
+identically, for every well count and every pair of flow rates. This is
+energy conservation applied to a closed cycle in a lossless model, not a
+result about the store, but it determines how the design problem may be posed.
+A single-cycle model, such as that of Ref.~\cite{KoIHTC2026}, sizes the field
+by requiring that it absorb $\Delta E_\mathrm{out,HP}$ within $t_\mathrm{ch}$
+and solves for $\Nw$ (and, separately, for the discharging flow). At CSS the
+absorbed and released energies are the same number, so the charging and
+discharging requirements collapse into a single equation. That equation
+fixes the ratio of the two flow rates and places no constraint on $\Nw$: the
+sizing problem has no root. Introducing a loss mechanism would not remove the
+degeneracy, since at CSS the charge would then exceed the discharge by exactly
+the loss and the one remaining equation would still determine only the flow
+ratio.
+
+The problem is therefore posed as a simulation. The field is specified by the
+latent inventory alone,
+\begin{equation}
+  \Nw=\frac{\Delta E_\mathrm{out,HP}}{\rho_s\,\Vwell\,\hm},
+  \label{eq:Nwell}
+\end{equation}
+which ignores the sensible capacity of the store and is to that extent
+conservative; the two flow rates are fixed by their glides,
+Eq.~\eqref{eq:mdot}; the field is marched to CSS; and the relative deviation
+of the delivered energy from the requirement,
+\begin{equation}
+  \mathcal{D}=\frac{\Delta E_\mathrm{dc}}{\Delta E_\mathrm{in,ORC}}-1,
+  \label{eq:deviation}
+\end{equation}
+is reported as a result. Because $\md_\mathrm{dc}$ is fixed by the specified
+glide, the delivered energy over a fixed window is, for constant $c_p$,
+\begin{equation}
+  \frac{\Delta E_\mathrm{dc}}{\Delta E_\mathrm{in,ORC}}
+  \simeq\frac{\overline{T}_\mathrm{2d}-T_\mathrm{3d}}{\Delta T_\mathrm{3D,2D}},
+  \label{eq:glide-shortfall}
+\end{equation}
+so $\mathcal{D}$ is the shortfall (or excess) of the glide the field actually
+achieves relative to the one assumed \chk{v0.13 reference case: 1.04458
+against 1.04413; the residual difference reflects the variation of $c_p$ with
+temperature}. Two consequences
+follow. First, $\mathcal{D}$ does not enter RTE: the charging flow is pinned
+in the same way, so a field that delivers \SI{1}{\percent} more than the
+target also absorbs \SI{1}{\percent} more, and $\mathcal{D}$ measures plant
+size rather than performance. Second, $\mathcal{D}$ is not to be driven to
+zero by adjusting a design parameter, since doing so would convert the one
+independent output of the procedure back into an imposed constraint.
+
+The residual melted fraction at the end of discharge,
+$\bar\varepsilon_\mathrm{dc}$, is used as a diagnostic of the limiting
+mechanism. If it is close to zero the store empties within the window and the
+field is limited by its inventory; if it is appreciably above zero, and
+particularly if it rises with $\Nw$, the field is limited by the rate of heat
+transfer, and the effective levers are the flow rate, the window length and
+the exchanger conductance rather than the PCM inventory.
+
+%-----------------------------------------------------------------------
+\subsection{Verification of the exergy audit}
+\label{sec:ex-verification}
+%-----------------------------------------------------------------------
+
+The component destructions of Eqs.~\eqref{eq:sgen-hp}--\eqref{eq:sgen-orc} are
+computed from the entropy generated inside each component. For each machine
+the sum is compared with a boundary balance constructed from stream states
+alone,
+\begin{align}
+  \sum_{j\in\mathrm{HTHP}}I_j&=W_\mathrm{C}+\left(\Ex_\mathrm{geo}-\Ex_\mathrm{reinj}\right)
+    -\Exd_\mathrm{w}^\mathrm{tot}\!\left(T_\mathrm{3c},T_\mathrm{2c}\right)t_\mathrm{ch}
+    +I_\mathrm{mot},
+  \label{eq:gate-hp}\\
+  \sum_{j\in\mathrm{ORC}}I_j&=\Exd_\mathrm{w}^\mathrm{tot}\!\left(T_\mathrm{2d},T_\mathrm{3d}\right)t_\mathrm{dc}
+    -W_\mathrm{T}+I_\mathrm{gen},
+  \label{eq:gate-orc}
+\end{align}
+and the two sides agree to $10^{-15}$ in relative terms for the reference
+case. These two checks are independent and can fail: they detected the
+inconsistency in the water flow rates discussed after Eq.~\eqref{eq:mdot}.
+The global balance, Eq.~\eqref{eq:ex-balance}, is by contrast an identity
+under the present construction. Because $T_\mathrm{4c}=T_\mathrm{3c}$ and the
+discharge terminal temperatures are shared with the ORC evaporator,
+Eq.~\eqref{eq:I-BB} cancels the water terms of the two surface exchangers
+exactly, and the global residual is zero by construction rather than by
+verification. $I_\mathrm{BB}$ is therefore correct but not independently
+verified until it is evaluated from $s(E')$.
+
+Two approximations that the audit carried in earlier versions have since been
+removed. It was evaluated on the target duties of Section~\ref{sec:budget}
+rather than on the energy the field actually moves, and the pumping work was
+excluded altogether; the round-trip efficiency used the realised duty and
+charged the pumping, so the two quantities did not share a control volume and
+$\psi$ could not properly be compared with RTE. Both are now on the
+cyclic-steady-state basis. Because the storage efficiency is identically unity
+at CSS and $\lambda$ is zero, the two half-cycles scale together and the
+rebase is a single factor, \num{1.0446} in the reference case; the pumping
+work enters as an input and its dissipation in the tubes as a destruction,
+\SI{703}{\kilo\watt\hour} per cycle, or \SI{2.7}{\percent} of the total.
+
+One approximation remains: the audit uses the nominal water terminal
+temperatures rather than the flow-averaged outlets
+$\overline{T}_\mathrm{2c}$ and $\overline{T}_\mathrm{2d}$ that the field
+actually returns. The resulting mismatch in water exergy is reported by the
+audit as a separate diagnostic rather than absorbed into any component.
+
+%-----------------------------------------------------------------------
+\subsection{Solution procedure}
+\label{sec:procedure}
+%-----------------------------------------------------------------------
+
+The procedure is summarised in Fig.~\ref{fig:procedure}. It is organised in
+three nested levels. At the plant level the ORC and the HTHP are evaluated
+once (Section~\ref{sec:cycles}), and their outputs to the rest of the
+calculation are $\etaORC$, $\COP$ and the secondary-fluid temperatures of
+Table~\ref{tab:closure}. At the field level the target output fixes the
+energy budget, Eqs.~\eqref{eq:E-orc}--\eqref{eq:W-in} with $\lambda=0$, the
+well count, Eq.~\eqref{eq:Nwell}, and the flow rates, Eq.~\eqref{eq:mdot}.
+At the borehole level the charging and discharging marches are repeated until
+Eq.~\eqref{eq:css-test} is satisfied. No quantity is obtained by root finding;
+the loop to CSS is the only iteration.
+
+Because $T_\mathrm{3e}$ depends on the realised outlet $\overline{T}_\mathrm{2d}$,
+which is available only after the march, the whole procedure is executed
+twice: first with the provisional outlet $T_\mathrm{2d}^{(0)}$, then with the
+flow-averaged outlet from the first pass. The ORC, the energy budget, $\Nw$
+and both flow rates are re-evaluated in the second pass. A single correction
+suffices because the outlet is controlled by the store rather than by the
+plant; the change in $\overline{T}_\mathrm{2d}$ between the two passes is
+reported as a check \chk{below \SI{e-4}{\kelvin} in the v0.13 reference case}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  font=\footnotesize, node distance=2.6mm,
+  blk/.style ={draw, rounded corners=2pt, inner sep=4pt, align=left,
+               text width=0.80\linewidth},
+  inp/.style ={blk, fill=black!4},
+  mar/.style ={blk, line width=0.9pt, fill=black!2},
+  tst/.style ={draw, dashed, rounded corners=2pt, inner sep=4pt, align=center,
+               text width=0.62\linewidth},
+  fl/.style  ={-{Latex[length=2mm]}, thick},
+  lab/.style ={font=\scriptsize, inner sep=1.5pt}]
+
+\node[inp] (in) {\textbf{Inputs.} $\dot W_\mathrm{el,out}$, $t_\mathrm{ch}$,
+  $t_\mathrm{dc}$; approaches and glides of Table~\ref{tab:closure};
+  $T_\mathrm{source}$, $T_\mathrm{sink}$; isentropic, generator and motor efficiencies; PCM
+  properties, $T_m^\mathrm{top}$, $\Nlay$, $\Delta T_\mathrm{casc}$; well and
+  tube geometry; working fluids; $n_s$, $n_t$ time levels,
+  $\epsilon_\mathrm{CSS}$};
+
+\node[blk, below=of in] (cyc) {\textbf{1.\ Thermodynamic cycles}
+  \hfill\emph{plant level}\\
+  cascade, Eq.~\eqref{eq:cascade}; inlets $T_\mathrm{4c}$, $T_\mathrm{3d}$,
+  Eq.~\eqref{eq:inlets}; $T_\mathrm{2d}$ (provisional, then realised)\\
+  ORC: Eqs.~\eqref{eq:orc-p}--\eqref{eq:T3e}, $T_\mathrm{3e}$ by bisection on
+  the pinch $\Rightarrow\etaORC$\\
+  HTHP: Eqs.~\eqref{eq:hp-p}--\eqref{eq:hp-T}, suction states by bisection,
+  $x_\mathrm{8h}$ by fixed point $\Rightarrow\COP$};
+
+\node[blk, below=of cyc] (bud) {\textbf{2.\ Energy budget and hardware}
+  \hfill\emph{field level, no root finding}\\
+  $\dot Q_\mathrm{in,ORC}$, $\Delta E_\mathrm{in,ORC}$, $\Delta
+  E_\mathrm{out,HP}$ ($\lambda=0$), Eqs.~\eqref{eq:E-orc}--\eqref{eq:W-in};
+  $\Nw$, Eq.~\eqref{eq:Nwell}; $\md_\mathrm{ch}$, $\md_\mathrm{dc}$,
+  Eq.~\eqref{eq:mdot}};
+
+\node[mar, below=of bud] (ch) {\textbf{3.\ Charge}\hfill\emph{borehole level}\\
+  inlet $T_\mathrm{4c}$ at $s=0$, flow $\md_\mathrm{ch}$; \textbf{for} each
+  time level $t_k$ (logarithmic):\\
+  \hspace*{3mm}\textbf{for} $j=1,\ldots,n_s$: state $\to\Amelt,\Tpcm$;
+  shell, Eq.~\eqref{eq:shell-choice} or $\delta_\mathrm{eq}$;
+  $h_i$, $\etao$, $\Ui$; $\NTU_j$, $K_j$;\\
+  \hspace*{9mm}advance $E'_j$ (Table~\ref{tab:alg-segment});
+  $T_{j+1}$ from Eq.~\eqref{eq:T-march}};
+
+\node[mar, below=of ch] (dc) {\textbf{4.\ Discharge}\\
+  mirror cascade and state; inlet $T_\mathrm{3d}$ at $s=\Ltube$, flow
+  $\md_\mathrm{dc}$; march as in 3 with the freezing shell};
+
+\node[tst, below=of dc] (tst) {state returned to itself, Eq.~\eqref{eq:css-test}?};
+
+\node[blk, below=5mm of tst] (cor) {\textbf{5.\ Correction pass}
+  \hfill\emph{executed once}\\
+  repeat 1--4 with $T_\mathrm{2d}=\overline{T}_\mathrm{2d}$ from the first
+  pass; report the change in $\overline{T}_\mathrm{2d}$};
+
+\node[inp, below=of cor] (out) {\textbf{6.\ Results at CSS.}
+  $\Delta E_\mathrm{ch}$, $\Delta E_\mathrm{dc}$, deviation $\mathcal D$,
+  Eq.~\eqref{eq:deviation}; $\overline{T}_\mathrm{2c}$,
+  $\overline{T}_\mathrm{2d}$; $\bar\varepsilon_\mathrm{ch}$,
+  $\bar\varepsilon_\mathrm{dc}$; pumping, Eq.~\eqref{eq:Wf}; $\eta_T$,
+  $\eta_{T,\mathrm{eff}}$, RTE, $\varepsilon_\mathrm{RTE}$,
+  $\Delta E_\mathrm{therm}$, $\rho_E$; $UA$ of the plant exchangers,
+  Eq.~\eqref{eq:UA}; exergy audit, $\psi$, $\md_\mathrm{geo}$,
+  $N_\mathrm{geo}$, Section~\ref{sec:exergy}; profiles of $T$, $\Tpcm$,
+  $\eloc$, $\Ui$, $\NTU$};
+
+\foreach \a/\b in {in/cyc,cyc/bud,bud/ch,ch/dc,dc/tst,cor/out}
+  \draw[fl] (\a) -- (\b);
+\draw[fl] (tst) -- node[lab,right] {yes} (cor);
+\coordinate (L) at ($(ch.west)+(-7mm,0)$);
+\draw[fl] (tst.west) -- (L |- tst.west)
+  node[lab,midway,above] {no: next cycle} -- (L) -- (ch.west);
+\end{tikzpicture}
+\caption{Solution procedure. Blocks 1--2 are evaluated once per pass and
+produce a fully specified field; blocks 3--4 are repeated until cyclic steady
+state; block 5 is a second evaluation, not a loop.}
+\label{fig:procedure}
+\end{figure}
+
+%-----------------------------------------------------------------------
+\subsection{Simulation conditions}
+\label{sec:conditions}
+%-----------------------------------------------------------------------
+
+The reference case is summarised in Table~\ref{tab:conditions}. The PCM
+properties are consistent with the trimodal material of Saher \textit{et al.}\
+\cite{Saher2024}: a top-layer melting temperature of \SI{150}{\celsius} and a
+latent heat of \SI{380}{\kilo\joule\per\kilogram}; in the absence of reported
+data, densities of \num{1550} and \SI{1450}{\kilogram\per\meter\cubed},
+specific heats of \num{1280} and \SI{1800}{\joule\per\kilogram\per\kelvin}
+and conductivities of \num{0.60} and \SI{0.45}{\watt\per\meter\per\kelvin}
+are assumed for the solid and liquid, respectively. \chk{The cascade assumes a
+family of PCMs of identical properties with melting points spanning
+\SIrange{101}{150}{\celsius}; state this explicitly and discuss whether such a
+family exists.} The wells are \SI{5000}{ft} (\SI{1524}{\meter}) deep with a
+\SI{7}{in} (\SI{177.8}{\milli\meter}) bore, each containing two hairpins of
+1\,$\tfrac14$\,in Schedule~80 tube with 24 fins per leg, which leaves
+$\Vwell=\SI{27.68}{\meter\cubed}$ of PCM per well. The cell radius is
+$r_\mathrm{cell}=\SI{44.45}{\milli\meter}$, so
+$\delta_\mathrm{merge}=\SI{23.37}{\milli\meter}$, $\beta=2.109$,
+$S=0.3467$ and $\delta_\mathrm{eq}=\SI{8.74}{\milli\meter}$.
+
+\begin{table}[htbp]
+\centering
+\caption{Reference case.}
+\label{tab:conditions}
+\small
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}l l r@{}}
+\toprule
+ & quantity & value \\
+\midrule
+\multirow{4}{*}{Duty}
+ & net electrical output $\dot W_\mathrm{el,out}$ & \SI{1}{\mega\watt} \\
+ & charging / discharging window $t_\mathrm{ch}$, $t_\mathrm{dc}$ & \SI{10}{\hour} / \SI{10}{\hour} \\
+ & HTHP source $T_\mathrm{source}$ / ORC sink $T_\mathrm{sink}$ & \SI{60}{\celsius} / \SI{20}{\celsius} \\
+ & working fluid (ORC and HTHP) & cyclopentane \\
+\midrule
+\multirow{4}{*}{Machines}
+ & isentropic: turbines $\eta_{s,t}$ / ORC pumps $\eta_{s,p}$ / compressors $\eta_{s,c}$ & 0.85 / 0.85 / 0.85 \\
+ & generator $\eta_\mathrm{gen}$ / motor $\eta_\mathrm{mot}$ & 0.95 / 0.95 \\
+ & ORC intermediate pressure & arithmetic mean \\
+ & HTHP intermediate pressure & geometric mean \\
+\midrule
+\multirow{6}{*}{Approaches [K]}
+ & $\Delta T_\mathrm{pinch,ORC}$ / $\Delta T_\mathrm{2D,3E}$ & 5 / 12 \\
+ & $\Delta T_\mathrm{E,sink}$ / $\Delta T_\mathrm{sink,gl}$ & 5 / 0 \\
+ & $\Delta T_\mathrm{2H,3C}$ / $\Delta T_\mathrm{sub}$ & 10 / 2 \\
+ & $\Delta T_\mathrm{3A,4A}$ / $\Delta T_\mathrm{pinch,HPE}$ & 10 / 5 \\
+ & $\Delta T_\mathrm{4C,M}$ / $\Delta T_\mathrm{M,1D}$ & 10 / 10 \\
+ & glides $\Delta T_\mathrm{3C,2C}$ / $\Delta T_\mathrm{3D,2D}$ / $\Delta T_\mathrm{casc}$ & 55 / 55 / 55 \\
+\midrule
+\multirow{4}{*}{PCM}
+ & $T_m^\mathrm{top}$ / $T_m^\mathrm{bot}$ / $\Nlay$ & \SI{150}{\celsius} / \SI{101.1}{\celsius} / 9 \\
+ & $\hm$ & \SI{380}{\kilo\joule\per\kilogram} \\
+ & $\rho_s$ / $\rho_l$; $c_{p,s}$ / $c_{p,l}$ & \SI{1550}{} / \SI{1450}{\kilogram\per\meter\cubed}; 1280 / \SI{1800}{\joule\per\kilogram\per\kelvin} \\
+ & $k_s$ / $k_l$ & 0.60 / \SI{0.45}{\watt\per\meter\per\kelvin} \\
+\midrule
+\multirow{5}{*}{Geometry}
+ & $\Lwell$ / $D_\mathrm{well}$ & \SI{1524}{\meter} / \SI{177.8}{\milli\meter} \\
+ & hairpins per well $n_t$ & 2 \\
+ & $r_i$ / $r_e$ / $k_\mathrm{wall}$ & \SI{16.23}{\milli\meter} / \SI{21.08}{\milli\meter} / \SI{45}{\watt\per\meter\per\kelvin} \\
+ & $n_f$ / $L_f$ / $t_f$ & 24 / \SI{7.5}{\milli\meter} / \SI{1.5}{\milli\meter} \\
+ & fouling $R''_{f,i}$ & \SI{e-3}{\meter\squared\kelvin\per\watt} \\
+\midrule
+\multirow{4}{*}{Geothermal source}
+ & yield per producing well $\md_\mathrm{geo,well}$ & \SI{12.5}{\kilo\gram\per\second} \chk{provisional} \\
+ & minimum reinjection temperature $T_\mathrm{reinj,min}$ & \SI{25}{\celsius} \chk{placeholder} \\
+ & dead state $T_0$ & $T_\mathrm{sink}=\SI{20}{\celsius}$ \\
+ & exergy convention & resource \\
+\midrule
+\multirow{3}{*}{Loop / numerics}
+ & water pressure $p_\mathrm{w}$ & \SI{1}{\mega\pascal} \\
+ & segments $n_s$ / time levels per half-cycle & 100 / 40 \chk{use 99 or 108} \\
+ & first time level / CSS tolerance & \SI{1}{\second} / \SI{e-9}{\joule\per\meter} \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+The time levels are distributed logarithmically between \SI{1}{\second} and
+the end of each window, $t_k=t_\mathrm{w}^{(k-1)/(n_t-1)}$ with $t_\mathrm{w}$
+in seconds, so the last step of a \SI{10}{\hour} window is
+\SI{8.5e3}{\second}. \chk{The warning raised by the code for $n_s=100$ and
+$\Nlay=9$: a layer boundary falls inside a segment, which then carries a
+melting temperature in error by up to one layer width (\SI{6.1}{\kelvin}).
+Rerun with $n_s=99$ or $108$ for the paper, and report a grid-convergence
+check in $n_s$ and $n_t$.}
+
+\paragraph{Validity of H7 in the reference case} At the charging flow the
+mean velocity in the tube is about \SI{1.25}{\meter\per\second}, so the water
+transits the \SI{3048}{\meter} hairpin in about \SI{2.4e3}{\second}, or
+\SI{7}{\percent} of the window. The heat capacity of the water in the tube is
+\SI{26}{\percent} of the sensible capacity $C_l$ of the PCM it serves, but a
+\SI{10}{\kelvin} swing of the water holds only \SI{1.2}{\percent} of the
+latent inventory, so the unresolved start-up transient displaces little
+energy although it occupies a noticeable fraction of the window.
+\chk{Earlier drafts quote \SI{2264}{\second} and \SI{1.35}{\meter\per\second};
+v0.11 and v0.12 give \SI{2438}{\second} and \SI{1.25}{\meter\per\second}.}
+
+The yield of a geothermal producer is taken provisionally as
+\SI{12.5}{\kilo\gram\per\second}, the value for a \SI{4500}{\meter},
+\SI{206}{\celsius} repurposed well, which is deeper and hotter than the source
+considered here; reported values for repurposed oil and gas wells range from
+about \SIrange{1}{12.5}{\kilo\gram\per\second}. $N_\mathrm{geo}$ is inversely
+proportional to this value and should be read as a scaling result.
+\chk{add references for the per-well yield range and the \SI{4500}{\meter}
+case study.}
+
+The equations were implemented in Python with CoolProp \cite{CoolProp} for
+fluid properties. \todo{Python/CoolProp versions; code availability
+statement.}
