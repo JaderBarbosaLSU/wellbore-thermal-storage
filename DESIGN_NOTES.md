@@ -1215,3 +1215,75 @@ fail** at 4.5e-3 with the DN-24 defect reinstated.
 
 The borehole number stands as correct-but-unverified until the resolved
 s(E′) integral over z and t provides an independent value.
+
+## DN-27 — The last four KPIs, and one guard that failed its own standard
+
+**The four pinches individually.** `exchanger_UA` always computed them;
+`performance_indices` exported only the minimum. Which exchanger is tightest
+is design information, and a design can move the binding one without the
+minimum changing at all. At the design point: HTHP evap 5.00, **HTHP cond
+10.00**, ORC evap 5.01, ORC cond 5.00 — three are hard against their
+specified pinch, and `DT_2H_3C` is the one loose approach in the plant.
+
+**Power density beside energy density.** ρ_E = 170.9 kWh/m³ says how much a
+cubic metre holds; it says nothing about how fast. ρ_P = 2.415 kW/m³, and
+0.0439 kW per metre of well — 44 W/m of borehole. The two are traded against
+each other by the discharge window, so a store with twice the energy density
+and half the rate is a *different machine*, not a better one. Reported per
+metre as well because drilling is priced by the metre.
+
+**The residual, decomposed.** `eps_cycled = 0.9595` hides which end of the
+cycle wastes the material:
+
+  - **floor 0.0109** — still molten when discharge ends, never gives its
+    latent heat back. Capacity paid for and not used.
+  - **headroom 0.0296** — never melted at end of charge, never stores at all.
+
+The headroom is nearly **three times** the floor, so the waste is at the cold
+end of the cascade, and the remedy is charge duration or inlet temperature —
+not the discharge side. The two have opposite remedies, so reporting only
+their difference lets a design trade one for the other and look unchanged.
+
+**Lorenz, and why it is weaker than it looks.** Every stream glides, so
+Carnot would compare the real machine against an ideal one handed an easier
+problem. Using thermodynamic mean temperatures: heat pump 2.4731 against
+5.2667 reversible (**ratio 0.470**), ORC 0.1487 against 0.2527 (**ratio
+0.589**).
+
+The finding: *the heat pump is further from its own ideal than the ORC*,
+despite both carrying 0.85 isentropic machines. Consistent with the two
+throttles, which are 16.3 % of all destruction and have no ORC counterpart.
+
+There is **no useful plant-level Carnot bound**. As a pure electricity store
+the reversible round trip is exactly 1, so η_RTE/1 is η_RTE again. The
+comparison is only meaningful per machine.
+
+These ratios add **no information** `exergy_audit` does not already carry.
+What they add is a normalisation — I_j says how much was lost, the ratio says
+how close to its own ideal a machine got given the job it was handed.
+
+### The guard that did not meet the project's standard
+
+The rule here has been: *a guard is not finished until it has been watched to
+fail.* This one has not, and it ships labelled as such.
+
+The natural check is `ratio <= 1`. It is nearly worthless at ratios of 0.47
+and 0.59 — there is so much margin that a wrong reference still lands inside
+(0, 1]. Adding ordering checks did not rescue it. **Four deliberate
+corruptions were tried and none fired:**
+
+| corruption | why it was not caught |
+|---|---|
+| sink used as the HP source | the guard reads the same `T_4a` that was corrupted |
+| charging stream's endpoints swapped | a no-op, not a bug: `_T_lm` is symmetric |
+| ORC cold end above its hot end | yields a different but internally valid reference |
+| refrigerant `T_2h` in place of the water | the two temperatures are close, so the mean lands inside the band |
+
+The reason is structural: the reference is built from the same state points
+any check would test it against, so the guard can confirm internal
+consistency but never the *choice of streams*. Catching that would mean
+computing the reference a second, independent way — not worth it for a
+diagnostic that adds no information to the destruction table.
+
+Recorded rather than quietly shipped, because a guard that looks like the
+exergy gates and is nothing like them is worse than no guard.

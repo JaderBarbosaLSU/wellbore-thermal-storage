@@ -553,6 +553,7 @@ cells.append(code(src('_orc_cold_composite', 'orc_pinch', 'feasible_rankine',
                       'exchanger_UA', 'ua_report',
                       'water_h', 'water_s', 'stream_exergy_rate',
                       'geothermal_resource', 'exergy_audit', 'exergy_report',
+                      '_T_lm', 'lorenz_reference',
                       'T_m_bottom', 'cycle_state_points', 'energy_budget',
                       'melting_temperatures')))
 
