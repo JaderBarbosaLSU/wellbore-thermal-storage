@@ -193,6 +193,17 @@ cells.append(md("""
 the session, re-run this cell — it reads what is already on disk and continues
 from there. To start over, delete `morris_raw.json`.
 
+**The bar refreshes every second from a background thread**, so the elapsed
+clock moves whether or not a point has finished. That is deliberate: a bar
+that only advances on completion cannot tell you the difference between *slow*
+and *hung*, and a single point takes about 26 s. If the `current point running`
+counter is climbing, it is working; if it freezes, it is not.
+
+The ETA uses the **median** of the last ten point times, not the mean of all of
+them — the first point pays CoolProp's table warm-up and a few points hit the
+CSS iteration limit, and either would drag a running mean around for the rest
+of the hour.
+
 Set `R = 3` for a first look (~18 min); `R = 10` for anything you will quote.
 """))
 
@@ -208,25 +219,32 @@ if pathlib.Path(CKPT).exists():
     old = json.loads(pathlib.Path(CKPT).read_text())
     if old.get('r') == R and old.get('seed') == SEED:
         done = {(x['traj'], x['step']): x for x in old['rows']}
-        print(f'resuming: {len(done)} of {R*(k+1)} points already done')
+        print(f'resuming: {len(done)} of {R*(k+1)} points already on disk')
 
-rows, t0 = [], time.time()
-for ti, Bs in enumerate(trajs):
-    for si in range(k + 1):
-        if (ti, si) in done:
-            rows.append(done[(ti, si)]); continue
-        rows.append({'traj': ti, 'step': si, 'x': Bs[si].tolist(),
-                     'kpi': dm.evaluate(Bs[si])})
-    nb = sum(1 for x in rows if x['kpi'] is None)
-    pathlib.Path(CKPT).write_text(json.dumps(
-        {'factors': list(dm.FACTORS), 'kpis': dm.KPIS, 'delta': delta,
-         'r': R, 'p': 6, 'seed': SEED, 'model': MODEL_VERSION, 'rows': rows}))
-    el = time.time() - t0
-    print(f'  trajectory {ti+1}/{R}  ·  {len(rows)} points  ·  '
-          f'{nb} infeasible  ·  {el/60:.1f} min elapsed', flush=True)
+rows = []
+bar = dm.Progress(R * (k + 1), f'Morris screen · R={R} · {R*(k+1)} runs')
+try:
+    for ti, Bs in enumerate(trajs):
+        for si in range(k + 1):
+            if (ti, si) in done:
+                rows.append(done[(ti, si)])
+                bar.tick(done[(ti, si)]['kpi'] is not None,
+                         f'trajectory {ti+1}/{R} (cached)')
+                continue
+            res = dm.evaluate(Bs[si])
+            rows.append({'traj': ti, 'step': si, 'x': Bs[si].tolist(),
+                         'kpi': res})
+            bar.tick(res is not None, f'trajectory {ti+1}/{R}')
+        # checkpoint after every trajectory
+        pathlib.Path(CKPT).write_text(json.dumps(
+            {'factors': list(dm.FACTORS), 'kpis': dm.KPIS, 'delta': delta,
+             'r': R, 'p': 6, 'seed': SEED, 'model': MODEL_VERSION,
+             'rows': rows}))
+finally:
+    bar.close()
 
 nb = sum(1 for x in rows if x['kpi'] is None)
-print(f'\ndone: {len(rows)} points, {nb} infeasible ({100*nb/len(rows):.1f} %)')
+print(f'done: {len(rows)} points, {nb} infeasible ({100*nb/len(rows):.1f} %)')
 """))
 
 cells.append(md("""

@@ -480,3 +480,122 @@ def summary_table(res, kpi):
     import pandas as pd
     df = pd.DataFrame(res[kpi]).T[['mu', 'mu_star', 'sigma', 'ci', 'n']]
     return df.sort_values('mu_star', ascending=False).round(4)
+
+
+# ======================================================================
+#  PROGRESS.  A run is an hour and a single design point takes ~26 s, so
+#  without this there is a half-minute of silence after every point and six
+#  minutes between trajectory prints. The question "is it stuck or is it
+#  working" then has no answer short of killing it.
+#
+#  A background thread refreshes the display every second whether or not a
+#  point has finished, so the elapsed clock is always MOVING. That is the
+#  part that distinguishes slow from hung; a bar that only advances on
+#  completion cannot.
+# ======================================================================
+import threading
+import time as _time
+
+
+def _hms(s):
+    s = int(max(0, s))
+    return f'{s // 3600}:{s % 3600 // 60:02d}:{s % 60:02d}' if s >= 3600 \
+        else f'{s // 60:d}:{s % 60:02d}'
+
+
+class Progress:
+    """Live progress with an ETA, safe to use outside IPython.
+
+    ETA uses the MEDIAN of the last 10 point times rather than the mean of
+    all of them: the first point pays CoolProp's table warm-up and a few
+    points hit the CSS iteration limit, and either would drag a running mean
+    around for the rest of the run.
+    """
+
+    def __init__(self, total, label='Morris screen'):
+        self.total, self.label = total, label
+        self.done = self.bad = 0
+        self.note = ''
+        self.t0 = _time.time()
+        self.t_point = self.t0
+        self.times = []
+        self._stop = threading.Event()
+        self._html = None
+        try:
+            # Only take the HTML path inside a real notebook frontend.
+            # `display()` outside one returns a handle that never renders and
+            # prints an object repr instead, which is worse than plain text.
+            from IPython import get_ipython
+            if get_ipython() is None:
+                raise RuntimeError('not in IPython')
+            from IPython.display import display, HTML
+            self._html = display(HTML(self._render()), display_id=True)
+        except Exception:
+            self._html = None
+        self._th = threading.Thread(target=self._loop, daemon=True)
+        self._th.start()
+
+    def _rate(self):
+        if not self.times:
+            return None
+        recent = sorted(self.times[-10:])
+        return recent[len(recent) // 2]
+
+    def _render(self):
+        f = self.done / self.total if self.total else 0.0
+        nb = int(round(38 * f))
+        r = self._rate()
+        eta = ('estimating…' if r is None
+               else '~' + _hms(r * (self.total - self.done)) + ' left')
+        cur = _time.time() - self.t_point
+        bar = '█' * nb + '░' * (38 - nb)
+        return (
+            f"<div style='font-family:ui-monospace,monospace;font-size:13px;"
+            f"line-height:1.7'>"
+            f"<b>{self.label}</b><br>"
+            f"<span style='letter-spacing:-1px'>{bar}</span> "
+            f"{self.done}/{self.total} ({100 * f:.0f} %)<br>"
+            f"elapsed {_hms(_time.time() - self.t0)} &nbsp;·&nbsp; {eta}"
+            f"&nbsp;·&nbsp; {('%.0f s/point' % r) if r else '—'}<br>"
+            f"<span style='color:#888'>current point running "
+            f"{cur:.0f} s &nbsp;·&nbsp; {self.bad} infeasible"
+            f"{' &nbsp;·&nbsp; ' + self.note if self.note else ''}</span></div>")
+
+    def _loop(self):
+        while not self._stop.wait(1.0):
+            try:
+                if self._html is not None:
+                    from IPython.display import HTML
+                    self._html.update(HTML(self._render()))
+                else:
+                    r = self._rate()
+                    print(f'\r  {self.done}/{self.total} · '
+                          f'elapsed {_hms(_time.time() - self.t0)} · '
+                          f'{"~" + _hms(r * (self.total - self.done)) + " left" if r else "…"}'
+                          f' · current {_time.time() - self.t_point:.0f} s   ',
+                          end='', flush=True)
+            except Exception:
+                pass
+
+    def tick(self, ok=True, note=''):
+        now = _time.time()
+        self.times.append(now - self.t_point)
+        self.t_point = now
+        self.done += 1
+        self.bad += 0 if ok else 1
+        self.note = note
+
+    def close(self):
+        self._stop.set()
+        try:
+            self._th.join(timeout=2.0)
+        except Exception:
+            pass
+        if self._html is None:
+            print()
+        else:
+            try:
+                from IPython.display import HTML
+                self._html.update(HTML(self._render()))
+            except Exception:
+                pass
