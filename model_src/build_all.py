@@ -25,7 +25,7 @@ import sys
 # after the physics had moved on. A version string that lags the code is
 # the first thing anyone checks when two runs disagree, so the build
 # refuses to proceed if the generators disagree with this.
-VERSION = "0.15"
+VERSION = "0.16"
 
 HERE = pathlib.Path(__file__).parent
 BUILD = pathlib.Path('/tmp/build')
@@ -239,6 +239,7 @@ if __name__ == '__main__':
     run('make_thums.py')
     run('build_student.py')
     run('build_notebook.py')
+    run('build_doe_notebook.py')
     print('\nchecking that every name resolves')
     check_names(BUILD / 'P2H2P_model.ipynb')
     check_names(BUILD / 'P2H2P_verification.ipynb')

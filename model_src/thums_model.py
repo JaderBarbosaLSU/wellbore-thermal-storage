@@ -3969,6 +3969,30 @@ def performance_indices(case, r):
         for name, v in ex["components_kWh"].items():
             out["I_" + name.replace(" ", "_").replace("-", "")] = v
         out["exergy_gates_pass"] = ex["gates_pass"]
+
+        # ---- per-well productivity, and one scalar for the whole audit ----
+        # rho_P says power per cubic metre of store; this says power per WELL,
+        # which is the number an operator compares against a drilling cost.
+        if N_st is not None:
+            out["kW_per_well"] = W_el_out / N_st
+        out["I_per_MWh"] = ex["total_kWh"] / (ex["W_el_out_kWh"] / 1000.0)
+
+    # ---- REGIME LABELS, not performance -------------------------------
+    # These do not say whether a design is good. They say whether two runs
+    # are the same plant, and a screen that averages across them will report
+    # main effects taken over a regime change. A run whose ORC switched from
+    # pinch-bound to hot-end-bound is a different question, not a worse
+    # answer. Carried in the KPI dict so a factorial or a Morris screen
+    # cannot lose them.
+    out["deviation"] = r["deviation"]
+    out["merge_proximity_max"] = float(max(r["charge"]["merge_proximity_max"],
+                                           r["discharge"]["merge_proximity_max"]))
+    tb = r["rank"].get("T_3e_binding", "")
+    out["T_3e_binding"] = tb
+    out["regime_pinch_bound"] = 1.0 if "pinch" in tb else 0.0
+    msgs = validate_case(case, verbose=False)
+    out["feasible"] = 0.0 if any(k == "error" for k, _ in msgs) else 1.0
+    out["n_warnings"] = float(sum(1 for k, _ in msgs if k == "warn"))
     return out
 
 
