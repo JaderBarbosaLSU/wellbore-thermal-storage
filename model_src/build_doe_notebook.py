@@ -107,11 +107,23 @@ for name, url in [('thums.py',      RAW + '/model_src/thums.py'),
     urllib.request.urlretrieve(url, name)
     print(f'{{name:>14}}  {{len(open(name).read().splitlines()):>5}} lines')
 
+# DROP THE CACHED MODULES BEFORE IMPORTING.
+# `urlretrieve` above overwrites the file on disk, but `import` returns
+# whatever is already in sys.modules -- so re-running this cell after the
+# repository has moved silently keeps the OLD code, and the next cell fails
+# with AttributeError on something that plainly exists in the file you just
+# downloaded. Popping them forces a fresh import. `doe_morris` imports
+# `thums`, so both must go and in that order.
+for _m in ('doe_morris', 'thums'):
+    sys.modules.pop(_m, None)
+
 import thums as T, doe_morris as dm
 MODEL_VERSION = re.search(r'live model, v([\d.]+?)\.\s',
                           open('thums.py').read()).group(1)
 print(f'\nmodel v{{MODEL_VERSION}} · {{len(dm.FACTORS)}} factors · '
       f'{{len(dm.KPIS)}} KPIs')
+assert hasattr(dm, 'Progress'), (
+    'stale doe_morris in the kernel -- Runtime > Restart session')
 """))
 
 # ---------------------------------------------------------------- factors
