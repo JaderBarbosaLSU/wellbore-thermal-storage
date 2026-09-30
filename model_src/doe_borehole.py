@@ -27,10 +27,18 @@ the PCM conductivity? does pipe size interact with the cycle length? A
 Resolution V factorial answers both in the same 128 runs.
 
 THE DESIGN IS SEARCHED AND VERIFIED, NOT QUOTED. The generators below were
-found by exhaustive search over the 64 candidate words of length >= 4, taking
-the minimum-aberration set among those with no defining word shorter than 5.
-`verify_design` then forms all 11 main-effect and 55 two-factor-interaction
-columns and checks X'X = 128 I exactly. Run it before spending an hour.
+found by exhaustive search over the candidate words of length >= 4, taking the
+minimum-aberration set among those with no short defining word. `verify_design`
+then forms all 9 main-effect and 36 two-factor-interaction columns and checks
+X'X = 128 I exactly. Run it before spending an hour.
+
+At nine factors the search returns something better than it did at eleven.
+The defining relation is I = ABCDE = ABCFG = DEFG -- three words, all of
+length 5 or 6, none of length 4 -- which is RESOLUTION VI: two-factor
+interactions are now aliased only with FOUR-factor interactions, a rung
+cleaner than the Resolution V design the eleven-factor version had to accept.
+64 runs was checked and cannot do it: no Resolution V design exists for nine
+factors in 64 runs, so 128 stands.
 """
 import itertools
 import json
@@ -43,15 +51,14 @@ import thums as T
 # The design. 7 basic factors, 4 generated, 128 runs, Resolution V.
 # Found by search; see verify_design().
 BASIC = 7
-GENERATORS = [(0, 1, 2, 3),        # H = ABCD
-              (0, 1, 4, 5),        # J = ABEF
-              (0, 2, 4, 6),        # K = ACEG
-              (1, 3, 5, 6)]        # L = BDFG
-LETTERS = 'ABCDEFGHJKL'
+GENERATORS = [(0, 1, 2, 3, 4),     # H = ABCDE
+              (0, 1, 2, 5, 6)]     # J = ABCFG
+LETTERS = 'ABCDEFGHJ'
+NF = BASIC + len(GENERATORS)       # 9 factors
 
 
 def design_matrix():
-    """The 128 x 11 matrix in -1/+1."""
+    """The 128 x 9 matrix in -1/+1."""
     n = 2 ** BASIC
     B = np.array([[1 if (i >> j) & 1 else -1 for j in range(BASIC)]
                   for i in range(n)])
@@ -68,9 +75,9 @@ def verify_design(verbose=True):
     """
     X = design_matrix()
     cols, labs = [], []
-    for i in range(11):
+    for i in range(NF):
         cols.append(X[:, i]); labs.append(LETTERS[i])
-    for i, j in itertools.combinations(range(11), 2):
+    for i, j in itertools.combinations(range(NF), 2):
         cols.append(X[:, i] * X[:, j]); labs.append(LETTERS[i] + LETTERS[j])
     M = np.column_stack(cols)
     XtX = M.T @ M
@@ -80,10 +87,11 @@ def verify_design(verbose=True):
         print(f"design: {X.shape[0]} runs x {X.shape[1]} factors")
         print(f"balanced: {bool(np.all(X.sum(0) == 0))}")
         print(f"model matrix: {M.shape[1]} columns "
-              f"(11 main + {M.shape[1] - 11} two-factor interactions)")
+              f"({NF} main + {M.shape[1] - NF} two-factor interactions)")
         print(f"largest off-diagonal of X'X: {off}")
-        print("RESOLUTION V CONFIRMED" if ok else "*** DESIGN IS CONFOUNDED ***")
-        print("\naliased with three-factor interactions and higher only;")
+        print("RESOLUTION V OR BETTER CONFIRMED" if ok
+              else "*** DESIGN IS CONFOUNDED ***")
+        print("\nshortest defining word is length 5, so 2fi alias with 4fi;")
         print("main effects and 2fi are clean.")
     return ok
 
@@ -96,7 +104,7 @@ FACTORS = {
     # --- the PCM itself. Absent from the v0.16 screen entirely, which for a
     #     study of a phase-change battery was the wrong omission: latent heat
     #     and conductivity are the two things material selection actually buys.
-    'h_m_kJkg':   (250.0, 450.0, 'f'),   # latent heat of fusion
+    'h_m_kJkg':   (180.0, 380.0, 'f'),   # latent heat of fusion
     'k_scale':    (0.5, 2.0, 'f'),       # multiplies BOTH k_s and k_l,
                                          # keeping the solid/liquid ratio
     'rho_scale':  (0.85, 1.15, 'f'),     # multiplies both densities
@@ -106,22 +114,10 @@ FACTORS = {
     'L_ft':       (3000.0, 8000.0, 'f'),  # well depth
     'num_tubes':  (1, 3, 'i'),            # HAIRPINS per hole (2 legs each)
     'nps':        (0, 1, 'nps'),          # 1.25 in or 2 in, Sch 80
-    'num_fins':   (8, 32, 'i'),
-    # Fin length as a FRACTION of the radial space the leg actually owns,
-    # not an absolute length. A box in fin_L put 16 of the 128 corners
-    # outside the geometry -- and not at random: every one of them had three
-    # hairpins, 2 in pipe and 15 mm fins together, so the loss fell entirely
-    # on the num_tubes x nps and num_tubes x fin_L interactions, which is
-    # exactly where a structured loss does most damage. Sampling the fill
-    # fraction makes every corner fit by construction, and is the more
-    # meaningful quantity anyway: it asks how much of the available space the
-    # fins take, which is the decision, rather than a length that means
-    # different things in different holes.
-    'fin_fill':   (0.20, 0.80, 'f'),      # fin_L / (r_cell - r_e)
-    'N_lay':      (5, 15, 'i'),           # cascade layers; the SPAN is held
-                                          # fixed, so this varies granularity
-                                          # only -- see build_case
-    'Rf_i':       (0.0, 2e-3, 'f'),       # internal fouling resistance
+    'num_fins':   (8, 32, 'i'),        # fin LENGTH is frozen -- see FROZEN
+    'N_lay':      (5, 15, 'i'),        # cascade layers; the SPAN is held
+                                       # fixed, so this varies granularity
+                                       # only -- see build_case
 }
 NPS_LIST = [1.25, 2.0]
 SCH80 = {1.25: (42.16, 4.85), 2.00: (60.33, 5.54)}
@@ -131,7 +127,18 @@ BASE = T.Case()
 FROZEN = dict(T_m_C=BASE.T_m_C, DT_4C_M=BASE.DT_4C_M, DT_M_1D=BASE.DT_M_1D,
               DT_3C_2C=BASE.DT_3C_2C, DT_3D_2D=55.0,
               t_ch=BASE.t_ch, t_dc=BASE.t_dc,
-              W_dot_el_out=BASE.W_dot_el_out)
+              W_dot_el_out=BASE.W_dot_el_out,
+              # Fin LENGTH fixed at 3.5 mm, down from the 7.5 mm default. Only
+              # the fin COUNT varies now (8 -> 32), so the design asks "how
+              # many fins" and not "how much fin", which is the cleaner
+              # question and the one a manufacturer actually answers. 3.5 mm
+              # also fits inside the tightest cell in the design -- three
+              # hairpins of 2 in pipe -- so no corner is lost to geometry.
+              fin_L=0.0035,
+              # Fouling fixed at the design value. In the v0.16 screen it
+              # ranked last of thirteen; sampling it here would spend a
+              # column of a 9-factor design on a known non-effect.
+              Rf_i=BASE.Rf_i)
 SPAN_FIXED = 55.0 * (9 - 1) / 9          # the v0.16 design-point span, 48.89 K
 
 KPIS = ['eta_RTE', 'psi', 'wells_per_MWe', 'kW_per_well', 'rho_E_kWh_m3',
@@ -162,11 +169,6 @@ def build_case(row):
     # N_lay change it would leak a surface effect into a borehole study.
     DT_cascade = SPAN_FIXED * N / (N - 1)
 
-    # r_cell depends on num_tubes and the hole, so the space available for
-    # fins is known before the Case exists; fin_L follows from the fraction.
-    r_cell = (BASE.D_well / 2.0) / np.sqrt(2 * int(v['num_tubes']))
-    fin_L = v['fin_fill'] * (r_cell - r_e)
-
     return T.Case(
         h_m=v['h_m_kJkg'] * 1000.0,
         k_s=0.60 * v['k_scale'], k_l=0.45 * v['k_scale'],
@@ -174,8 +176,7 @@ def build_case(row):
         cp_s=1280.0 * v['cp_scale'], cp_l=1800.0 * v['cp_scale'],
         L_ft=v['L_ft'], num_tubes=int(v['num_tubes']),
         r_i=r_i, r_e=r_e,
-        num_fins=int(v['num_fins']), fin_L=fin_L,
-        Rf_i=v['Rf_i'],
+        num_fins=int(v['num_fins']),
         N_lay=N, n_segments=int(N * max(4, round(100 / N))),
         DT_cascade=DT_cascade,
         **FROZEN)
@@ -233,8 +234,8 @@ def run(centre_points=4, out='borehole_raw.json', verbose=True):
                  'frozen': {k: v for k, v in FROZEN.items()},
                  'span_fixed': SPAN_FIXED}))
     for j in range(centre_points):
-        res = evaluate(np.zeros(11))
-        rows.append({'run': len(X) + j, 'x': [0.0] * 11,
+        res = evaluate(np.zeros(NF))
+        rows.append({'run': len(X) + j, 'x': [0.0] * NF,
                      'centre': True, 'kpi': res})
         if bar:
             bar.tick(res is not None, f'centre {j + 1}/{centre_points}')
@@ -268,9 +269,9 @@ def analyse(path='borehole_raw.json'):
         if len(y) != len(X):
             continue
         eff = {}
-        for i in range(11):
+        for i in range(NF):
             eff[names[i]] = float(2.0 * np.mean(X[:, i] * y))
-        for i, j in itertools.combinations(range(11), 2):
+        for i, j in itertools.combinations(range(NF), 2):
             eff[f'{names[i]} x {names[j]}'] = float(
                 2.0 * np.mean(X[:, i] * X[:, j] * y))
         # curvature: centre mean vs the corner mean. If the response were
