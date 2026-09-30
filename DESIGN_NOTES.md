@@ -1343,3 +1343,36 @@ alongside the model rather than after it, and it is the second time in this
 project that the document has caught something the test suite could not — the
 first being the stale version stamp on the title page, which was visible on
 page one of a PDF nobody was reading.
+
+## DN-29 — Study 2 at nine factors: fewer knobs, a better design
+
+JRB's revision to the borehole factor list dropped `fin_fill` and `Rf_i`,
+froze fin length at 3.5 mm, and moved the latent-heat range to 180–380 kJ/kg.
+Removing two factors turned out to buy resolution rather than merely save
+columns.
+
+Exhaustive search over the candidate generators returns, for 9 factors in
+128 runs:
+
+    I = ABCDEH = ABCFGJ = DEFGHJ
+
+Every defining word has length 6 — nothing of length 4 or 5 — so the design
+is **Resolution VI**. Two-factor interactions
+alias with four-factor interactions, one rung cleaner than the Resolution V
+the eleven-factor design had to accept. `verify_design()` confirms
+X'X = 128·I over all 9 main effects and 36 two-factor interactions.
+
+64 runs was checked and rejected: no Resolution V design exists for nine
+factors in 64 runs, so the run time does not fall.
+
+**Fixing fin_L makes `fin_fill` unnecessary.** DN-(prev) introduced the fill
+fraction to cure a *structured* loss of 16 corners, all of them three
+hairpins × 2″ × 15 mm fins — a loss that fell entirely on the `num_tubes ×
+nps` and `num_tubes × fin_L` columns, which is where structured loss does
+most damage. At a fixed 3.5 mm the tightest clearance across all 128 corners
+is 2.63 mm and nothing is rejected, so the reparameterisation can be retired
+and the design asks the cleaner question: *how many fins*, not *how much fin*.
+
+**Units caught at the boundary.** The request said "0.0035 mm", which is
+3.5 µm — 400× thinner than the fin is thick. Queried rather than silently
+converted; confirmed as 0.0035 m.
