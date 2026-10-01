@@ -1473,3 +1473,60 @@ prediction: the shielding factor between an isolated well and one inside a
 field is 29–42×, essentially independent of driving temperature and only
 weakly dependent on rock conductivity. The field result follows by division;
 nothing in BOREAS v1.0 should be read as what a cluster would see.
+
+## DN-32 — B(z): the well field is a cone, not an array
+
+THUMS wellheads sit on **6 ft centres**, 12 ft between double rows, and over
+1200 wells are drilled directionally from four islands with drift angles to
+84 deg across 6500 acres. An earlier estimate here used 8 m spacing, which was
+wrong by a factor of four in the direction that matters most.
+
+The governing number is the time for neighbours to merge thermally, `r²/α`:
+
+| spacing | merge time |
+|---|---|
+| 1.83 m (6 ft) | **36 days** |
+| 8 m (the old assumption) | 1.9 yr |
+| 162 m (reservoir depth) | 779 yr |
+
+So the shallow section is **one thermal body within a month** and the deep
+section is a field of isolated wells — in the same well. A single spacing
+cannot represent that, and neither can a single resistance.
+
+**And the two effects oppose each other with depth.** Shallow rock is cold, so
+the driving difference is largest exactly where shielding is strongest; deep
+rock is hot, so the driving difference is smallest exactly where the wells
+stand alone. That partial cancellation is a property of directionally-drilled
+island fields specifically, and it does not appear in any purpose-drilled BTES
+geometry.
+
+**The model.** Vertical above the kickoff point, then fanning at a constant
+effective half-angle; spacing scales with the fan radius. The shielded
+resistance is the perimeter flux shared among the wells,
+
+    R_perimeter(z) = N sqrt(pi alpha t) / (2 pi k R_field(z))
+
+which carries no driving temperature and so is a true resistance. The two
+regimes are combined by taking the **larger** resistance — not a smooth blend,
+and not pretending to be one: a well cannot leak more than if it stood alone,
+a field cannot leak more than its perimeter allows, and whichever binds
+governs. The crossover is sharp in reality too; it is the moment the cells
+merge.
+
+### What it does
+
+| case | loss | eta_storage | eta_RTE | eps_cycled |
+|---|---|---|---|---|
+| isolated well | 75.6 % | 0.244 | 0.072 | 0.452 |
+| parallel array at 1.83 m | **0.93 %** | **0.991** | **0.323** | **0.931** |
+
+Two orders of magnitude, from one geometric parameter. The isolated-well
+figure is not a pessimistic estimate of the real loss — it is a different
+configuration, and one nobody would build.
+
+**This also settles the insulation question.** For an isolated well there is a
+shallow optimum near 5 mm, worth +19 % on delivered energy before the PCM
+volume penalty turns the curve over. In a field the loss is already under 1 %,
+so insulation trades 11 % of the PCM for nothing. That an optimum exists at
+all is a symptom that the isolated-well scope is unphysical: a model whose
+advice is "insulate" is reporting on a configuration that does not exist.

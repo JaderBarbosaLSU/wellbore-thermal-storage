@@ -90,6 +90,31 @@ class Case:
     # threw away exactly the physics the deficit represents.
     L_producing_ft: float = 8000.0   # depth the geothermal water comes from
 
+    # ---- THE WELL FIELD IS A CONE, NOT AN ARRAY -------------------------
+    # THUMS wellheads sit on 6 ft centres with 12 ft between double rows,
+    # and over 1200 wells are drilled DIRECTIONALLY from four islands with
+    # drift angles to 84 deg, reaching 6500 acres. So the spacing is not a
+    # number, it is a function of depth: metres apart at the wellhead, of
+    # order 150 m at reservoir depth.
+    #
+    # That matters more than any other single parameter here. Neighbours
+    # merge thermally in r^2/alpha, which at 6 ft is 36 DAYS and at 160 m is
+    # eight centuries. The shallow section is one thermal body within a month
+    # and barely loses at all; the deep section is a field of isolated wells.
+    #
+    # And the two effects run opposite ways with depth. Shallow rock is cold,
+    # so the driving difference is largest exactly where the shielding is
+    # strongest; deep rock is hot, so the driving difference is smallest
+    # exactly where the wells stand alone. Neither a single spacing nor a
+    # single resistance can represent that, which is why B is B(z).
+    #
+    # n_wells_field = None recovers the isolated well, which is the
+    # conservative bound and the v1.0 default behaviour.
+    n_wells_field: float = None   # wells sharing the formation; None = alone
+    B_surface_m: float = 1.83     # wellhead spacing, 6 ft                [m]
+    z_kickoff_m: float = 300.0    # vertical above the kickoff point      [m]
+    fan_angle_deg: float = 45.0   # effective half-angle of the fan     [deg]
+
     # ---- power block and operating conditions ----
     fluid: str = "cyclopentane"   # ORC working fluid
     fluid2: str = "Water"         # borehole secondary fluid
@@ -927,7 +952,32 @@ def ground_resistance(case):
     return R
 
 
-def formation_resistance(case):
+def field_radius(case, depth):
+    """Radius of the well cluster at a given depth [m].
+
+    Vertical above the kickoff point, then fanning at a constant effective
+    half-angle. A real directional programme builds angle over a section and
+    then holds it, so the fan is not a straight cone -- but the quantity this
+    feeds is a logarithm, and the difference between a cone and a build-and-
+    hold is well inside the uncertainty in the spacing data itself.
+    """
+    if case.n_wells_field is None:
+        return None
+    R0 = case.B_surface_m * np.sqrt(case.n_wells_field / np.pi)
+    spread = np.maximum(0.0, np.asarray(depth, float) - case.z_kickoff_m)
+    return R0 + spread * np.tan(np.radians(case.fan_angle_deg))
+
+
+def well_spacing(case, depth):
+    """Centre-to-centre spacing at depth, scaled with the fan radius [m]."""
+    Rf = field_radius(case, depth)
+    if Rf is None:
+        return None
+    R0 = case.B_surface_m * np.sqrt(case.n_wells_field / np.pi)
+    return case.B_surface_m * Rf / R0
+
+
+def formation_resistance(case, depth=None):
     """Total series resistance, PCM bulk to undisturbed rock [m K / W].
 
     Per metre of BOREHOLE, not per metre of tube. The PCM-to-casing term is
@@ -948,7 +998,34 @@ def formation_resistance(case):
     R_g = ground_resistance(case)
     if not np.isfinite(R_g):
         return np.inf                      # adiabatic; K_loss becomes 0
-    return R_pcm + R_steel + R_cem + R_g
+    R_near = R_pcm + R_steel + R_cem
+
+    # ---- FIELD SHIELDING -------------------------------------------------
+    # A well inside a cluster cannot lose what an isolated one would: its
+    # neighbours hold the rock between them warm, and once the cells have
+    # merged the only heat leaving is across the cluster PERIMETER, shared
+    # among N wells. Writing that as a resistance,
+    #
+    #     R_perimeter(z) = N sqrt(pi alpha t) / (2 pi k R_field(z))
+    #
+    # -- the semi-infinite-slab flux at the boundary, over the perimeter the
+    # field presents, divided by the wells that share it. It carries no
+    # driving temperature, so it is a true resistance and drops straight into
+    # the series chain.
+    #
+    # The two regimes are combined by taking the LARGER resistance. That is
+    # not a smooth blend and does not pretend to be: a well cannot leak more
+    # than if it stood alone, and a field cannot leak more than its perimeter
+    # allows, so whichever constraint binds is the one that governs. The
+    # crossover is sharp in reality too -- it is the moment the cells merge.
+    if depth is None or case.n_wells_field is None:
+        return R_near + R_g
+    alpha = case.k_rock / case.rho_cp_rock
+    t = case.t_operation_yr * 365.25 * 24.0 * 3600.0
+    Rf = field_radius(case, depth)
+    R_per = (case.n_wells_field * np.sqrt(np.pi * alpha * t)
+             / (2.0 * np.pi * case.k_rock * Rf))
+    return R_near + np.maximum(R_g, R_per)
 
 
 def formation_profile(case, n_segments=None, discharge=False):
@@ -977,7 +1054,8 @@ def formation_profile(case, n_segments=None, discharge=False):
 
 
 def march_h(case, T_inlet, T_m_seg, m_dot, k_wall, times,
-            n_segments=None, E0=None, record=False, T_rock=None):
+            n_segments=None, E0=None, record=False, T_rock=None,
+            R_form=None):
     """Segment march on the ENTHALPY state. Replaces `march` from v0.4.
 
     Identical to `march` in every respect except what is integrated: the state
@@ -1012,9 +1090,11 @@ def march_h(case, T_inlet, T_m_seg, m_dot, k_wall, times,
         K_loss = np.zeros(n_segments)
         T_rock_arr = np.zeros(n_segments)
     else:
-        R_tot = formation_resistance(case)
-        K_loss = (np.zeros(n_segments) if not np.isfinite(R_tot)
-                  else np.full(n_segments, 1.0 / (R_tot * case.n_ft)))
+        R_tot = (formation_resistance(case) if R_form is None
+                 else np.asarray(R_form, float))
+        R_arr = np.full(n_segments, R_tot) if np.ndim(R_tot) == 0 else R_tot
+        K_loss = np.where(np.isfinite(R_arr), 1.0 / (R_arr * case.n_ft), 0.0)
+        K_loss = np.nan_to_num(K_loss, posinf=0.0, neginf=0.0)
         T_rock_arr = np.asarray(T_rock, float)
     Q_loss_cum = 0.0
     # ---- A CLAUSIUS GATE ON THE LOSS TERM --------------------------------

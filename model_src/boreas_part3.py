@@ -890,8 +890,13 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False, T_2d=None):
     T_m_seg_dc = T_m_seg[::-1].copy()     # flow reverses; see run_cycle
     # The rock profile is mirrored with exactly the same rule as T_m_seg, for
     # exactly the same reason: on discharge the flow enters at the top.
-    T_rock_ch, _ = formation_profile(case, n, discharge=False)
-    T_rock_dc, _ = formation_profile(case, n, discharge=True)
+    T_rock_ch, depth_ch = formation_profile(case, n, discharge=False)
+    T_rock_dc, depth_dc = formation_profile(case, n, discharge=True)
+    # The resistance is now a PROFILE, because the spacing is. Built on the
+    # same two frames as T_rock so a mirroring slip cannot put the shielded
+    # shallow resistance against the deep rock.
+    R_form_ch = formation_resistance(case, depth_ch)
+    R_form_dc = formation_resistance(case, depth_dc)
     times_ch = np.logspace(0.0, np.log10(case.t_ch * 3600.0), case.n_times)
     times_dc = np.logspace(0.0, np.log10(case.t_dc * 3600.0), case.n_times)
 
@@ -924,10 +929,11 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False, T_2d=None):
     # ---- march until the state repeats -----------------------------------
     def cycle(E0, rec=False):
         ch = march_h(case, T["T_4c"], T_m_seg, m1_ch, case.k_wall, times_ch,
-                     n_segments=n, E0=E0, record=rec, T_rock=T_rock_ch)
+                     n_segments=n, E0=E0, record=rec, T_rock=T_rock_ch,
+                     R_form=R_form_ch)
         dc = march_h(case, T["T_3d"], T_m_seg_dc, m1_dc, case.k_wall, times_dc,
                      n_segments=n, E0=ch["E"][::-1], record=rec,
-                     T_rock=T_rock_dc)
+                     T_rock=T_rock_dc, R_form=R_form_dc)
         return ch, dc
 
     E = np.zeros(n)
@@ -983,7 +989,13 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False, T_2d=None):
         Q_loss_ch_kJ=ch["Q_loss_J"] * case.n_ft * N / 1000.0,
         Q_loss_dc_kJ=dc["Q_loss_J"] * case.n_ft * N / 1000.0,
         Q_loss_kJ=(ch["Q_loss_J"] + dc["Q_loss_J"]) * case.n_ft * N / 1000.0,
-        R_formation=formation_resistance(case),
+        R_formation=float(np.mean(np.atleast_1d(
+            formation_resistance(case, depth_ch)))),
+        B_top=(None if case.n_wells_field is None
+               else float(np.atleast_1d(well_spacing(case, 0.0))[0])),
+        B_bottom=(None if case.n_wells_field is None
+                  else float(np.atleast_1d(
+                      well_spacing(case, case.L_well))[0])),
         R_ground=ground_resistance(case),
         eta_storage=Q_dc / Q_ch, lambda_overridden=lambda_overridden,
         T_2d_assumed=T["T_2d"], T_2d_realised=T_2d_realised,
