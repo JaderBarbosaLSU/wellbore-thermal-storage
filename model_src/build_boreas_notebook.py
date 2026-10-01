@@ -329,8 +329,9 @@ About a minute per case.
 cells.append(code(r"""
 rows = {}
 for lab, kw in [('isolated well', {}),
-                ('array, 1.83 m', dict(n_wells_field=1000., fan_angle_deg=0.)),
-                ('directional fan', dict(n_wells_field=1000.))]:
+                ('fan, 100 wells', dict(n_wells_field=100.)),
+                ('fan, 1000 wells', dict(n_wells_field=1000.)),
+                ('array, 1.83 m', dict(n_wells_field=1000., fan_angle_deg=0.))]:
     cc = B.Case(n_segments=99, **kw)
     r = B.simulate_css_corrected(cc)
     k = B.performance_indices(cc, r)
@@ -344,7 +345,23 @@ display(pd.DataFrame(rows).T.round(4))
 """))
 
 cells.append(md(r"""
-Two orders of magnitude in the loss, from one geometric parameter.
+Expected, with the default 45 deg fan:
+
+| configuration | loss | $\eta_{storage}$ | $\eta_{RTE}$ |
+|---|---|---|---|
+| isolated well | 75.6 % | 0.244 | 0.072 |
+| fan, 100 wells | 54.9 % | 0.451 | 0.138 |
+| **fan, 1000 wells** | **12.8 %** | **0.872** | **0.281** |
+| array at 1.83 m | 0.93 % | 0.991 | 0.323 |
+
+Two orders of magnitude between the bounds, from one geometric parameter. The
+realistic case loses **12.8 %** — about 15 % relative on round-trip efficiency
+against the adiabatic 0.323. Material, and nothing like fatal.
+
+The fan *angle* matters nearly as much as the well count: steepening 45 deg to
+70 deg more than doubles the loss, because the wells separate faster with
+depth. In a real field that angle is set by where the reservoir is, which makes
+it a site parameter rather than a design one.
 
 **This also settles the insulation question.** For an isolated well there is a
 shallow optimum near 5 mm of casing insulation, worth about +19 % on delivered

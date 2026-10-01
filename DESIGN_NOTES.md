@@ -1515,12 +1515,23 @@ merge.
 
 ### What it does
 
-| case | loss | eta_storage | eta_RTE | eps_cycled |
-|---|---|---|---|---|
-| isolated well | 75.6 % | 0.244 | 0.072 | 0.452 |
-| parallel array at 1.83 m | **0.93 %** | **0.991** | **0.323** | **0.931** |
+| case | B at bottom | loss | eta_storage | eta_RTE | eps_cycled |
+|---|---|---|---|---|---|
+| isolated well | — | 75.6 % | 0.244 | 0.072 | 0.452 |
+| fan, 100 wells | 219 m | 54.9 % | 0.451 | 0.138 | 0.596 |
+| fan, 1000, steep 70 deg | 190 m | 28.7 % | 0.713 | 0.226 | 0.773 |
+| **fan, 1000 wells (the realistic case)** | **70 m** | **12.8 %** | **0.872** | **0.281** | **0.868** |
+| parallel array at 1.83 m | 1.8 m | 0.93 % | 0.991 | 0.323 | 0.931 |
 
-Two orders of magnitude, from one geometric parameter. The isolated-well
+Two orders of magnitude between the bounding cases, from one geometric
+parameter. **The realistic case — a thousand wells fanning at 45 deg — loses
+12.8 %**, which costs about 15 % relative on round-trip efficiency against the
+adiabatic 0.323. Material, and nothing like fatal.
+
+The fan angle matters almost as much as the well count: steepening from 45 to
+70 deg more than doubles the loss, because it pushes the wells apart faster
+with depth. In a real field that angle is set by where the reservoir is, not
+by choice — which makes it a site parameter rather than a design one. The isolated-well
 figure is not a pessimistic estimate of the real loss — it is a different
 configuration, and one nobody would build.
 

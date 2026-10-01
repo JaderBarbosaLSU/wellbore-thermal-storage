@@ -301,18 +301,25 @@ loss sign reversed               & $5.0\times10^{-15}$ silent & $-3.87\times10^{
 
 \begin{table}[h]
 \centering
-\begin{tabular}{lrrrr}
+\begin{tabular}{lrrrrr}
 \toprule
-configuration & loss & $\eta_{\mathrm{storage}}$ & $\eta_{\mathrm{RTE}}$
- & $\varepsilon_{\mathrm{cycled}}$ \\
+configuration & $B$ at bottom & loss & $\eta_{\mathrm{storage}}$
+ & $\eta_{\mathrm{RTE}}$ & $\varepsilon_{\mathrm{cycled}}$ \\
 \midrule
-isolated well           & \SI{75.6}{\percent} & 0.244 & 0.072 & 0.452 \\
-array at \SI{1.83}{\metre} & \SI{0.93}{\percent} & 0.991 & 0.323 & 0.931 \\
+isolated well              & ---                & \SI{75.6}{\percent} & 0.244 & 0.072 & 0.452 \\
+fan, 100 wells             & \SI{219}{\metre}   & \SI{54.9}{\percent} & 0.451 & 0.138 & 0.596 \\
+fan, 1000 wells, \SI{70}{\degree} & \SI{190}{\metre} & \SI{28.7}{\percent} & 0.713 & 0.226 & 0.773 \\
+\textbf{fan, 1000 wells, \SI{45}{\degree}} & \SI{70}{\metre} & \textbf{\SI{12.8}{\percent}} & \textbf{0.872} & \textbf{0.281} & \textbf{0.868} \\
+array at \SI{1.83}{\metre} & \SI{1.8}{\metre}   & \SI{0.93}{\percent} & 0.991 & 0.323 & 0.931 \\
 \bottomrule
 \end{tabular}
-\caption{Two orders of magnitude in the loss from a single geometric
-parameter. The isolated-well figure is not a pessimistic estimate of the
-loss; it is a different configuration.}
+\caption{Two orders of magnitude between the bounding cases from a single
+geometric parameter. The isolated-well figure is not a pessimistic estimate of
+the loss; it is a different configuration. The realistic case --- a thousand
+wells fanning at \SI{45}{\degree} --- loses \SI{12.8}{\percent}, costing some
+\SI{15}{\percent} relative on round-trip efficiency against the adiabatic
+$0.323$. The fan angle matters nearly as much as the well count, and in a real
+field it is set by reservoir position rather than by choice.}
 \end{table}
 
 This also settles the question of insulating the storage from the casing. For
