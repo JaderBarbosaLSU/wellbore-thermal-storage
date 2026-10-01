@@ -1,0 +1,53 @@
+\section{Nomenclature}
+
+\begin{longtable}{llll}
+\toprule
+symbol & meaning & unit & default \\
+\midrule
+\endfirsthead
+\toprule
+symbol & meaning & unit & default \\
+\midrule
+\endhead
+\multicolumn{4}{l}{\textit{geometry}}\\
+$\nft$        & finned tubes per borehole (all downward) & --- & 3 \\
+$r_i,\ r_e$   & finned tube inner, outer radius & \si{\metre} & 0.01623,\ 0.02108 \\
+$\rid$        & downcomer bore radius & \si{\metre} & 0.02811 \\
+$r_{\mathrm{id},o}$ & downcomer outer radius over insulation & \si{\metre} & 0.04096 \\
+$r_c$         & equivalent cell radius of one finned tube & \si{\metre} & 0.04555 \\
+$R_c$         & casing inner radius, $D_{w}/2$ & \si{\metre} & 0.0889 \\
+$r_{co}$      & casing outer radius & \si{\metre} & 0.098 \\
+$r_b$         & drilled hole radius & \si{\metre} & 0.110 \\
+$\Lw$         & well depth & \si{\metre} & 1524 \\
+$L_t$         & developed tube length, $=\Lw$ & \si{\metre} & 1524 \\
+$t_{\mathrm{ins}},\ k_{\mathrm{ins}}$ & downcomer insulation thickness, conductivity & \si{\metre},\ \si{\watt\per\metre\per\kelvin} & 0.008,\ 0.007 \\
+\midrule
+\multicolumn{4}{l}{\textit{formation}}\\
+$T_s$         & ground surface temperature & \degC & 18 \\
+$\nabla T$    & geothermal gradient & \si{\kelvin\per\kilo\metre} & 45 \\
+$k_r,\ \rho c_r$ & formation conductivity, volumetric heat capacity & \si{\watt\per\metre\per\kelvin},\ \si{\joule\per\metre\cubed\per\kelvin} & 2.5,\ \num{2.34e6} \\
+$\alpha$      & formation diffusivity, $k_r/\rho c_r$ & \si{\metre\squared\per\second} & \num{1.068e-6} \\
+$k_{\mathrm{cem}}$ & annular cement conductivity & \si{\watt\per\metre\per\kelvin} & 1.0 \\
+$t_{\mathrm{op}}$ & age of the field at evaluation & \si{yr} & 10 \\
+$L_{\mathrm{prod}}$ & depth the geothermal water is produced from & ft & 8000 \\
+\midrule
+\multicolumn{4}{l}{\textit{field}}\\
+$N$           & wells sharing the formation (\texttt{None} $=$ isolated) & --- & --- \\
+$B_0$         & wellhead spacing & \si{\metre} & 1.83 \\
+$z_{\mathrm{kop}}$ & kickoff depth & \si{\metre} & 300 \\
+$\theta$      & effective fan half-angle & \si{\degree} & 45 \\
+$R_f(z)$      & cluster radius at depth $z$ & \si{\metre} & --- \\
+$B(z)$        & well spacing at depth $z$ & \si{\metre} & --- \\
+\midrule
+\multicolumn{4}{l}{\textit{thermal}}\\
+$\Ep$         & stored enthalpy per unit tube length & \si{\joule\per\metre} & --- \\
+$\Tpcm$       & phase-change material temperature & \si{\kelvin} & --- \\
+$\Trock$      & undisturbed formation temperature & \si{\kelvin} & --- \\
+$K,\ K_\ell$  & tube and formation conductances per unit length & \si{\watt\per\metre\per\kelvin} & --- \\
+$\qp$         & heat rate per unit tube length & \si{\watt\per\metre} & --- \\
+$\etast$      & storage efficiency, $Q_{\mathrm{dis}}/Q_{\mathrm{ch}}$ & --- & --- \\
+$\etarte$     & round-trip efficiency, both parasitics charged & --- & --- \\
+$\varepsilon_{\mathrm{cyc}}$ & fraction of the store that cycles & --- & --- \\
+\bottomrule
+\end{longtable}
+

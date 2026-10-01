@@ -1,0 +1,27 @@
+\section{Limitations and further work}
+
+\begin{description}[leftmargin=2.2em,style=nextline]
+\item[Single field age.] $\Rg$ is evaluated at one $t_{\mathrm{op}}$. The
+decay of the loss from the first year to the thirtieth is obtained by repeated
+evaluation rather than by an outer loop over years, and the warming of the
+rock within the cluster is not represented as a capacitance. At island spacing
+that warming is a one-time charge of order \SI{360}{\mega\watt\hour} per well,
+roughly 300 daily cycles, after which it is storage rather than loss.
+\item[The near-well resistance.] $R_p$ ignores the crowding of the conduction
+paths near the casing. It is a quarter of a total the ground dominates.
+\item[Uniform cluster.] Hypothesis B6 divides the perimeter loss equally. Edge
+wells lose more and interior wells less; representing that requires a
+position-resolved field rather than a single $R_f(z)$.
+\item[The surface machinery is frozen.] Round-trip efficiency is governed by
+the heat-pump lift. Writing the two Carnot factors together,
+\begin{equation}
+\mathrm{COP}_C \times \eta_C
+ = \frac{T_h}{T_h - T_{\mathrm{src}}}\left(1 - \frac{T_0}{T_h}\right)
+ = \frac{T_h - T_0}{T_h - T_{\mathrm{src}}},
+\end{equation}
+which depends on the \emph{lift} and not on how hot the store is --- so
+raising $\Tm$ reduces $\etarte$, because the coefficient of performance falls
+faster than the power block gains. The lever is the source temperature, and
+the same field is considerably hotter at depth than the \SI{60}{\degC}
+currently assumed. That is a surface-side study and is not addressed here.
+\end{description}

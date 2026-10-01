@@ -1,0 +1,45 @@
+\section{Scope and relation to the THUMS series}
+
+\subsection{Why a new series rather than a new version}
+
+P2H2P/THUMS is frozen at v0.16 and remains runnable. Nothing in BOREAS edits
+it; the build script hashes the THUMS sources against their recorded stamp and
+refuses to proceed if they have moved, so the promise is enforced rather than
+asserted. The separation is deliberate. The geometry change is not a refinement
+of the hairpin model but a different machine, and the two should be comparable
+to one another rather than one silently overwriting the other. In particular,
+the \SI{92}{\kilo\watt} parasitic quantified in Section~\ref{sec:hairpin} is a
+\emph{result} about the previous geometry, and results require the previous
+geometry to remain executable.
+
+\subsection{What is inherited unchanged}
+
+The following are carried over from THUMS v0.16 without modification, and are
+documented in the companion model report rather than repeated here:
+
+\begin{itemize}[nosep]
+\item the enthalpy formulation (``Formulation C''), in which the stored state
+      is $\Ep$, the enthalpy per unit length of tube measured from a
+      fully-solid-at-$\Tm$ datum, with the three-branch constitutive curve
+      giving subcooled solid, two-phase and superheated liquid;
+\item the cyclic steady state (CSS) solver, which marches charge and discharge
+      alternately until the end-of-cycle state repeats to tolerance;
+\item the quasi-steady melt-layer conduction model and the direction-dependent
+      choice of conduction path;
+\item the double-stage ORC and the high-temperature heat pump, including
+      isentropic machine efficiencies applied inside the cycles;
+\item the component-wise exergy audit, the Gouy--Stodola accounting, and the
+      treatment of the finite geothermal resource;
+\item the single ORC correction pass that resolves the coupling between the
+      evaporating temperature and the realised discharge outlet.
+\end{itemize}
+
+\subsection{What is new}
+
+Four things, in the order they are developed below: the downcomer tube
+geometry (Section~\ref{sec:geometry}); the reinterpretation of the axial
+coordinate as a depth, with the cascade orientation that follows
+(Section~\ref{sec:coordinate}); the conducting formation
+(Section~\ref{sec:formation}); and the depth-dependent field shielding
+(Section~\ref{sec:field}).
+

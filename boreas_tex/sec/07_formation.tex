@@ -1,0 +1,128 @@
+\section{The formation}
+\label{sec:formation}
+
+\subsection{The series circuit}
+
+Heat leaves the material through four resistances in series, per unit length
+of borehole:
+\begin{equation}
+\Rtot(t) = \underbrace{R_p + R_{\mathrm{cas}} + R_{\mathrm{cem}}}_{\Rnear}
+  + \Rg(t),
+\end{equation}
+with
+\begin{align}
+R_p &= \frac{\ln(R_c/r_e)}{2\pi\,\nft\,k_p},
+&
+R_{\mathrm{cas}} &= \frac{\ln(r_{co}/R_c)}{2\pi k_{\mathrm{steel}}},
+\\[4pt]
+R_{\mathrm{cem}} &= \frac{\ln(r_b/r_{co})}{2\pi k_{\mathrm{cem}}},
+&
+\Rg(t) &= \frac{1}{2\pi k_r}
+  \ln\!\left(\frac{2.5\sqrt{\alpha t}}{r_b}\right).
+\label{eq:Rg}
+\end{align}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrr}
+\toprule
+term & value, \si{\metre\kelvin\per\watt} & share \\
+\midrule
+material to casing, $R_p$      & 0.14543 & \SI{26.5}{\percent} \\
+casing steel, $R_{\mathrm{cas}}$ & 0.00034 & \SI{0.1}{\percent} \\
+cement, $R_{\mathrm{cem}}$     & 0.01838 & \SI{3.4}{\percent} \\
+\textbf{ground}, $\Rg$         & \textbf{0.38413} & \textbf{\SI{70.1}{\percent}} \\
+\midrule
+total                          & 0.54829 & \\
+\bottomrule
+\end{tabular}
+\caption{The resistance budget at the design point, $t_{\mathrm{op}} =
+\SI{10}{yr}$. The casing is thermally invisible and the cement is a rounding
+error; the ground resistance is the model.}
+\end{table}
+
+Two remarks. First, $R_p$ is the crude term: it treats the $\nft$ tubes as
+independent parallel paths to the casing and ignores that those paths crowd
+together near the wall. It is a quarter of a total the ground dominates, and
+refining it would move the result less than the uncertainty in $k_r$ does ---
+across the plausible range $k_r \in [1.5, 3.5]$ the loss varies by a factor of
+2.1. Second, $\Rg$ is the only term that depends on time. It grows as the
+thermal front spreads, which is why $t_{\mathrm{op}}$ is a parameter of the
+case and why a quoted loss figure is meaningless without the age beside it.
+
+\subsection{The undisturbed temperature profile}
+
+\begin{equation}
+\Trock(z) = T_s + \nabla T \cdot \text{depth}(z).
+\end{equation}
+At the default \SI{45}{\kelvin\per\kilo\metre} from \SI{18}{\degC}, the rock
+runs from \SI{18}{\degC} at the surface to \SI{86}{\degC} at
+\SI{1524}{\metre}. At the central Wilmington value of
+\SI{56.5}{\kelvin\per\kilo\metre}, compiled in 1949 from 84 temperature
+measurements and the highest known in the Los Angeles basin, it reaches
+\SI{104}{\degC} at \SI{5000}{ft} and \SI{156}{\degC} at \SI{8000}{ft} ---
+\emph{hotter than the coldest cascade layers}. Those segments gain heat from
+the formation. The implementation takes no absolute values anywhere, so a
+negative loss is reported as a result rather than absorbed.
+
+\subsection{The gradient and the source temperature are independent}
+
+The wellhead temperature of the geothermal stream is a \emph{lower bound} on
+the formation temperature at producing depth: the water cools as it ascends
+the production string, and the producing wells may be deeper than the
+retrofitted ones. Deriving the gradient from the source temperature writes
+that bound as an equality and discards precisely the physics the deficit
+represents. Both are therefore specified, and only the inequality
+\begin{equation}
+T_{\mathrm{source}} \;\le\; T_s + \nabla T\, L_{\mathrm{prod}}
+\end{equation}
+is enforced --- as a check that can fail, with a warning when the margin falls
+below \SI{5}{\kelvin}, which would leave no allowance for the ascent.
+
+\subsection{Coupling to the enthalpy march}
+
+Each segment now has two linear sinks acting on it: the tube at $T_0$ with
+conductance $K$, and the formation at $\Trock$ with conductance
+$K_\ell = 1/(\Rtot \nft)$, the division by $\nft$ because the per-borehole
+conductance is shared among the tubes at that depth. These combine exactly:
+for any material temperature $T$,
+\begin{equation}
+K(T_0 - T) + K_\ell(\Trock - T)
+  = (K + K_\ell)\,(T_{\mathrm{eq}} - T),
+\qquad
+T_{\mathrm{eq}} = \frac{K T_0 + K_\ell \Trock}{K + K_\ell}.
+\label{eq:combine}
+\end{equation}
+The segment advance is therefore called with $(K + K_\ell, T_{\mathrm{eq}})$
+and is unchanged in form, remaining implicit in $T$. Adding the loss
+explicitly after the step would have been a half-order scheme on a term that
+reverses sign with depth.
+
+The split is recovered afterwards without further assumption. If $q_{\Sigma}$
+is the net heat the material received over the step, the effective material
+temperature follows from $q_{\Sigma} = (K+K_\ell)(T_{\mathrm{eq}} - T_{\rm
+eff})$, and then
+\begin{equation}
+q_{\mathrm{loss}} = K_\ell\,(T_{\mathrm{eff}} - \Trock),
+\qquad
+\qp_{\mathrm{tube}} = q_{\Sigma} + q_{\mathrm{loss}} .
+\label{eq:split}
+\end{equation}
+Only $\qp_{\mathrm{tube}}$ is charged against the fluid: the formation term is
+not the fluid's to pay.
+
+\subsection{What the energy closure becomes}
+
+In THUMS the closure was $|Q_{\mathrm{cum}} - \Delta E|/|Q_{\mathrm{cum}}|$:
+everything the tube gave went into storage, because nothing could leave. The
+identity is now
+\begin{equation}
+Q_{\mathrm{tube}} = \Delta E + Q_{\mathrm{loss}},
+\end{equation}
+and the residual is what remains. This is a bookkeeping identity rather than a
+gate --- it cannot fail without an arithmetic error --- but it is retained
+because it catches one specific mistake that the split in~\eqref{eq:split}
+invites, namely omitting $q_{\mathrm{loss}}$ from the tube duty. It does
+\emph{not} catch a sign error, for reasons developed in
+Section~\ref{sec:gates}.
+

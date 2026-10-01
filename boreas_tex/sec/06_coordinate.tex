@@ -1,0 +1,53 @@
+\section{The axial coordinate and the cascade orientation}
+\label{sec:coordinate}
+
+\subsection{$z$ becomes a depth}
+
+With the return no longer exchanging, the developed length of a heat-transfer
+path is $L_t = \Lw$ rather than $2\Lw$, and the map onto depth is one-to-one.
+This single change is what admits a depth-dependent formation.
+
+On charge the water reaches the bottom of the hole through the downcomer
+before it has given up any heat, so the finned tubes are entered at the
+bottom: the solver coordinate $z = 0$ is the bottom of the well and depth
+decreases with $z$,
+\begin{equation}
+\text{depth}(z) = \Lw - z .
+\end{equation}
+On discharge the flow reverses --- cold water descends the insulated
+downcomer, enters the tubes at the bottom and rises --- so the march is run
+with the segment index reversed, and the formation profile is reversed with
+it, by exactly the same rule already applied to the melting-temperature
+profile. A mirroring error here would place the shielded shallow resistance
+against the deep rock, so the orientation is asserted in the parameter
+validation rather than left to a comment.
+
+\subsection{The cascade necessarily runs hot at the bottom}
+
+Because the charge water arrives at the bottom undiminished, the hottest
+melting layer is at the bottom and the coldest at the top. This is not a free
+choice: the geometry determines it.
+
+It is also the favourable orientation. The formation is coldest at the surface
+and hottest at depth, so a hot-at-top cascade --- the THUMS arrangement ---
+opposes the gradient at both ends. The net driving difference is identical for
+either orientation, since the depth-mean of $\Tm(z)$ is unchanged, but the
+distribution is not:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrr}
+\toprule
+at \SI{8000}{ft}, $\nabla T = \SI{56.5}{\kelvin\per\kilo\metre}$
+ & $\Delta T$ at top & $\Delta T$ at bottom & cannot freeze \\
+\midrule
+hot-at-top (THUMS)     & $+132$\,K & $-55$\,K & \SI{29}{\percent} \\
+hot-at-bottom (BOREAS) & $+83$\,K  & $-6$\,K  & \SI{7}{\percent}  \\
+\bottomrule
+\end{tabular}
+\caption{Material held above its melting temperature by the surrounding rock
+cannot solidify on discharge, and that capacity is dead --- drilled and paid
+for, and unable to cycle. Both orientations have a depth-mean driving
+difference of \SI{38.7}{\kelvin}; only the distribution differs.}
+\end{table}
+

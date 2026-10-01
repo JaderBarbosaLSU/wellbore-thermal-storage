@@ -1,0 +1,80 @@
+\section{Verification}
+\label{sec:gates}
+
+\subsection{Philosophy}
+
+A check that has never been observed to fail is not evidence. Each gate below
+was corrupted deliberately and watched. The two energy checks are reported
+together because neither is sufficient alone, and the second exists precisely
+because the first proved silent.
+
+\subsection{The adiabatic limit, and an inverted guard}
+
+Driving $k_r \to 0$ must recover hypothesis H6 exactly: zero loss and
+$\etast = 1$. On its first execution this test returned $\etast = 0.20$ and a
+loss \emph{larger} than the physical case.
+
+The cause was a guard in~\eqref{eq:Rg}. When the argument of the logarithm
+falls below unity the line source is outside its validity, and the
+implementation returned $\Rg = 0$, intending ``the front has not yet cleared
+the hole''. But zero \emph{resistance} is infinite \emph{conductance}: the
+expression asserted that the rock was a perfect heat sink, which is the
+opposite of what was meant and the most damaging possible failure of that
+function. It now returns infinity, and the parameter validation warns rather
+than allowing a silent number through. The test passes with zero loss and
+$\etast = 1$ to the cyclic convergence tolerance.
+
+\subsection{Why the closure cannot detect a sign error}
+
+Let $q_{\mathrm{loss}}$ be negated in~\eqref{eq:split}. Then
+$\qp_{\mathrm{tube}} = q_\Sigma - q_{\mathrm{loss}}$ and the accumulated loss
+is $-Q_{\mathrm{loss}}$, so the residual becomes
+\begin{equation}
+Q_{\mathrm{tube}} - \Delta E - Q_{\mathrm{loss}}^{\,\mathrm{wrong}}
+ = \big(\textstyle\sum q_\Sigma - Q_{\mathrm{loss}}\big)
+   - \textstyle\sum q_\Sigma - \big(-Q_{\mathrm{loss}}\big) = 0 ,
+\end{equation}
+identically. The error appears twice with opposite signs and cancels. Measured,
+the residual under this corruption is $5\times10^{-15}$ --- machine epsilon.
+The closure reads only its own inputs and is therefore blind to the convention
+it was written with.
+
+\subsection{A Clausius gate on the loss term}
+
+The independent input the closure lacks is the \emph{state}. Heat must flow
+from hot to cold, so $q_{\mathrm{loss}}$ and $(\Tpcm - \Trock)$ must share a
+sign at every segment and every step. Accumulating their product,
+\begin{equation}
+\Sigma \;=\; \sum_{\text{steps}}\sum_{i}
+  q_{\mathrm{loss},i}\,\big(T_{p,i} - T_{r,i}\big)\,\Delta z\,\Delta t
+  \;=\; \sum K_\ell (\Delta T)^{2} \;\ge\; 0 ,
+\end{equation}
+which under a reversed convention is $-\sum K_\ell(\Delta T)^2$ and cannot be
+positive. The difference from the closure is that $(\Tpcm - \Trock)$ is
+evaluated from the marched state rather than from $q_{\mathrm{loss}}$ itself.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrr}
+\toprule
+corruption & closure & $\Sigma$ \\
+\midrule
+(none)                           & $2.9\times10^{-16}$ & $+1.64\times10^{11}$ \\
+loss omitted from the tube duty  & $5.6\times10^{-1}$ \textbf{fires} & $+1.75\times10^{11}$ silent \\
+loss sign reversed               & $5.0\times10^{-15}$ silent & $-3.87\times10^{11}$ \textbf{fires} \\
+\bottomrule
+\end{tabular}
+\caption{Each gate detects exactly what the other cannot. Neither alone would
+have been sufficient.}
+\end{table}
+
+\subsection{Parameter validation}
+
+Beyond the two energy gates, the case validator checks: the source temperature
+against the gradient; the cascade orientation, which must be hot-at-bottom and
+whose profile must be in charge-frame indexing; the geometric packing, as a
+necessary area condition with a warning when the downcomer must be run
+off-centre; the remaining material volume; the fraction of the well whose
+melting point lies below the local rock temperature, and so cannot freeze; and
+the validity of the line-source form at the requested field age.
+

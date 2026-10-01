@@ -1,0 +1,99 @@
+\section{Field shielding: $B(z)$}
+\label{sec:field}
+
+\subsection{The field is a cone, not an array}
+
+In a directionally drilled island field the wellheads are close and the wells
+diverge. THUMS wellheads sit on \SI{6}{ft} (\SI{1.83}{\metre}) centres with
+\SI{12}{ft} between double rows, and over 1200 wells reach some 6500 acres
+with drift angles to \SI{84}{\degree}. Spacing is therefore a function of
+depth, and over the storage interval it varies by more than an order of
+magnitude.
+
+The governing quantity is the time for neighbouring thermal fields to merge,
+$\tau = B^{2}/\alpha$:
+
+\begin{center}
+\begin{tabular}{lr}
+\toprule
+spacing & merge time \\
+\midrule
+\SI{1.83}{\metre} (wellhead) & \SI{36}{days} \\
+\SI{8}{\metre}               & \SI{1.9}{yr}  \\
+\SI{70}{\metre} (base of storage) & \SI{145}{yr} \\
+\SI{162}{\metre} (reservoir) & \SI{779}{yr}  \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The shallow section is a single thermal body within a month; the deep section
+is a field of isolated wells. Both occur in the same well.
+
+\paragraph{The two effects oppose one another with depth.} Shallow rock is
+cold, so the driving difference is largest exactly where the shielding is
+strongest; deep rock is hot, so the driving difference is smallest exactly
+where the wells stand alone. This partial cancellation is specific to
+directionally drilled island fields and does not arise in purpose-drilled
+borehole thermal storage, where the spacing is uniform by design. It is, as
+far as we are aware, untreated in the literature, and it is a structural
+property of repurposing this particular class of infrastructure.
+
+\subsection{Model}
+
+Above the kickoff point the wells are vertical; below it they fan at an
+effective half-angle $\theta$, so with
+$R_0 = B_0\sqrt{N/\pi}$,
+\begin{equation}
+R_f(z) = R_0 + \max\!\big(0,\ \text{depth}(z) - z_{\mathrm{kop}}\big)\tan\theta,
+\qquad
+B(z) = B_0\,\frac{R_f(z)}{R_0}.
+\end{equation}
+A real directional programme builds angle over a section and then holds it, so
+the fan is not a straight cone; the quantity this feeds is a logarithm, and
+the difference is well inside the uncertainty in the spacing data itself.
+
+A shielded well cannot lose what an isolated one would. Once the cells have
+merged, the only heat leaving crosses the cluster perimeter, and it divides
+among $N$ wells. Taking the semi-infinite-slab flux at that boundary,
+$q'' = k_r \Delta T/\sqrt{\pi\alpha t}$, over a perimeter $2\pi R_f(z)$ gives
+a loss per well of $q'' \, 2\pi R_f(z)/N$, which written as a resistance is
+\begin{equation}
+\Rper(z) = \frac{N\sqrt{\pi\alpha t}}{2\pi k_r R_f(z)}\,.
+\label{eq:Rper}
+\end{equation}
+This carries no driving temperature and is therefore a true resistance, so it
+enters the series chain directly.
+
+\subsection{Combining the two regimes}
+
+The two are combined by taking the larger resistance:
+\begin{equation}
+R_{\mathrm{form}}(z) = \Rnear + \max\!\big(\Rg,\ \Rper(z)\big).
+\label{eq:maxrule}
+\end{equation}
+This is not a smooth blend and does not pretend to be. A well cannot lose more
+heat than if it stood alone, and a field cannot lose more than its perimeter
+admits; whichever constraint binds is the one that governs. The crossover is
+sharp in reality as well --- it is the moment the cells merge, and $\tau =
+B^2/\alpha$ above shows that moment to be well defined.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{rrrr}
+\toprule
+depth, \si{\metre} & $B(z)$, \si{\metre} & $R_{\mathrm{form}}$, \si{\metre\kelvin\per\watt}
+ & shielding vs isolated \\
+\midrule
+0    & 1.8  & 63.62 & $116\times$ \\
+300  & 1.8  & 63.62 & $116\times$ \\
+600  & 18.6 & 6.39  & $11.7\times$ \\
+1000 & 41.1 & 2.99  & $5.5\times$ \\
+1524 & 70.4 & 1.81  & $3.3\times$ \\
+\bottomrule
+\end{tabular}
+\caption{$N = 1000$, $\theta = \SI{45}{\degree}$, $t_{\mathrm{op}} =
+\SI{10}{yr}$. The shielding weakens by a factor of 35 down the well but never
+stops binding: even at the base, where the wells are \SI{70}{\metre} apart,
+the field resistance is more than three times the isolated one.}
+\end{table}
+

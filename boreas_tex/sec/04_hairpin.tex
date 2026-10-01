@@ -1,0 +1,90 @@
+\section{The hairpin geometry is self-contradictory}
+\label{sec:hairpin}
+
+\subsection{What the cascade requires}
+
+The charging water enters the borehole at $\Tm + \Delta T_{4C\text{-}M}$ and
+glides $\Delta T_{3C\text{-}2C}$ as it gives up heat, so with the default
+values $\Delta T_{4C\text{-}M} = \SI{10}{\kelvin}$ and
+$\Delta T_{3C\text{-}2C} = \SI{55}{\kelvin}$ it enters at \SI{160}{\degC} and
+leaves at \SI{105}{\degC}. The cascade exists so that the melting temperature
+tracks the water: each layer sits a fixed approach below the local fluid
+temperature, and the span of melting temperatures matches the glide.
+
+In a hairpin the water traverses two legs in series. Over the second of them
+it is already below the top melting temperature --- indeed, with the figures
+above, the return leg runs
+\begin{equation}
+\Tm - (T_{4C} - \Delta T_{3C\text{-}2C}) = 150 - 105 = \SI{45}{\kelvin}
+\end{equation}
+\emph{below} the melting point. If the cascade were graded by depth, so that
+both legs at a given depth saw the same $\Tm$, the return leg would freeze what
+the down leg had just melted. The model therefore graded the cascade along the
+developed path $z \in [0, 2\Lw]$.
+
+\subsection{What path grading costs}
+
+Path grading is self-consistent, and it is what THUMS did. But it requires two
+distinct melting temperatures to coexist at the same depth. With a linear
+grade over the path, the difference between the down leg at path position $d$
+and the return leg at $2\Lw - d$ is
+\begin{equation}
+\Delta\Tm(d) = \frac{\text{span}}{2\Lw}\,\big[(2\Lw - d) - d\big]
+  = \text{span}\left(1 - \frac{d}{\Lw}\right),
+\end{equation}
+which is the full span of \SI{48.9}{\kelvin} at the wellhead, falling linearly
+to zero at the bottom, with a depth-average of \SI{24.4}{\kelvin}.
+
+These two bodies of material are separated by centimetres of \emph{contiguous}
+phase-change material, with no wall between them. Treating the legs as two
+parallel cylinders of radius $r_e$ with centre spacing $d_{cc}$ in a medium of
+conductivity $k_p$, the conduction shape factor per unit length is
+\begin{equation}
+\frac{S}{L} = \frac{2\pi}{\operatorname{arcosh}
+  \!\left(\dfrac{d_{cc}^{2} - 2r_e^{2}}{2r_e^{2}}\right)},
+\qquad
+\qp_{\text{leg-leg}} = k_p \frac{S}{L}\, \overline{\Delta\Tm}.
+\end{equation}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+hairpins & legs & $d_{cc}$ & $\qp_{\text{leg-leg}}$ & field total, \% of duty \\
+\midrule
+1 & 2 & \SI{126}{\milli\metre} & \SI{28}{\watt\per\metre} & \SI{43}{\kilo\watt} \ (\SI{36}{\percent}) \\
+2 & 4 & \SI{89}{\milli\metre}  & \SI{41}{\watt\per\metre} & \SI{62}{\kilo\watt} \ (\SI{52}{\percent}) \\
+3 & 6 & \SI{73}{\milli\metre}  & \SI{60}{\watt\per\metre} & \SI{92}{\kilo\watt} \ (\SI{77}{\percent}) \\
+\bottomrule
+\end{tabular}
+\caption{Parasitic conduction between the legs of a hairpin, evaluated at the
+depth-average temperature difference. This term is absent from the THUMS
+model. Note its direction: it \emph{grows} with the number of hairpins, which
+the v0.16 parametric study ranked as the single most beneficial design
+variable, with an effect of $+\SI{33.7}{\percent}$ on
+$\varepsilon_{\mathrm{cyc}}\eta_{\mathrm{RTE}}$.}
+\label{tab:shortcircuit}
+\end{table}
+
+The heat does not leave the store --- it moves from hot material to cold
+material within it --- so this is an exergy destruction and a degradation of
+the cascade rather than an energy loss. That does not make it benign. The
+cascade is the mechanism by which the store matches a gliding source, and a
+parasitic of \SI{77}{\percent} of duty flowing directly down the temperature
+grade is a short circuit across the model's central idea.
+
+\subsection{Two further consequences}
+
+\paragraph{Path-graded material is not pourable.} Two melting temperatures at
+one depth, in separate radial cells, requires radially segregated cartridges
+rather than material placed in layers from the bottom up. This is a
+manufacturing requirement that the geometry implies and that was never stated.
+
+\paragraph{No depth-dependent boundary condition is possible.} With
+$L_t = 2\Lw$ and $z$ a path length, the map $z \mapsto \text{depth}$ is
+two-to-one: each depth is occupied by the down leg at $z = d$ and the return
+leg at $z = 2\Lw - d$. A formation temperature that varies with depth would
+have two segments claiming it, with no principled way to divide the loss
+between them. \emph{This is why the two changes in BOREAS are one change}: the
+conducting wall cannot be attached to the hairpin geometry at all.
+

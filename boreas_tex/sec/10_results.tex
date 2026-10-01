@@ -1,0 +1,61 @@
+\section{Results}
+
+\subsection{Configurations}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrrrr}
+\toprule
+configuration & $B$ at base & loss & $\etast$ & $\etarte$
+ & $\varepsilon_{\mathrm{cyc}}$ \\
+\midrule
+isolated well              & ---                & \SI{75.6}{\percent} & 0.244 & 0.072 & 0.452 \\
+fan, $N = 100$             & \SI{219}{\metre}   & \SI{54.9}{\percent} & 0.451 & 0.138 & 0.596 \\
+fan, $N = 1000$, \SI{70}{\degree} & \SI{190}{\metre} & \SI{28.7}{\percent} & 0.713 & 0.226 & 0.773 \\
+\textbf{fan, $N = 1000$, \SI{45}{\degree}} & \SI{70}{\metre} & \textbf{\SI{12.8}{\percent}} & \textbf{0.872} & \textbf{0.281} & \textbf{0.868} \\
+array at \SI{1.83}{\metre} & \SI{1.8}{\metre}   & \SI{0.93}{\percent} & 0.991 & 0.323 & 0.931 \\
+\bottomrule
+\end{tabular}
+\caption{All at $t_{\mathrm{op}} = \SI{10}{yr}$,
+$\nabla T = \SI{45}{\kelvin\per\kilo\metre}$. The adiabatic value of $\etarte$
+is $0.323$.}
+\label{tab:results}
+\end{table}
+
+Three observations.
+
+\paragraph{The bounding cases differ by two orders of magnitude.} The
+isolated-well figure is not a pessimistic estimate of the loss; it is a
+different configuration, and one that would not be built. Reporting it alone
+would make the concept appear unviable on the strength of an assumption nobody
+made deliberately.
+
+\paragraph{The realistic case is material but not fatal.} A thousand wells
+fanning at \SI{45}{\degree} lose \SI{12.8}{\percent} of the charge, costing
+about \SI{15}{\percent} relative on round-trip efficiency against the adiabatic
+value. This is large enough that omitting it would have been a genuine defect
+in the model, and small enough that the concept survives it.
+
+\paragraph{The fan angle matters nearly as much as the well count.} Steepening
+from \SI{45}{\degree} to \SI{70}{\degree} more than doubles the loss, because
+the wells separate faster with depth. In a real field that angle is set by
+where the reservoir lies rather than by choice, which makes it a \emph{site}
+parameter rather than a design one --- and reframes the question from ``what is
+the loss'' to ``over what range of sites does this work''.
+
+\subsection{Insulating the material from the casing}
+
+For an isolated well there is a shallow optimum near \SI{5}{\milli\metre} of
+annular insulation, worth some \SI{19}{\percent} in delivered energy before
+the volume penalty reverses it; at \SI{20}{\milli\metre} the design is
+destroyed outright, since the insulation is removed from the outermost and
+largest-area annulus of material. In a field the loss is already below
+\SI{1}{\percent}, and insulation trades roughly \SI{11}{\percent} of the
+storage volume for nothing.
+
+The sharper observation is that the optimum's \emph{existence} is a symptom
+that the isolated-well scope is unphysical. A model whose recommendation is to
+insulate is reporting on a configuration that would not be built. Insulation
+moves the isolated well from \SI{84}{\percent} lost to \SI{77}{\percent} lost;
+spacing moves it to under \SI{1}{\percent}. These are not comparable levers.
+
