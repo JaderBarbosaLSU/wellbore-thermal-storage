@@ -1376,3 +1376,40 @@ and the design asks the cleaner question: *how many fins*, not *how much fin*.
 **Units caught at the boundary.** The request said "0.0035 mm", which is
 3.5 µm — 400× thinner than the fin is thick. Queried rather than silently
 converted; confirmed as 0.0035 m.
+
+## DN-30 — the Study 2 run, and a defect it exposed in my own analysis
+
+**The censoring was structured, exactly as feared.** 10 of 128 corners failed,
+and all 10 were the same shape: deep well (8000 ft) × one hairpin × 1¼″ pipe,
+where the `f_pump < 0.5` screen bites. Ten of the sixteen corners in that one
+cell are gone; everywhere else the design is intact.
+
+**That broke the estimator, not the design.** `analyse()` used the textbook
+shortcut `effect = 2·mean(x_i·y)`, which equals the least-squares estimate
+*only under balance*. With a structured loss each effect absorbs a share of
+every other, and the three factors involved are the three largest effects on
+`f_pump`. On ψ and η_RTE the shortcut disagreed with least squares by **more
+than 100 % of the largest effect in the table** — it was not perturbing the
+ranking, it was inventing it. Rewritten to least squares, with the shortcut
+retained and reported as `naive_gap` so the gap is visible.
+
+The *design* degraded gracefully: largest correlation between any two of the
+45 effect columns is 0.093, worst variance inflation 1.18×, rank still 46.
+This is Resolution VI earning its keep.
+
+**Four centre points, one point's worth of information.** All four returned
+bit-identical values — the model is deterministic, so replication measures no
+noise. They buy the curvature offset and nothing else. Budget one.
+
+**The physics result.** η_RTE regressed on `f_pump` alone gives R² = 0.956:
+the entire below-ground influence on round-trip efficiency is pumping. Within
+the low-pumping block η_RTE spans 0.3315–0.3340 (0.8 %) against 0.231–0.334
+(45 %) over the full set. Efficiency is therefore a *constraint to clear*, not
+an objective to maximise — and once cleared, the material governs density with
+almost no efficiency penalty. The two questions are nearly separable, with one
+real cross-link: a better PCM means fewer wells, so each works harder
+(mean `f_pump` 0.066 vs 0.046 across the latent-heat levels).
+
+**`wells_per_MWe` is badly curved** (−0.87 sd, −52 % of mean), as expected for
+something going as 1/h_m over a 2.1× range. Directions only; do not quote its
+magnitudes.

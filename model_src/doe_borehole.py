@@ -254,48 +254,96 @@ def run(centre_points=4, out='borehole_raw.json', verbose=True):
 def analyse(path='borehole_raw.json'):
     """Main effects, two-factor interactions, and a curvature test.
 
-    An EFFECT here is the change in the output when the factor goes from its
-    low to its high level, averaged over everything else -- the ordinary
-    factorial definition, not a regression slope.
+    ESTIMATED BY LEAST SQUARES, NOT BY A DIFFERENCE OF AVERAGES. The first
+    version of this function used the textbook shortcut
+
+        effect_i = 2 * mean(x_i * y)
+
+    which is exact -- and much easier to explain -- but ONLY when the design
+    is balanced. The first real run lost 10 of 128 corners, and not at random:
+    every one of them was a deep well with a single small pipe, where the
+    pumping screen f_pump < 0.5 bites. A structured loss is precisely the case
+    the shortcut cannot survive, because the surviving runs no longer carry
+    each factor at its high level exactly half the time, so every effect picks
+    up a share of every other effect.
+
+    It was not a small error. On psi and eta_RTE the shortcut disagreed with
+    least squares by more than 100 % OF THE LARGEST EFFECT IN THE TABLE -- it
+    was not perturbing the ranking, it was inventing it.
+
+    Least squares has no such requirement: it conditions on the runs that
+    exist. The surviving design is still well behaved (largest correlation
+    between any two of the 45 effect columns is 0.09, worst variance inflation
+    1.18x), so the estimates stay sharp. The shortcut is kept alongside and
+    reported as `naive_gap` so the discrepancy is visible rather than silent.
     """
     d = json.loads(pathlib.Path(path).read_text())
     names = d['factors']
+    nf = len(names)
     corner = [r for r in d['rows'] if not r['centre'] and r['kpi']]
     centre = [r for r in d['rows'] if r['centre'] and r['kpi']]
     X = np.array([r['x'] for r in corner])
+    pairs = list(itertools.combinations(range(nf), 2))
+    labs = list(names) + [f'{names[i]} x {names[j]}' for i, j in pairs]
+    M = np.column_stack([np.ones(len(X))]
+                        + [X[:, i] for i in range(nf)]
+                        + [X[:, i] * X[:, j] for i, j in pairs])
+    inv = np.linalg.inv(M.T @ M)
     out = {}
     for kpi in d['kpis']:
         y = np.array([r['kpi'][kpi] for r in corner if kpi in r['kpi']])
         if len(y) != len(X):
             continue
-        eff = {}
-        for i in range(NF):
-            eff[names[i]] = float(2.0 * np.mean(X[:, i] * y))
-        for i, j in itertools.combinations(range(NF), 2):
-            eff[f'{names[i]} x {names[j]}'] = float(
-                2.0 * np.mean(X[:, i] * X[:, j] * y))
-        # curvature: centre mean vs the corner mean. If the response were
-        # planar these coincide; a gap is curvature, pooled over all factors.
+        beta, *_ = np.linalg.lstsq(M, y, rcond=None)
+        eff = 2.0 * beta[1:]
+        mu = float(beta[0])
+        res = y - M @ beta
+        dof = max(1, len(y) - M.shape[1])
+        sig = float(np.sqrt(res @ res / dof))
+        se = 2.0 * sig * np.sqrt(np.diag(inv)[1:])
+        naive = np.array([2.0 * np.mean(X[:, i] * y) for i in range(nf)])
+        big = float(np.abs(eff).max()) or 1.0
+
+        # CURVATURE. Compared against the fitted INTERCEPT, which is the
+        # model's own prediction at the centre, not against the mean of the
+        # corners -- with runs missing those are not the same number.
+        #
+        # Note what the centre points can and cannot do here. The model is
+        # deterministic, so repeating the centre gives the identical answer
+        # every time: the replicates measure no noise and four of them carry
+        # exactly as much information as one. All they buy is the curvature
+        # offset. Budget one next time.
         cy = [r['kpi'][kpi] for r in centre if kpi in r['kpi']]
-        curv = (float(np.mean(cy) - np.mean(y)) if cy else float('nan'))
-        out[kpi] = {'effects': eff, 'mean': float(np.mean(y)),
-                    'curvature': curv,
-                    'curv_rel': curv / (np.std(y) or 1.0),
-                    'n_corner': len(y), 'n_centre': len(cy)}
+        curv = (float(np.mean(cy)) - mu) if cy else float('nan')
+        out[kpi] = {
+            'effects': dict(zip(labs, map(float, eff))),
+            'se': dict(zip(labs, map(float, se))),
+            'mean': mu, 'curvature': curv,
+            'curv_rel': curv / (float(np.std(y)) or 1.0),
+            'curv_pct': 100.0 * curv / (abs(mu) or 1.0),
+            'naive_gap': float(100.0 * np.abs(naive - eff[:nf]).max() / big),
+            'n_corner': len(y), 'n_centre': len(cy)}
     return out, d
 
 
 def top(res, kpi, n=12, kind='both'):
-    """Ranked effects for one KPI as a DataFrame."""
+    """Ranked effects for one KPI, with the t-ratio that says which are real.
+
+    `t` is the effect divided by its own standard error. Above about 2 the
+    effect is larger than the model's own residual scatter can account for;
+    below it, the row is telling you the factor did nothing.
+    """
     import pandas as pd
-    e = res[kpi]['effects']
+    e, s_e = res[kpi]['effects'], res[kpi]['se']
     if kind == 'main':
         e = {k: v for k, v in e.items() if ' x ' not in k}
     elif kind == 'inter':
         e = {k: v for k, v in e.items() if ' x ' in k}
     s = pd.Series(e).sort_values(key=np.abs, ascending=False).head(n)
-    return pd.DataFrame({'effect': s.round(5),
-                         '% of mean': (100 * s / res[kpi]['mean']).round(1)})
+    return pd.DataFrame({
+        'effect': s.round(5),
+        '% of mean': (100 * s / res[kpi]['mean']).round(1),
+        't': (s / pd.Series({k: s_e[k] for k in s.index})).abs().round(1)})
 
 
 try:
