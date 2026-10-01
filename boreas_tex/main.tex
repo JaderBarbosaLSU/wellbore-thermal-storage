@@ -1,0 +1,339 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs}
+\usepackage[margin=1in]{geometry}
+\usepackage{siunitx}
+\usepackage{graphicx}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc}
+
+\sisetup{per-mode=symbol}
+\newcommand{\degC}{\ensuremath{^{\circ}\mathrm{C}}}
+\newcommand{\Tm}{\ensuremath{T_{m}}}
+\newcommand{\Trock}{\ensuremath{T_{\mathrm{rock}}}}
+\newcommand{\Rg}{\ensuremath{R_{\mathrm{ground}}}}
+\newcommand{\Rper}{\ensuremath{R_{\mathrm{per}}}}
+\newcommand{\nft}{\ensuremath{n_{\mathrm{ft}}}}
+
+\title{\textbf{BOREAS: Borehole Array Storage}\\[6pt]
+\large A downcomer geometry and a conducting formation for
+latent-heat storage in repurposed wellbores}
+\author{J.\ R.\ Barbosa}
+\date{Model version 1.0}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+BOREAS replaces two assumptions carried by the THUMS/P2H2P model through
+sixteen versions: the hairpin tube geometry and the adiabatic borehole wall
+(hypothesis H6). The two are not independent. A hairpin requires its melting
+cascade to be graded along the \emph{tube path} rather than along depth, which
+places two melting temperatures at the same depth in contiguous phase-change
+material; the resulting leg-to-leg conduction is \SI{92}{\kilo\watt} against a
+duty of order \SI{120}{\kilo\watt}, a short circuit across the very cascade the
+model represents, and a term the model never contained. It also makes the
+axial coordinate a path length rather than a depth, so a depth-dependent
+formation temperature cannot be attached at all. Replacing the hairpin with
+$\nft$ downward fin tubes and a single insulated downcomer removes both
+obstacles at equal pressure drop and equal storage volume. With the wall
+conducting, the storage efficiency ceases to be unity by construction and
+becomes a measurement. Field shielding is represented through a depth-dependent
+well spacing $B(z)$ appropriate to directionally drilled island fields, where
+wellheads sit on \SI{1.83}{\metre} centres and diverge to \SI{70}{\metre} or
+more at depth. Loss falls from \SI{75.6}{\percent} of charge for an isolated
+well to \SI{0.93}{\percent} for a field at island spacing.
+\end{abstract}
+
+\section{Why a new series}
+
+P2H2P/THUMS is frozen at v0.16 and remains runnable; nothing in BOREAS edits
+it, and the build refuses to proceed if the THUMS sources have moved. The
+separation is deliberate: the geometry change is not a refinement of the
+hairpin model but a different machine, and the two should be comparable rather
+than one overwriting the other.
+
+\section{The hairpin is self-contradictory}
+\label{sec:hairpin}
+
+Charging water enters the borehole at $\Tm + \Delta T_{4C\text{-}M}$ and glides
+$\Delta T_{3C\text{-}2C}$ as it gives up heat, so the \emph{return} leg of a
+hairpin runs approximately \SI{45}{\kelvin} below the melting temperature.
+Graded by depth, that leg refreezes material the down leg has just melted.
+
+The model therefore graded the cascade along the developed tube path. This is
+self-consistent, but it requires two distinct melting temperatures to coexist
+at the same depth, separated by centimetres of \emph{contiguous} phase-change
+material with no intervening wall. Treating the two legs as parallel cylinders
+in a medium of conductivity $k_{\mathrm{PCM}}$, the conduction shape factor
+gives
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrr}
+\toprule
+hairpins & leg spacing & leg-to-leg conduction & fraction of duty \\
+\midrule
+1 & \SI{126}{\milli\metre} & \SI{43}{\kilo\watt} & \SI{36}{\percent} \\
+2 & \SI{89}{\milli\metre}  & \SI{62}{\kilo\watt} & \SI{52}{\percent} \\
+3 & \SI{73}{\milli\metre}  & \SI{92}{\kilo\watt} & \SI{77}{\percent} \\
+\bottomrule
+\end{tabular}
+\caption{Parasitic conduction between the two legs of a hairpin, which the
+THUMS model does not contain. Note that it grows with the number of
+hairpins, which the parametric study of v0.16 ranked as the single most
+beneficial design variable.}
+\end{table}
+
+Two further consequences follow. Path-graded material is not pourable: it
+would require radially segregated cartridges, a manufacturing requirement
+never stated. And since each depth is occupied by two tube segments, one rock
+temperature would have two claimants, so no depth-dependent boundary condition
+can be applied.
+
+\section{The downcomer geometry}
+
+BOREAS separates the two functions. All $\nft$ fin tubes run downward and
+exchange heat; a single \emph{insulated downcomer} returns the whole flow
+without exchanging. They meet in a manifold at the bottom of the same hole:
+no lateral, no new drilling, and the same class of object as the U-bend it
+replaces.
+
+Sizing the downcomer bore for equal velocity,
+\begin{equation}
+r_{\mathrm{id}} = r_i \sqrt{\nft},
+\end{equation}
+gives the same velocity in every passage over the same total path $2L_{w}$, so
+the pressure drop is that of the hairpin it replaces. A nested coaxial
+arrangement, in which the return runs inside each fin tube, preserves storage
+volume equally well but divides the flow area and costs a factor $3.3$ in
+pumping --- the single quantity the v0.16 study identified as governing
+subsurface efficiency.
+
+The downcomer is run off-centre. A concentric arrangement does not close for
+three \SI{1.25}{inch} tubes in a \SI{7}{inch} hole; the offset arrangement
+packs with clearance for $\nft \le 5$.
+
+\subsection{The axial coordinate becomes a depth}
+
+With the return no longer exchanging, $L_{\mathrm{tube}} = L_{w}$ rather than
+$2L_{w}$, and the solver coordinate maps one-to-one onto depth. On charge the
+water reaches the bottom of the hole through the downcomer before it has given
+up any heat, so $z = 0$ is the bottom and the cascade necessarily runs
+\emph{hot at the bottom}. On discharge the flow reverses and the march is run
+mirrored, as is the melting-temperature profile.
+
+\subsection{The cascade aligns with the geothermal gradient}
+
+The formation is coldest at the surface and hottest at depth. A hot-at-top
+cascade therefore opposes the gradient at both ends. The net driving
+difference is identical for either orientation --- the mean of $\Tm(z)$ is
+unchanged --- but the distribution is not:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrr}
+\toprule
+at \SI{8000}{ft}, \SI{56.5}{\kelvin\per\kilo\metre}
+ & $\Delta T$ at top & $\Delta T$ at bottom & cannot freeze \\
+\midrule
+hot-at-top (THUMS)     & $+132$\,K & $-55$\,K & \SI{29}{\percent} \\
+hot-at-bottom (BOREAS) & $+83$\,K  & $-6$\,K  & \SI{7}{\percent}  \\
+\bottomrule
+\end{tabular}
+\caption{Material held above its melting temperature by the surrounding rock
+cannot solidify on discharge, and that capacity is dead. The orientation is
+not a free choice: the downcomer determines it.}
+\end{table}
+
+\section{The formation}
+
+\subsection{The thermal circuit}
+
+The path from the phase-change material to undisturbed rock is a series chain
+per unit length of borehole,
+\begin{equation}
+R_{\mathrm{tot}} = R_{\mathrm{PCM}} + R_{\mathrm{casing}}
+  + R_{\mathrm{cement}} + \Rg(t),
+\end{equation}
+with
+\begin{equation}
+R_{\mathrm{PCM}} = \frac{\ln(R_{c}/r_e)}{2\pi\,\nft\,k_{\mathrm{PCM}}},
+\qquad
+\Rg(t) = \frac{1}{2\pi k_r}
+  \ln\!\left(\frac{2.5\sqrt{\alpha t}}{r_b}\right).
+\end{equation}
+
+At the design point the terms are \SI{25}{\percent}, \SI{0.1}{\percent},
+\SI{5}{\percent} and \SI{70}{\percent} respectively. The casing is thermally
+invisible and the cement is a rounding error: the ground resistance is the
+model, and unlike the others it grows with time. A quoted loss is therefore
+meaningless without the age of the field beside it.
+
+\subsection{The gradient is independent of the source temperature}
+
+The wellhead temperature of the geothermal stream is a \emph{lower bound} on
+the formation temperature at producing depth: the water cools ascending the
+production string, and the producing wells may be deeper than the retrofits.
+Deriving one quantity from the other writes that bound as an equality and
+discards the physics the deficit represents. Both are specified, and only the
+inequality
+\begin{equation}
+T_{\mathrm{source}} \;\le\; T_{\mathrm{surf}}
+  + \nabla T \, L_{\mathrm{prod}}
+\end{equation}
+is enforced, as a check that can fail.
+
+\subsection{Coupling to the enthalpy march}
+
+Two linear sinks act on each node: the tube at $T_0$ with conductance $K$, and
+the formation at $\Trock$ with conductance $K_\ell$. These combine exactly,
+\begin{equation}
+K(T_0 - T) + K_\ell(\Trock - T) = (K + K_\ell)(T_{\mathrm{eq}} - T),
+\qquad
+T_{\mathrm{eq}} = \frac{K T_0 + K_\ell \Trock}{K + K_\ell},
+\end{equation}
+so the segment advance remains implicit in the material temperature and
+unchanged in form. The split is recovered afterwards from the net heat. Adding
+the loss explicitly after the step would be a half-order scheme on a term that
+reverses sign with depth.
+
+\section{Field shielding: $B(z)$}
+
+\subsection{The field is a cone}
+
+Wellheads in a directionally drilled island field sit on \SI{1.83}{\metre}
+(\SI{6}{ft}) centres, and the wells diverge with drift angles reaching
+\SI{84}{\degree}. Spacing is therefore a function of depth, not a number. The
+governing timescale is that for neighbouring thermal fields to merge,
+$r^2/\alpha$:
+
+\begin{center}
+\begin{tabular}{lr}
+\toprule
+spacing & merge time \\
+\midrule
+\SI{1.83}{\metre}  & \SI{36}{days} \\
+\SI{8}{\metre}     & \SI{1.9}{yr}  \\
+\SI{162}{\metre}   & \SI{779}{yr}  \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The shallow section is a single thermal body within a month; the deep section
+is a field of isolated wells. Both occur in the same well.
+
+The two effects oppose one another with depth: shallow rock is cold, so the
+driving difference is largest exactly where shielding is strongest, while deep
+rock is hot, so it is smallest exactly where the wells stand alone. This
+partial cancellation is specific to directionally drilled island fields and
+does not arise in purpose-drilled borehole storage, where spacing is uniform by
+design.
+
+\subsection{Model}
+
+Above the kickoff point the wells are vertical; below it they fan at an
+effective half-angle $\theta$, so
+\begin{equation}
+R_f(z) = R_0 + \max(0,\, z - z_{\mathrm{kop}})\tan\theta,
+\qquad
+B(z) = B_0 \, R_f(z)/R_0 .
+\end{equation}
+A shielded well loses only its share of the cluster perimeter flux, which
+written as a resistance is
+\begin{equation}
+\Rper(z) = \frac{N\sqrt{\pi\alpha t}}{2\pi k_r R_f(z)} .
+\end{equation}
+This carries no driving temperature and is therefore a true resistance. The
+two regimes are combined by taking the larger,
+\begin{equation}
+R_{\mathrm{form}}(z) = R_{\mathrm{near}} + \max\!\big(\Rg,\, \Rper(z)\big),
+\end{equation}
+which is not a smooth blend and does not pretend to be: a well cannot lose more
+than if it stood alone, a field cannot lose more than its perimeter admits, and
+whichever constraint binds governs. The crossover is sharp in reality also ---
+it is the moment the cells merge.
+
+\section{Verification}
+
+Each new check was corrupted deliberately and watched to fail. Neither of the
+two below is sufficient alone, and the second exists because the first was
+silent.
+
+\paragraph{The adiabatic limit.} Driving $k_r \to 0$ must recover hypothesis H6
+exactly. On its first execution this test returned a storage efficiency of
+$0.20$ and a loss \emph{larger} than the physical case: the ground resistance
+returned zero where it intended infinity when the line source fell outside its
+validity, and zero resistance is infinite conductance. The test now passes with
+zero loss and unit storage efficiency to the cyclic convergence tolerance.
+
+\paragraph{The energy closure cannot detect a sign error.} Negating the loss
+term leaves the residual at $5\times 10^{-15}$, because the tube duty and the
+accumulated loss both carry the error and it cancels algebraically. The closure
+reads only its own inputs. The loss therefore carries an independent check on
+the direction of heat flow,
+\begin{equation}
+\Sigma = \sum q_{\mathrm{loss}}\,(T_{\mathrm{PCM}} - \Trock)
+  \;=\; \sum K_\ell (\Delta T)^2 \;\ge\; 0 ,
+\end{equation}
+which is negative under a flipped convention.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrr}
+\toprule
+corruption & closure & $\Sigma$ \\
+\midrule
+(none)                           & $2.9\times10^{-16}$ & $+1.64\times10^{11}$ \\
+loss omitted from the tube duty  & $5.6\times10^{-1}$ \textbf{fires} & $+1.75\times10^{11}$ silent \\
+loss sign reversed               & $5.0\times10^{-15}$ silent & $-3.87\times10^{11}$ \textbf{fires} \\
+\bottomrule
+\end{tabular}
+\caption{Each gate detects what the other cannot.}
+\end{table}
+
+\section{Results}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+configuration & loss & $\eta_{\mathrm{storage}}$ & $\eta_{\mathrm{RTE}}$
+ & $\varepsilon_{\mathrm{cycled}}$ \\
+\midrule
+isolated well           & \SI{75.6}{\percent} & 0.244 & 0.072 & 0.452 \\
+array at \SI{1.83}{\metre} & \SI{0.93}{\percent} & 0.991 & 0.323 & 0.931 \\
+\bottomrule
+\end{tabular}
+\caption{Two orders of magnitude in the loss from a single geometric
+parameter. The isolated-well figure is not a pessimistic estimate of the
+loss; it is a different configuration.}
+\end{table}
+
+This also settles the question of insulating the storage from the casing. For
+an isolated well there is a shallow optimum near \SI{5}{\milli\metre}, worth
+approximately \SI{19}{\percent} in delivered energy before the volume penalty
+reverses it. In a field the loss is already below \SI{1}{\percent} and
+insulation trades roughly \SI{11}{\percent} of the storage volume for nothing.
+That an optimum exists at all is a symptom that the isolated-well scope is
+unphysical: a model whose recommendation is to insulate is reporting on a
+configuration that would not be built.
+
+\section{Limitations}
+
+The ground resistance is evaluated at a single field age; the decay of loss
+from the first year to the thirtieth is obtained by repeated evaluation rather
+than by an outer loop over years. The near-well term $R_{\mathrm{PCM}}$ treats
+the tubes as independent parallel paths and ignores their crowding near the
+casing; it is a quarter of a total the ground dominates, so refining it would
+move the result less than the uncertainty in $k_r$. The surface machinery is
+unchanged and frozen: round-trip efficiency is governed by the heat-pump lift,
+$(T_h - T_0)/(T_h - T_{\mathrm{src}})$, and therefore by the geothermal source
+temperature rather than by anything below ground.
+
+\end{document}
