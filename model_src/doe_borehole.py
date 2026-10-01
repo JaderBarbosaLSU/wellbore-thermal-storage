@@ -141,10 +141,19 @@ FROZEN = dict(T_m_C=BASE.T_m_C, DT_4C_M=BASE.DT_4C_M, DT_M_1D=BASE.DT_M_1D,
               Rf_i=BASE.Rf_i)
 SPAN_FIXED = 55.0 * (9 - 1) / 9          # the v0.16 design-point span, 48.89 K
 
-KPIS = ['eta_RTE', 'psi', 'wells_per_MWe', 'kW_per_well', 'rho_E_kWh_m3',
-        'rho_P_kW_m3', 'dE_elec_kWh', 'eps_cycled', 'f_pump', 'UA_per_MWe',
-        'deviation', 'merge_proximity_max', 'regime_pinch_bound',
-        'n_warnings', 'N_geo', 'I_per_MWh']
+# eps_RTE is on this list even though it is exactly eta_RTE * eps_cycled and
+# so was always recoverable from the two of them. It was left off the first
+# run and had to be reconstructed by hand to answer a question about it --
+# which worked, but only because the identity is exact. A KPI that has to be
+# rebuilt outside the file is one that does not appear in the plots, the
+# summary table or the curvature test, and this one turned out to carry the
+# study's most interesting disagreement with eta_RTE (conductivity and fins
+# rank 9th and 8th on efficiency, 2nd and 5th on utilisation). Cheap to store,
+# expensive to notice late.
+KPIS = ['eta_RTE', 'eps_RTE', 'psi', 'wells_per_MWe', 'kW_per_well',
+        'rho_E_kWh_m3', 'rho_P_kW_m3', 'dE_elec_kWh', 'eps_cycled', 'f_pump',
+        'UA_per_MWe', 'deviation', 'merge_proximity_max',
+        'regime_pinch_bound', 'n_warnings', 'N_geo', 'I_per_MWh']
 
 
 def build_case(row):
