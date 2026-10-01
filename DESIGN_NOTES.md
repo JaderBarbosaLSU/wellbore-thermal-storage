@@ -1413,3 +1413,63 @@ real cross-link: a better PCM means fewer wells, so each works harder
 **`wells_per_MWe` is badly curved** (−0.87 sd, −52 % of mean), as expected for
 something going as 1/h_m over a 2.1× range. Directions only; do not quote its
 magnitudes.
+
+## DN-31 — BOREAS v1.0: a new series, not a new version
+
+P2H2P/THUMS is frozen at v0.16 and stays runnable. `build_boreas.py` checks
+that by hashing the THUMS sources against their own stamp and refusing to
+build if they have moved — the promise is worth what the test behind it is
+worth, and `cp` plus a careless `sed` is how it would quietly be broken.
+
+**The geometry.** n_ft fin tubes all run downward; one insulated downcomer
+returns the whole flow. `L_tube` becomes `L_well` rather than twice it, so
+**z is depth**, one-to-one. That single change is what makes a depth-dependent
+formation temperature attachable at all: with a hairpin every depth was
+occupied twice and one rock temperature would have had two PCM segments
+claiming it. The downcomer's own pressure drop is included — forgetting it
+would have halved the pumping rather than keeping it equal to the hairpin's,
+and flattered BOREAS on the one quantity Study 2 showed decides efficiency.
+
+**The sink enters exactly, not by splitting the operator.** Two linear sinks
+on one node combine as
+
+    K (T0 − T) + K_l (T_rock − T) = (K + K_l)(T_eq − T)
+
+with `T_eq` the conductance-weighted mean, so `advance_segment` is called
+unchanged and stays implicit in T_pcm. The split is recovered afterwards from
+`q_tot`, exactly. Adding the loss explicitly after the step would have been a
+half-order scheme on a term that reverses sign down the well.
+
+### Two gates, and neither is sufficient alone
+
+**The inverted guard, caught on the first run.** `ground_resistance` returned
+`0.0` when the line source was outside its validity — meaning "the front has
+not cleared the hole". Zero *resistance* is infinite *conductance*: it claims
+the rock is a perfect heat sink. Driving `k_rock → 0` and expecting
+`eta_storage = 1` returned 0.20 and a loss **larger** than the physical case.
+The adiabatic-limit gate found it immediately. Fixed to return infinity, with
+`validate_case` warning rather than letting a silent number through.
+
+**The closure cannot see a sign flip.** Negating `q_loss` leaves the residual
+at 5e-15, because `q_prime` and `Q_loss_cum` both carry the error and it
+cancels algebraically. The closure reads only its own inputs — DN-26 exactly.
+
+So the loss term gets a **Clausius gate**: accumulate `q_loss × (T_pcm −
+T_rock)`, which is `K (ΔT)²` under the correct convention and `−K (ΔT)²` under
+a flipped one. Watched to fail:
+
+| corruption | closure | Clausius |
+|---|---|---|
+| drop `q_loss` from `q_prime` | 5.6e-01 **fires** | +1.75e11 silent |
+| flip the loss sign | 5.0e-15 silent | **−3.87e11 fires** |
+
+Each catches what the other cannot. Neither alone would have been enough.
+
+### What the isolated well says
+
+Per the chosen scope — **no field shielding** — the loss is 73–92 % of charge
+and `eta_RTE` falls to 0.02–0.08. This is the conservative bound, not a
+prediction: the shielding factor between an isolated well and one inside a
+field is 29–42×, essentially independent of driving temperature and only
+weakly dependent on rock conductivity. The field result follows by division;
+nothing in BOREAS v1.0 should be read as what a cluster would see.

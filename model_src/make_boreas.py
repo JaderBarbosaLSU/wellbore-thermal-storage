@@ -1,0 +1,489 @@
+"""Build boreas.py -- the LIVE model of the BOREAS series.
+
+The engineering build (`thums_model.py`) carries the first-cycle sizing chain
+alongside the cyclic-steady-state path. That chain is not merely unused: the
+model now argues that it does not apply to a repeating duty (report S7.2), and
+it is the single most confusing thing in the sources -- two well counts, two
+criteria, a root find, and a reporting class whose job is to make retired key
+names fail loudly.
+
+This script removes it, by REACHABILITY rather than by judgement. Anything not
+called, directly or transitively, from the entry points below is dropped.
+
+The result is the module the student imports and the module the notebooks run.
+Nothing here is retyped: every function is the same text as in the engineering
+build, so the two cannot say different things.
+"""
+import ast
+import pathlib
+import re
+
+SRC = pathlib.Path('/tmp/build/boreas_model.py')
+OUT = pathlib.Path('/tmp/build/boreas.py')
+
+# The public surface of the v0.6 procedure. `calculate_pressure_drop` is an
+# entry point in its own right because the parasitic power is reported but is
+# not called by the CSS march.
+ENTRY = ('Case', 'simulate_css_corrected', 'simulate_css', 'css_report',
+         'performance_indices', 'kpi_report',
+         'cycle_state_points', 'energy_budget', 'melting_temperatures',
+         'T_m_bottom', 'layer_map', 'march_h', 'pcm_state', 'pcm_capacities',
+         'segment_profile', 'unmirror_march', 'mixed_mean_outlet',
+         'orc_pinch', 'feasible_rankine', 'exchanger_UA', 'ua_report',
+         'water_h', 'water_s', 'stream_exergy_rate',
+         'geothermal_resource', 'exergy_audit', 'exergy_report',
+         'borehole_pumping',
+         'conduction_shell', 'bulk_shape_factor', 'bulk_equivalent_delta',
+         'delta_from_area', 'calculate_pressure_drop')
+
+HEADER = '''"""BOREAS -- BOREhole Array Storage.
+
+Latent-heat storage in repurposed wellbores, with a DOWNCOMER geometry and a
+conducting formation. The live model, v1.0.
+
+BOREAS is a new series, not a new version of THUMS. The P2H2P/THUMS line stays
+exactly where it was at v0.16 and remains runnable; nothing here edits it. Two
+things differ, and they are not independent:
+
+  THE GEOMETRY. THUMS put n hairpins in the hole. A hairpin needs its cascade
+  graded along the TUBE PATH (the return leg runs ~45 K below the melting
+  point and would otherwise refreeze what the down leg melted), which puts two
+  melting points at the same depth in contiguous PCM. Conduction across that
+  gap is 43 kW at one hairpin and 92 kW at three, against a ~120 kW duty --
+  a short circuit straight across the cascade the model exists to represent,
+  and a term THUMS never had. BOREAS runs n_ft fin tubes DOWNWARD and returns
+  the whole flow through ONE INSULATED DOWNCOMER. Same pressure drop, same PCM
+  volume, no short circuit.
+
+  THE FORMATION. THUMS hypothesis H6 made the borehole wall adiabatic, so
+  eta_storage was identically 1 -- not approximately, exactly, by construction.
+  BOREAS conducts to the rock through casing, cement and ground, with the
+  undisturbed formation temperature set by an INDEPENDENT geothermal gradient.
+
+The second needed the first. With a hairpin, every depth is occupied by two
+tube segments, so one rock temperature would have had two PCM segments
+claiming it. Only when the return stops exchanging does z become a depth.
+
+Setting T_rock=None in `march_h` recovers the adiabatic wall exactly, which is
+how the v0.16 reproduction test is run. One formulation (enthalpy, "Formulation C"), one sizing
+framing (specify the hardware and march to cyclic steady state), no root
+finding anywhere.
+
+    plant      cycle_state_points   ->  state points and the two efficiencies
+               energy_budget        ->  how much energy must move per cycle
+
+    borehole   pcm_capacities       ->  E'_lat, C_s, C_l  per unit tube length
+               pcm_state            ->  E'  ->  (A_melt, T_pcm)
+               advance_segment      ->  branchwise-exact step of E'
+               march_h              ->  one half-cycle over the whole exchanger
+
+    cycle      simulate_css         ->  repeat until the state returns to itself
+               simulate_css_corrected  ->  ... with one ORC correction pass
+               css_report           ->  print it
+
+Everything is driven by one frozen dataclass, `Case`. To study a parameter,
+copy `CASE` with the field changed -- `CASE.with_(N_lay=12)` -- and re-run.
+`validate_case` checks a case for the inconsistencies that are easy to create
+and hard to see.
+
+Superseded material is not here. The first-cycle sizing chain, the closed-form
+Stefan front and the area-based melt front were removed; the reasoning that
+removed them is in DESIGN_NOTES.md and in the project report, and the code is
+in version control.
+"""
+'''
+
+VALIDATE = '''
+
+def validate_case(case, verbose=True):
+    """Check a Case for the inconsistencies that are easy to create.
+
+    This is not a check that the model is right -- that lives in the
+    verification notebook. It is a check that YOUR PARAMETERS are consistent,
+    and it fires on the traps that have actually caught people:
+
+      * `n_segments` not a multiple of `N_lay`, which makes `layer_map` place
+        a layer boundary mid-segment;
+      * a discharge inlet that is not below the coldest layer, or a charge
+        inlet not above the hottest, so the half-cycle cannot run;
+      * a glide so large that the coldest layer falls below the sink, or so
+        small that the cascade collapses;
+      * a time grid too coarse for the fastest segment time constant.
+
+    Returns a list of (level, message). `level` is 'error' for a case that
+    cannot be run and 'warn' for one that can but probably should not be.
+    """
+    msgs = []
+    def err(m): msgs.append(('error', m))
+    def warn(m): msgs.append(('warn', m))
+
+    # --- the cascade -----------------------------------------------------
+    if case.N_lay < 1:
+        err(f'N_lay = {case.N_lay}; must be at least 1')
+    if case.n_segments % case.N_lay:
+        warn(f'n_segments = {case.n_segments} is not a multiple of '
+             f'N_lay = {case.N_lay}: layer_map puts a layer boundary inside a '
+             f'segment, so one segment carries the wrong melting temperature '
+             f'by up to {case.DT_3C_2C / case.N_lay:.3f} K. '
+             f'Nearest clean values: '
+             f'{case.N_lay * (case.n_segments // case.N_lay)} or '
+             f'{case.N_lay * (case.n_segments // case.N_lay + 1)}')
+
+    T_bot = T_m_bottom(case) - 273.15
+    spacing = case.DT_3C_2C / case.N_lay
+
+    # --- the two inlets --------------------------------------------------
+    T_in_ch = case.T_m_C + case.DT_4C_M
+    T_in_dc = T_bot - case.DT_M_1D
+    if case.DT_4C_M <= 0:
+        err(f'DT_4C_M = {case.DT_4C_M} K; the charge inlet must be ABOVE the '
+            f'hottest layer or nothing melts')
+    if case.DT_M_1D <= 0:
+        err(f'DT_M_1D = {case.DT_M_1D} K; the discharge inlet must be BELOW '
+            f'the coldest layer or nothing freezes')
+    if 0 < case.DT_4C_M < spacing:
+        warn(f'DT_4C_M = {case.DT_4C_M:.3f} K is less than one layer width '
+             f'({spacing:.3f} K), so the charging fluid drops below a layer\\'s '
+             f'melting point before leaving it')
+    if 0 < case.DT_M_1D < spacing:
+        warn(f'DT_M_1D = {case.DT_M_1D:.3f} K is less than one layer width '
+             f'({spacing:.3f} K); the discharge pinches at each layer exit')
+
+    # --- glide and the sink ----------------------------------------------
+    if case.DT_3C_2C <= 0:
+        err(f'DT_3C_2C = {case.DT_3C_2C} K; the glide sets both mass flows')
+    if T_in_dc <= case.T_sink_C:
+        err(f'discharge inlet {T_in_dc:.1f} C is at or below the sink '
+            f'{case.T_sink_C:.1f} C')
+    if T_in_ch <= T_bot:
+        err(f'charge inlet {T_in_ch:.1f} C is below the coldest layer '
+            f'{T_bot:.1f} C')
+
+    # --- properties ------------------------------------------------------
+    for f in ('h_m', 'cp_s', 'cp_l', 'k_s', 'k_l', 'rho_s', 'rho_l'):
+        v = getattr(case, f, None)
+        if v is not None and v <= 0:
+            err(f'{f} = {v}; must be positive')
+
+    # --- the time grid ---------------------------------------------------
+    if case.n_times < 8:
+        warn(f'n_times = {case.n_times}; the logarithmic grid needs enough '
+             f'levels that the last step does not span most of the window')
+
+    # --- the working fluid is liquid water, and must stay that way --------
+    T_sat_w = CP.PropsSI('T', 'P', case.P, 'Q', 0, 'Water') - 273.15
+    if T_in_ch >= T_sat_w:
+        err(f'the charging inlet T_4c = {T_in_ch:.2f} C is at or above the '
+            f'saturation temperature of water at P = {case.P/1e5:.2f} bar, '
+            f'which is {T_sat_w:.2f} C. The model assumes single-phase '
+            f'liquid throughout (H7) and carries no boiling correlation, so '
+            f'it would report nonsense rather than fail. Raise case.P or '
+            f'lower T_m_C + DT_4C_M.')
+    elif T_sat_w - T_in_ch < 10.0:
+        warn(f'the charging inlet is {T_sat_w - T_in_ch:.2f} K below the '
+             f'saturation temperature of water at {case.P/1e5:.2f} bar; '
+             f'there is very little margin against boiling')
+
+    # --- approaches that are zero by construction -------------------------
+    # None of these is an error. Each is a place where the model quietly
+    # assumes an infinite exchanger, and a parametric study that leans on it
+    # will report an efficiency no hardware can reach.
+    for old, new in (('Turb_eff', 'eta_turb_s'), ('Comp_eff', 'eta_comp_s')):
+        if getattr(case, old, None) is not None:
+            err(f'{old} = {getattr(case, old)} was RETIRED at v0.12. It was '
+                f'the isentropic efficiency applied as a multiplier on the '
+                f'work AFTER an isentropic cycle; it is now applied inside '
+                f'the cycle, to the state points, as {new}. Setting both '
+                f'would double-count. Use {new} and leave {old} at None.')
+    for f in ('eta_turb_s', 'eta_pump_s', 'eta_comp_s', 'ElG_eff', 'ElH_eff'):
+        v = getattr(case, f)
+        if not (0.0 < v <= 1.0):
+            err(f'{f} = {v}; must be in (0, 1]')
+    if getattr(case, 'DT_3A_13H', None) is not None:
+        err(f'DT_3A_13H = {case.DT_3A_13H} was RETIRED at v0.9 and is now '
+            f'ignored. It used to set the evaporating temperature '
+            f'independently of DT_3A_4A, so the approach in the heat-pump '
+            f'evaporator was the difference of two free fields and nothing '
+            f'checked its sign: the defaults made it exactly zero, and '
+            f'reversing them made it negative with no symptom. The '
+            f'evaporating temperature is now derived, '
+            f'T_13h = T_source_C - DT_3A_4A - DT_pinch_HPE. Set '
+            f'DT_pinch_HPE instead, and leave DT_3A_13H at None.')
+    # ---- the geothermal resource, new at v0.13 --------------------------
+    if case.exergy_convention not in ('resource', 'stripped'):
+        err(f"exergy_convention = {case.exergy_convention!r}; must be "
+            f"'resource' (charge everything the well lifts, book the "
+            f"reinjected stream as a loss) or 'stripped' (charge only what "
+            f"the evaporator removes). They give OPPOSITE guidance on "
+            f"DT_3A_4A, so the choice is not cosmetic. See DN-23.")
+    if case.m_dot_geo_well <= 0:
+        err(f'm_dot_geo_well = {case.m_dot_geo_well} kg/s; N_geo is directly '
+            f'proportional to it and it must be positive.')
+    T_rei = case.T_source_C - case.DT_3A_4A
+    if T_rei < case.T_reinject_min_C:
+        warn(f'reinjection at {T_rei:.1f} C is below T_reinject_min_C = '
+             f'{case.T_reinject_min_C:.1f} C. DT_3A_4A = {case.DT_3A_4A} K '
+             f'draws the source down further than the formation constraint '
+             f'allows. This is a WARNING and not an error only because the '
+             f'default limit is a placeholder: the project has no measured '
+             f'value for it yet. The second law pushes DT_3A_4A UP -- it '
+             f'cuts m_geo far faster than it cuts COP -- so this bound is '
+             f'the one that will bind in an optimisation.')
+    if T_rei <= case.T_sink_C:
+        err(f'reinjection at {T_rei:.1f} C is at or below the sink '
+            f'({case.T_sink_C} C), which is the dead state. The source would '
+            f'carry no exergy worth taking and the audit would go negative.')
+    if case.DT_pinch_HPE <= 0:
+        err(f'DT_pinch_HPE = {case.DT_pinch_HPE} K; the refrigerant must '
+            f'evaporate BELOW the source outlet or the evaporator runs heat '
+            f'uphill. Zero means infinite area.')
+    elif case.DT_pinch_HPE < 2.0:
+        warn(f'DT_pinch_HPE = {case.DT_pinch_HPE:.2f} K is a very close '
+             f'approach in the heat-pump evaporator; the area needed grows '
+             f'roughly as 1/DT as this goes to zero')
+    T_evap = case.T_source_C - case.DT_3A_4A - case.DT_pinch_HPE
+    if T_evap <= case.T_sink_C:
+        err(f'the derived evaporating temperature {T_evap:.2f} C is at or '
+            f'below the sink at {case.T_sink_C:.2f} C; there is no lift left '
+            f'to speak of. Reduce DT_3A_4A or DT_pinch_HPE.')
+
+    # --- how hard the far end of the well is driven -----------------------
+    # NOT an error, and an earlier version of this check wrongly made it one.
+    # The margin below is computed on a LINEAR GLIDE against melting
+    # temperatures, i.e. it assumes the PCM sits at T_m. Under Formulation C
+    # it does not: the store superheats and subcools, so water arriving on
+    # the "wrong" side of T_m still exchanges heat, and `conduction_shell`
+    # takes the direction from sign(T_j - T_pcm) segment by segment. The
+    # model handles a negative margin correctly and reports the consequence
+    # through eps and the deviation. DT_M_1D = DT_3C_2C/N_lay -- the retired
+    # v0.5 closure, margin exactly zero -- runs and is one of the frozen
+    # verification fixtures. See DN-20.
+    span = case.cascade_span
+    g_ch, g_dc = case.DT_3C_2C, case.glide_dc_spec
+    for gl, appr, name, half, far in (
+            (g_ch, case.DT_4C_M, 'DT_4C_M', 'charging', 'coldest'),
+            (g_dc, case.DT_M_1D, 'DT_M_1D', 'discharging', 'hottest')):
+        margin = span - (gl - appr)
+        if margin <= 0.0:
+            warn(f'under a linear glide the {half} water would reach the '
+                 f'{far} layer {-margin:.3f} K on the wrong side of its '
+                 f'melting point (span {span:.3f} K, glide {gl:.3f} K, '
+                 f'{name} {appr:.3f} K). This is NOT infeasible -- the PCM '
+                 f'leaves T_m under Formulation C and the march takes the '
+                 f'heat-flow direction per segment -- but that end of the '
+                 f'store is being driven by the sensible branch, or briefly '
+                 f'in reverse, rather than melting or freezing as intended. '
+                 f'Expect a lower cycled fraction. Raise DT_cascade or '
+                 f'{name}, or narrow the glide, to restore the margin.')
+        elif margin < 2.0:
+            warn(f'the {half} margin at the {far} layer is only '
+                 f'{margin:.3f} K (span {span:.3f} K against a glide of '
+                 f'{gl:.3f} K less {name} = {appr:.3f} K); that end of the '
+                 f'store is driven very softly')
+
+    if case.DT_cascade is not None:
+        msgs.append(('info',
+                     f'cascade prescribed independently: DT_cascade = '
+                     f'{case.DT_cascade:.3f} K, span {span:.3f} K, against a '
+                     f'charging glide of {g_ch:.3f} K. The leading-face '
+                     f'approach is no longer uniform along the well.'))
+    if case.DT_3D_2D is not None:
+        msgs.append(('info',
+                     f'discharging glide prescribed independently: '
+                     f'DT_3D_2D = {case.DT_3D_2D:.3f} K against a charging '
+                     f'glide of {g_ch:.3f} K'))
+    if case.DT_sink_glide > 0.0:
+        warn(f'DT_sink_glide = {case.DT_sink_glide:.2f} K. The ORC condenser '
+             f'then has an INTERIOR pinch at the desuperheat corner, around '
+             f'93 % of its duty, and the model does not check it. It crosses '
+             f'near {case.DT_E_sink + 0.4:.1f} K of sink glide.')
+    warn('the ORC regenerator has a zero approach by construction '
+         '(T_9e = T_7e in double_stage_rankine), so its duty is an upper '
+         'bound rather than a design value. This is structural, not a '
+         'setting you can change from Case.')
+
+    # --- the ORC evaporator has to obey the second law --------------------
+    try:
+        rank, _hp, Tst = cycle_state_points(case)
+        got = rank.get('pinch')
+        old = rank.get('T_3e_uncorrected')
+        if old is not None and rank['T_3e'] < old - 1e-6:
+            rank_old = double_stage_rankine(case.fluid, Tst['T_1e'], old)
+            warn(f'the ORC pinch forced the boiling temperature DOWN, from '
+                 f'{old - 273.15:.2f} C to {rank["T_3e"] - 273.15:.2f} C, and '
+                 f'with it eta_ORC from {rank_old["rank_eff"]:.4f} to '
+                 f'{rank["rank_eff"]:.4f}. The hot-end rule DT_2D_3E = '
+                 f'{case.DT_2D_3E:.1f} K is not what sets the evaporating '
+                 f'temperature here; the pinch at DT_pinch_ORC = '
+                 f'{case.DT_pinch_ORC:.1f} K is. This is the honest cost of a '
+                 f'{case.DT_3C_2C:.0f} K water glide against a fluid that '
+                 f'boils at one temperature.')
+        elif got is not None:
+            msgs.append(('info', f'ORC evaporator pinch {got:+.2f} K, '
+                                 f'requirement {case.DT_pinch_ORC:.1f} K'))
+    except Exception as e:                       # never block on a diagnostic
+        warn(f'could not evaluate the ORC pinch: {e}')
+
+    if verbose:
+        if not msgs:
+            print('validate_case: OK')
+            print(f'  cascade   {case.T_m_C:.3f} C down to {T_bot:.3f} C '
+                  f'in {case.N_lay} layers of {spacing:.3f} K')
+            print(f'  inlets    charge {T_in_ch:.3f} C, '
+                  f'discharge {T_in_dc:.3f} C')
+        for level, m in msgs:
+            print(f'{level.upper():5s} {m}')
+    # ======================================================================
+    # BOREAS v1.0 additions
+    # ======================================================================
+
+    # --- the gradient and the source are INDEPENDENT, and checked ---------
+    # An earlier draft derived the gradient from T_source_C by setting the
+    # formation temperature at producing depth EQUAL to the wellhead
+    # temperature. That is a lower bound written as an equality: the water
+    # cools on the way up, so the rock is at least that hot and generally
+    # hotter, and the producing wells may be deeper than the retrofits. The
+    # deficit is real physics and deriving one from the other throws it away.
+    # So both are specified, and only the INEQUALITY is enforced.
+    T_at_prod = (case.T_surface_C
+                 + case.grad_K_per_km / 1000.0 * case.L_producing_ft * 0.3048)
+    if case.T_source_C > T_at_prod + 1e-9:
+        err(f'T_source_C = {case.T_source_C:.1f} C but the gradient only '
+            f'reaches {T_at_prod:.1f} C at {case.L_producing_ft:.0f} ft; '
+            f'the source cannot be hotter than the rock it comes from. '
+            f'Deepen L_producing_ft or raise grad_K_per_km.')
+    elif case.T_source_C > T_at_prod - 5.0:
+        warn(f'T_source_C = {case.T_source_C:.1f} C is within 5 K of the '
+             f'formation temperature at producing depth ({T_at_prod:.1f} C), '
+             f'which leaves no allowance for cooling up the production string')
+
+    # --- the cascade must run HOT AT THE BOTTOM --------------------------
+    # This is the whole point of the downcomer and it is the one thing a
+    # careless edit to melting_temperatures() would silently reverse. Hot at
+    # the top is the THUMS orientation: it puts the hottest PCM against the
+    # coldest shallow rock and the coldest PCM against rock that, at 8000 ft
+    # and a Wilmington gradient, is hotter than it is -- so the deep layers
+    # never freeze and that capacity is dead. Watched, not commented.
+    try:
+        T_rock_arr, depth = formation_profile(case, case.n_segments)
+        T_m_lay, _ = melting_temperatures(case)
+        T_m_seg = layer_map(T_m_lay, case.n_segments, case.N_lay)
+        if depth[0] < depth[-1]:
+            err('formation_profile is not in charge-frame indexing: '
+                'z = 0 must be the BOTTOM of the well')
+        if T_m_seg[0] < T_m_seg[-1]:
+            err('the cascade runs hot-at-top. BOREAS requires hot-at-bottom '
+                'so the cascade aligns with the geothermal gradient; '
+                'check melting_temperatures()')
+        stuck = float(np.mean(T_m_seg < T_rock_arr))
+        if stuck > 0.02:
+            warn(f'{100 * stuck:.0f} % of the well sits in rock HOTTER than '
+                 f'its melting point and cannot freeze on discharge; '
+                 f'that capacity is dead. Shorten the well, raise T_m_C, '
+                 f'or lower grad_K_per_km.')
+    except Exception as exc:              # pragma: no cover
+        warn(f'could not check the cascade orientation: {exc}')
+
+    # --- the geometry has to close ---------------------------------------
+    R = case.D_well / 2.0
+    a = case.r_e + case.fin_L                     # finned tube outer radius
+    b = case.r_id_outer
+    # Area is NECESSARY but not sufficient; 0.85 is a generous packing bound
+    # for a handful of unequal circles and is used only to catch the gross
+    # case. The arrangement is the one in the schematic -- the downcomer
+    # OFFSET, not centred -- which packs better than a concentric annulus.
+    if np.pi * (b ** 2 + case.n_ft * a ** 2) > 0.85 * np.pi * R ** 2:
+        err(f'the downcomer ({2000 * b:.0f} mm OD) and {case.n_ft} finned '
+            f'tubes ({2000 * a:.0f} mm over fins) cannot pack into a '
+            f'{1000 * case.D_well:.0f} mm hole')
+    elif b + 2.0 * a > R + 1e-6:
+        warn(f'the downcomer must be run OFF-CENTRE: {2000 * b:.0f} mm OD '
+             f'plus two finned tubes is {2000 * (b / 2 + a):.0f} mm against a '
+             f'{1000 * R:.0f} mm radius, so a concentric arrangement does not '
+             f'close. The schematic arrangement does; centralisers must hold '
+             f'the offset.')
+    if case.V_well <= 0:
+        err('no PCM volume left: the tubes and downcomer fill the hole')
+    f_pcm = case.V_well / case.V_borehole
+    if f_pcm < 0.15:
+        warn(f'PCM is only {100 * f_pcm:.0f} % of the borehole; the hardware '
+             f'is crowding out the storage')
+
+    # --- the formation model ---------------------------------------------
+    if not np.isfinite(ground_resistance(case)):
+        warn(f'the line-source ground resistance is outside its validity at '
+             f'k_rock = {case.k_rock} W/m/K, t = {case.t_operation_yr} yr; '
+             f'the formation has been treated as ADIABATIC for this run, so '
+             f'eta_storage will come back as exactly 1')
+    if case.t_operation_yr > 50.0:
+        warn('t_operation_yr beyond 50 yr: the line source is being '
+             'extrapolated well past any calibration')
+
+    return msgs
+'''
+
+
+def build():
+    src = SRC.read_text()
+    tree = ast.parse(src)
+    defs = {n.name: n for n in tree.body
+            if isinstance(n, (ast.FunctionDef, ast.ClassDef))}
+
+    calls = {}
+    for name, node in defs.items():
+        s = set()
+        for sub in ast.walk(node):
+            if isinstance(sub, ast.Call):
+                f = sub.func
+                if isinstance(f, ast.Name):
+                    s.add(f.id)
+                elif isinstance(f, ast.Attribute):
+                    s.add(f.attr)
+        calls[name] = s & set(defs)
+
+    live, stack = set(), list(ENTRY)
+    while stack:
+        x = stack.pop()
+        if x in live or x not in defs:
+            continue
+        live.add(x)
+        stack += list(calls[x])
+    dropped = sorted(set(defs) - live)
+
+    lines = src.splitlines(True)
+    keep = []
+    # module-level statements that are not dropped definitions, in file order
+    spans = sorted((defs[n].lineno, defs[n].end_lineno, n) for n in defs)
+    drop_ranges = []
+    for a, b, n in spans:
+        if n in dropped:
+            # swallow any decorator lines and the comment block above
+            start = a - 1
+            while start > 0 and (lines[start - 1].lstrip().startswith('@')):
+                start -= 1
+            while start > 0 and lines[start - 1].lstrip().startswith('#'):
+                start -= 1
+            drop_ranges.append((start, b))
+    drop = set()
+    for a, b in drop_ranges:
+        drop.update(range(a, b))
+
+    body = ''.join(l for i, l in enumerate(lines) if i not in drop)
+    # the original module docstring goes; ours replaces it
+    body = re.sub(r'\A""".*?"""\n', '', body, count=1, flags=re.S)
+    body = re.sub(r'\n{4,}', '\n\n\n', body)
+
+    out = HEADER + body.rstrip() + '\n' + VALIDATE
+    OUT.write_text(out)
+
+    n_all = len(src.splitlines())
+    n_out = len(out.splitlines())
+    print(f'wrote {OUT}')
+    print(f'  kept {len(live)} of {len(defs)} objects; '
+          f'{n_all} -> {n_out} lines')
+    print(f'  dropped: {", ".join(dropped)}')
+    return dropped
+
+
+if __name__ == '__main__':
+    build()
