@@ -55,14 +55,43 @@ the difference is well inside the uncertainty in the spacing data itself.
 A shielded well cannot lose what an isolated one would. Once the cells have
 merged, the only heat leaving crosses the cluster perimeter, and it divides
 among $N$ wells. Taking the semi-infinite-slab flux at that boundary,
-$q'' = k_r \Delta T/\sqrt{\pi\alpha t}$, over a perimeter $2\pi R_f(z)$ gives
-a loss per well of $q'' \, 2\pi R_f(z)/N$, which written as a resistance is
+$q'' = k_r \Delta T/\sqrt{\pi\alpha t}$, over a perimeter $P(z)$ gives a loss
+per well of $q''P(z)/N$, which written as a resistance is
 \begin{equation}
-\Rper(z) = \frac{N\sqrt{\pi\alpha t}}{2\pi k_r R_f(z)}\,.
+\Rper(z) = \frac{N\sqrt{\pi\alpha t}}{k_r\,P(z)}\,.
 \label{eq:Rper}
 \end{equation}
 This carries no driving temperature and is therefore a true resistance, so it
 enters the series chain directly.
+
+\subsection{Packing is not spacing}
+\label{sec:packing-field}
+
+It is tempting to write $P = 2\pi R_0$ with $R_0 = B_0\sqrt{N/\pi}$, turning a
+count and a spacing into a footprint. That assumes the wellheads \emph{fill a
+circle}, and a disc minimises perimeter for a given count --- so it is the
+most favourable arrangement that exists, and the error it introduces is
+entirely one-sided.
+
+THUMS wellheads sit in \textbf{linear double rows along the island rim},
+\SI{6}{ft} centre to centre with \SI{12}{ft} between rows, and the field is
+split across \textbf{four islands}, each presenting its own boundary:
+
+\begin{center}
+\begin{tabular}{lr}
+\toprule
+arrangement & perimeter per well \\
+\midrule
+disc, one cluster & \SI{0.205}{\metre} \\
+four islands, double rows & \textbf{\SI{1.859}{\metre}} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent a factor of \textbf{9.06}, and hence nine times the loss. The
+spacing was never in question; the packing was. $P(z)$ is therefore computed
+from a stated arrangement and scaled with the fan, $P(z) = P_0 R_f(z)/R_0$,
+rather than assumed circular.
 
 \subsection{Combining the two regimes}
 

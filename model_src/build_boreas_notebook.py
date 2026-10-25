@@ -34,7 +34,7 @@ Latent-heat storage in repurposed oil-and-gas wells. **A new series, not a new
 version of P2H2P/THUMS** — that model is frozen at v0.16 and still runs; its
 notebook is untouched.
 
-*v1.1 · built {STAMP}*
+*v1.3 · built {STAMP}*
 
 ---
 
@@ -326,7 +326,7 @@ cells.append(md(r"""
 ## 5. Run it
 
 `n_wells_field=None` is the **isolated well** — the conservative bound, and
-the v1.1 default. It is not a pessimistic estimate of the real loss; it is a
+the v1.3 default. It is not a pessimistic estimate of the real loss; it is a
 different configuration, and one nobody would build.
 
 About a minute per case.
@@ -439,6 +439,36 @@ print(f'  {"PASS" if r0["Q_loss_kJ"] == 0.0 else "FAIL"}'
 """))
 
 # ------------------------------------------------------------- playground
+cells.append(md(r"""
+---
+## 6b. Packing is not spacing
+
+`field_radius` in v1.0--v1.2 turned a well count and a spacing into a
+footprint the obvious way, $R_0 = B_0\sqrt{N/\pi}$ --- a compact disc. The
+spacing was right (6 ft, from the Oxy deck). The **packing** was not.
+
+A disc *minimises* perimeter for a given count, and shielding goes as
+$1/\text{perimeter}$, so it is the most favourable arrangement that exists.
+THUMS wellheads sit in **linear double rows along the island rim**, split
+across **four islands**, each with its own boundary.
+
+| arrangement | perimeter per well |
+|---|---|
+| disc | 0.205 m |
+| four islands, double rows | **1.859 m** |
+
+**9.06x more perimeter, so 9x the loss.** `packing` is now a `Case` field.
+"""))
+
+cells.append(code(r"""
+for pk, kw in [('disc', {}), ('rows', dict(n_islands=4))]:
+    cc = B.Case(n_wells_field=1000., fan_angle_deg=0., packing=pk, **kw)
+    P = float(np.atleast_1d(B.field_perimeter(cc, 0.))[0])
+    R = float(np.atleast_1d(B.formation_resistance(cc, np.array([0.])))[0])
+    print(f'{pk:>6}: perimeter {P:7.0f} m -> {P/1000:.3f} m per well, '
+          f'R_form {R:7.3f} m K/W')
+"""))
+
 # ------------------------------------------------------- depth sweep
 cells.append(md(r"""
 ---
