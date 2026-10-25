@@ -1,7 +1,7 @@
 """BOREAS -- BOREhole Array Storage.
 
 Latent-heat storage in repurposed wellbores, with a DOWNCOMER geometry and a
-conducting formation. The live model, v1.1.
+conducting formation. The live model, v1.2.
 
 BOREAS is a new series, not a new version of THUMS. The P2H2P/THUMS line stays
 exactly where it was at v0.16 and remains runnable; nothing here edits it. Two
@@ -3124,6 +3124,24 @@ def performance_indices(case, r):
         eta_T=eta_T, eta_T_eff=eta_T_eff,
         eta_RTE=eta_RTE, eps_RTE=eta_RTE * eps_cycled,
         eps_cycled=eps_cycled,
+        # ---- THE SCALE-FREE NUMBER --------------------------------------
+        # Deliverable electricity per metre of well per cycle. This is the
+        # only quantity the model produces that is independent of plant size,
+        # well count and field geometry, and it is therefore the one to
+        # report and the one that transfers to another field.
+        #
+        # It is also nearly a constant: 0.336 to 0.340 kWh/m across a 4x
+        # range of well depth at island spacing, a spread of 1.3 %. Depth,
+        # within that range, buys capacity strictly in proportion to the
+        # metres drilled and changes almost nothing else.
+        #
+        # Everything else is then arithmetic. For a field of n(L) wells
+        # vertical to depth L,  E_total = n(L) * L * e'  -- see
+        # `field_capacity`. Prescribing W_dot_el_out is scaffolding: the
+        # model is exactly linear in plant size (a 4x plant gives 4.0000x
+        # the wells and bit-identical per-well numbers), so the plant size
+        # cancels out of every per-well and per-metre quantity.
+        kWh_per_m_well=dE_therm * eta_T_eff / case.L_well,
         eta_storage=r["eta_storage"],
         Q_loss_kJ=Q_loss, f_formation_loss=f_loss,
         Q_bypass_ch_kJ=dc_ch, Q_bypass_dc_kJ=dc_dc, f_bypass=f_bypass,
@@ -3213,6 +3231,49 @@ def performance_indices(case, r):
     out["feasible"] = 0.0 if any(k == "error" for k, _ in msgs) else 1.0
     out["n_warnings"] = float(sum(1 for k, _ in msgs if k == "warn"))
     return out
+
+
+def field_capacity(case, r, n_wells_total, survival=None, k=None):
+    """Deliverable electricity per cycle for a WHOLE FIELD [MWh].
+
+    THE QUESTION, FLIPPED. Everywhere else the plant size is prescribed and
+    the well count follows. That is backwards for a repurposing study: the
+    wells are the asset and they are already in the ground. Here the count is
+    the input and the energy is the result.
+
+        E_total(L) = n(L) * L * e'(L)
+
+    with e' the per-metre figure above and n(L) the number of wells still
+    USABLE to depth L.
+
+    `survival` is a callable s(depth_m) -> fraction in [0, 1], the share of
+    the field still near-vertical at that depth. It is deliberately an
+    argument rather than a built-in correlation, because it is a property of
+    the drilling programme and must come from directional survey data. A
+    geometric estimate from a maximum inclination and a reach is possible --
+    with an instantaneous kick at 80 deg and 8200 ft of reach over 4175 ft of
+    TVD the knee sits near 2729 ft -- but that estimate is extremely
+    sensitive to the build rate, moving from 327 ft at 2 deg/100 ft to
+    2681 ft at an instantaneous kick. An eightfold range on the headline
+    number is not something to bury inside a default, so there is no default:
+    pass None and every well is assumed usable, which is an upper bound and
+    is reported as such.
+
+    WHY THERE IS AN OPTIMUM once `survival` is supplied. Per-well energy
+    grows with L while n(L) falls, so the product has a maximum -- at the
+    shallowest kickoff, i.e. drill to the knee and stop. Without a survival
+    function capacity rises monotonically with depth, which is an artefact of
+    assuming every well reaches every depth.
+    """
+    k = k or performance_indices(case, r)
+    e_prime = k["kWh_per_m_well"]                      # kWh per m per cycle
+    frac = 1.0 if survival is None else float(survival(case.L_well))
+    n = n_wells_total * frac
+    E = n * case.L_well * e_prime / 1000.0             # MWh
+    return dict(kWh_per_m_well=e_prime, survival_fraction=frac,
+                n_wells_usable=n, L_well_m=case.L_well,
+                E_total_MWh=E, P_MW=E / case.t_dc,
+                bounded=survival is None)
 
 
 def kpi_report(case, r, k=None):

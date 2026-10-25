@@ -1643,3 +1643,68 @@ useful self-consistency check on the B(z) implementation.
 
 **Scale, again.** At 32 wells/MWe the ~1000 active THUMS wells support of
 order **30 MWe**, and only if every one were converted.
+
+## DN-35 — flip the question: capacity from the wells, not wells from a plant
+
+JRB's reframing, and it is the right one for a repurposing study. Everywhere
+else the plant size is prescribed and the well count follows. But the wells
+are the asset; they are already in the ground. The count is the input and the
+energy is the result.
+
+**The flip is exact arithmetic, not an approximation.** Verified: a 4x plant
+gives 4.0000x the wells, with per-well energy identical to six decimals and
+per-well flow identical to eight. `W_dot_el_out` is scaffolding and cancels
+out of every per-well and per-metre quantity.
+
+### The scale-free number
+
+    e' = 0.338 kWh per metre of well, per cycle
+
+| L, ft | L, m | kWh/well | **kWh per m** | loss % | eta_RTE |
+|---|---|---|---|---|---|
+| 1000 | 304.8 | 102.4 | 0.3359 | 1.29 | 0.3253 |
+| 1500 | 457.2 | 154.3 | 0.3375 | 1.24 | 0.3256 |
+| 2000 | 609.6 | 206.3 | 0.3385 | 1.20 | 0.3256 |
+| 3000 | 914.4 | 310.5 | 0.3396 | 1.11 | 0.3253 |
+| 4000 | 1219.2 | 414.9 | 0.3403 | 1.02 | 0.3245 |
+
+**Constant to 1.3 % over a fourfold range of depth.** The whole model reduces
+to one coefficient; capacity is proportional to vertical well-metres and
+nothing else. This is the quantity to report: independent of plant size, well
+count and field, so it transfers to any other field.
+
+Everything else is arithmetic: `E_total(L) = n(L) * L * e'`.
+
+### Why the survival function matters more than it looked
+
+Without one, every well exists at every depth, so capacity rises
+monotonically with L and "deeper is always better" -- an artefact. With
+n(L), per-well energy grows while the count falls, so the product has a
+**maximum**, at the shallowest kickoff. Drill to the knee and stop.
+
+### The survival function is derivable, but the build rate ruins it
+
+At 80 deg, one foot of drop buys 5.67 ft of run, so a well reaching the full
+8200 ft must kick off at `TVD - D/tan(theta) = 2729 ft`. With targets uniform
+in area, `s(z) = [(TVD-z) tan(theta)/D_max]^2`. Capacity then peaks exactly at
+the knee: **282 MWh per cycle, 28 MW over 10 h, for 1000 wells.** That
+cross-checks an independent earlier estimate of ~30 MWe.
+
+But that assumed an instantaneous kick. With a real build rate the knee moves
+from **2681 ft (instantaneous) to 327 ft (2 deg/100 ft)** -- an eightfold
+range on the headline. The build rate now swamps every other uncertainty in
+the model; the line-source prefactor fixed in v1.1 is a rounding error beside
+it. So `field_capacity` takes `survival` as an argument with **no default**:
+it is a property of the drilling programme and must come from directional
+survey data. Passing None returns the all-wells-usable upper bound, flagged
+`bounded=True`.
+
+JRB is retrieving the CalGEM/DOGGR surveys. Note that e' does **not** depend
+on them -- the survey changes how many wells are present, not what a metre of
+well does -- so the number above is final.
+
+### v1.2
+
+Reporting only; no physics moved. `kWh_per_m_well` added to
+`performance_indices`, `field_capacity` added and registered in ENTRY (it was
+dropped as unreachable on the first build, the same way `downcomer_leak` was).
