@@ -314,6 +314,118 @@ def ts_combined(case, rank, hp, Tdict, ax=None, show_water=True):
     return ax
 
 
+# ------------------------------------- ORC evaporator composite curves
+def _composites(model, case, rank, Tdict):
+    """(Qc, Tc, Qh, Th, Q_total) from the MODEL's own constructions.
+
+    `_orc_cold_composite` and `_water_curve` are reused rather than
+    reimplemented, so what is plotted is by construction the same pair of
+    curves that `orc_pinch` minimises over. A composite curve redrawn by the
+    plotting layer is a second implementation of the physics, and the two
+    drift apart exactly when it matters.
+    """
+    Qc, Tc = model._orc_cold_composite(rank, case.fluid)
+    Qh, Th = model._water_curve(Tdict["T_3d"], Tdict["T_2d"], case.P, Qc[-1])
+    return Qc, Tc, Qh, Th, Qc[-1]
+
+
+def orc_composite(model, case, rank, Tdict, axes=None, show_hot_end=True,
+                  figsize=(11.8, 4.7)):
+    """ORC evaporator composite curves and the approach profile.
+
+    The point of the figure is that the pinch is INTERIOR. It sits at the
+    onset of boiling, where the working fluid's curve goes flat against a
+    water stream that keeps gliding down, and neither end of the exchanger
+    shows it. A hot-end approach rule -- the thing everyone writes first --
+    is blind to it by construction.
+
+    With `show_hot_end`, the cold composite that the hot-end rule alone would
+    permit (T_3e = T_2d - DT_2D_3E) is overlaid dashed. It crosses the water
+    curve, so it is not a conservative approximation of the right answer; it
+    is a second-law violation, and the efficiency computed from it is
+    unreachable at any size of exchanger.
+    """
+    if axes is None:
+        _, axes = plt.subplots(1, 2, figsize=figsize)
+    ax, ax2 = axes
+    Qc, Tc, Qh, Th, Qtot = _composites(model, case, rank, Tdict)
+    pc = 100.0 * np.asarray(Qc) / Qtot
+    ph = 100.0 * np.asarray(Qh) / Qtot
+
+    # --- approach profile and the pinch location, on a common Q grid
+    q = np.linspace(0.0, 100.0, 4000)
+    Tw = np.interp(q, ph, np.asarray(Th) - 273.15)
+    Tf = np.interp(q, pc, np.asarray(Tc) - 273.15)
+    dT = Tw - Tf
+    i = int(np.argmin(dT))
+    q_p, dT_p = q[i], dT[i]
+
+    # --- onset of boiling, read off the composite itself.
+    #
+    # NOT (h_bub - h_10e)/Qtot. That is the main stream's preheat alone, and
+    # it lands 5 points of duty too low, because the composite also carries
+    # the REHEAT stream (y of the flow, 5e->6e) whose whole duty lies BELOW
+    # the bubble temperature and is therefore already banked by the time the
+    # main stream starts boiling. Locating the break on the model's own
+    # curve avoids re-deriving the assembly and getting it wrong.
+    i_b = int(np.searchsorted(np.asarray(Tc), rank["T_3e"] - 1e-9))
+    i_b = min(i_b, len(Qc) - 1)
+    q_bub = 100.0 * Qc[i_b] / Qtot
+
+    ax.plot(ph, np.asarray(Th) - 273.15, color=RED, lw=1.9,
+            label=r"water (hot), $T_\mathrm{2d}\to T_\mathrm{3d}$")
+    ax.plot(pc, np.asarray(Tc) - 273.15, color=NAVY, lw=1.9,
+            label="ORC working fluid (cold)")
+
+    cross_pct = float("nan")
+    if show_hot_end:
+        T_he = rank["T_3e_hot_end"]
+        rk = model.double_stage_rankine(case.fluid, rank["T_1e"], T_he,
+                                        case.eta_turb_s, case.eta_pump_s)
+        Qc2, Tc2 = model._orc_cold_composite(rk, case.fluid)
+        p2 = 100.0 * np.asarray(Qc2) / Qc2[-1]
+        ax.plot(p2, np.asarray(Tc2) - 273.15,
+                color="#8a8a8a", lw=1.3, ls=(0, (5, 2)), zorder=3,
+                label=r"hot-end rule alone (infeasible)")
+        # how much of the exchanger would actually run BACKWARDS
+        cross_pct = 100.0 * float(np.mean(
+            np.interp(q, p2, np.asarray(Tc2) - 273.15) > Tw))
+
+    ax.axvline(q_bub, color="0.75", lw=0.9, ls=(0, (1, 2.5)), zorder=1)
+    ax.annotate("onset of boiling", (q_bub, ax.get_ylim()[0]),
+                textcoords="offset points", xytext=(4, 14), rotation=90,
+                fontsize=8.2, color="0.35")
+    ax.annotate("", xy=(q_p, Tw[i]), xytext=(q_p, Tf[i]),
+                arrowprops=dict(arrowstyle="<->", color="#1a1a1a", lw=1.1))
+    ax.annotate(rf"pinch $= {dT_p:.2f}$ K", (q_p, 0.5 * (Tw[i] + Tf[i])),
+                textcoords="offset points", xytext=(8, -3), fontsize=8.8)
+    ax.set_xlabel("cumulative duty  /  % of evaporator load")
+    ax.set_ylabel(r"temperature, $T$  /  $^{\circ}$C")
+    ax.set_title("(a) ORC evaporator composite curves", pad=8)
+    ax.legend(loc="lower right", handlelength=1.9, labelspacing=0.35)
+
+    ax2.plot(q, dT, color="#2f6f4f", lw=1.9)
+    ax2.axhline(case.DT_pinch_ORC, color=RED, lw=1.0, ls=(0, (4, 2)),
+                label=rf"$\Delta T_\mathrm{{pinch,ORC}} = "
+                      rf"{case.DT_pinch_ORC:.0f}$ K")
+    ax2.axvline(q_bub, color="0.75", lw=0.9, ls=(0, (1, 2.5)), zorder=1)
+    ax2.plot([q_p], [dT_p], "o", ms=5.0, mfc="white", mec="#1a1a1a", mew=1.4,
+             zorder=5)
+    ax2.annotate(rf"${dT_p:.2f}$ K at ${q_p:.1f}\,\%$", (q_p, dT_p),
+                 textcoords="offset points", xytext=(9, 4), fontsize=8.8)
+    ax2.set_xlabel("cumulative duty  /  % of evaporator load")
+    ax2.set_ylabel(r"approach, $T_\mathrm{water} - T_\mathrm{ORC}$  /  K")
+    ax2.set_title("(b) the approach is worst in the interior", pad=8)
+    ax2.set_ylim(0.0, max(dT.max() * 1.12, case.DT_pinch_ORC * 1.6))
+    ax2.legend(loc="upper right", handlelength=1.9)
+    return axes, dict(pinch_K=dT_p, pinch_at_pct=q_p, boiling_at_pct=q_bub,
+                      Q_total_kJ_per_kg=Qtot,
+                      hot_end_reversed_pct=cross_pct,
+                      T_3e_C=rank["T_3e"] - 273.15,
+                      T_3e_hot_end_C=rank["T_3e_hot_end"] - 273.15,
+                      T_2d_C=Tdict["T_2d"] - 273.15)
+
+
 # ------------------------------------------------------------- the table
 def state_table(rank, hp):
     """State points of both cycles as one DataFrame.
