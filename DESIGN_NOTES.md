@@ -1592,3 +1592,54 @@ designed for the first time on a real change.
 All three gates re-verified at v1.1: adiabatic limit passes, the closure fires
 on a dropped loss (6.0e-01) and is silent on a flipped sign (7.3e-16), and the
 Clausius gate fires on the flip (-4.33e11).
+
+## DN-34 — the fan abstraction is the wrong shape, and the depth question inverts
+
+The 2014 Oxy Long Beach drilling deck settles the geometry BOREAS was
+abstracting. Wellheads on **6 ft centres in double rows**; wells
+directionally drilled to **8200 ft displacement, 4175 ft TVD, 80° maximum
+inclination**.
+
+**The cone is the wrong mechanism.** `field_radius` keeps all N wells and
+grows their spacing uniformly below a 300 m kickoff. The real geometry is a
+*shedding bundle*: each well kicks off shallow and leaves at its own depth,
+while the core stays tight. Both weaken shielding with depth — mine through a
+growing perimeter, reality through a falling count — but they are different
+functions and only one is the field's.
+
+**The storage interval is the tight part.** PCM can only go in the upper,
+near-vertical, large-diameter cased section, which is exactly where the bundle
+has not yet dispersed. So the realistic spacing is the ISLAND value, not the
+fanned one.
+
+### The depth sweep, at both spacings
+
+| $L$, ft | island loss | island eta_RTE | wells/MWe | fan-45 loss | fan-45 eta_RTE |
+|---|---|---|---|---|---|
+| 1000 | 1.29 % | 0.3253 | 106.0 | 1.29 % | 0.3253 |
+| 1500 | 1.24 % | 0.3256 | 73.1 | 2.39 % | 0.3214 |
+| 2000 | 1.20 % | 0.3256 | 56.7 | 4.25 % | 0.3146 |
+| 3000 | 1.11 % | 0.3253 | 40.4 | 7.96 % | 0.3008 |
+| 4000 | 1.02 % | 0.3245 | 32.3 | 10.86 % | 0.2894 |
+
+**At island spacing the loss is FLAT at ~1 % and eta_RTE is pinned near 0.325
+at every depth** — shorter wells marginally better, because shorter tubes
+pump more easily. There is no thermodynamic optimum in depth. Depth is purely
+a capital lever: 3.3x fewer wells from 1000 ft to 4000 ft.
+
+The two spacings agree *exactly* at 1000 ft, because below a 300 m kickoff
+the fan has not opened and there is nothing to shield against. That is a
+useful self-consistency check on the B(z) implementation.
+
+**Two things the deck invalidates.**
+
+1. `L_ft = 5000` (the default) **exceeds the 4175 ft TVD** of the deepest
+   THUMS well. Every result quoted at the default depth is for a well this
+   field does not have.
+2. The "best" configuration in DN-32 was the 70° fan at 28.7 % loss. It was
+   never best — it was the steepest fan run, and therefore the *worst* of the
+   thousand-well cases. Real THUMS, over its vertical section, beats all of
+   them.
+
+**Scale, again.** At 32 wells/MWe the ~1000 active THUMS wells support of
+order **30 MWe**, and only if every one were converted.

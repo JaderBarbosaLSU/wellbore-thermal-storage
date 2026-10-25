@@ -34,7 +34,7 @@ Latent-heat storage in repurposed oil-and-gas wells. **A new series, not a new
 version of P2H2P/THUMS** — that model is frozen at v0.16 and still runs; its
 notebook is untouched.
 
-*v1.0 · built {STAMP}*
+*v1.1 · built {STAMP}*
 
 ---
 
@@ -196,6 +196,12 @@ wildly unequal:
 $$R_{tot} = \underbrace{R_{PCM}}_{\sim 25\%} + \underbrace{R_{casing}}_{0.1\%}
 + \underbrace{R_{cement}}_{5\%} + \underbrace{R_{ground}(t)}_{\sim 70\%}$$
 
+The ground resistance uses the **exact** large-time Carslaw--Jaeger prefactor
+$2e^{-\gamma/2} = 1.49861$, not the $2.5$ carried by v1.0 on an attribution
+that could not be substantiated. The difference was a *constant* additive
+offset of \SI{0.0326}{} m·K/W that never decayed with time; under the
+`max()` rule it moved only the isolated-well bound and the sparse fan.
+
 The casing is thermally invisible and the cement is a rounding error. **The
 ground resistance is the model**, and unlike the others it *grows with time*
 as the thermal front spreads — which is why `t_operation_yr` is a parameter
@@ -320,7 +326,7 @@ cells.append(md(r"""
 ## 5. Run it
 
 `n_wells_field=None` is the **isolated well** — the conservative bound, and
-the v1.0 default. It is not a pessimistic estimate of the real loss; it is a
+the v1.1 default. It is not a pessimistic estimate of the real loss; it is a
 different configuration, and one nobody would build.
 
 About a minute per case.
@@ -433,9 +439,85 @@ print(f'  {"PASS" if r0["Q_loss_kJ"] == 0.0 else "FAIL"}'
 """))
 
 # ------------------------------------------------------------- playground
+# ------------------------------------------------------- depth sweep
 cells.append(md(r"""
 ---
-## 7. Change something
+## 7. How deep should the storage go?
+
+The 2014 Oxy drilling deck settles the geometry this model was abstracting.
+THUMS wellheads sit on **6 ft centres** in double rows, and the wells are
+**directionally drilled**: 8200 ft of horizontal displacement, **4175 ft
+TVD**, 80° maximum inclination.
+
+Two things follow, and both matter.
+
+**The wells do not fan uniformly — the bundle *sheds* members.** Each well
+kicks off shallow and leaves at its own depth; the ones that remain stay
+tightly packed. The cone abstraction in section 4 keeps all $N$ wells and
+grows their spacing. Reality keeps a tight core and loses wells from it.
+
+**Storage can only occupy the upper, near-vertical, large-diameter cased
+section** — which is exactly where the bundle is still tight. So the realistic
+spacing over the storage interval is close to the *island* value, not the
+fanned one.
+
+That makes depth a genuine open question, and not the one you might expect.
+"""))
+
+cells.append(code(r"""
+import pandas as pd
+rows = {}
+for L in (1000., 2000., 3000., 4000.):
+    for tag, kw in [('island', dict(n_wells_field=1000., fan_angle_deg=0.)),
+                    ('fan 45', dict(n_wells_field=1000.))]:
+        cc = B.Case(n_segments=99, L_ft=L, **kw)
+        r = B.simulate_css_corrected(cc)
+        k = B.performance_indices(cc, r)
+        rows[(tag, L)] = {'loss %': 100*k['f_formation_loss'],
+                          'eta_RTE': k['eta_RTE'],
+                          'wells/MWe': k['wells_per_MWe'],
+                          'kW/well': k['kW_per_well']}
+    print(f'{L:.0f} ft done', flush=True)
+df = pd.DataFrame(rows).T.round(4)
+df.index.names = ['spacing', 'L_ft']
+display(df)
+"""))
+
+cells.append(md(r"""
+### The answer, and it is not a compromise
+
+| $L$, ft | island loss | island $\eta_{RTE}$ | wells/MWe | fan-45 loss | fan-45 $\eta_{RTE}$ |
+|---|---|---|---|---|---|
+| 1000 | 1.29 % | 0.3253 | 106.0 | 1.29 % | 0.3253 |
+| 1500 | 1.24 % | 0.3256 | 73.1 | 2.39 % | 0.3214 |
+| 2000 | 1.20 % | 0.3256 | 56.7 | 4.25 % | 0.3146 |
+| 3000 | 1.11 % | 0.3253 | 40.4 | 7.96 % | 0.3008 |
+| 4000 | 1.02 % | 0.3245 | 32.3 | 10.86 % | 0.2894 |
+
+**At island spacing the loss is flat at about 1 % and $\eta_{RTE}$ is pinned
+near 0.325 at every depth.** Shorter wells are even marginally *better*,
+because shorter tubes pump more easily.
+
+So there is **no thermodynamic optimum in depth**. Depth is purely a capital
+lever: 106 wells per MWe at 1000 ft against 32 at 4000 ft, a factor of 3.3.
+
+> **Go as deep as the near-vertical section allows.** The binding constraint
+> is well geometry, not heat transfer.
+
+Note also that the two columns agree exactly at 1000 ft: below a 300 m kickoff
+the fan has not opened yet, so there is nothing to shield against.
+
+**A caution on the default.** `L_ft = 5000` exceeds the 4175 ft TVD of the
+deepest THUMS well. Anything run at the default depth is a well this field
+does not have.
+
+**And on scale.** At 32 wells per MWe, the roughly 1000 active THUMS wells
+support of order **30 MWe** — if every one of them were converted.
+"""))
+
+cells.append(md(r"""
+---
+## 8. Change something
 
 Every parameter is a field of `Case`. The ones BOREAS adds:
 
