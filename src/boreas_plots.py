@@ -228,7 +228,8 @@ _CMB_HP = {"1h": (7, -11), "2h": (7, 2), "3h": (-17, 7), "4h": (-18, -12),
            "10h": (-24, -6), "11h": (7, 0), "12h": (7, -11), "13h": (-21, 3)}
 
 
-def ts_combined(case, rank, hp, Tdict, ax=None, show_water=True):
+def ts_combined(case, rank, hp, Tdict, ax=None, show_water=True,
+                water="level", model=None):
     """Both cycles on one T-s axes with the external water levels.
 
     This is the coupling diagram: the two cycles never exchange working
@@ -252,8 +253,28 @@ def ts_combined(case, rank, hp, Tdict, ax=None, show_water=True):
 
     pts = []
 
+    # ---- water as REAL GLIDES, duty-mapped onto the working fluid's
+    # entropy, with every pinch marked. `water="level"` falls back to the
+    # four inlet temperatures as horizontal lines, which is the conventional
+    # presentation but hides where each exchanger actually binds.
+    if show_water and water == "glide":
+        if model is None:
+            raise ValueError("water='glide' needs the model module, "
+                             "e.g. ts_combined(..., water='glide', model=B)")
+        ov = _water_overlay(model, case, rank, hp, Tdict)
+        style = {"ORC evaporator": ("#1a1a1a", r"ORC evaporator water, "
+                                               r"$T_\mathrm{2d}\to T_\mathrm{3d}$"),
+                 "ORC condenser": ("#2a6fb0", "sink water, ORC condenser"),
+                 "HTHP condenser": ("#0a9396", r"charge water, "
+                                               r"$T_\mathrm{2c}\to T_\mathrm{3c}$"),
+                 "HTHP evaporator": ("#9c27a0", "source water, HTHP evaporator")}
+        for nm, (col, lab) in style.items():
+            d = ov[nm]
+            _draw_water(ax, d, col, label=f"{lab}  ({d['pinch_K']:.1f} K)")
+            pts += list(zip(d["s"], d["T_w"]))
+
     # ---- water-side levels, drawn first so the cycles sit on top
-    if show_water:
+    if show_water and water == "level":
         levels = [
             (case.T_sink_C, "#2a6fb0", r"sink, ORC condenser"),
             (case.T_source_C, "#9c27a0", r"source, HTHP evaporator"),
@@ -303,7 +324,11 @@ def ts_combined(case, rank, hp, Tdict, ax=None, show_water=True):
     ax.plot([], [], "o-", color=RED, ms=4.4, lw=1.5, label="HTHP (heat pump)")
 
     _frame(ax, pts, padx=0.10, pady=0.12)
-    ax.set_xlabel(r"specific entropy, $s$  /  kJ kg$^{-1}$ K$^{-1}$")
+    xl = r"specific entropy, $s$  /  kJ kg$^{-1}$ K$^{-1}$"
+    if show_water and water == "glide":
+        xl += ("\n" r"(water lines are duty-mapped onto the working fluid's "
+               r"$s$; the vertical gap is the local approach)")
+    ax.set_xlabel(xl)
     ax.set_ylabel(r"temperature, $T$  /  $^{\circ}$C")
     ax.set_title(rf"{f}:  $\eta_\mathrm{{ORC}} = {rank['rank_eff']:.4f}$,"
                  rf"  COP $= {hp['hp_cop']:.4f}$,"
@@ -312,6 +337,128 @@ def ts_combined(case, rank, hp, Tdict, ax=None, show_water=True):
     ax.legend(loc="upper left", handlelength=1.9, borderpad=0.25,
               labelspacing=0.35, fontsize=8.2)
     return ax
+
+
+# ------------------------- water streams drawn ON the T-s diagram
+#
+# A water stream has its own entropy, on a scale that has nothing to do with
+# cyclopentane's, so it cannot simply be plotted on these axes. What CAN be
+# plotted, and is what matters for a pinch, is the water temperature at each
+# point OF THE EXCHANGER, placed at the entropy the working fluid has at that
+# same point. The two streams are tied together by cumulative duty: at a given
+# Q the working fluid is at (s, T_wf) and the water is at T_w. Plotting
+# (s, T_w) puts the water line directly above (evaporator) or below
+# (condenser) the working-fluid path, and the VERTICAL GAP at every abscissa
+# is then the real local approach, with the pinch as its narrowest point.
+#
+# This is a duty mapping, not a thermodynamic path: the water line is not a
+# process in cyclopentane's coordinates and its abscissa carries no meaning
+# for the water itself. Said plainly in the legend, it is an honest and very
+# readable construction; left unsaid it would be a category error.
+
+def _water_overlay(model, case, rank, hp, Tdict, n=400):
+    """name -> dict(s, T_wf, T_w, pinch_K, i_pinch, hot) for each exchanger.
+
+    The stream definitions, the water endpoints and the duty bases are taken
+    from `exchanger_UA`, so the pinch recovered here is the same number that
+    function reports rather than a parallel construction of it.
+    """
+    F, R, P = case.fluid, case.refrig, case.P
+    out = {}
+
+    def pack(name, s, T_wf, T_w, hot):
+        dT = (T_wf - T_w) if hot else (T_w - T_wf)
+        i = int(np.argmin(dT))
+        out[name] = dict(s=s, T_wf=T_wf - 273.15, T_w=T_w - 273.15,
+                         pinch_K=float(dT[i]), i_pinch=i, hot=hot)
+
+    def s_of(h, p, fluid):
+        return np.array([CP.PropsSI("S", "P", p, "H", x * 1e3, fluid)
+                         for x in h]) / 1e3
+
+    def simple(name, h_cold, h_hot, p, fluid, Tw_cold, Tw_hot, hot):
+        """Single-pressure working-fluid stream against a water glide."""
+        Q, T = model._stream_curve(h_cold, h_hot, p, fluid, n=n)
+        Qw, Tw = model._water_curve(Tw_cold, Tw_hot, P, Q[-1])
+        h = h_cold + Q
+        pack(name, s_of(h, p, fluid), T, np.interp(Q, Qw, Tw), hot)
+
+    # ---- ORC evaporator. The cold side is TWO streams (main + reheat), so
+    # the duty at a given point of the main stream includes whatever the
+    # reheat stream has already given up at that temperature. Mapping the
+    # main stream alone would shift the water line along Q and move the
+    # apparent pinch off the bubble point.
+    y, p_e, p_i = rank["y_frac"], rank["p_evape"], rank["p_5e"]
+    Qc, _ = model._orc_cold_composite(rank, F)
+    # The bubble point must be a NODE. The pinch sits exactly on it, so an
+    # evenly spaced grid that steps over it reports a slightly loose value
+    # (5.06 K instead of 5.00) and the arrow lands next to the corner rather
+    # than on it.
+    h_bub = CP.PropsSI("H", "P", p_e, "Q", 0, F) / 1e3
+    h = np.unique(np.append(np.linspace(rank["h_10e"], rank["h_3e"], n),
+                            h_bub))
+    T = np.array([CP.PropsSI("T", "P", p_e, "H", x * 1e3, F) for x in h])
+    h_rh = np.linspace(rank["h_5e"], rank["h_6e"], n)
+    T_rh = np.array([CP.PropsSI("T", "P", p_i, "H", x * 1e3, F) for x in h_rh])
+    Q = (h - rank["h_10e"]) + y * (np.interp(T, T_rh, h_rh) - rank["h_5e"])
+    Qw, Tw = model._water_curve(Tdict["T_3d"], Tdict["T_2d"], P, Qc[-1])
+    pack("ORC evaporator", s_of(h, p_e, F), T, np.interp(Q, Qw, Tw), False)
+
+    simple("ORC condenser", rank["h_1e"], rank["h_4e"], rank["p_conde"], F,
+           case.T_sink_C + 273.15,
+           case.T_sink_C + case.DT_sink_glide + 273.15, True)
+    simple("HTHP condenser", hp["h_3h"], hp["h_2h"], hp["p_condh"], R,
+           Tdict["T_2c"], Tdict["T_3c"], True)
+    simple("HTHP evaporator", hp["h_4h"], hp["h_13h"], hp["p_evaph"], R,
+           Tdict["T_4a"], case.T_source_C + 273.15, False)
+    return out
+
+
+def _draw_water(ax, d, color, label=None, mark_pinch=True, lw=1.6):
+    ax.plot(d["s"], d["T_w"], color=color, lw=lw, ls=(0, (6, 2)),
+            zorder=5, label=label)
+    if mark_pinch:
+        i = d["i_pinch"]
+        ax.annotate("", xy=(d["s"][i], d["T_w"][i]),
+                    xytext=(d["s"][i], d["T_wf"][i]),
+                    arrowprops=dict(arrowstyle="<->", color="#1a1a1a", lw=1.0))
+        ax.annotate(rf"${d['pinch_K']:.1f}$ K",
+                    (d["s"][i], 0.5 * (d["T_w"][i] + d["T_wf"][i])),
+                    textcoords="offset points", xytext=(6, -3), fontsize=8.0,
+                    zorder=8)
+
+
+def ts_water(model, case, rank, hp, Tdict, axes=None, figsize=(11.8, 8.8)):
+    """One panel per exchanger: working fluid and water on the same T-s axes.
+
+    Four panels rather than one plot, because the four exchangers live in
+    four different corners of the diagram and overlaying them all produces a
+    figure in which no pinch can actually be read.
+    """
+    if axes is None:
+        _, axes = plt.subplots(2, 2, figsize=figsize)
+    ov = _water_overlay(model, case, rank, hp, Tdict)
+    order = ["ORC evaporator", "ORC condenser",
+             "HTHP condenser", "HTHP evaporator"]
+    fluid_of = {"ORC evaporator": case.fluid, "ORC condenser": case.fluid,
+                "HTHP condenser": case.refrig, "HTHP evaporator": case.refrig}
+    tag = dict(zip(order, "abcd"))
+    for name, ax in zip(order, np.ravel(axes)):
+        d = ov[name]
+        _dome(ax, fluid_of[name])
+        wf_col = RED if d["hot"] else NAVY
+        ax.plot(d["s"], d["T_wf"], color=wf_col, lw=1.9, zorder=4,
+                label="working fluid")
+        _draw_water(ax, d, "#0a9396", label="water (duty-mapped)")
+        pts = list(zip(d["s"], d["T_wf"])) + list(zip(d["s"], d["T_w"]))
+        _frame(ax, pts, padx=0.14, pady=0.22)
+        ax.set_xlabel(r"specific entropy of the working fluid,"
+                      "\n" r"$s$  /  kJ kg$^{-1}$ K$^{-1}$")
+        ax.set_ylabel(r"temperature, $T$  /  $^{\circ}$C")
+        ax.set_title(rf"({tag[name]}) {name}:  pinch $= "
+                     rf"{d['pinch_K']:.2f}$ K", pad=8)
+        ax.legend(loc="best", handlelength=1.9, labelspacing=0.3)
+    return axes, ov
 
 
 # ------------------------------------- ORC evaporator composite curves
