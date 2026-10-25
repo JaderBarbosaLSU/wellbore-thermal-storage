@@ -1708,3 +1708,68 @@ well does -- so the number above is final.
 Reporting only; no physics moved. `kWh_per_m_well` added to
 `performance_indices`, `field_capacity` added and registered in ENTRY (it was
 dropped as unreachable on the first build, the same way `downcomer_leak` was).
+
+## DN-36 — the packing was wrong, and a disc is the most flattering shape there is
+
+JRB asked how the losses were being computed for the island case. The answer
+exposed an error that had been in since v1.0.
+
+`field_radius` turned a count and a spacing into a footprint the obvious way,
+`R0 = B0 sqrt(N/pi)` — a compact disc. The **spacing was never wrong**; 6 ft
+centres are from the Oxy deck. The **packing** was. A disc minimises perimeter
+for a given count, and the shielded resistance goes as 1/perimeter, so the
+disc is the single most favourable arrangement that exists.
+
+The THUMS islands are nothing like a disc. Wellheads sit in **linear double
+rows along the island rim** — 6 ft c/c, 12 ft between rows — split across
+**four islands**, each with its own perimeter.
+
+| arrangement | perimeter per well |
+|---|---|
+| disc (v1.0–v1.2) | 0.205 m |
+| four islands, double rows | **1.859 m** |
+
+**9.06x more perimeter, hence 9x the loss.**
+
+### What it does to the depth sweep
+
+| L, ft | loss (disc) | **loss (rows, 4 islands)** | eta_RTE disc | **eta_RTE rows** |
+|---|---|---|---|---|
+| 1000 | 1.29 % | **11.02 %** | 0.3253 | **0.2910** |
+| 2000 | 1.20 % | **10.21 %** | 0.3256 | **0.2937** |
+| 3000 | 1.11 % | **9.44 %** | 0.3253 | **0.2959** |
+| 4000 | 1.02 % | **8.69 %** | 0.3245 | **0.2974** |
+
+**The "shallow and shielded beats deep and exposed" conclusion is dead.** At
+realistic packing the island case loses 9–11 %, against 12.8 % for the 45 deg
+directional fan. They are the same machine to within the uncertainty.
+
+Note the loss now FALLS with depth (11.0 -> 8.7 %) where it was flat before:
+with a fixed perimeter, deeper wells add storage without adding boundary.
+
+### e' moves, but only a little, and the invariance survives
+
+| L, ft | e' (disc) | **e' (rows)** |
+|---|---|---|
+| 1000 | 0.3359 | **0.3070** |
+| 2000 | 0.3385 | **0.3114** |
+| 3000 | 0.3396 | **0.3142** |
+| 4000 | 0.3403 | **0.3162** |
+
+e' falls about 8 % to **0.311 kWh/m**, and is flat to 3.0 % over a fourfold
+depth range (was 1.3 %). The length-invariance that the capacity argument
+rests on is intact; only the coefficient moved.
+
+### Implementation
+
+`packing` is now a Case field: `'disc' | 'rows' | 'ring'`, with `n_islands`
+and `row_gap_m`. `field_perimeter` replaces the implicit `2 pi R` and is what
+`formation_resistance` consumes — perimeter is the quantity the physics uses,
+and expressing it as a radius is what hid the assumption. Disc packing
+reproduces v1.2 exactly (verified: P = 2 pi R0 to machine precision), so the
+old results remain reachable.
+
+**The lesson is the same one as DN-33.** A quantity was chosen because it was
+the obvious way to compute something, not because it described the field, and
+it sat unexamined behind a plausible formula until someone asked where the
+number came from.

@@ -114,6 +114,24 @@ class Case:
     B_surface_m: float = 1.83     # wellhead spacing, 6 ft                [m]
     z_kickoff_m: float = 300.0    # vertical above the kickoff point      [m]
     fan_angle_deg: float = 45.0   # effective half-angle of the fan     [deg]
+    # ---- HOW THE WELLHEADS ARE PACKED, WHICH IS NOT THE SAME AS HOW FAR
+    # APART THEY ARE.  v1.0-v1.2 assumed a compact disc, R0 = B0 sqrt(N/pi),
+    # because that is the obvious way to turn a count and a spacing into a
+    # footprint. It is also the most flattering way: a disc MINIMISES
+    # perimeter for a given count, and the shielded resistance goes as
+    # 1/perimeter.
+    #
+    # The THUMS islands are nothing like a disc. Wellheads sit in LINEAR
+    # DOUBLE ROWS along the island rim -- 6 ft centre to centre, 12 ft
+    # between the rows -- and the field is split across FOUR islands, each
+    # with its own perimeter. That presents 1.86 m of perimeter per well
+    # against 0.205 m for the disc: 9.1x more, hence 9.1x the loss.
+    #
+    # The spacing was never wrong. The packing was. Reported island-case
+    # losses of ~1 % become ~9 %.
+    packing: str = "disc"         # 'disc' | 'rows' | 'ring'
+    n_islands: int = 1            # clusters the field is split across
+    row_gap_m: float = 3.66       # 12 ft between the double rows        [m]
 
     # ---- power block and operating conditions ----
     fluid: str = "cyclopentane"   # ORC working fluid
@@ -979,6 +997,50 @@ def ground_resistance(case):
     return R
 
 
+def cluster_R0(case):
+    """Surface footprint radius of the well cluster [m], disc-equivalent."""
+    if case.n_wells_field is None:
+        return None
+    return case.B_surface_m * np.sqrt(case.n_wells_field / np.pi)
+
+
+def field_perimeter(case, depth):
+    """Perimeter the cluster presents to the formation at depth [m].
+
+    THIS, NOT 2*pi*R, IS WHAT THE SHIELDING ACTUALLY USES. The perimeter
+    model says a cluster loses heat across its boundary and the wells inside
+    share it, so the quantity that matters is metres of boundary per well.
+    Expressing that as a radius silently assumes the wells fill a circle.
+
+        disc   P = 2 pi R0                    compact, minimum perimeter
+        rows   P = n_isl * 2 (L_row + gap)    linear cellars, the THUMS case
+        ring   P = 2 * 2 pi R_isl             wells on a rim, both faces
+
+    The fan still applies: below the kickoff the cluster spreads, and every
+    linear dimension grows with it, so P scales with R_f(z)/R0 whatever the
+    packing. Above the kickoff -- which is where the storage is -- the
+    packing alone decides.
+    """
+    if case.n_wells_field is None:
+        return None
+    N, B0 = case.n_wells_field, case.B_surface_m
+    R0 = cluster_R0(case)
+    if case.packing == "disc":
+        P0 = 2.0 * np.pi * R0
+    elif case.packing == "rows":
+        n_isl = max(1, int(case.n_islands))
+        row_len = (N / n_isl / 2.0) * B0          # double rows
+        P0 = n_isl * 2.0 * (row_len + case.row_gap_m)
+    elif case.packing == "ring":
+        n_isl = max(1, int(case.n_islands))
+        circ = (N / n_isl / 2.0) * B0             # rim length occupied
+        P0 = n_isl * 2.0 * circ                   # loses from both faces
+    else:
+        raise ValueError(f"unknown packing {case.packing!r}")
+    Rf = field_radius(case, depth)
+    return P0 * (Rf / R0)
+
+
 def field_radius(case, depth):
     """Radius of the well cluster at a given depth [m].
 
@@ -1049,9 +1111,11 @@ def formation_resistance(case, depth=None):
         return R_near + R_g
     alpha = case.k_rock / case.rho_cp_rock
     t = case.t_operation_yr * 365.25 * 24.0 * 3600.0
-    Rf = field_radius(case, depth)
+    # Perimeter, not 2*pi*R: the packing decides how much boundary each
+    # well has to share. See `field_perimeter`.
+    P = field_perimeter(case, depth)
     R_per = (case.n_wells_field * np.sqrt(np.pi * alpha * t)
-             / (2.0 * np.pi * case.k_rock * Rf))
+             / (case.k_rock * P))
     return R_near + np.maximum(R_g, R_per)
 
 
