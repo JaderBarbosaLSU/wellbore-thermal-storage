@@ -1541,3 +1541,54 @@ volume penalty turns the curve over. In a field the loss is already under 1 %,
 so insulation trades 11 % of the PCM for nothing. That an optimum exists at
 all is a symptom that the isolated-well scope is unphysical: a model whose
 advice is "insulate" is reporting on a configuration that does not exist.
+
+## DN-33 — the line-source prefactor was invented; BOREAS v1.1 derives it
+
+`ground_resistance` used `2.5*sqrt(alpha t)`, attributed in its own docstring
+to "Eskilson's form". **That attribution was fabricated.** Two literature
+searches found no source for 2.5; the nearest convention in the borehole
+literature is `2*sqrt(alpha t)`. The flag came from a `\chk{}` note in the
+paper draft — i.e. the model was caught by the manuscript, not by the code.
+
+The correct constant follows in three lines from the large-time
+Carslaw--Jaeger infinite line source:
+
+    R' = [ln(4 a t/rb^2) - gamma]/(4 pi k)
+       = (1/2 pi k)[ln(2 sqrt(a t)/rb) - gamma/2]
+       = (1/2 pi k) ln( 2 exp(-gamma/2) sqrt(a t)/rb )
+
+so `C = 2 exp(-gamma/2) = 1.49861`. The error was a **constant additive
+offset** of `ln(2.5/C)/(2 pi k) = 0.0326 m K/W` — 9.3 % of R_g — that does
+*not* decay with time and so could not be excused as a transient. The
+asymptotic form itself is sound: `rb^2/(4 a t) = 9e-6`, exact to five decimals.
+
+**The damage was confined, and the `max()` rule is why.** Under
+`R_form = R_near + max(R_g, R_per)` the ground term only binds where the field
+does not shield:
+
+| configuration | R_g binds over |
+|---|---|
+| isolated well | 100 % |
+| fan, N = 100 | 46 % |
+| fan, N = 1000 (45° and 70°) | **0 %** |
+| array at 1.83 m | **0 %** |
+
+| | v1.0 loss | v1.1 loss | v1.0 eta_RTE | v1.1 eta_RTE |
+|---|---|---|---|---|
+| isolated well | 75.6 % | **79.0 %** | 0.0718 | **0.0612** |
+| fan, N = 100 | 54.9 % | **56.7 %** | 0.1378 | **0.1318** |
+| fan, N = 1000, 70° | 28.7 % | *bit-identical* | 0.2255 | *bit-identical* |
+| fan, N = 1000, 45° | 12.8 % | *bit-identical* | 0.2808 | *bit-identical* |
+| array at 1.83 m | 0.93 % | *bit-identical* | 0.3230 | *bit-identical* |
+
+So the headline result is untouched; only the conservative bound moves, and in
+the honest direction. The insulation optimum shifts from +19 % to +13 %.
+
+**The version gate did its job.** Editing the physics without bumping VERSION
+stopped the build: *"recorded 69cde1db, current f613f828"*. That is the gate
+written after v0.9, v0.14 and v0.14a all shipped on stale stamps, working as
+designed for the first time on a real change.
+
+All three gates re-verified at v1.1: adiabatic limit passes, the closure fires
+on a dropped loss (6.0e-01) and is silent on a flipped sign (7.3e-16), and the
+Clausius gate fires on the flip (-4.33e11).

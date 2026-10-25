@@ -18,9 +18,24 @@ R_{\mathrm{cas}} &= \frac{\ln(r_{co}/R_c)}{2\pi k_{\mathrm{steel}}},
 R_{\mathrm{cem}} &= \frac{\ln(r_b/r_{co})}{2\pi k_{\mathrm{cem}}},
 &
 \Rg(t) &= \frac{1}{2\pi k_r}
-  \ln\!\left(\frac{2.5\sqrt{\alpha t}}{r_b}\right).
+  \ln\!\left(\frac{2e^{-\gamma/2}\sqrt{\alpha t}}{r_b}\right).
 \label{eq:Rg}
 \end{align}
+
+The prefactor in $\Rg$ is derived rather than quoted. The large-time
+Carslaw--Jaeger infinite line source gives
+$R' = [\ln(4\alpha t/r_b^2)-\gamma]/4\pi k_r$, and halving the logarithm puts
+it in the form above with
+\begin{equation}
+  C = 2e^{-\gamma/2} = 1.49861,
+\end{equation}
+$\gamma$ being Euler's constant. An earlier version of this model used
+$C=2.5$ on an attribution that could not be substantiated; the difference is a
+\emph{constant} additive offset of $\ln(2.5/C)/2\pi k_r =
+\SI{0.0326}{\metre\kelvin\per\watt}$, which does not decay with time. The
+asymptotic form is well inside its validity here: $r_b^2/4\alpha t =
+9\times10^{-6}$ at the reference case, so the exponential-integral expansion
+is exact to five decimal places.
 
 \begin{table}[h]
 \centering
@@ -28,12 +43,12 @@ R_{\mathrm{cem}} &= \frac{\ln(r_b/r_{co})}{2\pi k_{\mathrm{cem}}},
 \toprule
 term & value, \si{\metre\kelvin\per\watt} & share \\
 \midrule
-material to casing, $R_p$      & 0.14543 & \SI{26.5}{\percent} \\
+material to casing, $R_p$      & 0.14543 & \SI{28.2}{\percent} \\
 casing steel, $R_{\mathrm{cas}}$ & 0.00034 & \SI{0.1}{\percent} \\
-cement, $R_{\mathrm{cem}}$     & 0.01838 & \SI{3.4}{\percent} \\
-\textbf{ground}, $\Rg$         & \textbf{0.38413} & \textbf{\SI{70.1}{\percent}} \\
+cement, $R_{\mathrm{cem}}$     & 0.01838 & \SI{3.6}{\percent} \\
+\textbf{ground}, $\Rg$         & \textbf{0.35155} & \textbf{\SI{68.2}{\percent}} \\
 \midrule
-total                          & 0.54829 & \\
+total                          & 0.51571 & \\
 \bottomrule
 \end{tabular}
 \caption{The resistance budget at the design point, $t_{\mathrm{op}} =

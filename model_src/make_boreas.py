@@ -39,7 +39,7 @@ ENTRY = ('Case', 'simulate_css_corrected', 'simulate_css', 'css_report',
 HEADER = '''"""BOREAS -- BOREhole Array Storage.
 
 Latent-heat storage in repurposed wellbores, with a DOWNCOMER geometry and a
-conducting formation. The live model, v1.0.
+conducting formation. The live model, v1.1.
 
 BOREAS is a new series, not a new version of THUMS. The P2H2P/THUMS line stays
 exactly where it was at v0.16 and remains runnable; nothing here edits it. Two

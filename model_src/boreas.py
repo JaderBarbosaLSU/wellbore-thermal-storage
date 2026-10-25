@@ -1,7 +1,7 @@
 """BOREAS -- BOREhole Array Storage.
 
 Latent-heat storage in repurposed wellbores, with a DOWNCOMER geometry and a
-conducting formation. The live model, v1.0.
+conducting formation. The live model, v1.1.
 
 BOREAS is a new series, not a new version of THUMS. The P2H2P/THUMS line stays
 exactly where it was at v0.16 and remains runnable; nothing here edits it. Two
@@ -1657,14 +1657,17 @@ def unmirror_march(res):
 def ground_resistance(case):
     """Quasi-steady line-source resistance of the formation, per metre.
 
-    Eskilson's form: at time t the disturbance has spread to roughly
-    2.5*sqrt(alpha t), and the resistance is the log of that over the borehole
-    radius. It is quasi-steady in the sense that the DAILY cycle is far faster
+    At time t the disturbance has spread to a radius of order sqrt(alpha t),
+    and the resistance is the log of that over the borehole radius. It is
+    quasi-steady in the sense that the DAILY cycle is far faster
     than the formation's response, so within one charge-discharge the ground
     looks like a fixed resistance to a fixed far-field temperature. The cycle
     time is 10 h and the formation time constant is years; the separation is
     four orders of magnitude, so this is a good approximation rather than a
     convenient one.
+
+    The prefactor is the exact large-time line-source constant
+    2 exp(-gamma/2); see the derivation inline below.
 
     SINGLE WELL, NO FIELD SHIELDING. This is deliberate and it is the
     conservative choice: an isolated well is the worst case, because in a
@@ -1678,7 +1681,31 @@ def ground_resistance(case):
         return np.inf                      # no formation: adiabatic wall
     alpha = case.k_rock / case.rho_cp_rock
     t = case.t_operation_yr * 365.25 * 24.0 * 3600.0
-    arg = 2.5 * np.sqrt(alpha * t) / case.r_bore
+    # THE PREFACTOR IS DERIVED, NOT QUOTED.  v1.0 used 2.5, attributed in this
+    # docstring to "Eskilson's form". That attribution was wrong: no source for
+    # 2.5 could be found, and it appears to have been invented. The correct
+    # constant follows in three lines from the large-time Carslaw-Jaeger
+    # infinite line source,
+    #
+    #     R' = [ln(4 a t / rb^2) - gamma] / (4 pi k)
+    #        = (1/2 pi k) [ln(2 sqrt(a t)/rb) - gamma/2]
+    #        = (1/2 pi k)  ln( 2 exp(-gamma/2) sqrt(a t) / rb ),
+    #
+    # so the prefactor is 2 exp(-gamma/2) = 1.49861, not 2.5. The difference is
+    # a CONSTANT additive offset of ln(2.5/1.49861)/(2 pi k) = 0.0326 m K/W at
+    # the reference case -- 9.3 % of R_g -- which does not decay with time and
+    # so cannot be dismissed as a transient.
+    #
+    # It bites only where the GROUND term binds. Under the max() rule of
+    # `formation_resistance`, the perimeter term dominates at every depth for
+    # the 1000-well fan and the island array, so the realistic results are
+    # unchanged; the isolated-well bound moves from 75.6 % to 79.0 % loss and
+    # the 100-well fan from 54.9 % to 56.7 %.
+    #
+    # The asymptotic form is safe here: rb^2/(4 a t) = 9e-6 at the reference
+    # case, so the E1 expansion is exact to five decimal places.
+    C_ILS = 2.0 * np.exp(-0.5772156649015329 / 2.0)      # = 1.498612
+    arg = C_ILS * np.sqrt(alpha * t) / case.r_bore
     R = np.log(arg) / (2.0 * np.pi * case.k_rock) if arg > 0.0 else -1.0
     if not np.isfinite(R) or R <= 0.0:
         # THE LINE SOURCE HAS BROKEN DOWN, and the branch matters.
