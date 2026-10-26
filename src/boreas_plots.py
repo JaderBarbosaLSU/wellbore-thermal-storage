@@ -339,6 +339,173 @@ def ts_combined(case, rank, hp, Tdict, ax=None, show_water=True,
     return ax
 
 
+# ----------------------------------------------------------- heat maps
+def heatmap(rows, xkey, ykey, zkey, xs, ys, ax=None, cmap="viridis",
+            title="", cbar_label="", fmt="{:.3f}", mark=None, annotate=True,
+            vmin=None, vmax=None, contour=True, cbar=True):
+    """One metric over a two-parameter grid, with the cells labelled.
+
+    Cells are ANNOTATED with their value. A heat map whose colour scale is
+    the only channel invites the reader to misjudge small differences, and
+    several of these maps are deliberately flat -- the flatness is the
+    result, and it is only legible if the numbers are on the cells.
+
+    Infeasible points (validate_case blocking, or an exception) are hatched
+    rather than dropped, so a hole in the map reads as a constraint and not
+    as a bug in the plot.
+    """
+    if ax is None:
+        _, ax = plt.subplots(figsize=(6.2, 4.8))
+    m = {(r[xkey], r[ykey]): r for r in rows}
+    Z = np.full((len(ys), len(xs)), np.nan)
+    bad = np.zeros_like(Z, dtype=bool)
+    for i, y in enumerate(ys):
+        for j, x in enumerate(xs):
+            r = m.get((float(x), float(y))) or m.get((x, y))
+            if r is None or not r.get("feasible", True) or zkey not in r:
+                bad[i, j] = True
+            else:
+                Z[i, j] = r[zkey]
+    im = ax.imshow(Z, origin="lower", aspect="auto", cmap=cmap,
+                   vmin=vmin, vmax=vmax, interpolation="nearest",
+                   extent=(-0.5, len(xs) - 0.5, -0.5, len(ys) - 0.5))
+    for i in range(len(ys)):
+        for j in range(len(xs)):
+            if bad[i, j]:
+                ax.add_patch(plt.Rectangle((j - 0.5, i - 0.5), 1, 1,
+                                           facecolor="0.92", edgecolor="0.6",
+                                           hatch="///", lw=0.5))
+            elif annotate:
+                lo, hi = np.nanmin(Z), np.nanmax(Z)
+                t = 0.5 if hi == lo else (Z[i, j] - lo) / (hi - lo)
+                ax.text(j, i, fmt.format(Z[i, j]), ha="center", va="center",
+                        fontsize=7.6,
+                        color="white" if t < 0.55 else "#111111")
+    if contour and np.isfinite(Z).sum() > 4:
+        ax.contour(np.arange(len(xs)), np.arange(len(ys)),
+                   np.ma.masked_invalid(Z), colors="white", linewidths=0.6,
+                   alpha=0.45)
+    if mark is not None:
+        mx, my = mark
+        if mx in list(xs) and my in list(ys):
+            ax.plot(list(xs).index(mx), list(ys).index(my), "o", ms=11,
+                    mfc="none", mec="#d62828", mew=2.0, zorder=6)
+    if np.isfinite(Z).any():
+        i, j = np.unravel_index(np.nanargmax(Z), Z.shape)
+        ax.plot(j, i, "*", ms=13, mfc="#ffd166", mec="#1a1a1a", mew=0.9,
+                zorder=7)
+    ax.set_xticks(range(len(xs)))
+    ax.set_xticklabels([f"{x:g}" for x in xs])
+    ax.set_yticks(range(len(ys)))
+    ax.set_yticklabels([f"{y:g}" for y in ys])
+    ax.set_title(title, pad=8)
+    for sp in ("top", "right"):
+        ax.spines[sp].set_visible(True)
+    if cbar:
+        cb = ax.figure.colorbar(im, ax=ax, fraction=0.046, pad=0.03)
+        cb.set_label(cbar_label)
+        cb.outline.set_linewidth(0.6)
+    return ax, Z
+
+
+def spread(Z):
+    """Peak-to-peak as a percentage of the mean -- is this map flat?"""
+    f = Z[np.isfinite(Z)]
+    return 100.0 * (f.max() - f.min()) / abs(f.mean()) if f.size else np.nan
+
+
+# --------------------------------------- surface cycles vs T_m
+def cycle_vs_Tm(rows_autoP, rows_fixedP, case, axes=None, figsize=(13.2, 4.3)):
+    """How the two surface machines trade against storage temperature.
+
+    `rows_autoP` has the water-loop pressure raised to keep the loop liquid
+    at each T_m; `rows_fixedP` holds it at the shipped value and goes
+    infeasible once the charging inlet reaches saturation. Plotting both is
+    the point: the first gives the thermodynamic optimum, the second says
+    what it costs to reach it.
+    """
+    if axes is None:
+        _, axes = plt.subplots(1, 3, figsize=figsize)
+    ok = [r for r in rows_autoP if r.get("feasible")]
+    T = np.array([r["T_m_C"] for r in ok])
+    eta = np.array([r["eta_ORC"] for r in ok])
+    cop = np.array([r["COP"] for r in ok])
+    prod = np.array([r["product"] for r in ok])
+    Pb = np.array([r["P_bar"] for r in ok])
+    T2d = np.array([r["T_2d_C"] for r in ok])
+    T3e = np.array([r["T_3e_C"] for r in ok])
+    okf = [r["T_m_C"] for r in rows_fixedP if r.get("feasible")]
+    T_lim = max(okf) if okf else None
+    i_opt = int(np.argmax(prod))
+    T_ref = case.T_m - 273.15
+
+    def shade(ax):
+        if T_lim is not None and T_lim < T.max():
+            ax.axvspan(T_lim, T.max(), color="0.88", zorder=0)
+            # y is in AXES fraction here, so it must be 1.0 -- not
+            # ax.get_ylim()[1], which is a data value and would place the
+            # text at several hundred percent of the axes height. With
+            # savefig.bbox='tight' that silently inflates the saved figure
+            # to tens of thousands of pixels instead of raising.
+            ax.annotate(f"needs $P>{case.P / 1e5:.0f}$ bar",
+                        (0.5 * (T_lim + T.max()), 1.0),
+                        ha="center", va="top", fontsize=8.0, color="0.35",
+                        xycoords=("data", "axes fraction"), xytext=(0, -6),
+                        textcoords="offset points")
+        ax.axvline(T_ref, color="0.45", lw=0.9, ls=(0, (1, 2.5)), zorder=1)
+
+    ax = axes[0]
+    ax.plot(T, eta, color=NAVY, lw=1.9, label=r"$\eta_\mathrm{ORC}$")
+    ax.set_ylabel(r"$\eta_\mathrm{ORC}$", color=NAVY)
+    ax.tick_params(axis="y", colors=NAVY)
+    axb = ax.twinx()
+    axb.plot(T, cop, color=RED, lw=1.9, label="COP")
+    axb.set_ylabel("COP", color=RED)
+    axb.tick_params(axis="y", colors=RED)
+    axb.spines["right"].set_visible(True)
+    shade(ax)
+    ax.set_title("(a) the two machines pull opposite ways", pad=8)
+
+    ax = axes[1]
+    ax.plot(T, prod, color="#2f6f4f", lw=2.0)
+    ax.plot([T[i_opt]], [prod[i_opt]], "o", ms=6, mfc="white",
+            mec="#2f6f4f", mew=1.6, zorder=5)
+    ax.annotate(rf"optimum {T[i_opt]:.0f} $^\circ$C" "\n"
+                rf"$\eta_\mathrm{{ORC}}\,$COP$\,={prod[i_opt]:.4f}$",
+                (T[i_opt], prod[i_opt]), textcoords="offset points",
+                xytext=(10, -26), fontsize=8.4)
+    j = int(np.argmin(np.abs(T - T_ref)))
+    ax.plot([T[j]], [prod[j]], "s", ms=5, mfc="white", mec="0.35", mew=1.3,
+            zorder=5)
+    ax.annotate(rf"reference {T_ref:.0f} $^\circ$C, {prod[j]:.4f}"
+                "\n" rf"({100 * (prod[i_opt] / prod[j] - 1):+.1f} % to optimum)",
+                (T[j], prod[j]), textcoords="offset points", xytext=(-26, -40),
+                fontsize=8.4, ha="left")
+    shade(ax)
+    axb = ax.twinx()
+    axb.plot(T, Pb, color="#9c27a0", lw=1.3, ls=(0, (4, 2)))
+    axb.set_ylabel("required loop pressure  /  bar", color="#9c27a0")
+    axb.tick_params(axis="y", colors="#9c27a0")
+    axb.spines["right"].set_visible(True)
+    ax.set_ylabel(r"$\eta_\mathrm{ORC}\times$ COP")
+    ax.set_title("(b) a shallow optimum, bought with pressure", pad=8)
+
+    ax = axes[2]
+    ax.plot(T, T2d - T3e, color="#b06a28", lw=1.9)
+    shade(ax)
+    ax.set_ylabel(r"$T_\mathrm{2d} - T_\mathrm{3e}$  /  K")
+    ax.set_title("(c) the pinch shortfall is not a quirk\nof the reference case",
+                 pad=8)
+    ax.set_ylim(0, max(60.0, float((T2d - T3e).max()) * 1.15))
+
+    for a in axes:
+        a.set_xlabel(r"storage melting temperature, $T_\mathrm{m}$  /  $^{\circ}$C")
+    return axes, dict(T_opt_C=float(T[i_opt]), product_opt=float(prod[i_opt]),
+                      T_ref_C=float(T_ref), product_ref=float(prod[j]),
+                      gain_pct=float(100 * (prod[i_opt] / prod[j] - 1)),
+                      P_feasible_limit_C=T_lim)
+
+
 # ------------------------- water streams drawn ON the T-s diagram
 #
 # A water stream has its own entropy, on a scale that has nothing to do with
