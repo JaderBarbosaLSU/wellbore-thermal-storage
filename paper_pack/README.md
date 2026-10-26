@@ -1,0 +1,121 @@
+# BOREAS v1.3 results pack for `P2H2P_enthalpy_paper`
+
+Everything here was generated from `boreas.py` v1.3 on 2026-10-25 at the
+reference case of `tab:conditions`, `n_s = 99`, `t_op = 10 yr`. Paste this
+prompt and the attached files into the enthalpy-paper task.
+
+---
+
+## What this closes
+
+| `\todo{}` in `results.tex` | closed by |
+|---|---|
+| §4.1 *T–s diagram of both cycles … table of state points, pressures, y, x_8h, ε_R1, ε_R2, η_ORC, COP, duties and flow rates* | `tex/res_cycles.tex` → `fig:ts`, `tab:states`, `tab:cycles` |
+| §4.1 *ORC evaporator composite curves showing the interior pinch … (v1.0 values; regenerate at v1.3)* | `tex/res_cycles.tex` → `fig:composite`, `fig:composite-stores`, `tab:T3e` |
+| §4.1 *UA and pinch of the four plant exchangers* | `tex/res_cycles.tex` → `tab:UA` |
+| §4.4 *(partially)* | `tex/res_param.tex` → five new paragraphs and figures |
+
+**Not** closed, and deliberately left alone: the §4.4 items on storage length
+against `z_KO`, the `t_op` sweep, `k_r`, the insulation sweep, and
+`N_geo`; the §4.3 profile and convergence plots; the `\chk` on moving the
+reference to 4000 ft.
+
+---
+
+## How to install
+
+1. Copy `figures/*.pdf` into the paper's `figures/`.
+2. Copy `tex/*.tex` into a `tex/` subdirectory (or flatten and fix the
+   `\input` paths — `res_cycles.tex` does `\input{tex/tab_states}` etc.).
+3. Replace the whole of `\subsection{Power-to-heat-to-power cycle analysis}`
+   with `tex/res_cycles.tex`.
+4. Insert `tex/res_param.tex` into `\subsection{Parametric assessment}`,
+   before the existing `\todo{}`s — it adds to that subsection rather than
+   replacing it.
+
+### Macros assumed to exist
+
+`\etaORC`, `\COP`, `\Nlay`, `\nft`, `\rev{}`, `\chk{}`, `\todo{}`, plus
+`siunitx` and `graphicx`. No new macros are defined. If `\Nlay` or `\nft` are
+not defined in the preamble, three uses in `res_param.tex` will fail.
+
+### New labels
+
+`tab:states`, `tab:cycles`, `tab:UA`, `tab:T3e`, `fig:ts`, `fig:composite`,
+`fig:composite-stores`, `fig:map-cascade`, `fig:map-geometry`,
+`fig:map-field`, `fig:nlay`, `fig:Tm`.
+
+---
+
+## Three things to check before accepting the text
+
+**1. The v1.0 `T_3e` values in the `\todo` have moved, one of them a lot.**
+
+| store | v1.0 in the paper | v1.3 |
+|---|---|---|
+| adiabatic | 95.0 °C | **95.03 °C** |
+| 1000-well fan | 93.9 °C | **89.90 °C** |
+| isolated well | 88.4 °C | **88.04 °C** |
+| vertical array, rows | — | **94.46 °C** |
+
+The fan moved because at v1.3 it is computed at the rows packing (57.1 %
+loss) rather than the disc (12.8 %). If the sentence in the paper is meant to
+quote the disc fan, the number is 93.9 °C and should say *disc*.
+
+**2. A `\chk` worth resolving: is `DT_3C_2C = 55 K` a free choice?**
+Within the model a narrower glide improves *both* η_RTE and e′ at every
+storage temperature — there is no cell in the 36-point map where 55 K beats
+25 K. If the 55 K is set by the PCM selection or the layer grading, that
+should be said, because otherwise the reference case is leaving ~12 % of
+η_RTE on the table.
+
+**3. The field maps use rows packing throughout, so their 45° column is not
+comparable with `tab:formation`'s disc-packing fan rows.** The caption says
+so. Worth a glance to make sure that does not read as a contradiction.
+
+---
+
+## Things the paper already has right (no action)
+
+I re-derived two results that turned out to be already in your `results.tex`,
+so these are confirmations, not corrections:
+
+- **The rows/disc comparison.** `tab:formation` already carries fan-1000 at
+  rows (57.1 %, RTE 0.131) beside the disc (12.8 %, 0.281), and the paragraph
+  *"The result is governed by the arrangement of the field"* already draws
+  the right conclusion. (The *model report* `boreas_tex/sec/10_results.tex`
+  still has the old apples-to-oranges comparison and does need fixing — that
+  is a separate document.)
+- **The convergence flag.** Your `\chk` in `tab:ref-results` already records
+  the 80-cycle limit and the 1e-9 absolute tolerance. For the record, the
+  quantitative framing: drift falls from 3.6e5 to 1.22e-9 J/m and plateaus,
+  a reduction of 3.2e-15 *relative*. The solve is converged to round-off; the
+  tolerance is absolute on a quantity of order 1e5 and so is unreachable by
+  construction. Making it relative would fix the flag and cut ~60 of the 80
+  cycles. Not changed, because it moves the physics hash.
+
+---
+
+## Regenerating
+
+```
+python3 papercalc.py adiabatic isolated fan1000_rows array_rows   # ~2 min
+python3 mktex.py          # rebuilds the four tables from papercalc.json
+python3 mkmaps.py         # rebuilds the heat maps from the sweep cache
+python3 mkfig_store.py    # rebuilds fig:composite-stores
+```
+
+`data/boreas_sweep_cache.json` holds all 180 cyclic-steady-state evaluations
+keyed by case parameters, so refining a map recomputes only the new cells.
+The tables are machine-generated — regenerate rather than hand-edit, or the
+paper will drift from the model.
+
+### A trap worth knowing about
+
+`boreas_sweep.py` runs `validate_case` on every point. Without that gate a
+`T_m` sweep past 180 °C silently computes on **superheated steam** — water
+saturates at 179.9 °C at the shipped 10 bar and CoolProp returns a vapour
+enthalpy about ten times the liquid one rather than failing — and the
+resulting pinch is meaningless. That artefact produced a false η_ORC optimum
+at 185 °C before the gate was added. The check exists in the model; it simply
+is not called by `cycle_state_points`.
