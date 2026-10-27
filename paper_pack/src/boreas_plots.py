@@ -362,41 +362,75 @@ def _time_subset(t_hist, n=9):
     return [int(np.argmin(np.abs(t - w))) for w in want]
 
 
-def _staircase(ax, z, T_m_seg, **kw):
+def _staircase_xy(z, T_m_seg):
+    """Explicit staircase polyline, so it can be drawn either way round.
+
+    `ax.step` only ever steps in y as a function of x, which is wrong when
+    depth is the ORDINATE. Building the vertices by hand keeps one
+    definition of the staircase for both orientations.
+    """
+    z = np.asarray(z, float)
+    T = np.asarray(T_m_seg, float) - 273.15
+    dz = z[1] - z[0] if len(z) > 1 else 1.0
+    edges = np.concatenate(([z[0] - dz / 2], z + dz / 2))
+    return np.repeat(T, 2), np.repeat(edges, 2)[1:-1]
+
+
+def _staircase(ax, z, T_m_seg, vertical=False, **kw):
     kw = dict(color="#1a1a1a", lw=1.1, ls=(0, (4, 2)), zorder=6) | kw
-    ax.step(z, np.asarray(T_m_seg) - 273.15, where="mid", **kw)
+    T, zz = _staircase_xy(z, T_m_seg)
+    ax.plot(*((T, zz) if vertical else (zz, T)), **kw)
 
 
 def well_profiles(r, case, field="T_fluid", axes=None, n_times=9,
-                  figsize=(11.6, 4.4), cmap="viridis", ylabel=None,
+                  figsize=None, cmap="viridis", ylabel=None,
                   title=None, staircase=False, scale=1.0, offset=0.0,
-                  logy=False):
+                  logy=False, vertical=True):
     """One field along the well at several times, charge and discharge.
 
     `r` must come from simulate_css_corrected(..., record=True).
+    `vertical` puts depth on the ordinate, increasing downward, which is the
+    natural frame for a well; the quantity then runs along the abscissa.
     """
+    if figsize is None:
+        figsize = (8.6, 5.6) if vertical else (11.6, 4.4)
     if axes is None:
-        _, axes = plt.subplots(1, 2, figsize=figsize, sharey=True)
+        _, axes = plt.subplots(1, 2, figsize=figsize,
+                              sharex=vertical, sharey=not vertical)
     cm = plt.get_cmap(cmap)
+    qlabel = ylabel or field
+    dlabel = r"depth, $z$ / m"
     for ax, half, lab in ((axes[0], "charge", "(a) charging"),
                           (axes[1], "discharge", "(b) discharging")):
         H, th, z = r[half]["history"], r[half]["t_hist"], r[half]["z"]
         idx = _time_subset(th, n_times)
         Y = np.asarray(H[field], float)
         for j, i in enumerate(idx):
-            y = Y[i]
+            y = Y[i] * scale + offset
             zz = z if len(y) == len(z) else np.linspace(z[0], z[-1], len(y))
-            ax.plot(zz, y * scale + offset, color=cm(j / max(1, len(idx) - 1)),
-                    lw=1.3, label=f"{th[i] / 60:.1f}")
+            col = cm(j / max(1, len(idx) - 1))
+            ax.plot(*((y, zz) if vertical else (zz, y)), color=col, lw=1.3,
+                    label=f"{th[i] / 60:.1f}")
         if staircase:
-            _staircase(ax, z, r["T_m_seg"])
+            _staircase(ax, z, r["T_m_seg"], vertical=vertical)
             ax.plot([], [], color="#1a1a1a", lw=1.1, ls=(0, (4, 2)),
                     label=r"$T_{m,k}$")
-        ax.set_xlabel(r"depth, $z$ / \si{\metre}".replace(r"\si{\metre}", "m"))
         ax.set_title(lab, pad=7)
-        if logy:
-            ax.set_yscale("log")
-    axes[0].set_ylabel(ylabel or field)
+        if vertical:
+            ax.set_xlabel(qlabel)
+            if logy:
+                ax.set_xscale("log")
+        else:
+            ax.set_xlabel(dlabel)
+            if logy:
+                ax.set_yscale("log")
+    if vertical:
+        axes[0].set_ylabel(dlabel)
+        for ax in axes:
+            if not ax.yaxis_inverted():
+                ax.invert_yaxis()          # depth increases downward
+    else:
+        axes[0].set_ylabel(qlabel)
     leg = axes[1].legend(title="time / min", ncol=2, fontsize=7.4,
                          title_fontsize=7.8, loc="best", handlelength=1.4,
                          labelspacing=0.25, columnspacing=1.0)
@@ -433,6 +467,87 @@ def well_integrals(r, case, axes=None, figsize=(11.6, 4.2)):
         axb.spines["right"].set_visible(True)
         ax.set_title(lab, pad=7)
     return axes
+
+
+def _resample(Y, t_src, t_dst):
+    """Linear interpolation of a (time, segment) field onto a new time grid.
+
+    The march records on a roughly LOGARITHMIC time grid, which is right for
+    static profiles but makes an animation played at constant frame rate
+    appear to accelerate. Resampling onto a uniform grid puts the playback
+    clock in proportion to physical time; the sub-minute transient is then
+    genuinely brief on screen, which is the honest depiction.
+    """
+    Y = np.asarray(Y, float)
+    return np.column_stack([np.interp(t_dst, t_src, Y[:, j])
+                            for j in range(Y.shape[1])])
+
+
+def animate_well(r, case, path, fps=12, frames_per_half=60, dpi=110,
+                 writer=None):
+    """Animate the well through one full cycle at cyclic steady state.
+
+    Three panels with depth on the ordinate: fluid temperature against the
+    melting staircase, local melted fraction, and the overall coefficient.
+    Axis limits are fixed over the whole cycle so that nothing jumps between
+    the half-cycles and the eye can compare them directly.
+
+    `path` ending .gif uses pillow, .mp4 uses ffmpeg.
+    """
+    import matplotlib.animation as manim
+    A = pcm_capacities_A(case)
+    z = r["charge"]["z"]
+    seq = []                                   # (phase, t_s, Tf, eps, Ui)
+    for half, lab in (("charge", "charging"), ("discharge", "discharging")):
+        H, th = r[half]["history"], r[half]["t_hist"]
+        tu = np.linspace(th[0], th[-1], frames_per_half)
+        Tf = _resample(H["T_fluid"], th, tu) - 273.15
+        eps = _resample(H["A_melt"], th, tu) / A
+        Ui = _resample(H["U_i"], th, tu)
+        for k in range(frames_per_half):
+            seq.append((lab, tu[k], Tf[k], eps[k], Ui[k]))
+
+    allT = np.concatenate([s[2] for s in seq])
+    allU = np.concatenate([s[4] for s in seq])
+    lims = [(allT.min() - 3, allT.max() + 3), (-0.04, 1.04),
+            (0.0, allU.max() * 1.05)]
+    labs = [r"$T_f$ / $^\circ$C", r"$A_\mathrm{melt}/A_\mathrm{av}$",
+            r"$U_i$ / W m$^{-2}$ K$^{-1}$"]
+    cols = [NAVY, "#2f6f4f", PURPLE]
+
+    fig, axes = plt.subplots(1, 3, figsize=(11.0, 5.4), sharey=True)
+    lines = []
+    for ax, lim, lab, col in zip(axes, lims, labs, cols):
+        ax.set_xlim(*lim)
+        ax.set_xlabel(lab)
+        ln, = ax.plot([], [], color=col, lw=2.0)
+        lines.append(ln)
+    _staircase(axes[0], z, r["T_m_seg"], vertical=True)
+    axes[0].set_ylabel(r"depth, $z$ / m")
+    # High depth at the bottom: setting the limits in descending order is
+    # the whole inversion -- invert_yaxis() on top of this would undo it.
+    axes[0].set_ylim(z[-1] * 1.02, -0.02 * z[-1])
+    head = fig.suptitle("", y=0.975, fontsize=11)
+    fig.subplots_adjust(left=0.075, right=0.985, top=0.90, bottom=0.11,
+                        wspace=0.10)
+
+    def draw(i):
+        lab, t, Tf, eps, Ui = seq[i]
+        zz = np.linspace(z[0], z[-1], len(Tf))
+        lines[0].set_data(Tf, zz)
+        lines[1].set_data(eps, z)
+        lines[2].set_data(Ui, z)
+        head.set_text(f"{lab}   $t$ = {t / 60:6.1f} min   "
+                      f"mean melted fraction {eps.mean():.3f}")
+        return lines + [head]
+
+    anim = manim.FuncAnimation(fig, draw, frames=len(seq), interval=1000 / fps,
+                               blit=False)
+    if writer is None:
+        writer = "pillow" if str(path).endswith(".gif") else "ffmpeg"
+    anim.save(str(path), writer=writer, fps=fps, dpi=dpi)
+    plt.close(fig)
+    return len(seq)
 
 
 def pcm_capacities_A(case):

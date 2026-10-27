@@ -1,5 +1,7 @@
 # BOREAS v1.3 results pack for `P2H2P_enthalpy_paper`
 
+**Revision 3 (2026-10-26).** Profile figures redrawn with depth on the ordinate, increasing downward, and an animation of the full cycle added (`figures/BOREAS_cycle.mp4`, `.gif`).
+
 **Revision 2 (2026-10-26).** Review comments applied: the composite-curve figure and the hot-end-rule discussion are removed, the state-point table is now supplementary, and the hot-end column is gone from `tab:T3e`. A new subsection on thermal behaviour along the well has been added.
 
 Everything here was generated from `boreas.py` v1.3 on 2026-10-25 at the
@@ -18,6 +20,7 @@ prompt and the attached files into the enthalpy-paper task.
 | §4.4 *(partially)* | `tex/res_param.tex` → five new paragraphs and figures |
 | §4.3 *Profiles along the well at CSS …* | `tex/res_thermal.tex` → `fig:prof-T`, `fig:prof-melt`, `fig:prof-Ui`, `fig:prof-int` |
 | *(new)* one sentence for the model section | `tex/model_hotend_sentence.tex` |
+| *(supplementary)* cycle animation | `figures/BOREAS_cycle.mp4`, `figures/BOREAS_cycle.gif` |
 
 **Not** closed, and deliberately left alone: the §4.4 items on storage length
 against `z_KO`, the `t_op` sweep, `k_r`, the insulation sweep, and
@@ -140,3 +143,27 @@ enthalpy about ten times the liquid one rather than failing — and the
 resulting pinch is meaningless. That artefact produced a false η_ORC optimum
 at 185 °C before the gate was added. The check exists in the model; it simply
 is not called by `cycle_state_points`.
+
+
+---
+
+## The animation
+
+`figures/BOREAS_cycle.mp4` (120 frames, 12 fps, ~10 s) and
+`figures/BOREAS_cycle.gif` (90 frames, lower resolution, for slides and
+anything that will not play video). Three panels with depth on the ordinate
+— fluid temperature against the melting staircase, local melted fraction,
+overall coefficient — running charge then discharge, with elapsed time and
+the mean melted fraction in the header. Axis limits are fixed across the
+whole cycle so the two half-cycles can be compared directly and nothing
+jumps at the changeover.
+
+One thing to know about the clock: the march records on a roughly
+*logarithmic* time grid, which is right for static profiles but would make
+constant-rate playback appear to accelerate. The frames are therefore
+resampled onto a uniform time grid, so screen time is proportional to
+physical time. The consequence is that the sub-minute startup transient goes
+past almost instantly — that is the honest depiction, not a dropped frame.
+
+Regenerate with `python3 src/mkanim.py` (needs `rec.pkl`, produced by
+`simulate_css_corrected(..., record=True)`; see `src/mkfig_prof.py`).
