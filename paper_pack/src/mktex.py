@@ -13,7 +13,7 @@ lines = [r'% Generated from boreas.py v1.3, reference case = 1000-well vertical'
          r'% array in double rows on four islands. Do not hand-edit: regenerate',
          r'% with mktex.py so the table cannot drift from the model.',
          r'\begin{table}[htbp]', r'\centering',
-         r'\caption{State points of the two cycles at the reference case. '
+         r'\caption{\emph{Supplementary material.} State points of the two cycles at the reference case. '
          r'The ORC is a double-stage reheat cycle with a regenerator '
          r'(7e--10e); the HTHP is a two-stage flash-economizer cycle, in '
          r'which 7h throttles into a drum at $p_\mathrm{int}$, the saturated '
@@ -106,21 +106,18 @@ t = [r'\begin{table}[htbp]', r'\centering',
      r'\caption{The store reaches the ORC through one number. Loss to the '
      r'formation lowers the realized water outlet '
      r'$\overline{T}_\mathrm{2d}$, the pinch-limited evaporating temperature '
-     r'follows and $\etaORC$ with it. The hot-end rule '
-     r'$T_\mathrm{3e}=\overline{T}_\mathrm{2d}-\Delta T_\mathrm{2D,3E}$ is '
-     r'not binding in any case.}',
+     r'follows and $\etaORC$ with it.}',
      r'\label{tab:T3e}', r'\small',
-     r'\begin{tabular}{@{}l r r r r@{}}', r'\toprule',
+     r'\begin{tabular}{@{}l r r r@{}}', r'\toprule',
      r'store & $\overline{T}_\mathrm{2d}$ [\si{\celsius}] & '
-     r'$T_\mathrm{3e}$ [\si{\celsius}] & hot-end rule [\si{\celsius}] & '
-     r'$\etaORC$ \\', r'\midrule']
+     r'$T_\mathrm{3e}$ [\si{\celsius}] & $\etaORC$ \\', r'\midrule']
 for key, lab in (('adiabatic', r'adiabatic, $k_r\to0$'),
                  ('array_rows', 'vertical array, 1000 wells, rows'),
                  ('fan1000_rows', 'fan, 1000 wells, rows'),
                  ('isolated', 'isolated well')):
     v = d[key]
     t.append(f'{lab} & {v["T_2d_realised_C"]:.2f} & {v["T_3e_C"]:.2f} & '
-             f'{v["T_3e_hot_end_C"]:.2f} & {v["eta_ORC"]:.4f} ' + r'\\')
+             f'{v["eta_ORC"]:.4f} ' + r'\\')
 t += [r'\bottomrule', r'\end{tabular}', r'\end{table}', '']
 open(OUT + 'tab_T3e.tex', 'w').write('\n'.join(t))
 print('wrote 4 tables to', OUT)

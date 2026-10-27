@@ -1,0 +1,116 @@
+%=======================================================================
+% NEW SUBSECTION for section 4, to sit after \subsection{Loss to the
+% formation and the role of the well field}. It closes the \todo{} on
+% "Profiles along the well at CSS".
+%
+% Figures are the BOREAS analogues of Figs. 5-8 of the IHTC hairpin paper,
+% in the downcomer geometry where the tube coordinate IS depth.
+%
+% boreas.py v1.3, simulate_css_corrected(..., record=True), reference case:
+% 1000-well vertical array in double rows on four islands, n_s = 99,
+% N_lay = 9, t_ch = t_dc = 10 h.
+%
+% Labels: fig:prof-T, fig:prof-melt, fig:prof-Ui, fig:prof-int.
+%=======================================================================
+\subsection{Thermal behaviour along the well}
+\label{sec:res-thermal}
+
+In the downcomer geometry the tube coordinate is the depth, so a profile
+along the fin tube is a profile down the well and the melting staircase
+$T_{m,k}$ is fixed in space rather than carried along a folded hairpin. The
+figures below are taken from one recorded cycle at cyclic steady state.
+
+\paragraph{The flow is counter-current between the half-cycles}
+Figure~\ref{fig:prof-T} gives the secondary-fluid temperature along the well.
+During charging the water enters at the top at
+$T_\mathrm{4c}=\SI{160}{\celsius}$ and cools as it descends through
+progressively cooler layers; during discharging it enters at the \emph{bottom}
+at $T_\mathrm{3d}=\SI{91.1}{\celsius}$ and warms as it rises. The cascade is
+therefore traversed in opposite directions in the two half-cycles, which is
+what allows the same staircase to serve both: each layer sees the fluid at a
+temperature on the correct side of its own $T_{m,k}$ in both periods.
+
+The layering keeps the fluid close to the staircase over the whole depth. As
+the fluid enters a new layer the driving difference is restored, so the
+profile tracks the steps rather than decaying smoothly, and the
+fluid-to-PCM difference stays bounded instead of collapsing at the far end.
+This is the mechanism identified for the hairpin store and it survives the
+change of geometry.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{figures/BOREAS_prof_Tfluid.pdf}
+\caption{Secondary-fluid temperature along the well during charging and
+discharging, at cyclic steady state. Dashed: the melting staircase
+$T_{m,k}$. Curves are labelled by time from the start of the half-cycle.
+Charging enters at the top, discharging at the bottom.}
+\label{fig:prof-T}
+\end{figure}
+
+\paragraph{Phase change is distributed, not concentrated}
+Figure~\ref{fig:prof-melt} shows the local melted fraction,
+$A_\mathrm{melt}/A_\mathrm{av}$. Within each layer the melted fraction falls
+with distance from the layer inlet, as the driving difference is consumed;
+at each layer boundary the difference is restored and the melted fraction
+jumps back up. The result is the sawtooth, and its significance is that the
+envelope is nearly flat: the shallowest and deepest layers reach comparable
+melted fractions, where a single-$T_m$ store would melt the first layer
+completely and leave the last barely touched. By the end of charging the
+volume-averaged melted fraction is $\bar\varepsilon_\mathrm{ch}=0.897$ and by
+the end of discharging the store has returned essentially to the solid state,
+$\bar\varepsilon_\mathrm{dc}=0.001$, so the cycled fraction is close to the
+whole inventory.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{figures/BOREAS_prof_melt.pdf}
+\caption{Local melted fraction of the PCM along the well. Curve legends as
+in Figure~\ref{fig:prof-T}. The sawtooth is the layering: the envelope is
+far flatter than the decay a single melting temperature would produce.}
+\label{fig:prof-melt}
+\end{figure}
+
+\paragraph{The overall coefficient follows the phase-change front}
+The same pattern appears in the overall heat transfer coefficient referred to
+the inner tube area, Figure~\ref{fig:prof-Ui}. $U_i$ ranges from about
+\SIrange{74}{781}{\watt\per\meter\squared\per\kelvin} over the cycle. Within
+a layer the melted shell thickens with distance from the layer inlet, the
+PCM-side resistance grows and $U_i$ falls; at the next layer boundary the
+shell is thin again and $U_i$ recovers. Early in each half-cycle, before any
+phase change has occurred, $U_i$ is uniform along the well at the value set
+by the solid PCM, which is the flat line in each panel.
+
+The local minima should not be read as a defect. A store with a single
+melting temperature would show higher $U_i$ near the inlet and a far lower
+one at depth, together with the non-uniform melting that
+Figure~\ref{fig:prof-melt} rules out; the layered arrangement trades peak
+local conductance for uniformity of utilisation along the well.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{figures/BOREAS_prof_Ui.pdf}
+\caption{Overall heat transfer coefficient on the inner tube area along the
+well. Curve legends as in Figure~\ref{fig:prof-T}.}
+\label{fig:prof-Ui}
+\end{figure}
+
+\paragraph{Integrated behaviour}
+Figure~\ref{fig:prof-int} gives the heat transfer rate integrated along the
+well, per storage well, together with the volume-averaged melted fraction.
+The magnitude of the rate falls through both half-cycles as the phase-change
+shell thickens and the PCM-side resistance grows, while the melted fraction
+rises on charge and falls on discharge. The charging and discharging rates
+are not mirror images: the charge is driven by a larger fluid-to-PCM
+difference, so it both melts more and does so faster, which is why the
+half-cycles balance at unequal mass flow rates
+($\md_\mathrm{ch}=\SI{0.531}{\kilogram\per\second}$ and
+$\md_\mathrm{dc}=\SI{0.534}{\kilogram\per\second}$ per fin tube).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{figures/BOREAS_prof_integrals.pdf}
+\caption{Heat transfer rate integrated along the well, per storage well, and
+the fraction of the PCM inventory that has changed phase, against time from
+the start of each half-cycle.}
+\label{fig:prof-int}
+\end{figure}

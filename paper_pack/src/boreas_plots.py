@@ -339,6 +339,108 @@ def ts_combined(case, rank, hp, Tdict, ax=None, show_water=True,
     return ax
 
 
+# ------------------------------------------- profiles along the well
+#
+# ORIENTATION, established from the data and not assumed. Both half-cycles
+# are recorded in the DEPTH frame: index 0 is the top of the well, where
+# T_m = 150 C, and index -1 the bottom at 101 C. The march is handed
+# reversed arrays on discharge and the history comes back in the depth
+# frame, so no flip is applied here.
+#
+# The test that settles it is the PCM temperature against its own melting
+# staircase: at the end of discharge the reversed reading would put the PCM
+# 27 K ABOVE its melting point, which cannot happen. Reading the fluid
+# boundary alone is not enough -- on charge the inlet (160 C) is at index 0,
+# on discharge the inlet (T_3d) is at index -1, because the flow is
+# counter-current between the half-cycles.
+
+def _time_subset(t_hist, n=9):
+    """Roughly log-spaced time levels, always including first and last."""
+    t = np.asarray(t_hist, float)
+    want = np.unique(np.concatenate(
+        ([t[0]], t[0] + (t[-1] - t[0]) * np.logspace(-3, 0, n - 1))))
+    return [int(np.argmin(np.abs(t - w))) for w in want]
+
+
+def _staircase(ax, z, T_m_seg, **kw):
+    kw = dict(color="#1a1a1a", lw=1.1, ls=(0, (4, 2)), zorder=6) | kw
+    ax.step(z, np.asarray(T_m_seg) - 273.15, where="mid", **kw)
+
+
+def well_profiles(r, case, field="T_fluid", axes=None, n_times=9,
+                  figsize=(11.6, 4.4), cmap="viridis", ylabel=None,
+                  title=None, staircase=False, scale=1.0, offset=0.0,
+                  logy=False):
+    """One field along the well at several times, charge and discharge.
+
+    `r` must come from simulate_css_corrected(..., record=True).
+    """
+    if axes is None:
+        _, axes = plt.subplots(1, 2, figsize=figsize, sharey=True)
+    cm = plt.get_cmap(cmap)
+    for ax, half, lab in ((axes[0], "charge", "(a) charging"),
+                          (axes[1], "discharge", "(b) discharging")):
+        H, th, z = r[half]["history"], r[half]["t_hist"], r[half]["z"]
+        idx = _time_subset(th, n_times)
+        Y = np.asarray(H[field], float)
+        for j, i in enumerate(idx):
+            y = Y[i]
+            zz = z if len(y) == len(z) else np.linspace(z[0], z[-1], len(y))
+            ax.plot(zz, y * scale + offset, color=cm(j / max(1, len(idx) - 1)),
+                    lw=1.3, label=f"{th[i] / 60:.1f}")
+        if staircase:
+            _staircase(ax, z, r["T_m_seg"])
+            ax.plot([], [], color="#1a1a1a", lw=1.1, ls=(0, (4, 2)),
+                    label=r"$T_{m,k}$")
+        ax.set_xlabel(r"depth, $z$ / \si{\metre}".replace(r"\si{\metre}", "m"))
+        ax.set_title(lab, pad=7)
+        if logy:
+            ax.set_yscale("log")
+    axes[0].set_ylabel(ylabel or field)
+    leg = axes[1].legend(title="time / min", ncol=2, fontsize=7.4,
+                         title_fontsize=7.8, loc="best", handlelength=1.4,
+                         labelspacing=0.25, columnspacing=1.0)
+    leg._legend_box.align = "left"
+    if title:
+        axes[0].figure.suptitle(title, y=0.99)
+    return axes
+
+
+def well_integrals(r, case, axes=None, figsize=(11.6, 4.2)):
+    """Heat rate integrated along the well, and the melted fraction, vs time.
+
+    The melted fraction is the volume-weighted mean of the local melted
+    cross-section, A_melt / A_avail, which is the same quantity the model
+    reports as the cycled fraction at the end of each half-cycle.
+    """
+    if axes is None:
+        _, axes = plt.subplots(1, 2, figsize=figsize)
+    A_avail = pcm_capacities_A(case)
+    for ax, half, lab in ((axes[0], "charge", "(a) charging"),
+                          (axes[1], "discharge", "(b) discharging")):
+        H, th, z = r[half]["history"], r[half]["t_hist"], r[half]["z"]
+        dz = z[1] - z[0]
+        q = np.asarray(H["q_prime"], float).sum(axis=1) * dz / 1e3   # kW/well
+        eps = np.asarray(H["A_melt"], float).mean(axis=1) / A_avail
+        ax.plot(th / 60.0, q, color=RED, lw=1.8)
+        ax.set_xlabel("time / min")
+        ax.set_ylabel(r"$\dot{Q}$ per well / kW", color=RED)
+        ax.tick_params(axis="y", colors=RED)
+        axb = ax.twinx()
+        axb.plot(th / 60.0, eps, color="#2f6f4f", lw=1.8, ls=(0, (5, 2)))
+        axb.set_ylabel("melted fraction of the PCM", color="#2f6f4f")
+        axb.tick_params(axis="y", colors="#2f6f4f")
+        axb.spines["right"].set_visible(True)
+        ax.set_title(lab, pad=7)
+    return axes
+
+
+def pcm_capacities_A(case):
+    """PCM cross-section available per fin tube [m^2]."""
+    import boreas as _b
+    return _b.pcm_capacities(case)[0]
+
+
 # ----------------------------------------------------------- heat maps
 def heatmap(rows, xkey, ykey, zkey, xs, ys, ax=None, cmap="viridis",
             title="", cbar_label="", fmt="{:.3f}", mark=None, annotate=True,

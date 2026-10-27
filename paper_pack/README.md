@@ -1,5 +1,7 @@
 # BOREAS v1.3 results pack for `P2H2P_enthalpy_paper`
 
+**Revision 2 (2026-10-26).** Review comments applied: the composite-curve figure and the hot-end-rule discussion are removed, the state-point table is now supplementary, and the hot-end column is gone from `tab:T3e`. A new subsection on thermal behaviour along the well has been added.
+
 Everything here was generated from `boreas.py` v1.3 on 2026-10-25 at the
 reference case of `tab:conditions`, `n_s = 99`, `t_op = 10 yr`. Paste this
 prompt and the attached files into the enthalpy-paper task.
@@ -14,6 +16,8 @@ prompt and the attached files into the enthalpy-paper task.
 | §4.1 *ORC evaporator composite curves showing the interior pinch … (v1.0 values; regenerate at v1.3)* | `tex/res_cycles.tex` → `fig:composite`, `fig:composite-stores`, `tab:T3e` |
 | §4.1 *UA and pinch of the four plant exchangers* | `tex/res_cycles.tex` → `tab:UA` |
 | §4.4 *(partially)* | `tex/res_param.tex` → five new paragraphs and figures |
+| §4.3 *Profiles along the well at CSS …* | `tex/res_thermal.tex` → `fig:prof-T`, `fig:prof-melt`, `fig:prof-Ui`, `fig:prof-int` |
+| *(new)* one sentence for the model section | `tex/model_hotend_sentence.tex` |
 
 **Not** closed, and deliberately left alone: the §4.4 items on storage length
 against `z_KO`, the `t_op` sweep, `k_r`, the insulation sweep, and
@@ -29,6 +33,13 @@ reference to 4000 ft.
    `\input` paths — `res_cycles.tex` does `\input{tex/tab_states}` etc.).
 3. Replace the whole of `\subsection{Power-to-heat-to-power cycle analysis}`
    with `tex/res_cycles.tex`.
+3b. Insert `tex/res_thermal.tex` after *Loss to the formation and the role of
+   the well field*. It closes the `\todo{}` on profiles along the well.
+3c. Paste the single sentence in `tex/model_hotend_sentence.tex` into the
+   model section, immediately after the equation defining `T_3e`. Without it
+   the `min()` of two constraints has an unexplained second argument.
+3d. Put `tex/tab_states.tex` in the supplementary material (its caption now
+   says so).
 4. Insert `tex/res_param.tex` into `\subsection{Parametric assessment}`,
    before the existing `\todo{}`s — it adds to that subsection rather than
    replacing it.
@@ -48,6 +59,16 @@ not defined in the preamble, three uses in `res_param.tex` will fail.
 ---
 
 ## Three things to check before accepting the text
+
+**0. Orientation of the profile figures, which I verified rather than assumed.**
+Both half-cycles are recorded in the depth frame (index 0 = top). On charge
+the water enters at the top at 160 °C; on discharge it enters at the
+*bottom* at 91.1 °C and rises counter-current. The test that settles it is
+the PCM temperature against its own melting staircase — the reversed reading
+would put the PCM 27 K *above* its melting point at the end of discharge.
+Reading the fluid boundary alone is not enough, because the inlet is at
+opposite ends in the two half-cycles. Worth a sanity check against your
+physical picture of the downcomer.
 
 **1. The v1.0 `T_3e` values in the `\todo` have moved, one of them a lot.**
 
