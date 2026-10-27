@@ -1,5 +1,11 @@
 # BOREAS v1.3 results pack for `P2H2P_enthalpy_paper`
 
+**Revision 7 (2026-10-27).** The ORC composite-curve figure (your Fig. 7)
+is now three independent panels in a `subfigure` environment, like the
+others. The three share one temperature range so they stay directly
+comparable; a per-panel autoscale would have destroyed the point of the
+figure.
+
 **Revision 6 (2026-10-27).** *Consistency fix.* The T–s diagram was
 generated from `Case()` — the **assumed** cascade, T_2d = 146.11 °C —
 while the state-point, UA and T_3e tables come from the array reference,

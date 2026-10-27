@@ -1,56 +1,58 @@
-"""ORC evaporator composites for three store configurations.
+"""ORC evaporator composites, one INDEPENDENT panel per store.
 
-The store reaches the ORC through ONE number, the realised water outlet
-T_2d. Loss to the formation lowers it, the pinch-limited evaporating
-temperature follows, and eta_ORC with it. Three panels on a common axis make
-that chain visible in a way the table cannot.
+Three panels for a subfigure environment, sized for 0.48\\linewidth in a
+single-column layout. The temperature range is computed across all three
+and applied to each, so the panels stay directly comparable even though
+they are now separate figures -- that comparability is the whole point of
+the figure and a per-panel autoscale would destroy it.
 """
 import json
 import matplotlib; matplotlib.use('Agg')
 import matplotlib.pyplot as plt, numpy as np
 import boreas as B, boreas_plots as BP
-BP.use_paper_style()
-d = json.load(open('papercalc.json'))
-O = '/sessions/festive-determined-cray/mnt/outputs/'
-
-show = [('adiabatic', r'adiabatic, $k_r\to0$'),
-        ('array_rows', 'vertical array, rows'),
-        ('isolated', 'isolated well')]
-fig, axes = plt.subplots(1, 3, figsize=(14.4, 4.4), sharey=True)
+BP.use_paper_style(scale=1.0)
+d = json.load(open('/sessions/festive-determined-cray/mnt/outputs/paper_pack/data/papercalc.json'))
+O = '/sessions/festive-determined-cray/mnt/outputs/panels/'
 case = B.Case(n_segments=99)
-for ax, (key, lab) in zip(axes, show):
-    v = d[key]
-    rank, T = v['rank'], v['Tdict']
+SHOW = [('adiabatic', 'comp_a', r'adiabatic, $k_r\to0$'),
+        ('array_rows', 'comp_b', 'vertical array, rows'),
+        ('isolated', 'comp_c', 'isolated well')]
+
+def curves(key):
+    v = d[key]; rank, T = v['rank'], v['Tdict']
     Qc, Tc = B._orc_cold_composite(rank, case.fluid)
     Qh, Th = B._water_curve(T['T_3d'], T['T_2d'], case.P, Qc[-1])
-    pc = 100 * np.asarray(Qc) / Qc[-1]
-    ph = 100 * np.asarray(Qh) / Qc[-1]
+    return (100 * np.asarray(Qc) / Qc[-1], np.asarray(Tc) - 273.15,
+            100 * np.asarray(Qh) / Qc[-1], np.asarray(Th) - 273.15, rank, T)
+
+data = {k: curves(k) for k, _, _ in SHOW}
+lo = min(min(v[1].min(), v[3].min()) for v in data.values())
+hi = max(max(v[1].max(), v[3].max()) for v in data.values())
+pad = 0.06 * (hi - lo)
+
+for key, name, lab in SHOW:
+    pc, Tc, ph, Th, rank, T = data[key]
+    fig, ax = plt.subplots(figsize=(3.45, 2.95))
     q = np.linspace(0, 100, 3000)
-    Tw = np.interp(q, ph, np.asarray(Th) - 273.15)
-    Tf = np.interp(q, pc, np.asarray(Tc) - 273.15)
+    Tw = np.interp(q, ph, Th); Tf = np.interp(q, pc, Tc)
     i = int(np.argmin(Tw - Tf))
-    ax.plot(ph, np.asarray(Th) - 273.15, color=BP.RED, lw=1.9,
+    ax.plot(ph, Th, color=BP.RED, lw=1.8,
             label=r'water, $\overline{T}_\mathrm{2d}\to T_\mathrm{3d}$')
-    ax.plot(pc, np.asarray(Tc) - 273.15, color=BP.NAVY, lw=1.9,
-            label='ORC working fluid')
+    ax.plot(pc, Tc, color=BP.NAVY, lw=1.8, label='ORC working fluid')
     ax.annotate('', xy=(q[i], Tw[i]), xytext=(q[i], Tf[i]),
                 arrowprops=dict(arrowstyle='<->', color='#1a1a1a', lw=1.1))
-    ax.annotate(rf'${Tw[i] - Tf[i]:.2f}$ K', (q[i], 0.5 * (Tw[i] + Tf[i])),
-                textcoords='offset points', xytext=(7, -3), fontsize=8.6)
+    ax.annotate(r'$\Delta T_\mathrm{pinch,ORC}$',
+                (q[i], 0.5 * (Tw[i] + Tf[i])), textcoords='offset points',
+                xytext=(7, -4), fontsize=7.8, bbox=BP.MASK, zorder=9)
     ax.axhline(rank['T_3e'] - 273.15, color='0.6', lw=0.8, ls=(0, (1, 2.5)))
-    ax.set_title(rf'{lab}' '\n'
-                 rf'$\overline{{T}}_\mathrm{{2d}}={T["T_2d"] - 273.15:.1f}$, '
-                 rf'$T_\mathrm{{3e}}={rank["T_3e"] - 273.15:.2f}\,^\circ$C, '
-                 rf'$\eta_\mathrm{{ORC}}={rank["rank_eff"]:.4f}$', pad=8,
-                 fontsize=9.8)
-    ax.set_xlabel('cumulative duty  /  % of evaporator load')
-axes[0].set_ylabel(r'temperature, $T$  /  $^{\circ}$C')
-axes[0].legend(loc='lower right', handlelength=1.8)
-fig.subplots_adjust(left=0.055, right=0.985, top=0.80, bottom=0.15, wspace=0.08)
-fig.savefig(O + 'BOREAS_ORC_composite_stores.pdf')
-fig.savefig(O + 'BOREAS_ORC_composite_stores.png', dpi=170)
-print('written')
-for key, _ in show:
-    v = d[key]
-    print(f"{key:14s} T_2d {v['T_2d_realised_C']:7.2f}  T_3e {v['T_3e_C']:7.2f}  "
-          f"etaORC {v['eta_ORC']:.4f}  binding {v['T_3e_binding']}")
+    ax.set_ylim(lo - pad, hi + pad)
+    ax.set_xlabel('cumulative duty / % of load')
+    ax.set_ylabel(r'temperature / $^\circ$C')
+    if key == 'adiabatic':
+        ax.legend(loc='lower right', handlelength=1.6, fontsize=7.4)
+    fig.subplots_adjust(left=0.175, right=0.98, top=0.97, bottom=0.185)
+    fig.savefig(O + name + '.pdf'); fig.savefig(O + name + '.png', dpi=190)
+    plt.close(fig)
+    print(f"{lab:26s} T_2d {T['T_2d']-273.15:7.2f}  T_3e {rank['T_3e']-273.15:7.2f}"
+          f"  etaORC {rank['rank_eff']:.4f}")
+print('3 composite panels written, common T range %.1f..%.1f C' % (lo, hi))
