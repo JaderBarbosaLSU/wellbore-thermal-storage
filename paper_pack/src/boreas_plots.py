@@ -37,13 +37,20 @@ SERIF = ["Times New Roman", "Nimbus Roman", "Liberation Serif",
 RED, BLUE, NAVY, PURPLE, GREY = "#b03028", "#1b6ca8", "#23356b", "#5b3a8e", "#6a6a6a"
 
 
-def use_paper_style():
-    """Serif, hairline axes, no top/right spine. Call once per session."""
+def use_paper_style(scale=1.0):
+    """Serif, hairline axes, no top/right spine. Call once per session.
+
+    `scale` multiplies every type size, for figures that will be reproduced
+    small in a two-column layout.
+    """
+    s = float(scale)
     mpl.rcParams.update({
         "font.family": "serif", "font.serif": SERIF,
         "mathtext.fontset": "stix",
-        "font.size": 10, "axes.labelsize": 11, "axes.titlesize": 11,
-        "xtick.labelsize": 9.5, "ytick.labelsize": 9.5, "legend.fontsize": 8.6,
+        "font.size": 10 * s, "axes.labelsize": 11 * s,
+        "axes.titlesize": 11 * s,
+        "xtick.labelsize": 9.5 * s, "ytick.labelsize": 9.5 * s,
+        "legend.fontsize": 8.6 * s,
         "axes.linewidth": 0.8,
         "axes.spines.top": False, "axes.spines.right": False,
         "xtick.direction": "in", "ytick.direction": "in",
@@ -71,7 +78,7 @@ def _dome(ax, fluid, n=320):
     sl = np.array([CP.PropsSI("S", "T", t, "Q", 0, fluid) for t in T]) / 1e3
     sv = np.array([CP.PropsSI("S", "T", t, "Q", 1, fluid) for t in T]) / 1e3
     ax.plot(np.r_[sl, sv[::-1]], np.r_[T, T[::-1]] - 273.15,
-            color="0.45", lw=1.0, zorder=1)
+            color="0.30", lw=1.3, zorder=1)
 
 
 def _iso_p(ax, fluid, p, h1, h2, n=160, **kw):
@@ -221,15 +228,16 @@ def ts_both(case, rank, hp, figsize=(11.8, 4.7)):
 
 
 # --------------------------------------------------- both on one axes
-_CMB_ORC = {"1e": (7, -12), "2e": (7, 2), "3e": (-17, 7), "4e": (7, -2),
-            "5e": (-19, -12), "6e": (6, 5)}
-_CMB_HP = {"1h": (7, -11), "2h": (7, 2), "3h": (-17, 7), "4h": (-18, -12),
-           "7h": (-21, -12), "8h": (-6, -13), "9h": (-22, 2),
-           "10h": (-24, -6), "11h": (7, 0), "12h": (7, -11), "13h": (-21, 3)}
+_CMB_ORC = {"1e": (-22, -11), "2e": (7, 3), "3e": (-16, 8), "4e": (7, -2),
+            "5e": (-19, -13), "6e": (-20, 7)}
+_CMB_HP = {"1h": (7, -11), "2h": (-20, 5), "3h": (-17, 7), "4h": (-20, -13),
+           "7h": (-21, -12), "8h": (-6, -13), "9h": (-24, 5),
+           "10h": (-26, -10), "11h": (7, 0), "12h": (7, -11), "13h": (-21, 3)}
 
 
 def ts_combined(case, rank, hp, Tdict, ax=None, show_water=True,
-                water="level", model=None):
+                water="level", model=None, isobars=True, show_values=False,
+                title=None):
     """Both cycles on one T-s axes with the external water levels.
 
     This is the coupling diagram: the two cycles never exchange working
@@ -262,15 +270,26 @@ def ts_combined(case, rank, hp, Tdict, ax=None, show_water=True,
             raise ValueError("water='glide' needs the model module, "
                              "e.g. ts_combined(..., water='glide', model=B)")
         ov = _water_overlay(model, case, rank, hp, Tdict)
-        style = {"ORC evaporator": ("#1a1a1a", r"ORC evaporator water, "
-                                               r"$T_\mathrm{2d}\to T_\mathrm{3d}$"),
-                 "ORC condenser": ("#2a6fb0", "sink water, ORC condenser"),
-                 "HTHP condenser": ("#0a9396", r"charge water, "
-                                               r"$T_\mathrm{2c}\to T_\mathrm{3c}$"),
-                 "HTHP evaporator": ("#9c27a0", "source water, HTHP evaporator")}
-        for nm, (col, lab) in style.items():
+        # symbol, not value: the approach temperatures are specified
+        # quantities and belong in the nomenclature, not on the drawing
+        style = {
+            "ORC evaporator": ("#1a1a1a",
+                               r"ORC evaporator water, $T_\mathrm{2d}\to T_\mathrm{3d}$",
+                               r"$\Delta T_\mathrm{pinch,ORC}$", (7, -4)),
+            "ORC condenser": ("#2a6fb0", "sink water, ORC condenser",
+                              r"$\Delta T_\mathrm{E,sink}$", (7, -12)),
+            "HTHP condenser": ("#0a9396",
+                               r"charge water, $T_\mathrm{2c}\to T_\mathrm{3c}$",
+                               r"$\Delta T_\mathrm{2H,3C}$", (7, -4)),
+            "HTHP evaporator": ("#9c27a0", "source water, HTHP evaporator",
+                                r"$\Delta T_\mathrm{pinch,HPE}$", (7, -12)),
+        }
+        for nm, (col, lab, sym, off) in style.items():
             d = ov[nm]
-            _draw_water(ax, d, col, label=f"{lab}  ({d['pinch_K']:.1f} K)")
+            txt = f"{lab}  ({d['pinch_K']:.1f} K)" if show_values else lab
+            _draw_water(ax, d, col, label=txt,
+                        symbol=None if show_values else sym,
+                        dx=off[0], dy=off[1])
             pts += list(zip(d["s"], d["T_w"]))
 
     # ---- water-side levels, drawn first so the cycles sit on top
@@ -324,18 +343,43 @@ def ts_combined(case, rank, hp, Tdict, ax=None, show_water=True,
     ax.plot([], [], "o-", color=RED, ms=4.4, lw=1.5, label="HTHP (heat pump)")
 
     _frame(ax, pts, padx=0.10, pady=0.12)
-    xl = r"specific entropy, $s$  /  kJ kg$^{-1}$ K$^{-1}$"
-    if show_water and water == "glide":
-        xl += ("\n" r"(water lines are duty-mapped onto the working fluid's "
-               r"$s$; the vertical gap is the local approach)")
-    ax.set_xlabel(xl)
+
+    # ---- constant-pressure reference curves, drawn last so the frame is
+    # known and they can be clipped to it. The two superheated legs that
+    # look like chords -- 13h->1h and 4e to the saturated vapour -- ARE on
+    # their isobars; those isobars are straight there to 0.009 K and
+    # 0.057 K respectively. Drawing the isobars makes that visible rather
+    # than something the reader has to take on trust.
+    if isobars:
+        y0, y1 = ax.get_ylim()
+        levels = sorted({round(p, 3) for p in
+                         (rank["p_conde"], rank["p_inte"], rank["p_evape"],
+                          hp["p_evaph"], hp["p_inth"], hp["p_condh"])})
+        # Group pressures that are within a few per cent: their isobars are
+        # one line at this scale, so two labels would sit on top of each
+        # other. Here p_int,HP = 3.82 bar and p_evap,ORC = 3.70 bar.
+        groups = []
+        for p in levels:
+            if groups and abs(p - groups[-1][-1]) / p < 0.06:
+                groups[-1].append(p)
+            else:
+                groups.append([p])
+        fracs = [0.97, 0.52, 0.86, 0.97, 0.68, 0.40]
+        for q, grp in enumerate(groups):
+            # only the NUMBER goes in math mode; "bar" set upright
+            lab = "$" + r"\,/\,".join(f"{pp / 1e5:.2f}" for pp in grp) + "$ bar"
+            for j, pp in enumerate(grp):
+                _isobar_bg(ax, f, pp, max(y0, -40.0), min(y1 + 40.0, 230.0),
+                           label=(lab if j == 0 else None),
+                           label_frac=fracs[q % len(fracs)])
+        ax.set_ylim(y0, y1)
+
+    ax.set_xlabel(r"specific entropy, $s$  /  kJ kg$^{-1}$ K$^{-1}$")
     ax.set_ylabel(r"temperature, $T$  /  $^{\circ}$C")
-    ax.set_title(rf"{f}:  $\eta_\mathrm{{ORC}} = {rank['rank_eff']:.4f}$,"
-                 rf"  COP $= {hp['hp_cop']:.4f}$,"
-                 rf"  $y = {rank['y_frac']:.4f}$,"
-                 rf"  $x_\mathrm{{8h}} = {hp['x_8h']:.4f}$", pad=8)
+    ax.set_title(title or "Cyclopentane in the Heat Pump and Organic "
+                          "Rankine Cycles", pad=9)
     ax.legend(loc="upper left", handlelength=1.9, borderpad=0.25,
-              labelspacing=0.35, fontsize=8.2)
+              labelspacing=0.35)
     return ax
 
 
@@ -850,7 +894,9 @@ def _water_overlay(model, case, rank, hp, Tdict, n=400):
     return out
 
 
-def _draw_water(ax, d, color, label=None, mark_pinch=True, lw=1.6):
+def _draw_water(ax, d, color, label=None, mark_pinch=True, lw=1.6,
+                symbol=None, fontsize=8.8, dx=6, dy=-3):
+    """Water glide plus its pinch. `symbol` replaces the numeric value."""
     ax.plot(d["s"], d["T_w"], color=color, lw=lw, ls=(0, (6, 2)),
             zorder=5, label=label)
     if mark_pinch:
@@ -858,10 +904,41 @@ def _draw_water(ax, d, color, label=None, mark_pinch=True, lw=1.6):
         ax.annotate("", xy=(d["s"][i], d["T_w"][i]),
                     xytext=(d["s"][i], d["T_wf"][i]),
                     arrowprops=dict(arrowstyle="<->", color="#1a1a1a", lw=1.0))
-        ax.annotate(rf"${d['pinch_K']:.1f}$ K",
-                    (d["s"][i], 0.5 * (d["T_w"][i] + d["T_wf"][i])),
-                    textcoords="offset points", xytext=(6, -3), fontsize=8.0,
-                    zorder=8)
+        txt = symbol if symbol is not None else rf"${d['pinch_K']:.1f}$ K"
+        ax.annotate(txt, (d["s"][i], 0.5 * (d["T_w"][i] + d["T_wf"][i])),
+                    textcoords="offset points", xytext=(dx, dy),
+                    fontsize=fontsize, zorder=8)
+
+
+def _isobar_bg(ax, fluid, p, T_lo, T_hi, n=240, label=None, lw=0.7,
+               color="0.78", fontsize=7.6, zorder=0, label_frac=0.97):
+    """A constant-pressure reference curve spanning the frame.
+
+    Sampled in ENTHALPY between two SINGLE-PHASE anchors, so the path runs
+    liquid -> dome -> vapour without a (T, p) call ever landing inside the
+    two-phase region, where temperature and pressure are not independent.
+    """
+    h_lo = CP.PropsSI("H", "T", T_lo + 273.15, "P", p, fluid) / 1e3
+    h_hi = CP.PropsSI("H", "T", T_hi + 273.15, "P", p, fluid) / 1e3
+    H = np.linspace(h_lo, h_hi, n)
+    T = np.array([CP.PropsSI("T", "P", p, "H", h * 1e3, fluid)
+                  for h in H]) - 273.15
+    s = np.array([CP.PropsSI("S", "P", p, "H", h * 1e3, fluid)
+                  for h in H]) / 1e3
+    ax.plot(s, T, color=color, lw=lw, zorder=zorder)
+    if label:
+        # Put the label on the last point that is actually INSIDE the frame.
+        # Anchoring it at a fixed fraction of the curve puts it off-plot,
+        # because the curve is deliberately drawn wider than the axes.
+        x0, x1 = ax.get_xlim()
+        y0, y1 = sorted(ax.get_ylim())
+        inside = np.where((s > x0) & (s < x1) & (T > y0) & (T < y1))[0]
+        if len(inside):
+            k = inside[int(np.clip(label_frac, 0.0, 1.0) * (len(inside) - 1))]
+            ax.annotate(label, (s[k], T[k]), fontsize=fontsize, color="0.45",
+                        zorder=zorder + 1, ha="right", va="bottom",
+                        textcoords="offset points", xytext=(-3, 2))
+    return s, T
 
 
 def ts_water(model, case, rank, hp, Tdict, axes=None, figsize=(11.8, 8.8)):
