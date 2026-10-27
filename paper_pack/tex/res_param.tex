@@ -33,16 +33,20 @@ grid step at the reference loop pressure.
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\linewidth]{figures/BOREAS_cycles_vs_Tm.pdf}
-\caption{Surface cycles against storage temperature. (a) the two machines
-pull in opposite directions; (b) their product has a shallow maximum at
-\SI{165}{\celsius}, and the dashed line is the loop pressure needed to keep
-the water liquid at the charging inlet; (c) the shortfall between the water
-arriving from the store and the pinch-limited evaporating temperature is
-\SIrange{42}{57}{\kelvin} across the whole range, so the interior pinch
-described in Section~\ref{sec:res-cycles} is a property of the plant and not
-of the reference case. Shaded: infeasible at \SI{10}{\bar}. Dotted: the
-reference.}
+\begin{subfigure}[t]{0.48\linewidth}
+  \includegraphics[width=\linewidth]{figures/panels/Tm_a.pdf}
+  \caption{}\label{fig:Tm-a}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.48\linewidth}
+  \includegraphics[width=\linewidth]{figures/panels/Tm_b.pdf}
+  \caption{}\label{fig:Tm-b}
+\end{subfigure}
+\\[2.2ex]
+\begin{subfigure}[t]{0.48\linewidth}
+  \includegraphics[width=\linewidth]{figures/panels/Tm_c.pdf}
+  \caption{}\label{fig:Tm-c}
+\end{subfigure}
+\caption{Surface cycles against storage temperature. (a) the two machines pull in opposite directions; (b) their product has a shallow maximum at \SI{165}{\celsius}, with the dashed line giving the loop pressure needed to keep the water liquid at the charging inlet; (c) the shortfall between the water arriving from the store and the pinch-limited evaporating temperature, \SIrange{42}{57}{\kelvin} across the whole range, so the interior pinch described in Section~\ref{sec:res-cycles} is a property of the plant and not of the reference case. Shaded: infeasible at the reference loop pressure. Dotted: the reference case.}
 \label{fig:Tm}
 \end{figure}
 
@@ -72,11 +76,20 @@ glide should be reduced.}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\linewidth]{figures/BOREAS_map_cascade.pdf}
-\caption{The cascade design space, 36 cyclic-steady-state evaluations.
-Circle: the reference case. Star: the best cell of each panel. Hatched cells
-are infeasible. Above \SI{165}{\celsius} the loop pressure is raised to keep
-the water liquid, so those columns carry a pressure cost not shown here.}
+\begin{subfigure}[t]{0.48\linewidth}
+  \includegraphics[width=\linewidth]{figures/panels/map_cascade_a.pdf}
+  \caption{}\label{fig:map-cascade-a}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.48\linewidth}
+  \includegraphics[width=\linewidth]{figures/panels/map_cascade_b.pdf}
+  \caption{}\label{fig:map-cascade-b}
+\end{subfigure}
+\\[2.2ex]
+\begin{subfigure}[t]{0.48\linewidth}
+  \includegraphics[width=\linewidth]{figures/panels/map_cascade_c.pdf}
+  \caption{}\label{fig:map-cascade-c}
+\end{subfigure}
+\caption{The cascade design space, 36 cyclic-steady-state evaluations: (a) round-trip efficiency, (b) energy density $e'$, (c) formation loss. Above \SI{165}{\celsius} the loop pressure is raised to keep the water liquid, so those rows carry a pressure cost not shown here. In every panel the value in the \textbf{reference-case} cell is set in bold and its cell outlined in red; the value in the \textbf{best} cell of that panel is set in bold at a larger size. Hatched cells are infeasible. Values are printed on the cells because several of these maps are deliberately flat, and flatness cannot be judged from colour alone.}
 \label{fig:map-cascade}
 \end{figure}
 
@@ -99,11 +112,20 @@ reference sits comfortably inside it, with $\nft=4$ marginally better
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\linewidth]{figures/BOREAS_map_geometry.pdf}
-\caption{Geometry maps. Circle: the reference case. Note the colour range of
-(a) and (b): the horizontal flatness is the result, not a rendering artifact,
-and the cell values are printed so that it can be read rather than inferred
-from the colour.}
+\begin{subfigure}[t]{0.48\linewidth}
+  \includegraphics[width=\linewidth]{figures/panels/map_geom_a.pdf}
+  \caption{}\label{fig:map-geometry-a}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.48\linewidth}
+  \includegraphics[width=\linewidth]{figures/panels/map_geom_b.pdf}
+  \caption{}\label{fig:map-geometry-b}
+\end{subfigure}
+\\[2.2ex]
+\begin{subfigure}[t]{0.48\linewidth}
+  \includegraphics[width=\linewidth]{figures/panels/map_geom_c.pdf}
+  \caption{}\label{fig:map-geometry-c}
+\end{subfigure}
+\caption{Geometry maps: (a) $e'$ and (b) $\eta_\mathrm{RTE}$ over well length and layer count, (c) $\eta_\mathrm{RTE}$ over well length and fin-tube count. The near-constancy of (a) and (b) along the horizontal is the separability result, not a rendering artifact. In every panel the value in the \textbf{reference-case} cell is set in bold and its cell outlined in red; the value in the \textbf{best} cell of that panel is set in bold at a larger size. Hatched cells are infeasible. Values are printed on the cells because several of these maps are deliberately flat, and flatness cannot be judged from colour alone.}
 \label{fig:map-geometry}
 \end{figure}
 
@@ -169,10 +191,19 @@ Section~\ref{sec:res-formation}.
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\linewidth]{figures/BOREAS_map_field.pdf}
-\caption{Field maps at the rows packing on four islands. Circle: the
-reference case. Note that (a) and (b) use the realistic packing throughout,
-so the \SI{45}{\degree} column is \emph{not} comparable with the
-disc-packing fan rows of Table~\ref{tab:formation}.}
+\begin{subfigure}[t]{0.48\linewidth}
+  \includegraphics[width=\linewidth]{figures/panels/map_field_a.pdf}
+  \caption{}\label{fig:map-field-a}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.48\linewidth}
+  \includegraphics[width=\linewidth]{figures/panels/map_field_b.pdf}
+  \caption{}\label{fig:map-field-b}
+\end{subfigure}
+\\[2.2ex]
+\begin{subfigure}[t]{0.48\linewidth}
+  \includegraphics[width=\linewidth]{figures/panels/map_field_c.pdf}
+  \caption{}\label{fig:map-field-c}
+\end{subfigure}
+\caption{Field maps at the rows packing on four islands: (a) formation loss and (b) $\eta_\mathrm{RTE}$ over well count and fan half-angle, (c) formation loss over well length and geothermal gradient. Panels (a) and (b) use the realistic packing throughout, so their \SI{45}{\degree} column is \emph{not} comparable with the disc-packing fan rows of Table~\ref{tab:formation}. In every panel the value in the \textbf{reference-case} cell is set in bold and its cell outlined in red; the value in the \textbf{best} cell of that panel is set in bold at a larger size. Hatched cells are infeasible. Values are printed on the cells because several of these maps are deliberately flat, and flatness cannot be judged from colour alone.}
 \label{fig:map-field}
 \end{figure}

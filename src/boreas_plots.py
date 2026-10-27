@@ -36,6 +36,12 @@ SERIF = ["Times New Roman", "Nimbus Roman", "Liberation Serif",
 
 RED, BLUE, NAVY, PURPLE, GREY = "#b03028", "#1b6ca8", "#23356b", "#5b3a8e", "#6a6a6a"
 
+# Annotations in a busy T-s plot land on curves. A white, edgeless patch
+# behind the text masks whatever it crosses; without it the approach-
+# temperature symbols and the isobar labels are unreadable where they sit
+# on a process line.
+MASK = dict(facecolor="white", edgecolor="none", alpha=0.82, pad=1.3)
+
 
 def use_paper_style(scale=1.0):
     """Serif, hairline axes, no top/right spine. Call once per session.
@@ -109,7 +115,7 @@ def _frame(ax, pts, padx=0.16, pady=0.18):
 def _label(ax, s, T, lab, off, marker="o", fc="white", ec="#1a1a1a"):
     ax.plot(s, T, marker, ms=4.4, mfc=fc, mec=ec, mew=1.2, zorder=6)
     ax.annotate(lab, (s, T), textcoords="offset points", xytext=off,
-                fontsize=8.4, color="#1a1a1a", zorder=7)
+                fontsize=8.4, color="#1a1a1a", zorder=7, bbox=MASK)
 
 
 def _axes(ax, title, loc="lower right"):
@@ -275,14 +281,14 @@ def ts_combined(case, rank, hp, Tdict, ax=None, show_water=True,
         style = {
             "ORC evaporator": ("#1a1a1a",
                                r"ORC evaporator water, $T_\mathrm{2d}\to T_\mathrm{3d}$",
-                               r"$\Delta T_\mathrm{pinch,ORC}$", (7, -4)),
+                               r"$\Delta T_\mathrm{pinch,ORC}$", (9, 7)),
             "ORC condenser": ("#2a6fb0", "sink water, ORC condenser",
-                              r"$\Delta T_\mathrm{E,sink}$", (7, -12)),
+                              r"$\Delta T_\mathrm{E,sink}$", (10, -14)),
             "HTHP condenser": ("#0a9396",
                                r"charge water, $T_\mathrm{2c}\to T_\mathrm{3c}$",
-                               r"$\Delta T_\mathrm{2H,3C}$", (7, -4)),
+                               r"$\Delta T_\mathrm{2H,3C}$", (8, -2)),
             "HTHP evaporator": ("#9c27a0", "source water, HTHP evaporator",
-                                r"$\Delta T_\mathrm{pinch,HPE}$", (7, -12)),
+                                r"$\Delta T_\mathrm{pinch,HPE}$", (9, -15)),
         }
         for nm, (col, lab, sym, off) in style.items():
             d = ov[nm]
@@ -655,7 +661,8 @@ def pcm_capacities_A(case):
 # ----------------------------------------------------------- heat maps
 def heatmap(rows, xkey, ykey, zkey, xs, ys, ax=None, cmap="viridis",
             title="", cbar_label="", fmt="{:.3f}", mark=None, annotate=True,
-            vmin=None, vmax=None, contour=True, cbar=True):
+            vmin=None, vmax=None, cbar=True, fontsize=7.6,
+            best="max", box_ref=True):
     """One metric over a two-parameter grid, with the cells labelled.
 
     Cells are ANNOTATED with their value. A heat map whose colour scale is
@@ -682,31 +689,41 @@ def heatmap(rows, xkey, ykey, zkey, xs, ys, ax=None, cmap="viridis",
     im = ax.imshow(Z, origin="lower", aspect="auto", cmap=cmap,
                    vmin=vmin, vmax=vmax, interpolation="nearest",
                    extent=(-0.5, len(xs) - 0.5, -0.5, len(ys) - 0.5))
+    # Which cells get called out. The reference case and the best cell are
+    # marked by STYLING THE VALUE, not by drawing a symbol on top of it: an
+    # overlaid star or ring hides the number it is pointing at, which is the
+    # one thing the reader wants from an annotated map.
+    ref_ij = None
+    if mark is not None and mark[0] in list(xs) and mark[1] in list(ys):
+        ref_ij = (list(ys).index(mark[1]), list(xs).index(mark[0]))
+    best_ij = None
+    if best and np.isfinite(Z).any():
+        pick = np.nanargmax(Z) if best == "max" else np.nanargmin(Z)
+        best_ij = np.unravel_index(pick, Z.shape)
+
     for i in range(len(ys)):
         for j in range(len(xs)):
             if bad[i, j]:
                 ax.add_patch(plt.Rectangle((j - 0.5, i - 0.5), 1, 1,
                                            facecolor="0.92", edgecolor="0.6",
                                            hatch="///", lw=0.5))
-            elif annotate:
-                lo, hi = np.nanmin(Z), np.nanmax(Z)
-                t = 0.5 if hi == lo else (Z[i, j] - lo) / (hi - lo)
-                ax.text(j, i, fmt.format(Z[i, j]), ha="center", va="center",
-                        fontsize=7.6,
-                        color="white" if t < 0.55 else "#111111")
-    if contour and np.isfinite(Z).sum() > 4:
-        ax.contour(np.arange(len(xs)), np.arange(len(ys)),
-                   np.ma.masked_invalid(Z), colors="white", linewidths=0.6,
-                   alpha=0.45)
-    if mark is not None:
-        mx, my = mark
-        if mx in list(xs) and my in list(ys):
-            ax.plot(list(xs).index(mx), list(ys).index(my), "o", ms=11,
-                    mfc="none", mec="#d62828", mew=2.0, zorder=6)
-    if np.isfinite(Z).any():
-        i, j = np.unravel_index(np.nanargmax(Z), Z.shape)
-        ax.plot(j, i, "*", ms=13, mfc="#ffd166", mec="#1a1a1a", mew=0.9,
-                zorder=7)
+                continue
+            if not annotate:
+                continue
+            lo, hi = np.nanmin(Z), np.nanmax(Z)
+            t = 0.5 if hi == lo else (Z[i, j] - lo) / (hi - lo)
+            col = "white" if t < 0.55 else "#111111"
+            fs, weight = fontsize, "normal"
+            if best_ij is not None and (i, j) == tuple(best_ij):
+                fs, weight = fontsize * 1.45, "bold"
+            elif ref_ij is not None and (i, j) == ref_ij:
+                weight = "bold"
+            ax.text(j, i, fmt.format(Z[i, j]), ha="center", va="center",
+                    fontsize=fs, fontweight=weight, color=col, zorder=5)
+    if ref_ij is not None and box_ref:
+        ax.add_patch(plt.Rectangle((ref_ij[1] - 0.5, ref_ij[0] - 0.5), 1, 1,
+                                   fill=False, edgecolor="#d62828", lw=1.8,
+                                   zorder=6))
     ax.set_xticks(range(len(xs)))
     ax.set_xticklabels([f"{x:g}" for x in xs])
     ax.set_yticks(range(len(ys)))
@@ -760,11 +777,13 @@ def cycle_vs_Tm(rows_autoP, rows_fixedP, case, axes=None, figsize=(13.2, 4.3)):
             # text at several hundred percent of the axes height. With
             # savefig.bbox='tight' that silently inflates the saved figure
             # to tens of thousands of pixels instead of raising.
+            # bottom of the band, not the top: the top is where the
+            # optimum callout lives
             ax.annotate(f"needs $P>{case.P / 1e5:.0f}$ bar",
-                        (0.5 * (T_lim + T.max()), 1.0),
-                        ha="center", va="top", fontsize=8.0, color="0.35",
-                        xycoords=("data", "axes fraction"), xytext=(0, -6),
-                        textcoords="offset points")
+                        (0.5 * (T_lim + T.max()), 0.02),
+                        ha="center", va="bottom", fontsize=8.0, color="0.35",
+                        xycoords=("data", "axes fraction"), xytext=(0, 2),
+                        textcoords="offset points", bbox=MASK)
         ax.axvline(T_ref, color="0.45", lw=0.9, ls=(0, (1, 2.5)), zorder=1)
 
     ax = axes[0]
@@ -786,14 +805,14 @@ def cycle_vs_Tm(rows_autoP, rows_fixedP, case, axes=None, figsize=(13.2, 4.3)):
     ax.annotate(rf"optimum {T[i_opt]:.0f} $^\circ$C" "\n"
                 rf"$\eta_\mathrm{{ORC}}\,$COP$\,={prod[i_opt]:.4f}$",
                 (T[i_opt], prod[i_opt]), textcoords="offset points",
-                xytext=(10, -26), fontsize=8.4)
+                xytext=(-4, -30), fontsize=8.4, bbox=MASK)
     j = int(np.argmin(np.abs(T - T_ref)))
     ax.plot([T[j]], [prod[j]], "s", ms=5, mfc="white", mec="0.35", mew=1.3,
             zorder=5)
     ax.annotate(rf"reference {T_ref:.0f} $^\circ$C, {prod[j]:.4f}"
                 "\n" rf"({100 * (prod[i_opt] / prod[j] - 1):+.1f} % to optimum)",
-                (T[j], prod[j]), textcoords="offset points", xytext=(-26, -40),
-                fontsize=8.4, ha="left")
+                (T[j], prod[j]), textcoords="offset points", xytext=(-58, -52),
+                fontsize=8.4, ha="left", bbox=MASK)
     shade(ax)
     axb = ax.twinx()
     axb.plot(T, Pb, color="#9c27a0", lw=1.3, ls=(0, (4, 2)))
@@ -907,7 +926,7 @@ def _draw_water(ax, d, color, label=None, mark_pinch=True, lw=1.6,
         txt = symbol if symbol is not None else rf"${d['pinch_K']:.1f}$ K"
         ax.annotate(txt, (d["s"][i], 0.5 * (d["T_w"][i] + d["T_wf"][i])),
                     textcoords="offset points", xytext=(dx, dy),
-                    fontsize=fontsize, zorder=8)
+                    fontsize=fontsize, zorder=9, bbox=MASK)
 
 
 def _isobar_bg(ax, fluid, p, T_lo, T_hi, n=240, label=None, lw=0.7,
@@ -936,8 +955,9 @@ def _isobar_bg(ax, fluid, p, T_lo, T_hi, n=240, label=None, lw=0.7,
         if len(inside):
             k = inside[int(np.clip(label_frac, 0.0, 1.0) * (len(inside) - 1))]
             ax.annotate(label, (s[k], T[k]), fontsize=fontsize, color="0.45",
-                        zorder=zorder + 1, ha="right", va="bottom",
-                        textcoords="offset points", xytext=(-3, 2))
+                        zorder=8, ha="right", va="bottom",
+                        textcoords="offset points", xytext=(-3, 2),
+                        bbox=MASK)
     return s, T
 
 

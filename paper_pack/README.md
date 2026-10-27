@@ -1,5 +1,19 @@
 # BOREAS v1.3 results pack for `P2H2P_enthalpy_paper`
 
+**Revision 5 (2026-10-27).** Figures re-authored for a **single-column**
+layout, so `width=\linewidth` reproduces them near 1:1. The four
+three-panel figures (cascade map, geometry maps, field maps, and the T_m
+study) are now **independent panels in `subfigure` environments** — they
+were unreadable squeezed into one single-column width. Heat-map changes:
+contour trendlines removed; the reference and best cells are called out by
+**styling the value** (bold, and bold-larger respectively) plus a red cell
+outline, instead of a star or ring drawn on top of the number it points at;
+both are now explained in the captions. T–s diagram: every annotation
+carries a white mask so no label sits on a curve.
+
+**Requires `\usepackage{subcaption}`.** Panel PDFs live in
+`figures/panels/`.
+
 **Revision 4 (2026-10-26).** *Coordinate correction.* The profile figures in
 revision 3 plotted the solver's `z` and labelled it depth. It is not: `z = 0`
 is the **bottom** of the well on charge, so `depth = L_well - z`, and the
@@ -57,10 +71,10 @@ reference to 4000 ft.
    before the existing `\todo{}`s — it adds to that subsection rather than
    replacing it.
 
-### Macros assumed to exist
+### Macros and packages assumed to exist
 
-`\etaORC`, `\COP`, `\Nlay`, `\nft`, `\rev{}`, `\chk{}`, `\todo{}`, plus
-`siunitx` and `graphicx`. No new macros are defined. If `\Nlay` or `\nft` are
+`\etaORC`, `\COP`, `\Nlay`, `\nft`, `\md`, `\rev{}`, `\chk{}`, `\todo{}`,
+plus `siunitx`, `graphicx` and **`subcaption`**. No new macros are defined. If `\Nlay` or `\nft` are
 not defined in the preamble, three uses in `res_param.tex` will fail.
 
 ### New labels
