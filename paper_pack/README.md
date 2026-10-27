@@ -1,5 +1,15 @@
 # BOREAS v1.3 results pack for `P2H2P_enthalpy_paper`
 
+**Revision 4 (2026-10-26).** *Coordinate correction.* The profile figures in
+revision 3 plotted the solver's `z` and labelled it depth. It is not: `z = 0`
+is the **bottom** of the well on charge, so `depth = L_well - z`, and the
+figures had the well upside down. They now use `formation_profile`'s own
+depth array. The consequence for the text is that the hottest layer
+(150 °C) is at the **bottom**, charge enters the fin tubes at the bottom and
+rises, and discharge enters at the top and descends — the opposite of what
+revision 3 said. PCM temperature is now overlaid on the fluid profile and in
+the animation.
+
 **Revision 3 (2026-10-26).** Profile figures redrawn with depth on the ordinate, increasing downward, and an animation of the full cycle added (`figures/BOREAS_cycle.mp4`, `.gif`).
 
 **Revision 2 (2026-10-26).** Review comments applied: the composite-curve figure and the hot-end-rule discussion are removed, the state-point table is now supplementary, and the hot-end column is gone from `tab:T3e`. A new subsection on thermal behaviour along the well has been added.

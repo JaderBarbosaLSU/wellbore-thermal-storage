@@ -4,8 +4,13 @@
 % "Profiles along the well at CSS".
 %
 % Figures are the BOREAS analogues of Figs. 5-8 of the IHTC hairpin paper,
-% in the downcomer geometry where the tube coordinate IS depth. Depth is on
-% the ORDINATE, increasing downward (revision 2026-10-26).
+% Depth is on the ORDINATE, increasing downward.
+%
+% COORDINATE WARNING: the solver's z is NOT depth. z = 0 is the BOTTOM of
+% the well on charge (the water arrives there down the downcomer), so
+% depth = L_well - z. The figures use formation_profile's depth array so
+% there is a single definition. Both half-cycle histories come back in the
+% CHARGE frame.
 %
 % An animation of the full cycle is supplied as supplementary material:
 % BOREAS_cycle.mp4 (and .gif). It is NOT referenced by a \ref, so it can be
@@ -20,37 +25,56 @@
 \subsection{Thermal behaviour along the well}
 \label{sec:res-thermal}
 
-In the downcomer geometry the tube coordinate is the depth, so a profile
-along the fin tube is a profile down the well and the melting staircase
+In the downcomer geometry each fin tube occupies every depth once, so a
+profile along the tube is a profile down the well and the melting staircase
 $T_{m,k}$ is fixed in space rather than carried along a folded hairpin. The
-figures below are taken from one recorded cycle at cyclic steady state, and
-are drawn with depth increasing downward so that they read as the well does.
-An animation of the same cycle is provided as supplementary material.
+figures below are taken from one recorded cycle at cyclic steady state and
+are drawn with depth increasing downward, as the well does. An animation of
+the same cycle is provided as supplementary material.
 
-\paragraph{The flow is counter-current between the half-cycles}
-Figure~\ref{fig:prof-T} gives the secondary-fluid temperature along the well.
-During charging the water enters at the top at
-$T_\mathrm{4c}=\SI{160}{\celsius}$ and cools as it descends through
-progressively cooler layers; during discharging it enters at the \emph{bottom}
-at $T_\mathrm{3d}=\SI{91.1}{\celsius}$ and warms as it rises. The cascade is
-therefore traversed in opposite directions in the two half-cycles, which is
-what allows the same staircase to serve both: each layer sees the fluid at a
-temperature on the correct side of its own $T_{m,k}$ in both periods.
+\paragraph{The cascade is graded with the rock, and the flow is
+counter-current} The hottest layer, $T_{m}=\SI{150}{\celsius}$, is at the
+\emph{bottom} of the well and the coolest, \SI{101}{\celsius}, at the top.
+That is the right way round: the undisturbed rock runs from
+\SI{18}{\celsius} at the surface to \SI{86}{\celsius} at
+\SI{1516}{\metre}, so grading the store with the geotherm puts the largest
+PCM-to-rock difference where the rock is coldest only at the shallow end,
+where the inventory is least hot. The alternative grading would place
+\SI{150}{\celsius} material against \SI{18}{\celsius} rock.
 
-The layering keeps the fluid close to the staircase over the whole depth. As
-the fluid enters a new layer the driving difference is restored, so the
-profile tracks the steps rather than decaying smoothly, and the
-fluid-to-PCM difference stays bounded instead of collapsing at the far end.
-This is the mechanism identified for the hairpin store and it survives the
-change of geometry.
+Figure~\ref{fig:prof-T} gives the secondary-fluid and PCM temperatures along
+the well. During charging the water descends the insulated downcomer without
+exchanging, enters the fin tubes at the \emph{bottom} at
+$T_\mathrm{4c}=\SI{160}{\celsius}$ and cools as it \emph{rises} through
+progressively cooler layers, leaving the tubes near \SI{109}{\celsius}.
+During discharging the flow reverses: water returns from the ORC at
+$T_\mathrm{3d}=\SI{91.1}{\celsius}$, enters the fin tubes at the \emph{top},
+warms as it \emph{descends} toward the hotter layers, and leaves the bottom
+between \SI{152}{\celsius} and \SI{124}{\celsius} over the half-cycle before
+returning up the downcomer. The insulated downcomer therefore always carries
+the hot stream --- in on charge, out on discharge --- which is what it is
+for. The cascade is traversed in opposite directions in the two half-cycles,
+and that is what allows one staircase to serve both: each layer sees the
+fluid on the correct side of its own $T_{m,k}$ in both periods.
+
+The PCM temperature, dashed in Figure~\ref{fig:prof-T}, makes the mechanism
+explicit. Within a layer it sits on the melting plateau while phase change
+proceeds and bows toward the fluid only once that layer is spent; at a layer
+boundary the driving difference is restored and the bow resets. The fluid
+profile therefore tracks the staircase down the whole well rather than
+decaying smoothly toward it, and the fluid-to-PCM difference stays bounded
+instead of collapsing at the far end. This is the mechanism identified for
+the hairpin store, and it survives the change of geometry.
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\linewidth]{figures/BOREAS_prof_Tfluid.pdf}
-\caption{Secondary-fluid temperature along the well during charging and
-discharging, at cyclic steady state. Dashed: the melting staircase
-$T_{m,k}$. Curves are labelled by time from the start of the half-cycle.
-Charging enters at the top, discharging at the bottom.}
+\caption{Secondary-fluid temperature (solid) and PCM temperature (dotted)
+along the well during charging and discharging, at cyclic steady state.
+Black dashed: the melting staircase $T_{m,k}$, hottest at the bottom.
+Curves are labelled by time from the start of the half-cycle. Charging
+enters the fin tubes at the bottom and rises; discharging enters at the top
+and descends.}
 \label{fig:prof-T}
 \end{figure}
 

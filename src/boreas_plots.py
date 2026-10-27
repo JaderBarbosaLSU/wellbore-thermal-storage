@@ -341,18 +341,26 @@ def ts_combined(case, rank, hp, Tdict, ax=None, show_water=True,
 
 # ------------------------------------------- profiles along the well
 #
-# ORIENTATION, established from the data and not assumed. Both half-cycles
-# are recorded in the DEPTH frame: index 0 is the top of the well, where
-# T_m = 150 C, and index -1 the bottom at 101 C. The march is handed
-# reversed arrays on discharge and the history comes back in the depth
-# frame, so no flip is applied here.
+# THE COORDINATE. The solver's z is NOT depth. Quoting formation_profile:
+# "On CHARGE the water enters the fin tubes at the BOTTOM -- it arrives
+# there down the downcomer -- so the solver's z = 0 is the bottom of the
+# well and depth decreases with z." So depth = L_well - z, and plotting
+# against the raw z and calling it depth puts the well upside down. Use
+# `depth_seg`, taken from formation_profile so there is one definition.
 #
-# The test that settles it is the PCM temperature against its own melting
-# staircase: at the end of discharge the reversed reading would put the PCM
-# 27 K ABOVE its melting point, which cannot happen. Reading the fluid
-# boundary alone is not enough -- on charge the inlet (160 C) is at index 0,
-# on discharge the inlet (T_3d) is at index -1, because the flow is
-# counter-current between the half-cycles.
+# WHICH FRAME THE HISTORY IS IN. Both half-cycles come back in the CHARGE
+# frame -- index 0 is the BOTTOM for charge and discharge alike -- even
+# though the discharge march is run mirrored. Verified, not assumed: the
+# test is that the PCM can never sit above its own melting point while it
+# is freezing, and at the end of discharge max(T_pcm - T_m) is +0.00 K read
+# forward against +26.9 K read reversed. The fluid boundary alone does not
+# settle it, because the inlet is at opposite ends in the two half-cycles.
+#
+# PHYSICALLY. The hottest layer (150 C) sits at the BOTTOM, against the
+# hottest rock, which is what keeps its loss down. On charge the water
+# descends the insulated downcomer, enters the fin tubes at the bottom and
+# cools as it RISES; on discharge it enters at the top, warms as it
+# DESCENDS, and returns up the downcomer. Counter-current.
 
 def _time_subset(t_hist, n=9):
     """Roughly log-spaced time levels, always including first and last."""
@@ -382,39 +390,66 @@ def _staircase(ax, z, T_m_seg, vertical=False, **kw):
     ax.plot(*((T, zz) if vertical else (zz, T)), **kw)
 
 
+def depth_axis(model, case, n=None):
+    """(depth of segment centres, depth of fluid nodes) in metres.
+
+    Taken from the model's own formation_profile so the plotting layer
+    cannot drift from the solver's idea of which end is the bottom.
+    """
+    n = n or case.n_segments
+    depth_seg = np.asarray(model.formation_profile(case, n,
+                                                   discharge=False)[1], float)
+    L = case.L_well
+    return depth_seg, L - np.linspace(0.0, L, n + 1)
+
+
 def well_profiles(r, case, field="T_fluid", axes=None, n_times=9,
                   figsize=None, cmap="viridis", ylabel=None,
                   title=None, staircase=False, scale=1.0, offset=0.0,
-                  logy=False, vertical=True):
+                  logy=False, vertical=True, depth_seg=None, depth_node=None,
+                  overlay=None, overlay_label=None, overlay_ls=(0, (2, 1.6))):
     """One field along the well at several times, charge and discharge.
 
     `r` must come from simulate_css_corrected(..., record=True).
-    `vertical` puts depth on the ordinate, increasing downward, which is the
-    natural frame for a well; the quantity then runs along the abscissa.
+    `depth_seg` / `depth_node` come from `depth_axis`; without them the raw
+    solver coordinate is used, which runs from the BOTTOM of the well and is
+    not depth.
+    `overlay` names a second field drawn dashed in the same colour per time
+    (used for T_pcm beside T_fluid).
     """
     if figsize is None:
-        figsize = (8.6, 5.6) if vertical else (11.6, 4.4)
+        figsize = (8.8, 5.8) if vertical else (11.6, 4.4)
     if axes is None:
         _, axes = plt.subplots(1, 2, figsize=figsize,
                               sharex=vertical, sharey=not vertical)
     cm = plt.get_cmap(cmap)
     qlabel = ylabel or field
-    dlabel = r"depth, $z$ / m"
+    dlabel = r"depth / m"
     for ax, half, lab in ((axes[0], "charge", "(a) charging"),
                           (axes[1], "discharge", "(b) discharging")):
-        H, th, z = r[half]["history"], r[half]["t_hist"], r[half]["z"]
+        H, th = r[half]["history"], r[half]["t_hist"]
+        zs = depth_seg if depth_seg is not None else r[half]["z"]
+        zn = depth_node if depth_node is not None else None
         idx = _time_subset(th, n_times)
         Y = np.asarray(H[field], float)
+        O = np.asarray(H[overlay], float) if overlay else None
         for j, i in enumerate(idx):
-            y = Y[i] * scale + offset
-            zz = z if len(y) == len(z) else np.linspace(z[0], z[-1], len(y))
             col = cm(j / max(1, len(idx) - 1))
-            ax.plot(*((y, zz) if vertical else (zz, y)), color=col, lw=1.3,
-                    label=f"{th[i] / 60:.1f}")
+            for arr, ls in ((Y, "-"), (O, overlay_ls)):
+                if arr is None:
+                    continue
+                y = arr[i] * scale + offset
+                if len(y) == len(zs):
+                    zz = zs
+                elif zn is not None and len(y) == len(zn):
+                    zz = zn
+                else:
+                    zz = np.linspace(zs[0], zs[-1], len(y))
+                ax.plot(*((y, zz) if vertical else (zz, y)), color=col,
+                        lw=1.3, ls=ls,
+                        label=(f"{th[i] / 60:.1f}" if ls == "-" else None))
         if staircase:
-            _staircase(ax, z, r["T_m_seg"], vertical=vertical)
-            ax.plot([], [], color="#1a1a1a", lw=1.1, ls=(0, (4, 2)),
-                    label=r"$T_{m,k}$")
+            _staircase(ax, zs, r["T_m_seg"], vertical=vertical)
         ax.set_title(lab, pad=7)
         if vertical:
             ax.set_xlabel(qlabel)
@@ -426,13 +461,19 @@ def well_profiles(r, case, field="T_fluid", axes=None, n_times=9,
                 ax.set_yscale("log")
     if vertical:
         axes[0].set_ylabel(dlabel)
+        zs = depth_seg if depth_seg is not None else r["charge"]["z"]
         for ax in axes:
-            if not ax.yaxis_inverted():
-                ax.invert_yaxis()          # depth increases downward
+            ax.set_ylim(max(zs) * 1.02, -0.02 * max(zs))   # 0 at the top
     else:
         axes[0].set_ylabel(qlabel)
+    if overlay:
+        axes[1].plot([], [], color="0.35", lw=1.3, ls=overlay_ls,
+                     label=overlay_label or overlay)
+    if staircase:
+        axes[1].plot([], [], color="#1a1a1a", lw=1.1, ls=(0, (4, 2)),
+                     label=r"$T_{m,k}$")
     leg = axes[1].legend(title="time / min", ncol=2, fontsize=7.4,
-                         title_fontsize=7.8, loc="best", handlelength=1.4,
+                         title_fontsize=7.8, loc="best", handlelength=1.6,
                          labelspacing=0.25, columnspacing=1.0)
     leg._legend_box.align = "left"
     if title:
@@ -495,23 +536,25 @@ def animate_well(r, case, path, fps=12, frames_per_half=60, dpi=110,
     `path` ending .gif uses pillow, .mp4 uses ffmpeg.
     """
     import matplotlib.animation as manim
+    import boreas as _b
     A = pcm_capacities_A(case)
-    z = r["charge"]["z"]
-    seq = []                                   # (phase, t_s, Tf, eps, Ui)
+    zs, zn = depth_axis(_b, case, len(r["T_m_seg"]))
+    seq = []                              # (phase, t_s, Tf, Tp, eps, Ui)
     for half, lab in (("charge", "charging"), ("discharge", "discharging")):
         H, th = r[half]["history"], r[half]["t_hist"]
         tu = np.linspace(th[0], th[-1], frames_per_half)
         Tf = _resample(H["T_fluid"], th, tu) - 273.15
+        Tp = _resample(H["T_pcm"], th, tu) - 273.15
         eps = _resample(H["A_melt"], th, tu) / A
         Ui = _resample(H["U_i"], th, tu)
         for k in range(frames_per_half):
-            seq.append((lab, tu[k], Tf[k], eps[k], Ui[k]))
+            seq.append((lab, tu[k], Tf[k], Tp[k], eps[k], Ui[k]))
 
-    allT = np.concatenate([s[2] for s in seq])
-    allU = np.concatenate([s[4] for s in seq])
+    allT = np.concatenate([np.concatenate([s[2], s[3]]) for s in seq])
+    allU = np.concatenate([s[5] for s in seq])
     lims = [(allT.min() - 3, allT.max() + 3), (-0.04, 1.04),
             (0.0, allU.max() * 1.05)]
-    labs = [r"$T_f$ / $^\circ$C", r"$A_\mathrm{melt}/A_\mathrm{av}$",
+    labs = [r"temperature / $^\circ$C", r"$A_\mathrm{melt}/A_\mathrm{av}$",
             r"$U_i$ / W m$^{-2}$ K$^{-1}$"]
     cols = [NAVY, "#2f6f4f", PURPLE]
 
@@ -522,21 +565,30 @@ def animate_well(r, case, path, fps=12, frames_per_half=60, dpi=110,
         ax.set_xlabel(lab)
         ln, = ax.plot([], [], color=col, lw=2.0)
         lines.append(ln)
-    _staircase(axes[0], z, r["T_m_seg"], vertical=True)
-    axes[0].set_ylabel(r"depth, $z$ / m")
-    # High depth at the bottom: setting the limits in descending order is
-    # the whole inversion -- invert_yaxis() on top of this would undo it.
-    axes[0].set_ylim(z[-1] * 1.02, -0.02 * z[-1])
+    lpcm, = axes[0].plot([], [], color=RED, lw=1.5, ls=(0, (2, 1.6)))
+    lines.append(lpcm)
+    _staircase(axes[0], zs, r["T_m_seg"], vertical=True)
+    axes[0].plot([], [], color=NAVY, lw=2.0, label=r"$T_f$")
+    axes[0].plot([], [], color=RED, lw=1.5, ls=(0, (2, 1.6)),
+                 label=r"$T_\mathrm{pcm}$")
+    axes[0].plot([], [], color="#1a1a1a", lw=1.1, ls=(0, (4, 2)),
+                 label=r"$T_{m,k}$")
+    axes[0].legend(loc="lower left", fontsize=8.2, handlelength=1.8)
+    axes[0].set_ylabel(r"depth / m")
+    # Depth increases downward: setting the limits in descending order IS
+    # the inversion -- invert_yaxis() on top of this would undo it.
+    top = float(np.max(zs))
+    axes[0].set_ylim(top * 1.02, -0.02 * top)
     head = fig.suptitle("", y=0.975, fontsize=11)
     fig.subplots_adjust(left=0.075, right=0.985, top=0.90, bottom=0.11,
                         wspace=0.10)
 
     def draw(i):
-        lab, t, Tf, eps, Ui = seq[i]
-        zz = np.linspace(z[0], z[-1], len(Tf))
-        lines[0].set_data(Tf, zz)
-        lines[1].set_data(eps, z)
-        lines[2].set_data(Ui, z)
+        lab, t, Tf, Tp, eps, Ui = seq[i]
+        lines[0].set_data(Tf, zn if len(Tf) == len(zn) else zs)
+        lines[1].set_data(eps, zs)
+        lines[2].set_data(Ui, zs)
+        lines[3].set_data(Tp, zs)
         head.set_text(f"{lab}   $t$ = {t / 60:6.1f} min   "
                       f"mean melted fraction {eps.mean():.3f}")
         return lines + [head]
