@@ -1,0 +1,58 @@
+%=======================================================================
+% The reference case, exactly as every figure and table in this pack was
+% computed. Supplied because the pack refers to "the reference case"
+% throughout and cites tab:conditions for it; check this against your
+% Table 1 and delete whichever is redundant.
+%
+% Values read from boreas.py v1.3 Case() with the field overrides listed.
+%=======================================================================
+\begin{table}[htbp]
+\centering
+\caption{The reference case. Every figure and table in this section is
+computed at these conditions unless the quantity is the one being swept.
+The field entries are overrides on the model defaults; the defaults
+describe an \emph{isolated} well ($N_\mathrm{field}$ unset, disc packing,
+$\theta=\SI{45}{\degree}$) and are not the reference.}
+\label{tab:reference}
+\small
+\begin{tabular}{@{}l l l@{}}
+\toprule
+quantity & value & note \\
+\midrule
+\multicolumn{3}{@{}l}{\emph{Well and storage interval}}\\
+useful length $L$ & \SI{5000}{ft} = \SI{1524}{\metre} & $z \equiv$ depth \\
+producing depth & \SI{8000}{ft} & geothermal side \\
+fin tubes per well $\nft$ & 3 & all downward \\
+tube bore / outer radius & \SI{16.23}{\milli\metre} / \SI{21.08}{\milli\metre} & \\
+fins per tube & 24 & \SI{1.5}{\milli\metre} thick, \SI{3.5}{\milli\metre} long \\
+casing outer radius & \SI{98}{\milli\metre} & \\
+drilled-hole radius $r_b$ & \SI{110}{\milli\metre} & \SI{7}{in} hole \\
+downcomer insulation & \SI{8}{\milli\metre}, $k=\SI{0.007}{\watt\per\metre\per\kelvin}$ & VIT; the
+\emph{casing} is bare \\
+PCM volume per well & \SI{22.85}{\metre\cubed} & \SI{0.0150}{\metre\squared} cross-section \\
+segments $n_s$ & 99 & a multiple of $\Nlay$ \\
+\midrule
+\multicolumn{3}{@{}l}{\emph{Cascade}}\\
+melting temperature $T_m$ & \SI{150}{\celsius} & hottest layer, at the \emph{bottom} \\
+layers $\Nlay$ & 9 & \\
+grading $\Delta T_\mathrm{3C,2C}$ & \SI{55}{\kelvin} & span \SI{48.9}{\kelvin}, one layer short \\
+latent heat $h_m$ & \SI{380}{\kilo\joule\per\kilogram} & $k_s/k_l = 0.60/0.45$ \\
+\midrule
+\multicolumn{3}{@{}l}{\emph{Field} (overrides on the defaults)}\\
+wells sharing the formation & 1000 & \\
+fan half-angle $\theta$ & \SI{0}{\degree} & vertical array \\
+packing & double rows, 4 islands & \SI{6}{ft} centres, \SI{12}{ft} between rows \\
+age $t_\mathrm{op}$ & \SI{10}{yr} & \\
+\midrule
+\multicolumn{3}{@{}l}{\emph{Formation}}\\
+gradient $G$ & \SI{45}{\kelvin\per\kilo\metre} & surface \SI{18}{\celsius} \\
+$k_r$ / $(\rho c_p)_r$ & \SI{2.5}{\watt\per\metre\per\kelvin} / \SI{2.34}{\mega\joule\per\metre\cubed\per\kelvin} & cement \SI{1.0}{\watt\per\metre\per\kelvin} \\
+\midrule
+\multicolumn{3}{@{}l}{\emph{Plant}}\\
+working fluid & cyclopentane & both cycles \\
+secondary fluid & water at \SI{10}{\bar} & saturates at \SI{179.9}{\celsius} \\
+net electrical output & \SI{1}{\mega\watt} & \SI{10}{\hour} charge, \SI{10}{\hour} discharge \\
+source / sink & \SI{60}{\celsius} / \SI{20}{\celsius} & \SI{12.5}{\kilogram\per\second} per geothermal well \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,5 +1,13 @@
 # BOREAS v1.3 results pack for `P2H2P_enthalpy_paper`
 
+**Revision 6 (2026-10-27).** *Consistency fix.* The T–s diagram was
+generated from `Case()` — the **assumed** cascade, T_2d = 146.11 °C —
+while the state-point, UA and T_3e tables come from the array reference,
+where the **realised** T_2d is 142.62 °C. Figure and table therefore
+disagreed (T_3e 95.09 vs 94.46 °C, eta_ORC 0.1481 vs 0.1471, p_evap 3.704
+vs 3.647 bar). The figure is now built from the same realised cycle as the
+tables. New `tex/tab_reference.tex` states the reference case explicitly.
+
 **Revision 5 (2026-10-27).** Figures re-authored for a **single-column**
 layout, so `width=\linewidth` reproduces them near 1:1. The four
 three-panel figures (cascade map, geometry maps, field maps, and the T_m
