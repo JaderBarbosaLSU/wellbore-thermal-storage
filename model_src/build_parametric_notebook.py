@@ -179,6 +179,67 @@ for n in arr.NL:
 
 cells.append(md(r"""
 ---
+## 3. The configuration table
+
+The same fourteen field scenarios that `BOREAS_model.ipynb` computes in
+section 5, read here from cache in a second rather than recomputed in a
+quarter of an hour. Use whichever suits: that notebook is self-contained
+and slow, this one is fast and depends on the cache.
+
+**array** and **fan** describe the trajectories --- vertical throughout,
+against deviating at half-angle $\theta$ below the kickoff. **disc**,
+**rows** and **ring** describe the plan view of the wellheads: a filled
+circle, two straight lines side by side, and the same double line closed
+into a loop. Every field case is one of each.
+"""))
+
+cells.append(code(r"""
+import pandas as pd
+cfg_grid = [{k: v for k, v in d.items() if k != 'label'} for d in arr.CONFIGS]
+cfg = S.collect('config', cfg_grid, fixed=arr.CONFIG_FIXED)
+tab = {}
+for d, r in zip(arr.CONFIGS, cfg):
+    if not r.get('feasible'):
+        continue
+    tab[d['label']] = {'loss %': r['loss_pct'], 'eta_storage': r['eta_storage'],
+                       'eta_RTE': r['eta_RTE'], 'eps_cycled': r['eps_cycled'],
+                       'T_2d [C]': r['T_2d_realised_C'],
+                       'wells/MWe': r['wells_per_MWe']}
+print(f'{len(tab)} of {len(arr.CONFIGS)} configurations cached')
+display(pd.DataFrame(tab).T.round(4))
+"""))
+
+cells.append(md(r"""
+**Closing the rows into a ring buys almost nothing.** The ring is exposed
+on both faces, so its perimeter is the rim length twice over; against the
+double row it saves only the two end-caps, $2w_\mathrm{row}$ per island.
+That is 1.6 % of the perimeter at 1000 wells and 14 % at 100, where the
+caps are a larger share of a shorter row. The arrangement that matters is
+whether the wells are strung out at all, not how the line is closed.
+"""))
+
+cells.append(code(r"""
+import numpy as np
+m = {d['label']: r for d, r in zip(arr.CONFIGS, cfg) if r.get('feasible')}
+print(f"{'case':24s}{'rows':>9}{'ring':>9}{'disc':>9}   (loss %)")
+for stem in ('fan, 100 wells', 'fan, 1000 wells', 'fan, 1000, 70 deg',
+             'vertical array'):
+    vals = []
+    for pk in ('rows', 'ring', 'disc'):
+        r = m.get(f'{stem}, {pk}')
+        vals.append(f"{r['loss_pct']:9.1f}" if r else f"{'--':>9}")
+    print(f'{stem:24s}' + ''.join(vals))
+print()
+for N in (100., 1000.):
+    for pk, ni in (('disc', 1), ('rows', 4), ('ring', 4)):
+        cc = B.Case(n_wells_field=N, fan_angle_deg=0., packing=pk, n_islands=ni)
+        P0 = float(np.atleast_1d(B.field_perimeter(cc, 0.))[0])
+        print(f'  N={int(N):5d}  {pk:5s}  P0 = {P0:8.1f} m  '
+              f'-> {P0/N:.3f} m per well')
+"""))
+
+cells.append(md(r"""
+---
 ## 3. The maps, redrawn from the cache
 
 Nothing below computes. Each call is a dictionary lookup plus a plot.
