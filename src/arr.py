@@ -50,3 +50,27 @@ SPAN0 = 55.0 * 8.0 / 9.0
 G_NLPIN = [{'N_lay': int(n), 'n_segments': nseg(n),
             'DT_cascade': SPAN0 * n / (n - 1.0)} for n in NL]
 G_NLFREE = [{'N_lay': int(n), 'n_segments': nseg(n)} for n in NL]
+
+
+# ---- the configuration table of the paper -------------------------------
+# Each row names its packing EXPLICITLY. The model default is disc, and a
+# row that omits it silently reports the superseded v1.2 geometry.
+DISC = dict(packing='disc', n_islands=1)
+ROWS4 = dict(packing='rows', n_islands=4)
+CONFIGS = [
+    dict(label='adiabatic, k_r -> 0', k_rock=1e-9, **DISC),
+    dict(label='isolated well', **DISC),
+    dict(label='fan, 100 wells, disc', n_wells_field=100., **DISC),
+    dict(label='fan, 100 wells, rows', n_wells_field=100., **ROWS4),
+    dict(label='fan, 1000 wells, disc', n_wells_field=1000., **DISC),
+    dict(label='fan, 1000 wells, rows', n_wells_field=1000., **ROWS4),
+    dict(label='fan, 1000, 70 deg, disc', n_wells_field=1000.,
+         fan_angle_deg=70., **DISC),
+    dict(label='fan, 1000, 70 deg, rows', n_wells_field=1000.,
+         fan_angle_deg=70., **ROWS4),
+    dict(label='vertical array, disc', n_wells_field=1000.,
+         fan_angle_deg=0., **DISC),
+    dict(label='vertical array, rows', n_wells_field=1000.,
+         fan_angle_deg=0., **ROWS4),
+]
+CONFIG_FIXED = dict(n_segments=99)

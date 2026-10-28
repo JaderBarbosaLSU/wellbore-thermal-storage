@@ -116,7 +116,30 @@ def css_metrics(model, **kw):
     return {a: b for a, b in out.items() if b is not None}
 
 
-KINDS = {"cycle": cycle_metrics, "css": css_metrics}
+def config_metrics(model, **kw):
+    """The configuration-table row: loss, eta_storage, RTE, cycled, wells/MWe.
+
+    A separate KIND rather than extra keys on css_metrics, so adding it does
+    not change the css metric set and therefore does not invalidate the 291
+    cached evaluations behind the maps.
+    """
+    c, ok, why = _prepare(model, kw)
+    if not ok:
+        return dict(feasible=False, why=why[:160])
+    r = model.simulate_css_corrected(c)
+    k = model.performance_indices(c, r)
+    return dict(feasible=True,
+                loss_pct=100.0 * k["f_formation_loss"],
+                eta_storage=r["eta_storage"],
+                eta_RTE=k["eta_RTE"],
+                eps_cycled=k["eps_cycled"],
+                wells_per_MWe=k["wells_per_MWe"],
+                T_2d_realised_C=r["T_2d_realised"] - 273.15,
+                B_top=r["B_top"], B_bottom=r["B_bottom"])
+
+
+KINDS = {"cycle": cycle_metrics, "css": css_metrics,
+         "config": config_metrics}
 
 
 # ----------------------------------------------------------------- driver

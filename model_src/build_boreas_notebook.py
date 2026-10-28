@@ -328,19 +328,45 @@ cells.append(md(r"""
 ---
 ## 5. Run it
 
-`n_wells_field=None` is the **isolated well** — the conservative bound, and
-the v1.3 default. It is not a pessimistic estimate of the real loss; it is a
-different configuration, and one nobody would build.
+`n_wells_field=None` is the **isolated well** --- the conservative bound,
+and the v1.3 default. It is not a pessimistic estimate of the real loss; it
+is a different configuration, and one nobody would build.
 
-About a minute per case.
+**Every row below names its `packing` explicitly, and that is not
+decoration.** The model default is `packing='disc'`, a compact circular
+cluster, which *minimises* perimeter for a given well count and so is the
+most favourable arrangement that exists. A row that omits `packing`
+silently reports the superseded v1.2 geometry: the vertical array comes out
+at 0.9 % loss instead of 7.9 %. Comparing a fan computed at disc packing
+against an array computed at rows is how an earlier draft concluded the two
+were "the same machine".
+
+`packing='ring'` is also implemented --- wells on a rim, both faces
+exposed --- but is not used in the paper and is not tabulated here.
+
+Ten cases, about a minute each.
 """))
 
 cells.append(code(r"""
+import pandas as pd
+DISC = dict(packing='disc', n_islands=1)
+ROWS4 = dict(packing='rows', n_islands=4)
+
+CONFIGS = [
+    ('adiabatic, k_r -> 0',      dict(k_rock=1e-9, **DISC)),
+    ('isolated well',            dict(**DISC)),
+    ('fan, 100 wells, disc',     dict(n_wells_field=100., **DISC)),
+    ('fan, 100 wells, rows',     dict(n_wells_field=100., **ROWS4)),
+    ('fan, 1000 wells, disc',    dict(n_wells_field=1000., **DISC)),
+    ('fan, 1000 wells, rows',    dict(n_wells_field=1000., **ROWS4)),
+    ('fan, 1000, 70 deg, disc',  dict(n_wells_field=1000., fan_angle_deg=70., **DISC)),
+    ('fan, 1000, 70 deg, rows',  dict(n_wells_field=1000., fan_angle_deg=70., **ROWS4)),
+    ('vertical array, disc',     dict(n_wells_field=1000., fan_angle_deg=0., **DISC)),
+    ('vertical array, rows',     dict(n_wells_field=1000., fan_angle_deg=0., **ROWS4)),
+]
+
 rows = {}
-for lab, kw in [('isolated well', {}),
-                ('fan, 100 wells', dict(n_wells_field=100.)),
-                ('fan, 1000 wells', dict(n_wells_field=1000.)),
-                ('array, 1.83 m', dict(n_wells_field=1000., fan_angle_deg=0.))]:
+for lab, kw in CONFIGS:
     cc = B.Case(n_segments=99, **kw)
     r = B.simulate_css_corrected(cc)
     k = B.performance_indices(cc, r)
@@ -348,8 +374,9 @@ for lab, kw in [('isolated well', {}),
                  'eta_storage': r['eta_storage'],
                  'eta_RTE': k['eta_RTE'],
                  'eps_cycled': k['eps_cycled'],
-                 'wells/MWe': k['wells_per_MWe']}
-    print(f'  {lab} done')
+                 'wells/MWe': k['wells_per_MWe'],
+                 'T_2d [C]': r['T_2d_realised'] - 273.15}
+    print(f'  {lab:26s} loss {rows[lab]["loss %"]:5.1f} %', flush=True)
 display(pd.DataFrame(rows).T.round(4))
 """))
 
@@ -384,6 +411,15 @@ that does not exist.
 """))
 
 # ----------------------------------------------------------------- gates
+cells.append(md(r"""
+**What this table does not contain.** The paper also reports a
+*superposition* variant of the two 1000-well rows, in which
+`formation_resistance` is replaced by a line-source superposition over the
+actual well positions. That is **not** what the shipped code computes, so
+those rows cannot be reproduced from this notebook; they came from a
+separate calculation and are labelled as such in the paper.
+"""))
+
 cells.append(md(r"""
 ---
 ## 6. The gates, watched to fail
