@@ -332,25 +332,53 @@ cells.append(md(r"""
 and the v1.3 default. It is not a pessimistic estimate of the real loss; it
 is a different configuration, and one nobody would build.
 
-**Every row below names its `packing` explicitly, and that is not
-decoration.** The model default is `packing='disc'`, a compact circular
-cluster, which *minimises* perimeter for a given well count and so is the
-most favourable arrangement that exists. A row that omits `packing`
-silently reports the superseded v1.2 geometry: the vertical array comes out
-at 0.9 % loss instead of 7.9 %. Comparing a fan computed at disc packing
-against an array computed at rows is how an earlier draft concluded the two
-were "the same machine".
+**What the four words mean.** Two of them describe the *trajectories*, two
+the *plan view* of the wellheads:
 
-`packing='ring'` is also implemented --- wells on a rim, both faces
-exposed --- but is not used in the paper and is not tabulated here.
+| term | meaning |
+|---|---|
+| **array** | the wells stay vertical, $\theta = 0$, so the spacing $B(z)$ is the wellhead spacing at every depth |
+| **fan** | the wells are vertical to the kickoff and then deviate at half-angle $\theta$, so $B(z)$ grows with depth |
+| **disc** | a circle *filled* with wellheads on $B_0$ centres; $P_0 = 2\pi R_0$ with $R_0 = B_0\sqrt{N/\pi}$ |
+| **rows** | two straight lines of wells side by side, $w_\mathrm{row}$ apart, per island; $P_0 = n_\mathrm{isl}\,2(L_\mathrm{row} + w_\mathrm{row})$ |
+| **ring** | the same double line closed into a loop, like stands round a stadium; it loses from **both** faces, inner and outer, so $P_0 = n_\mathrm{isl}\,2\,L_\mathrm{row}$ |
 
-Ten cases, about a minute each.
+So *array* and *fan* are alternatives, and *disc*, *rows* and *ring* are
+alternatives; every field case is one of each.
+
+**Packing must be named explicitly, and that is not decoration.** The model
+default is `packing='disc'`, which *minimises* perimeter for a given well
+count and is therefore the most favourable arrangement that exists. A row
+that omits `packing` silently reports the superseded v1.2 geometry: the
+vertical array comes out at 0.9 % loss instead of 7.9 %. Comparing a fan
+computed at disc packing against an array computed at rows is how an
+earlier draft concluded the two were "the same machine".
+
+Fourteen cases, about a minute each.
+"""))
+
+cells.append(code(r"""
+import numpy as np, pandas as pd
+# the geometry, before any thermal calculation
+geo = {}
+for N in (100., 1000.):
+    for pk, ni in (('disc', 1), ('rows', 4), ('ring', 4)):
+        cc = B.Case(n_wells_field=N, fan_angle_deg=0., packing=pk, n_islands=ni)
+        P0 = float(np.atleast_1d(B.field_perimeter(cc, 0.))[0])
+        geo[(int(N), pk)] = {'islands': ni, 'P0 [m]': P0,
+                             'per well [m]': P0 / N}
+g = pd.DataFrame(geo).T.round(3)
+g.index.names = ['N', 'packing']
+display(g)
+print('ring differs from rows only by the two end-caps of each row,')
+print('2*w_row per island: 1.6 % of the perimeter at N=1000, 14 % at N=100.')
 """))
 
 cells.append(code(r"""
 import pandas as pd
 DISC = dict(packing='disc', n_islands=1)
 ROWS4 = dict(packing='rows', n_islands=4)
+RING4 = dict(packing='ring', n_islands=4)
 
 CONFIGS = [
     ('adiabatic, k_r -> 0',      dict(k_rock=1e-9, **DISC)),
@@ -363,6 +391,10 @@ CONFIGS = [
     ('fan, 1000, 70 deg, rows',  dict(n_wells_field=1000., fan_angle_deg=70., **ROWS4)),
     ('vertical array, disc',     dict(n_wells_field=1000., fan_angle_deg=0., **DISC)),
     ('vertical array, rows',     dict(n_wells_field=1000., fan_angle_deg=0., **ROWS4)),
+    ('fan, 100 wells, ring',     dict(n_wells_field=100., **RING4)),
+    ('fan, 1000 wells, ring',    dict(n_wells_field=1000., **RING4)),
+    ('fan, 1000, 70 deg, ring',  dict(n_wells_field=1000., fan_angle_deg=70., **RING4)),
+    ('vertical array, ring',     dict(n_wells_field=1000., fan_angle_deg=0., **RING4)),
 ]
 
 rows = {}
@@ -412,6 +444,15 @@ that does not exist.
 
 # ----------------------------------------------------------------- gates
 cells.append(md(r"""
+**Closing the rows into a ring buys almost nothing.** The ring loses from
+both faces, so its perimeter is the rim length twice over, and against the
+double row it saves only the two end-caps --- 1.6 % of the perimeter at
+1000 wells. The loss moves from 7.9 % to 7.8 % for the vertical array and
+from 57.1 % to 56.9 % for the fan. At 100 wells the saving is larger (14 %
+of the perimeter, 65.5 % to 64.9 % loss) because the end-caps are a bigger
+share of a shorter row. The arrangement that matters is whether the wells
+are strung out at all, not how the line is closed.
+
 **What this table does not contain.** The paper also reports a
 *superposition* variant of the two 1000-well rows, in which
 `formation_resistance` is replaced by a line-source superposition over the

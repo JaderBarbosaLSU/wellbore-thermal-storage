@@ -73,4 +73,18 @@ CONFIGS = [
     dict(label='vertical array, rows', n_wells_field=1000.,
          fan_angle_deg=0., **ROWS4),
 ]
+RING4 = dict(packing='ring', n_islands=4)
+# ring is the double line closed into a loop, losing from BOTH faces. It
+# differs from rows only by the two end-caps of each row -- 2*row_gap per
+# island -- so at 1000 wells it is 1.6 % less perimeter than rows and at
+# 100 wells 14 % less, the gap mattering more against a shorter row.
+CONFIGS += [
+    dict(label='fan, 100 wells, ring', n_wells_field=100., **RING4),
+    dict(label='fan, 1000 wells, ring', n_wells_field=1000., **RING4),
+    dict(label='fan, 1000, 70 deg, ring', n_wells_field=1000.,
+         fan_angle_deg=70., **RING4),
+    dict(label='vertical array, ring', n_wells_field=1000.,
+         fan_angle_deg=0., **RING4),
+]
+
 CONFIG_FIXED = dict(n_segments=99)
