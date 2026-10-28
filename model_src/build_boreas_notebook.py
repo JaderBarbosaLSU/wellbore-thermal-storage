@@ -12,6 +12,9 @@ import pathlib
 STAMP = (_dt.datetime.utcnow() - _dt.timedelta(hours=3)).strftime(
     '%Y-%m-%d %H:%M BRT')
 MODEL = pathlib.Path('/tmp/build/boreas.py')
+# boreas_plots.py is a source file, not a build product -- it is hand-written
+# and lives next to this script, unlike boreas.py which is assembled.
+PLOTS = pathlib.Path(__file__).parent / 'boreas_plots.py'
 OUT = pathlib.Path('/tmp/build/BOREAS_model.ipynb')
 
 
@@ -566,6 +569,368 @@ contradicting the source temperature, a cascade that has been flipped
 hot-to-top, a geometry that will not pack, and a well whose deep layers cannot
 freeze.
 """))
+
+### ------------------------------------------------- 8. cycle diagrams
+cells.append(md(r"""
+---
+## 8. The surface cycles: $T$--$s$ diagrams and state points
+
+The borehole model and the plant models meet at the water loop, and the only
+quantity the store sets is $T_\mathrm{2d}$, the temperature of the water
+arriving at the ORC evaporator. Everything else in the two cycles below is
+frozen from the hairpin study. So these diagrams are *context*, not a result:
+they say what machine the store is feeding, and they make visible how much of
+the store's temperature the ORC actually uses.
+
+Three things in these figures are deliberate and worth stating, because each
+is a place where a $T$--$s$ plot is usually drawn wrongly:
+
+1. **Isobars are sampled in enthalpy, not temperature.** Inside the dome $T$
+   and $p$ are not independent, so a state cannot be recovered from $(T, p)$
+   there and a temperature-sampled isobar breaks silently at the saturation
+   line --- which is exactly where every heat-exchanger leg lives. Enthalpy is
+   monotonic along an isobar through subcooled liquid, dome and superheat
+   alike.
+2. **Throttles are drawn as isenthalps**, sampled in pressure, not as the
+   straight lines a sketch usually shows. The $7\mathrm{h} \to 8\mathrm{h}$
+   expansion is strongly curved in $T$--$s$ and the curvature *is* the
+   irreversibility.
+3. **The connectivity is read from the model's enthalpies, not from the
+   numbering.** The ORC is a *reheat* cycle ($3\mathrm{e} \to 5\mathrm{e}$,
+   reheat at $p_\mathrm{int}$ to $6\mathrm{e}$, then $\to 4\mathrm{e}$); the
+   HTHP is a two-stage *flash-economizer* cycle. Neither is apparent from the
+   state list alone.
+
+### A note on fonts
+
+Times New Roman is proprietary and is **not** installed on Colab. Asking
+`matplotlib` for it by name there does not fail --- it silently falls back to
+DejaVu Sans and the figure comes out in the wrong face. The style helper asks
+for Times first and then for its metric-compatible clones (Nimbus Roman,
+Liberation Serif), which are present on virtually every Linux image and are
+indistinguishable from Times at figure scale. `active_serif()` reports which
+one actually resolved, so the fallback is visible rather than silent. On a Mac
+with Times installed, you get the real thing.
+"""))
+
+cells.append(code('%%writefile boreas_plots.py\n' + PLOTS.read_text()))
+
+cells.append(code(r"""
+import importlib, boreas_plots as BP
+importlib.reload(BP)
+BP.use_paper_style()
+print('serif resolved to:', BP.active_serif()[0])
+
+ref = B.Case()
+rank, hp, Tdict = B.cycle_state_points(ref)
+"""))
+
+cells.append(md(r"""
+### 8.1 The two cycles side by side
+"""))
+
+cells.append(code(r"""
+fig, _ = BP.ts_both(ref, rank, hp)
+fig.savefig('BOREAS_Ts_cycles.pdf')
+fig.show()
+"""))
+
+cells.append(md(r"""
+### 8.2 Both on one axes, with the water levels
+
+This is the coupling diagram. The two cycles never exchange working fluid ---
+they exchange *water* --- so the horizontal dotted lines are the only thing
+that makes the pair a single machine rather than two unrelated plots. Four
+levels are shown: the sink, the geothermal source feeding the HTHP evaporator,
+the HTHP condenser inlet $T_\mathrm{2c}$ (the charge loop), and
+$T_\mathrm{2d}$, the store outlet --- the one line the borehole model sets.
+"""))
+
+cells.append(code(r"""
+import matplotlib.pyplot as plt
+fig, ax = plt.subplots(figsize=(8.0, 5.8))
+BP.ts_combined(ref, rank, hp, Tdict, ax=ax)
+fig.tight_layout()
+fig.savefig('BOREAS_Ts_combined.pdf')
+fig.show()
+"""))
+
+cells.append(md(r"""
+### 8.2b The water on the $T$--$s$ diagram, with every pinch marked
+
+The horizontal lines above are *inlet temperatures*. They say where the water
+starts, not what it does, and a pinch cannot be read off them. The water
+actually glides --- $T_\mathrm{2d} \to T_\mathrm{3d}$ through the ORC
+evaporator, $T_\mathrm{2c} \to T_\mathrm{3c}$ through the HTHP condenser ---
+and it is the glide against a *flat* boiling or condensing plateau that
+creates the binding approach.
+
+Water cannot be plotted on these axes directly: its entropy is on a scale with
+nothing to do with cyclopentane's. What can be plotted is the water
+**temperature at each point of the exchanger**, placed at the entropy the
+working fluid has at that same point. The two streams are tied together by
+cumulative duty, so at a given $Q$ the working fluid sits at $(s, T_\mathrm{wf})$
+and the water at $T_\mathrm{w}$; plotting $(s, T_\mathrm{w})$ puts the water
+line directly above (evaporator) or below (condenser) the working-fluid path,
+and the **vertical gap at every abscissa is the real local approach**.
+
+This is a duty mapping, not a thermodynamic path. The water line is not a
+process in cyclopentane's coordinates and its abscissa means nothing for the
+water itself. Stated plainly it is an honest and very readable construction;
+left unstated it would be a category error, so the axis label says so.
+"""))
+
+cells.append(code(r"""
+fig, ax = plt.subplots(figsize=(8.6, 6.2))
+BP.ts_combined(ref, rank, hp, Tdict, ax=ax, water='glide', model=B)
+fig.tight_layout()
+fig.savefig('BOREAS_Ts_combined_water.pdf')
+fig.show()
+"""))
+
+cells.append(md(r"""
+Two things are now visible that the level lines hid.
+
+The ORC-evaporator water (black) descends across the diagram and **touches the
+working fluid at the bubble-point corner** --- the pinch is there, not at
+either end. And the charge water (teal, $T_\mathrm{2c} \to T_\mathrm{3c}$) runs
+nearly parallel to it, offset by the storage approach: that offset is the
+round trip through the PCM, and it is the only part of this figure the
+borehole model can move.
+
+### 8.2c One panel per exchanger
+
+Four exchangers in four corners of the diagram; overlaying them all makes a
+figure in which no individual pinch can be read. Each panel below carries the
+dome, the working-fluid path, the duty-mapped water line and the pinch arrow.
+The recovered pinches should reproduce the specification
+($\Delta T_\mathrm{pinch,ORC}$, $\Delta T_\mathrm{E,sink}$,
+$\Delta T_\mathrm{2H,3C}$, $\Delta T_\mathrm{pinch,HPE}$) --- if one of them
+does not, the overlay and the model disagree and the overlay is wrong.
+"""))
+
+cells.append(code(r"""
+fig, axes = plt.subplots(2, 2, figsize=(11.8, 8.8))
+_, ov = BP.ts_water(B, ref, rank, hp, Tdict, axes=axes)
+fig.tight_layout()
+fig.savefig('BOREAS_Ts_water.pdf')
+
+print(f"{'exchanger':20s}{'pinch, K':>10}{'specified':>12}")
+spec = {'ORC evaporator': ref.DT_pinch_ORC,
+        'ORC condenser': ref.DT_E_sink,
+        'HTHP condenser': ref.DT_2H_3C,
+        'HTHP evaporator': ref.DT_pinch_HPE}
+for k, v in ov.items():
+    print(f"{k:20s}{v['pinch_K']:>10.3f}{spec[k]:>12.3f}")
+fig.show()
+"""))
+
+cells.append(md(r"""
+### 8.3 ORC evaporator composite curves: the pinch is *interior*
+
+This is the figure that explains the gap. The water glides down from
+$T_\mathrm{2d}$ to $T_\mathrm{3d}$ as a nearly straight sensible line; the
+working fluid preheats, then goes **flat** at $T_\mathrm{3e}$ for the rest of
+the exchanger. The smallest approach therefore occurs neither at the hot end
+nor at the cold end but at the corner where boiling starts, and panel (b)
+makes the V unmistakable.
+
+The grey dashed curve is the cold composite that the hot-end rule *alone*
+would permit, $T_\mathrm{3e} = T_\mathrm{2d} - \Delta T_\mathrm{2D,3E}$. It
+does not merely violate the 5 K pinch --- it sits **above** the water over
+most of the duty, so heat would have to flow from the cold stream to the hot
+one. That is not a slightly optimistic design, it is a second-law violation,
+and the efficiency computed from it is unreachable at any exchanger size. The
+printed `hot_end_reversed_pct` is the fraction of the load that runs
+backwards.
+
+The curves here are the model's own: `orc_composite` calls
+`_orc_cold_composite` and `_water_curve` rather than rebuilding them, so what
+is plotted is by construction what `orc_pinch` minimises over. The returned
+`pinch_K` should agree with `rank['pinch']` to rounding --- that agreement is
+the figure's self-check, and it is worth reading rather than trusting.
+"""))
+
+cells.append(code(r"""
+fig, axes = plt.subplots(1, 2, figsize=(11.8, 4.7))
+_, info = BP.orc_composite(B, ref, rank, Tdict, axes=axes)
+fig.tight_layout()
+fig.savefig('BOREAS_ORC_composite.pdf')
+
+for k, v in info.items():
+    print(f'  {k:24s} {v:10.4f}')
+print(f"\n  model's own pinch        {rank['pinch']:10.4f}   <- must agree")
+"""))
+
+cells.append(md(r"""
+Note where the onset of boiling lands on the duty axis. It is **not**
+$(h_\mathrm{bub} - h_\mathrm{10e})/Q_\mathrm{tot}$: that is the main stream's
+preheat alone and lands about five points of duty too low, because the
+composite also carries the reheat stream ($y$ of the flow, $5\mathrm{e} \to
+6\mathrm{e}$), whose entire duty lies *below* the bubble temperature and is
+therefore already banked by the time the main stream starts to boil. The break
+is read off the assembled composite instead of re-derived --- re-deriving it
+is how the marker ends up a few points away from the pinch it is supposed to
+coincide with.
+
+### 8.3b Look at the gap between $T_\mathrm{2d}$ and $3\mathrm{e}$
+
+In the reference case the store delivers water at $T_\mathrm{2d}$ but the ORC
+evaporates well below it. Which constraint is binding is reported by the model
+itself, and it is not always the one you would assume: if the hot-end rule
+$T_\mathrm{3e} = T_\mathrm{2d} - \Delta T_\mathrm{2D,3E}$ bound, the approach
+would be 12 K. Run the cell and read `T_3e_binding`.
+"""))
+
+cells.append(code(r"""
+T_2d = Tdict['T_2d'] - 273.15
+print(f"water from the store, T_2d        {T_2d:8.2f} C")
+print(f"hot-end rule would give T_3e      {rank['T_3e_hot_end'] - 273.15:8.2f} C"
+      f"   (approach {T_2d - (rank['T_3e_hot_end'] - 273.15):.1f} K)")
+print(f"realised T_3e                     {rank['T_3e'] - 273.15:8.2f} C"
+      f"   (approach {T_2d - (rank['T_3e'] - 273.15):.1f} K)")
+print(f"binding constraint                {rank['T_3e_binding']}")
+print()
+T_carnot = 1.0 - (rank['T_1e'] / rank['T_3e'])
+print(f"Carnot between T_1e and T_3e      {T_carnot:8.4f}")
+print(f"eta_ORC                           {rank['rank_eff']:8.4f}"
+      f"   ({rank['rank_eff'] / T_carnot * 100:.0f} % of Carnot)")
+"""))
+
+cells.append(md(r"""
+### 8.4 State points and the scalar summary
+"""))
+
+cells.append(code(r"""
+st = BP.state_table(rank, hp)
+display(st)
+st.to_csv('BOREAS_state_points.csv')
+
+# h is kJ/kg in the model's dictionaries while s is J/kg/K. The mixed units
+# are the model's; state_table converts s and leaves h alone. Do not "fix"
+# this by dividing h -- that was a real error earlier in this work.
+print(st.to_latex(float_format='%.3f'))
+"""))
+
+cells.append(code(r"""
+display(BP.cycle_summary(rank, hp))
+"""))
+
+cells.append(md(r"""
+### 8.5 What actually moves the cycles
+
+Worth running before assuming otherwise. The geothermal source temperature
+moves the **COP** --- it sets the heat-pump lift --- and *nothing on the ORC
+side*. $T_\mathrm{2d}$ is fixed by the cascade specification
+($\Delta T_\mathrm{3C,2C}$ and the melting temperature), not by the source, so
+$T_\mathrm{3e}$ and $\eta_\mathrm{ORC}$ do not budge. The two cycles are
+coupled to the store but decoupled from each other, which is why the DOE found
+$\eta_\mathrm{RTE}$ below ground to be almost entirely pumping.
+"""))
+
+cells.append(code(r"""
+alt = B.Case(grad_K_per_km=56.5, T_source_C=70.0)
+rank_a, hp_a, T_a = B.cycle_state_points(alt)
+print(f"T_2d   {Tdict['T_2d'] - 273.15:7.2f} ->{T_a['T_2d'] - 273.15:7.2f} C")
+print(f"T_3e   {rank['T_3e'] - 273.15:7.2f} ->{rank_a['T_3e'] - 273.15:7.2f} C")
+print(f"etaORC {rank['rank_eff']:7.4f} ->{rank_a['rank_eff']:7.4f}")
+print(f"COP    {hp['hp_cop']:7.4f} ->{hp_a['hp_cop']:7.4f}")
+"""))
+
+### ------------------------------------------- 9. well profiles
+cells.append(md(r"""
+---
+## 9. Thermal behaviour along the well
+
+The figures above are about the surface machines. These are about the store
+itself, and they need a RECORDED march:
+`simulate_css_corrected(..., record=True)` keeps the fluid and PCM
+temperature, the melted area, $U_i$ and $q'$ at every time level, at the
+cost of one extra cycle.
+
+### The coordinate, which is the thing to get right
+
+**The solver's `z` is not depth.** Quoting `formation_profile`: on charge
+the water enters the fin tubes at the *bottom* --- it arrives there down the
+insulated downcomer --- so `z = 0` is the bottom of the well and depth
+decreases with `z`. Plotting against the raw `z` and calling it depth draws
+the well upside down, which is exactly what an earlier version of these
+figures did. `depth_axis()` takes the depth array from the model itself so
+there is one definition.
+
+Both half-cycle histories come back in the **charge** frame, index 0 at the
+bottom, even though the discharge march is run mirrored. Reading the fluid
+boundary condition does not settle that, because the inlet sits at opposite
+ends in the two half-cycles. The test that does: PCM cannot be above its own
+melting point while it is freezing, and at the end of discharge
+`max(T_pcm - T_m)` is `+0.00` K read forward against `+26.9` K reversed.
+"""))
+
+cells.append(code(r"""
+import pickle, os
+if os.path.exists('rec.pkl'):
+    rec = pickle.load(open('rec.pkl', 'rb'))
+else:
+    ref_well = B.Case(n_segments=99, n_wells_field=1000., fan_angle_deg=0.,
+                      packing='rows', n_islands=4)
+    rec = B.simulate_css_corrected(ref_well, record=True)   # ~1 min
+    pickle.dump(rec, open('rec.pkl', 'wb'))
+
+ref_well = B.Case(n_segments=99, n_wells_field=1000., fan_angle_deg=0.,
+                  packing='rows', n_islands=4)
+A_av = BP.pcm_capacities_A(ref_well)
+dseg, dnode = BP.depth_axis(B, ref_well, 99)
+print(f'depth runs {dseg[0]:.0f} m (index 0, bottom) -> {dseg[-1]:.0f} m (top)')
+
+# the orientation check, printed rather than trusted
+Tm = rec['T_m_seg'] - 273.15
+Tp = rec['discharge']['history']['T_pcm'][-1] - 273.15
+print(f'end of discharge, max(T_pcm - T_m): forward {(Tp - Tm).max():+.2f} K, '
+      f'reversed {(Tp - Tm[::-1]).max():+.2f} K  <- forward must be <= 0')
+"""))
+
+cells.append(code(r"""
+fig, ax = plt.subplots(1, 2, figsize=(8.8, 5.8), sharex=True)
+BP.well_profiles(rec, ref_well, axes=ax, vertical=True, staircase=True,
+                 depth_seg=dseg, depth_node=dnode, offset=-273.15, n_times=6,
+                 field='T_fluid', overlay='T_pcm',
+                 overlay_label=r'$T_\mathrm{pcm}$',
+                 ylabel=r'temperature / $^\circ$C')
+fig.tight_layout(); fig.show()
+"""))
+
+cells.append(code(r"""
+fig, ax = plt.subplots(1, 2, figsize=(8.8, 5.8), sharex=True)
+BP.well_profiles(rec, ref_well, axes=ax, vertical=True, field='A_melt',
+                 depth_seg=dseg, depth_node=dnode, scale=1.0 / A_av,
+                 ylabel=r'melted fraction, $A_\mathrm{melt}/A_\mathrm{av}$')
+fig.tight_layout(); fig.show()
+
+fig, ax = plt.subplots(1, 2, figsize=(8.8, 5.8), sharex=True)
+BP.well_profiles(rec, ref_well, axes=ax, vertical=True, field='U_i',
+                 depth_seg=dseg, depth_node=dnode,
+                 ylabel=r'$U_i$ / W m$^{-2}$ K$^{-1}$')
+fig.tight_layout(); fig.show()
+
+fig, ax = plt.subplots(1, 2, figsize=(11.6, 4.2))
+BP.well_integrals(rec, ref_well, axes=ax)
+fig.tight_layout(); fig.show()
+"""))
+
+cells.append(md(r"""
+### 9.1 Animation of the full cycle
+
+Charge then discharge, three panels, with the frames resampled onto a
+**uniform** time grid --- the march records on a roughly logarithmic one,
+which would make constant-rate playback appear to accelerate.
+"""))
+
+cells.append(code(r"""
+from IPython.display import Video
+BP.animate_well(rec, ref_well, 'BOREAS_cycle.mp4', fps=12, frames_per_half=60)
+Video('BOREAS_cycle.mp4', embed=True, width=760)
+"""))
+
 
 cells.append(code(r"""
 mine = B.Case(

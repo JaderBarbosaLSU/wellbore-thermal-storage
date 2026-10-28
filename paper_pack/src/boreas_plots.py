@@ -777,11 +777,13 @@ def cycle_vs_Tm(rows_autoP, rows_fixedP, case, axes=None, figsize=(13.2, 4.3)):
             # text at several hundred percent of the axes height. With
             # savefig.bbox='tight' that silently inflates the saved figure
             # to tens of thousands of pixels instead of raising.
+            # bottom of the band, not the top: the top is where the
+            # optimum callout lives
             ax.annotate(f"needs $P>{case.P / 1e5:.0f}$ bar",
-                        (0.5 * (T_lim + T.max()), 1.0),
-                        ha="center", va="top", fontsize=8.0, color="0.35",
-                        xycoords=("data", "axes fraction"), xytext=(0, -6),
-                        textcoords="offset points")
+                        (0.5 * (T_lim + T.max()), 0.02),
+                        ha="center", va="bottom", fontsize=8.0, color="0.35",
+                        xycoords=("data", "axes fraction"), xytext=(0, 2),
+                        textcoords="offset points", bbox=MASK)
         ax.axvline(T_ref, color="0.45", lw=0.9, ls=(0, (1, 2.5)), zorder=1)
 
     ax = axes[0]
@@ -803,14 +805,14 @@ def cycle_vs_Tm(rows_autoP, rows_fixedP, case, axes=None, figsize=(13.2, 4.3)):
     ax.annotate(rf"optimum {T[i_opt]:.0f} $^\circ$C" "\n"
                 rf"$\eta_\mathrm{{ORC}}\,$COP$\,={prod[i_opt]:.4f}$",
                 (T[i_opt], prod[i_opt]), textcoords="offset points",
-                xytext=(10, -26), fontsize=8.4)
+                xytext=(-4, -30), fontsize=8.4, bbox=MASK)
     j = int(np.argmin(np.abs(T - T_ref)))
     ax.plot([T[j]], [prod[j]], "s", ms=5, mfc="white", mec="0.35", mew=1.3,
             zorder=5)
     ax.annotate(rf"reference {T_ref:.0f} $^\circ$C, {prod[j]:.4f}"
                 "\n" rf"({100 * (prod[i_opt] / prod[j] - 1):+.1f} % to optimum)",
-                (T[j], prod[j]), textcoords="offset points", xytext=(-26, -40),
-                fontsize=8.4, ha="left")
+                (T[j], prod[j]), textcoords="offset points", xytext=(-58, -52),
+                fontsize=8.4, ha="left", bbox=MASK)
     shade(ax)
     axb = ax.twinx()
     axb.plot(T, Pb, color="#9c27a0", lw=1.3, ls=(0, (4, 2)))
