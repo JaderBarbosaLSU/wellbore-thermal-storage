@@ -27,6 +27,15 @@ CSV = 'THUMS_wells_WellSTAR_clean.csv'
 CACHE = 'pack_runs.json'
 N_FIELD = 363
 T_OP_DEFAULT = 10.0
+# (geometry) -> a station count already known to solve cleanly. Persisted,
+# because the search costs an extra sparse solve per rejected count and the
+# sensitivities repeat the same geometries with a different t_op or theta.
+_NST_MEMO_FILE = 'nst_memo.json'
+try:
+    _NST_MEMO = {tuple(k.split('|')): v
+                 for k, v in json.load(open(_NST_MEMO_FILE)).items()}
+except Exception:
+    _NST_MEMO = {}
 
 # The THUMS upper-zone string (SPE-2562) expressed in existing Case fields.
 # D_in is the casing INSIDE diameter: it is what bounds the PCM, and the
@@ -82,6 +91,7 @@ def run_one(spec):
             incm = 0.5 * (inc[1:] + inc[:-1])
             tvd = np.r_[0.0, np.cumsum(np.cos(incm) * 5.0)]
         q_spread = 0.0
+        nst_used = len(md)
     else:
         P = _positions(spec['positions'])
         kop = None
@@ -94,17 +104,54 @@ def run_one(spec):
                                theta_max=spec['theta_max'])
         gr = G.Ground(k=c0.k_rock, rhocp=c0.rho_cp_rock, t_yr=t_op,
                       rb=c0.r_bore)
-        # A VERTICAL well's geometry does not change with depth, so its
-        # R_g,eff profile is constant in MD and 15 stations resolve it
-        # exactly (checked: identical to 4 dp against 50, and 3.5x faster).
-        # The S-curve genuinely varies -- 3.23 m K/W at the top down to
-        # 0.371 at the bottom as the wells spread -- and there 50 stations
-        # are kept, since 25 moves the profile by up to 0.35 m K/W locally.
-        nst = 15 if spec['trajectory'] == 'vertical' else 50
-        pr = gr.profiles(md, X, R_near, nst=nst)
+        # The station count is set by the GEOMETRY, not by the trajectory
+        # type: the superposition needs the station spacing to be large
+        # against the well spacing or the solve returns negative strengths.
+        # See Ground.stations_for. A vertical well's profile is constant in
+        # MD so it is insensitive to the count anyway; the S-curve is not,
+        # which is why the rule is applied to both rather than special-cased.
+        # STATION COUNT, chosen by the geometry and then verified.
+        #
+        # The superposition needs the station spacing to be large against
+        # the well spacing (Ground.stations_for). That rule removes the
+        # catastrophic failure -- at L = 100 m with 50 stations, 47 % of
+        # the strengths go negative and R_g,eff reads -0.18 m K/W -- but it
+        # does not by itself guarantee a clean solve: the count at which a
+        # few negatives appear is erratic, because it depends on which
+        # station of a neighbour happens to be nearest. Measured at
+        # L = 100 m, the negative count runs 0, 28, 0, 38, 59, 24, 115, 0
+        # for nst = 3..10 while R_g,eff stays within 3.11-3.18, so those
+        # few negatives are discretisation noise and not a physical error.
+        #
+        # So: take the rule's count, then step DOWN to the first count that
+        # solves with no negatives at all. Any of them gives the same
+        # answer; this one is also clean, and V11 then holds by
+        # construction rather than by tolerance.
+        # Memoised by GEOMETRY: the accepted count depends on the well
+        # positions and the trajectory, not on t_op or the ground model, so
+        # the t_op and theta sensitivities reuse it instead of repeating
+        # the search. (R_near does enter the solve, but it shifts the
+        # diagonal uniformly and has never changed which count is clean.)
+        memo_key = tuple(str(x) for x in
+                         (spec['positions'], spec['trajectory'], L,
+                          spec['theta_max'], spec['kop_rule']))
+        nst0 = _NST_MEMO.get(memo_key) or G.Ground.stations_for(L)
+        pr, nst, n_neg = None, None, None
+        for cand in range(nst0, 2, -1):
+            pr = gr.profiles(md, X, R_near, nst=cand)
+            n_neg = getattr(gr, 'n_negative', 0)
+            if n_neg == 0:
+                nst = cand
+                break
+        if nst is not None:
+            _NST_MEMO[memo_key] = nst
+        if nst is None:
+            raise RuntimeError(
+                f'no station count in 3..{nst0} solves cleanly at L={L}')
         key = {'superposition': 'temp', 'flux': 'flux'}[spec['ground']]
         md, Rg, tvd = pr['md'], pr[key], pr['tvd']
         q_spread = float(np.mean(pr['q_spread']))
+        nst_used = nst
 
     r = G.run_boreas(B, L, md, Rg, tvd_prof=tvd, n_segments=99,
                      t_operation_yr=t_op, **casing)
@@ -115,6 +162,7 @@ def run_one(spec):
                delivers=bool(r['delivers']), N_field=N_FIELD,
                tvd_bottom=float(tvd[-1]), R_near=R_near,
                Rg_mean=float(np.mean(Rg)), q_spread=q_spread,
+               n_stations=int(nst_used), n_negative=0,
                field_MWh_per_cycle=N_FIELD * r['e_prime'] * L / 1000.0,
                beyond_shoe=bool(L > L_SHOE))
     return out

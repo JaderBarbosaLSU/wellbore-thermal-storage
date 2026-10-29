@@ -192,6 +192,29 @@ class Ground:
                 dist.append(np.maximum(d_u, self.rb))
         return st, np.concatenate(rows), np.concatenate(cols), np.concatenate(dist), N
 
+    @staticmethod
+    def stations_for(L, B0=1.65, ratio=10.0, lo=3, hi=50):
+        """How many MD stations the superposition can actually support.
+
+        THE METHOD NEEDS THE STATION SPACING TO BE LARGE COMPARED WITH THE
+        WELL SPACING. Each station is treated as an infinite line source in
+        the plane normal to the trajectory, and that is only meaningful if
+        the station represents a segment much longer than the distance to
+        the neighbouring wells. Violate it and the solve returns NEGATIVE
+        strengths -- wells absorbing heat while hotter than the rock, which
+        cannot happen -- and R_g,eff comes out nonsensical or negative.
+
+        Measured: at L = 100 m with 50 stations the spacing is 2.0 m
+        against a well spacing of 1.65 m, 8565 of 18150 strengths go
+        negative and R_g,eff reads -0.18 m K/W. Cutting to 10 stations
+        (11.1 m, ratio 6.7) gives no negatives and 3.16; 5 and 3 stations
+        give 3.17 and 3.16, so the answer is converged once the ratio is
+        respected. The old fixed nst=50 was silently wrong for every
+        trajectory shorter than about 800 m.
+        """
+        import math
+        return int(min(hi, max(lo, math.floor(L / (ratio * B0)) + 1)))
+
     def profiles(self, md, X, R_near, nst=50, perimeter=None):
         """Field-mean R_g,eff(MD) for 'flux' and 'temp' (and 'per' if given)."""
         st, r, c, d, N = self.pairs(md, X, nst)
@@ -204,6 +227,11 @@ class Ground:
         # equal temperature: (R_near + self + G) q = 1
         A = (G + G.T) * 0.5 + sp.identity(M) * (R_near + self_t)
         q = spla.spsolve(A.tocsc(), np.ones(M)).reshape(N, nst)
+        # V11: every solved strength must be positive. All wells sit at the
+        # same temperature and all are hotter than the far field, so every
+        # one of them rejects heat; a negative q is the discretisation
+        # failing, not a result. Recorded so the caller can assert on it.
+        self.n_negative = int((q < 0).sum())
         temp = 1.0 / q.mean(0) - R_near
         out = dict(md=st, flux=np.maximum(flux, self.Rg), temp=np.maximum(temp, self.Rg),
                    flux_raw=flux, temp_raw=temp, q_spread=q.std(0) / q.mean(0),
