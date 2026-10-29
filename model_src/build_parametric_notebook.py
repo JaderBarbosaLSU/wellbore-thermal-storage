@@ -86,6 +86,44 @@ for name, g, fx in GRIDS:
 
 cells.append(md(r"""
 ---
+## 0.1 The inputs — **the grids live in `arr.py`, above**
+
+This notebook has no design point of its own: the base case is
+`BOREAS_model.ipynb`'s, and what it varies are the **grid axes** and the
+**field arrangement**, both defined in the `arr.py` cell above. To change a
+sweep, edit that cell and re-run from it.
+
+One thing to know before you do: a changed axis is a set of **new cache
+keys**, so the points are recomputed at about 30 s each. Widening a 6×6 map
+by one row is six evaluations, three minutes. Replacing an axis wholesale
+is a new map and an hour.
+"""))
+
+cells.append(code(r"""
+print('GRID AXES (edit in the arr.py cell above)\n')
+for name, ax in (('T_m / C            ', arr.TM),
+                 ('DT_3C_2C / K       ', arr.DG),
+                 ('L / ft             ', arr.LW),
+                 ('N_lay              ', arr.NL),
+                 ('n_ft               ', arr.NFT),
+                 ('N wells            ', arr.NW),
+                 ('fan half-angle / deg', arr.FA),
+                 ('gradient / K/km    ', arr.GR)):
+    print(f'  {name}  {list(ax)}')
+
+print('\nFIELD ARRANGEMENTS used as `fixed=` by the grids\n')
+for nm, d in (('ARRAY        (maps)', arr.ARRAY),
+              ('ARRAY_NOSEG  (N_lay axis: n_segments varies per point)', arr.ARRAY_NOSEG),
+              ('ARRAY_NOFAN  (theta axis: fan angle varies per point)', arr.ARRAY_NOFAN),
+              ('CONFIG_FIXED (configuration table)', arr.CONFIG_FIXED)):
+    print(f'  {nm}\n      {d}')
+
+print(f'\nspan pinned at SPAN0 = {arr.SPAN0:.3f} K for the N_lay study')
+print(f'{len(arr.CONFIGS)} configurations in the table of section 3')
+"""))
+
+cells.append(md(r"""
+---
 ## 1. How the sweep driver works
 
 Three things in `boreas_sweep.py` are there because of something that went

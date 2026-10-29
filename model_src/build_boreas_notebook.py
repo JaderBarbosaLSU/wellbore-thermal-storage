@@ -301,7 +301,7 @@ perimeter allows, and whichever binds governs.
 """))
 
 cells.append(code(r"""
-cf = B.Case(n_wells_field=1000.0)
+cf = CASE.with_(n_wells_field=1000.0)
 z = np.linspace(0, cf.L_well, 200)
 Bz = B.well_spacing(cf, z)
 Rf = B.formation_resistance(cf, z)
@@ -322,6 +322,132 @@ plt.tight_layout(); plt.show()
 print(f'  shielding factor: {Rf[0]/R_iso:6.0f}x at the top, '
       f'{Rf[-1]/R_iso:5.1f}x at the bottom')
 """))
+
+
+### --------------------------------------------- THE DESIGN POINT
+cells.append(md(r"""
+---
+## 3. The design point — **edit here, nowhere else**
+
+Every parameter you are likely to change lives in the next cell. Nothing
+below it hard-codes a number: each later section starts from `CASE` and
+says, in one visible `.with_(...)`, what it is changing and why.
+
+The split is deliberate:
+
+* **`CASE`** is the well, the material and the plant — what you are
+  building. It says nothing about how many of them there are or how they
+  are arranged on the surface.
+* **`FIELD`** is the arrangement — count, trajectory, packing. It is kept
+  separate because the *same* well gives losses from 0.9 % to 79 %
+  depending only on this, and because the model's defaults here describe an
+  **isolated** well, which is a bound and not a design.
+
+`Case` has 83 fields. The ones written out below are those worth touching;
+the rest keep their defaults, and the audit cell that follows prints
+everything you have changed so nothing hides.
+"""))
+
+cells.append(code(r"""
+# =============================================================================
+#  THE DESIGN POINT.  Edit the numbers HERE -- not in the model cell, and not
+#  in the sections below.  Units are in front of every value.
+# =============================================================================
+CASE = B.Case(
+    # --- PCM and cascade -----------------------------------------------------
+    T_m_C      = 150.0,      # melting temperature of the HOTTEST layer     [C]
+                             #   the cascade is graded with the geotherm, so
+                             #   this layer sits at the BOTTOM of the well
+    h_m        = 380_000.0,  # latent heat of fusion                     [J/kg]
+    k_s        = 0.60,       # solid conductivity                       [W/m/K]
+    k_l        = 0.45,       # liquid conductivity                      [W/m/K]
+    N_lay      = 9,          # cascade layers along the well                [-]
+    DT_3C_2C   = 55.0,       # cascade grading; SPAN = this*(N_lay-1)/N_lay [K]
+                             #   -> 48.889 K.  DT_cascade overrides it if set;
+                             #   setting DT_cascade EQUAL to this is a no-op.
+
+    # --- the well ------------------------------------------------------------
+    L_ft       = 5000.0,     # useful storage length                       [ft]
+    n_ft       = 3,          # fin tubes per well, all downward             [-]
+    num_fins   = 24,         # fins per tube                                [-]
+    fin_L      = 0.0035,     # fin length                                   [m]
+    fin_t      = 0.0015,     # fin thickness                                [m]
+    t_ins      = 0.008,      # DOWNCOMER insulation (the casing is bare)    [m]
+    k_ins      = 0.007,      # downcomer insulation, VIT                [W/m/K]
+    r_casing_o = 0.098,      # casing outer radius                          [m]
+    r_bore     = 0.110,      # drilled hole radius, 7 in                    [m]
+
+    # --- formation -----------------------------------------------------------
+    T_surface_C   = 18.0,    # surface temperature                          [C]
+    grad_K_per_km = 45.0,    # geothermal gradient                       [K/km]
+    k_rock        = 2.5,     # rock conductivity                        [W/m/K]
+    rho_cp_rock   = 2.34e6,  # rock volumetric heat capacity          [J/m3/K]
+    t_operation_yr = 10.0,   # field age at which R_g is evaluated          [yr]
+
+    # --- plant ---------------------------------------------------------------
+    W_dot_el_out = 1000.0,   # net electrical output                      [kWe]
+    t_ch         = 10.0,     # charge duration                               [h]
+    t_dc         = 10.0,     # discharge duration                            [h]
+    T_source_C   = 60.0,     # geothermal source                             [C]
+    T_sink_C     = 20.0,     # heat sink                                     [C]
+    P            = 10.0e5,   # secondary-loop pressure                      [Pa]
+                             #   water saturates at 179.9 C here, which CAPS
+                             #   T_m near 165 C; see section 8.5
+    DT_pinch_ORC = 5.0,      # ORC evaporator pinch                          [K]
+    DT_2H_3C     = 10.0,     # HTHP condenser approach                       [K]
+
+    # --- numerics ------------------------------------------------------------
+    n_segments = 99,         # a MULTIPLE of N_lay, or a layer boundary falls
+                             #   inside a segment and validate_case warns
+)
+
+# =============================================================================
+#  THE FIELD.  How many of that well, and how they are arranged.
+#    trajectory : fan_angle_deg = 0 is a vertical array; > 0 deviates below
+#                 the kickoff, so the spacing grows with depth
+#    packing    : 'disc' a filled circle, 'rows' two straight lines side by
+#                 side per island, 'ring' that double line closed into a loop
+# =============================================================================
+FIELD = dict(
+    n_wells_field = 1000.0,  # wells sharing the formation                  [-]
+    fan_angle_deg = 0.0,     # 0 = vertical array                         [deg]
+    packing       = 'rows',  # 'disc' | 'rows' | 'ring'
+    n_islands     = 4,       # separate clusters                            [-]
+    B_surface_m   = 1.83,    # wellhead spacing, 6 ft                       [m]
+    row_gap_m     = 3.66,    # between the two rows, 12 ft                  [m]
+)
+
+REF = CASE.with_(**FIELD)        # the reference case used throughout
+print('design point set.  REF =  CASE  +  FIELD')
+"""))
+
+cells.append(md(r"""
+### 3.1 What you actually changed
+
+`Case` carries 83 fields and the cell above writes out 30. This prints
+every field of `REF` that differs from the model default, so nothing you
+set — or forgot to set — is invisible.
+"""))
+
+cells.append(code(r"""
+import dataclasses
+base = B.Case()
+diff = [(f.name, getattr(base, f.name), getattr(REF, f.name))
+        for f in dataclasses.fields(base)
+        if getattr(base, f.name) != getattr(REF, f.name)]
+print(f'{len(diff)} field(s) differ from the model defaults:\n')
+print(f"  {'field':18s}{'default':>14}  ->  {'yours':<14}")
+for n, d, v in diff:
+    print(f'  {n:18s}{str(d):>14}  ->  {str(v):<14}')
+
+print('\nvalidate_case on REF:')
+msgs = B.validate_case(REF, verbose=False)
+if not msgs:
+    print('  (clean)')
+for lvl, m in msgs:
+    print(f'  [{lvl}] {m[:100]}')
+"""))
+
 
 # ----------------------------------------------------------------- run
 cells.append(md(r"""
@@ -363,7 +489,7 @@ import numpy as np, pandas as pd
 geo = {}
 for N in (100., 1000.):
     for pk, ni in (('disc', 1), ('rows', 4), ('ring', 4)):
-        cc = B.Case(n_wells_field=N, fan_angle_deg=0., packing=pk, n_islands=ni)
+        cc = CASE.with_(n_wells_field=N, fan_angle_deg=0., packing=pk, n_islands=ni)
         P0 = float(np.atleast_1d(B.field_perimeter(cc, 0.))[0])
         geo[(int(N), pk)] = {'islands': ni, 'P0 [m]': P0,
                              'per well [m]': P0 / N}
@@ -399,7 +525,7 @@ CONFIGS = [
 
 rows = {}
 for lab, kw in CONFIGS:
-    cc = B.Case(n_segments=99, **kw)
+    cc = CASE.with_(**kw)        # CASE, not a fresh Case(): one design point
     r = B.simulate_css_corrected(cc)
     k = B.performance_indices(cc, r)
     rows[lab] = {'loss %': 100 * k['f_formation_loss'],
@@ -478,8 +604,9 @@ convention and $-K(\Delta T)^2$ under a flipped one.
 """))
 
 cells.append(code(r"""
+import dataclasses
 src = open('boreas.py').read()
-r_ok = B.simulate_css_corrected(B.Case(n_segments=99))
+r_ok = B.simulate_css_corrected(REF)
 print(f'{"(uncorrupted)":<28} closure {r_ok["charge"]["closure"]:.2e}   '
       f'clausius {r_ok["charge"]["loss_clausius"]:+.3e}')
 for lab, bad in [
@@ -491,7 +618,7 @@ for lab, bad in [
     assert bad != src, lab
     ns = {}
     exec(compile(bad, 'corrupt', 'exec'), ns)
-    rb = ns['simulate_css_corrected'](ns['Case'](n_segments=99))
+    rb = ns['simulate_css_corrected'](ns['Case'](**dataclasses.asdict(REF)))
     cl, cz = rb['charge']['closure'], rb['charge']['loss_clausius']
     print(f'{lab:<28} closure {cl:.2e} {"FIRES" if cl > 1e-6 else "silent":>6}   '
           f'clausius {cz:+.3e} {"FIRES" if cz < 0 else "silent"}')
@@ -511,7 +638,7 @@ $\eta_{storage}=0.20$ and a loss **larger** than the physical case.
 """))
 
 cells.append(code(r"""
-r0 = B.simulate_css_corrected(B.Case(n_segments=99, k_rock=1e-9))
+r0 = B.simulate_css_corrected(REF.with_(k_rock=1e-9))
 print(f'  k_rock -> 0 : Q_loss {r0["Q_loss_kJ"]:.3e} kJ, '
       f'eta_storage {r0["eta_storage"]:.9f}')
 print(f'  {"PASS" if r0["Q_loss_kJ"] == 0.0 else "FAIL"}'
@@ -542,7 +669,7 @@ across **four islands**, each with its own boundary.
 
 cells.append(code(r"""
 for pk, kw in [('disc', {}), ('rows', dict(n_islands=4))]:
-    cc = B.Case(n_wells_field=1000., fan_angle_deg=0., packing=pk, **kw)
+    cc = CASE.with_(**{**FIELD, 'packing': pk}, **kw)
     P = float(np.atleast_1d(B.field_perimeter(cc, 0.))[0])
     R = float(np.atleast_1d(B.formation_resistance(cc, np.array([0.])))[0])
     print(f'{pk:>6}: perimeter {P:7.0f} m -> {P/1000:.3f} m per well, '
@@ -580,7 +707,7 @@ rows = {}
 for L in (1000., 2000., 3000., 4000.):
     for tag, kw in [('island', dict(n_wells_field=1000., fan_angle_deg=0.)),
                     ('fan 45', dict(n_wells_field=1000.))]:
-        cc = B.Case(n_segments=99, L_ft=L, **kw)
+        cc = CASE.with_(L_ft=L, **kw)
         r = B.simulate_css_corrected(cc)
         k = B.performance_indices(cc, r)
         rows[(tag, L)] = {'loss %': 100*k['f_formation_loss'],
@@ -698,7 +825,7 @@ importlib.reload(BP)
 BP.use_paper_style()
 print('serif resolved to:', BP.active_serif()[0])
 
-ref = B.Case()
+ref = REF
 rank, hp, Tdict = B.cycle_state_points(ref)
 """))
 
@@ -906,7 +1033,7 @@ $\eta_\mathrm{RTE}$ below ground to be almost entirely pumping.
 """))
 
 cells.append(code(r"""
-alt = B.Case(grad_K_per_km=56.5, T_source_C=70.0)
+alt = REF.with_(grad_K_per_km=56.5, T_source_C=70.0)
 rank_a, hp_a, T_a = B.cycle_state_points(alt)
 print(f"T_2d   {Tdict['T_2d'] - 273.15:7.2f} ->{T_a['T_2d'] - 273.15:7.2f} C")
 print(f"T_3e   {rank['T_3e'] - 273.15:7.2f} ->{rank_a['T_3e'] - 273.15:7.2f} C")
@@ -948,13 +1075,10 @@ import pickle, os
 if os.path.exists('rec.pkl'):
     rec = pickle.load(open('rec.pkl', 'rb'))
 else:
-    ref_well = B.Case(n_segments=99, n_wells_field=1000., fan_angle_deg=0.,
-                      packing='rows', n_islands=4)
-    rec = B.simulate_css_corrected(ref_well, record=True)   # ~1 min
+    rec = B.simulate_css_corrected(REF, record=True)   # ~1 min
     pickle.dump(rec, open('rec.pkl', 'wb'))
 
-ref_well = B.Case(n_segments=99, n_wells_field=1000., fan_angle_deg=0.,
-                  packing='rows', n_islands=4)
+ref_well = REF
 A_av = BP.pcm_capacities_A(ref_well)
 dseg, dnode = BP.depth_axis(B, ref_well, 99)
 print(f'depth runs {dseg[0]:.0f} m (index 0, bottom) -> {dseg[-1]:.0f} m (top)')
@@ -1010,12 +1134,9 @@ Video('BOREAS_cycle.mp4', embed=True, width=760)
 
 
 cells.append(code(r"""
-mine = B.Case(
-    n_segments=99,
+mine = REF.with_(
     n_ft=5,                    # more, smaller tubes -> more PCM, more pumping
     grad_K_per_km=56.5,        # central Wilmington, 1949 survey
-    t_operation_yr=10.0,
-    n_wells_field=1000.0,
 )
 for lvl, m in B.validate_case(mine, verbose=False):
     print(f'  [{lvl}] {m}')
