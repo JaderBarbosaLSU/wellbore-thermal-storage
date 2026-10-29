@@ -118,9 +118,135 @@ print(f'\ndefault case: {c.n_ft} fin tubes + 1 downcomer, '
 """))
 
 # --------------------------------------------------------------- geometry
+### --------------------------------------------- THE DESIGN POINT
 cells.append(md(r"""
 ---
-## 2. The hole, in cross-section
+## 2. The design point — **edit here, nowhere else**
+
+Every parameter you are likely to change lives in the next cell. Nothing
+below it hard-codes a number: each later section starts from `CASE` and
+says, in one visible `.with_(...)`, what it is changing and why.
+
+The split is deliberate:
+
+* **`CASE`** is the well, the material and the plant — what you are
+  building. It says nothing about how many of them there are or how they
+  are arranged on the surface.
+* **`FIELD`** is the arrangement — count, trajectory, packing. It is kept
+  separate because the *same* well gives losses from 0.9 % to 79 %
+  depending only on this, and because the model's defaults here describe an
+  **isolated** well, which is a bound and not a design.
+
+`Case` has 83 fields. The ones written out below are those worth touching;
+the rest keep their defaults, and the audit cell that follows prints
+everything you have changed so nothing hides.
+"""))
+
+cells.append(code(r"""
+# =============================================================================
+#  THE DESIGN POINT.  Edit the numbers HERE -- not in the model cell, and not
+#  in the sections below.  Units are in front of every value.
+# =============================================================================
+CASE = B.Case(
+    # --- PCM and cascade -----------------------------------------------------
+    T_m_C      = 150.0,      # melting temperature of the HOTTEST layer     [C]
+                             #   the cascade is graded with the geotherm, so
+                             #   this layer sits at the BOTTOM of the well
+    h_m        = 380_000.0,  # latent heat of fusion                     [J/kg]
+    k_s        = 0.60,       # solid conductivity                       [W/m/K]
+    k_l        = 0.45,       # liquid conductivity                      [W/m/K]
+    N_lay      = 9,          # cascade layers along the well                [-]
+    DT_3C_2C   = 55.0,       # cascade grading; SPAN = this*(N_lay-1)/N_lay [K]
+                             #   -> 48.889 K.  DT_cascade overrides it if set;
+                             #   setting DT_cascade EQUAL to this is a no-op.
+
+    # --- the well ------------------------------------------------------------
+    L_ft       = 5000.0,     # useful storage length                       [ft]
+    n_ft       = 3,          # fin tubes per well, all downward             [-]
+    num_fins   = 24,         # fins per tube                                [-]
+    fin_L      = 0.0035,     # fin length                                   [m]
+    fin_t      = 0.0015,     # fin thickness                                [m]
+    t_ins      = 0.008,      # DOWNCOMER insulation (the casing is bare)    [m]
+    k_ins      = 0.007,      # downcomer insulation, VIT                [W/m/K]
+    r_casing_o = 0.098,      # casing outer radius                          [m]
+    r_bore     = 0.110,      # drilled hole radius, 7 in                    [m]
+
+    # --- formation -----------------------------------------------------------
+    T_surface_C   = 18.0,    # surface temperature                          [C]
+    grad_K_per_km = 45.0,    # geothermal gradient                       [K/km]
+    k_rock        = 2.5,     # rock conductivity                        [W/m/K]
+    rho_cp_rock   = 2.34e6,  # rock volumetric heat capacity          [J/m3/K]
+    t_operation_yr = 10.0,   # field age at which R_g is evaluated          [yr]
+
+    # --- plant ---------------------------------------------------------------
+    W_dot_el_out = 1000.0,   # net electrical output                      [kWe]
+    t_ch         = 10.0,     # charge duration                               [h]
+    t_dc         = 10.0,     # discharge duration                            [h]
+    T_source_C   = 60.0,     # geothermal source                             [C]
+    T_sink_C     = 20.0,     # heat sink                                     [C]
+    P            = 10.0e5,   # secondary-loop pressure                      [Pa]
+                             #   water saturates at 179.9 C here, which CAPS
+                             #   T_m near 165 C; see section 10.5
+    DT_pinch_ORC = 5.0,      # ORC evaporator pinch                          [K]
+    DT_2H_3C     = 10.0,     # HTHP condenser approach                       [K]
+
+    # --- numerics ------------------------------------------------------------
+    n_segments = 99,         # a MULTIPLE of N_lay, or a layer boundary falls
+                             #   inside a segment and validate_case warns
+)
+
+# =============================================================================
+#  THE FIELD.  How many of that well, and how they are arranged.
+#    trajectory : fan_angle_deg = 0 is a vertical array; > 0 deviates below
+#                 the kickoff, so the spacing grows with depth
+#    packing    : 'disc' a filled circle, 'rows' two straight lines side by
+#                 side per island, 'ring' that double line closed into a loop
+# =============================================================================
+FIELD = dict(
+    n_wells_field = 1000.0,  # wells sharing the formation                  [-]
+    fan_angle_deg = 0.0,     # 0 = vertical array                         [deg]
+    packing       = 'rows',  # 'disc' | 'rows' | 'ring'
+    n_islands     = 4,       # separate clusters                            [-]
+    B_surface_m   = 1.83,    # wellhead spacing, 6 ft                       [m]
+    row_gap_m     = 3.66,    # between the two rows, 12 ft                  [m]
+)
+
+REF = CASE.with_(**FIELD)        # the reference case used throughout
+print('design point set.  REF =  CASE  +  FIELD')
+"""))
+
+cells.append(md(r"""
+### 2.1 What you actually changed
+
+`Case` carries 83 fields and the cell above writes out 30. This prints
+every field of `REF` that differs from the model default, so nothing you
+set — or forgot to set — is invisible.
+"""))
+
+cells.append(code(r"""
+import dataclasses
+base = B.Case()
+diff = [(f.name, getattr(base, f.name), getattr(REF, f.name))
+        for f in dataclasses.fields(base)
+        if getattr(base, f.name) != getattr(REF, f.name)]
+print(f'{len(diff)} field(s) differ from the model defaults:\n')
+print(f"  {'field':18s}{'default':>14}  ->  {'yours':<14}")
+for n, d, v in diff:
+    print(f'  {n:18s}{str(d):>14}  ->  {str(v):<14}')
+
+print('\nvalidate_case on REF:')
+msgs = B.validate_case(REF, verbose=False)
+if not msgs:
+    print('  (clean)')
+for lvl, m in msgs:
+    print(f'  [{lvl}] {m[:100]}')
+"""))
+
+
+
+cells.append(md(r"""
+---
+## 3. The hole, in cross-section
 
 `n_ft` finned tubes and one insulated downcomer, sized so its velocity matches
 theirs. That sizing is the whole reason this geometry costs nothing in
@@ -191,7 +317,7 @@ print(f'  L_tube        {c.L_tube:.0f} m = L_well  <-- not 2x, and that is the p
 # -------------------------------------------------------------- formation
 cells.append(md(r"""
 ---
-## 3. The formation
+## 4. The formation
 
 The thermal circuit from the PCM outward is a series chain, and the terms are
 wildly unequal:
@@ -265,7 +391,7 @@ charge water reaches the bottom before it has given up any heat.
 # ----------------------------------------------------------------- B(z)
 cells.append(md(r"""
 ---
-## 4. $B(z)$ — the field is a cone, not an array
+## 5. $B(z)$ — the field is a cone, not an array
 
 THUMS wellheads sit on **6 ft centres**, 12 ft between double rows, and over
 1200 wells are drilled *directionally* from four islands with drift angles to
@@ -324,135 +450,10 @@ print(f'  shielding factor: {Rf[0]/R_iso:6.0f}x at the top, '
 """))
 
 
-### --------------------------------------------- THE DESIGN POINT
-cells.append(md(r"""
----
-## 3. The design point — **edit here, nowhere else**
-
-Every parameter you are likely to change lives in the next cell. Nothing
-below it hard-codes a number: each later section starts from `CASE` and
-says, in one visible `.with_(...)`, what it is changing and why.
-
-The split is deliberate:
-
-* **`CASE`** is the well, the material and the plant — what you are
-  building. It says nothing about how many of them there are or how they
-  are arranged on the surface.
-* **`FIELD`** is the arrangement — count, trajectory, packing. It is kept
-  separate because the *same* well gives losses from 0.9 % to 79 %
-  depending only on this, and because the model's defaults here describe an
-  **isolated** well, which is a bound and not a design.
-
-`Case` has 83 fields. The ones written out below are those worth touching;
-the rest keep their defaults, and the audit cell that follows prints
-everything you have changed so nothing hides.
-"""))
-
-cells.append(code(r"""
-# =============================================================================
-#  THE DESIGN POINT.  Edit the numbers HERE -- not in the model cell, and not
-#  in the sections below.  Units are in front of every value.
-# =============================================================================
-CASE = B.Case(
-    # --- PCM and cascade -----------------------------------------------------
-    T_m_C      = 150.0,      # melting temperature of the HOTTEST layer     [C]
-                             #   the cascade is graded with the geotherm, so
-                             #   this layer sits at the BOTTOM of the well
-    h_m        = 380_000.0,  # latent heat of fusion                     [J/kg]
-    k_s        = 0.60,       # solid conductivity                       [W/m/K]
-    k_l        = 0.45,       # liquid conductivity                      [W/m/K]
-    N_lay      = 9,          # cascade layers along the well                [-]
-    DT_3C_2C   = 55.0,       # cascade grading; SPAN = this*(N_lay-1)/N_lay [K]
-                             #   -> 48.889 K.  DT_cascade overrides it if set;
-                             #   setting DT_cascade EQUAL to this is a no-op.
-
-    # --- the well ------------------------------------------------------------
-    L_ft       = 5000.0,     # useful storage length                       [ft]
-    n_ft       = 3,          # fin tubes per well, all downward             [-]
-    num_fins   = 24,         # fins per tube                                [-]
-    fin_L      = 0.0035,     # fin length                                   [m]
-    fin_t      = 0.0015,     # fin thickness                                [m]
-    t_ins      = 0.008,      # DOWNCOMER insulation (the casing is bare)    [m]
-    k_ins      = 0.007,      # downcomer insulation, VIT                [W/m/K]
-    r_casing_o = 0.098,      # casing outer radius                          [m]
-    r_bore     = 0.110,      # drilled hole radius, 7 in                    [m]
-
-    # --- formation -----------------------------------------------------------
-    T_surface_C   = 18.0,    # surface temperature                          [C]
-    grad_K_per_km = 45.0,    # geothermal gradient                       [K/km]
-    k_rock        = 2.5,     # rock conductivity                        [W/m/K]
-    rho_cp_rock   = 2.34e6,  # rock volumetric heat capacity          [J/m3/K]
-    t_operation_yr = 10.0,   # field age at which R_g is evaluated          [yr]
-
-    # --- plant ---------------------------------------------------------------
-    W_dot_el_out = 1000.0,   # net electrical output                      [kWe]
-    t_ch         = 10.0,     # charge duration                               [h]
-    t_dc         = 10.0,     # discharge duration                            [h]
-    T_source_C   = 60.0,     # geothermal source                             [C]
-    T_sink_C     = 20.0,     # heat sink                                     [C]
-    P            = 10.0e5,   # secondary-loop pressure                      [Pa]
-                             #   water saturates at 179.9 C here, which CAPS
-                             #   T_m near 165 C; see section 8.5
-    DT_pinch_ORC = 5.0,      # ORC evaporator pinch                          [K]
-    DT_2H_3C     = 10.0,     # HTHP condenser approach                       [K]
-
-    # --- numerics ------------------------------------------------------------
-    n_segments = 99,         # a MULTIPLE of N_lay, or a layer boundary falls
-                             #   inside a segment and validate_case warns
-)
-
-# =============================================================================
-#  THE FIELD.  How many of that well, and how they are arranged.
-#    trajectory : fan_angle_deg = 0 is a vertical array; > 0 deviates below
-#                 the kickoff, so the spacing grows with depth
-#    packing    : 'disc' a filled circle, 'rows' two straight lines side by
-#                 side per island, 'ring' that double line closed into a loop
-# =============================================================================
-FIELD = dict(
-    n_wells_field = 1000.0,  # wells sharing the formation                  [-]
-    fan_angle_deg = 0.0,     # 0 = vertical array                         [deg]
-    packing       = 'rows',  # 'disc' | 'rows' | 'ring'
-    n_islands     = 4,       # separate clusters                            [-]
-    B_surface_m   = 1.83,    # wellhead spacing, 6 ft                       [m]
-    row_gap_m     = 3.66,    # between the two rows, 12 ft                  [m]
-)
-
-REF = CASE.with_(**FIELD)        # the reference case used throughout
-print('design point set.  REF =  CASE  +  FIELD')
-"""))
-
-cells.append(md(r"""
-### 3.1 What you actually changed
-
-`Case` carries 83 fields and the cell above writes out 30. This prints
-every field of `REF` that differs from the model default, so nothing you
-set — or forgot to set — is invisible.
-"""))
-
-cells.append(code(r"""
-import dataclasses
-base = B.Case()
-diff = [(f.name, getattr(base, f.name), getattr(REF, f.name))
-        for f in dataclasses.fields(base)
-        if getattr(base, f.name) != getattr(REF, f.name)]
-print(f'{len(diff)} field(s) differ from the model defaults:\n')
-print(f"  {'field':18s}{'default':>14}  ->  {'yours':<14}")
-for n, d, v in diff:
-    print(f'  {n:18s}{str(d):>14}  ->  {str(v):<14}')
-
-print('\nvalidate_case on REF:')
-msgs = B.validate_case(REF, verbose=False)
-if not msgs:
-    print('  (clean)')
-for lvl, m in msgs:
-    print(f'  [{lvl}] {m[:100]}')
-"""))
-
-
 # ----------------------------------------------------------------- run
 cells.append(md(r"""
 ---
-## 5. Run it
+## 6. Run it
 
 `n_wells_field=None` is the **isolated well** --- the conservative bound,
 and the v1.3 default. It is not a pessimistic estimate of the real loss; it
@@ -589,7 +590,7 @@ separate calculation and are labelled as such in the paper.
 
 cells.append(md(r"""
 ---
-## 6. The gates, watched to fail
+## 7. The gates, watched to fail
 
 A check that has never been seen to fail is not evidence. Both of these were
 corrupted deliberately, and the second exists *because* the first was silent.
@@ -648,7 +649,7 @@ print(f'  {"PASS" if r0["Q_loss_kJ"] == 0.0 else "FAIL"}'
 # ------------------------------------------------------------- playground
 cells.append(md(r"""
 ---
-## 6b. Packing is not spacing
+## 7b. Packing is not spacing
 
 `field_radius` in v1.0--v1.2 turned a well count and a spacing into a
 footprint the obvious way, $R_0 = B_0\sqrt{N/\pi}$ --- a compact disc. The
@@ -669,7 +670,7 @@ across **four islands**, each with its own boundary.
 
 cells.append(code(r"""
 for pk, kw in [('disc', {}), ('rows', dict(n_islands=4))]:
-    cc = CASE.with_(**{**FIELD, 'packing': pk}, **kw)
+    cc = CASE.with_(**{**FIELD, 'packing': pk, **kw})
     P = float(np.atleast_1d(B.field_perimeter(cc, 0.))[0])
     R = float(np.atleast_1d(B.formation_resistance(cc, np.array([0.])))[0])
     print(f'{pk:>6}: perimeter {P:7.0f} m -> {P/1000:.3f} m per well, '
@@ -679,7 +680,7 @@ for pk, kw in [('disc', {}), ('rows', dict(n_islands=4))]:
 # ------------------------------------------------------- depth sweep
 cells.append(md(r"""
 ---
-## 7. How deep should the storage go?
+## 8. How deep should the storage go?
 
 The 2014 Oxy drilling deck settles the geometry this model was abstracting.
 THUMS wellheads sit on **6 ft centres** in double rows, and the wells are
@@ -754,7 +755,7 @@ support of order **30 MWe** — if every one of them were converted.
 
 cells.append(md(r"""
 ---
-## 8. Change something
+## 9. Change something
 
 Every parameter is a field of `Case`. The ones BOREAS adds:
 
@@ -777,7 +778,7 @@ freeze.
 ### ------------------------------------------------- 8. cycle diagrams
 cells.append(md(r"""
 ---
-## 8. The surface cycles: $T$--$s$ diagrams and state points
+## 10. The surface cycles: $T$--$s$ diagrams and state points
 
 The borehole model and the plant models meet at the water loop, and the only
 quantity the store sets is $T_\mathrm{2d}$, the temperature of the water
@@ -830,7 +831,7 @@ rank, hp, Tdict = B.cycle_state_points(ref)
 """))
 
 cells.append(md(r"""
-### 8.1 The two cycles side by side
+### 10.1 The two cycles side by side
 """))
 
 cells.append(code(r"""
@@ -840,7 +841,7 @@ fig.show()
 """))
 
 cells.append(md(r"""
-### 8.2 Both on one axes, with the water levels
+### 10.2 Both on one axes, with the water levels
 
 This is the coupling diagram. The two cycles never exchange working fluid ---
 they exchange *water* --- so the horizontal dotted lines are the only thing
@@ -860,7 +861,7 @@ fig.show()
 """))
 
 cells.append(md(r"""
-### 8.2b The water on the $T$--$s$ diagram, with every pinch marked
+### 10.2b The water on the $T$--$s$ diagram, with every pinch marked
 
 The horizontal lines above are *inlet temperatures*. They say where the water
 starts, not what it does, and a pinch cannot be read off them. The water
@@ -902,7 +903,7 @@ nearly parallel to it, offset by the storage approach: that offset is the
 round trip through the PCM, and it is the only part of this figure the
 borehole model can move.
 
-### 8.2c One panel per exchanger
+### 10.2c One panel per exchanger
 
 Four exchangers in four corners of the diagram; overlaying them all makes a
 figure in which no individual pinch can be read. Each panel below carries the
@@ -930,7 +931,7 @@ fig.show()
 """))
 
 cells.append(md(r"""
-### 8.3 ORC evaporator composite curves: the pinch is *interior*
+### 10.3 ORC evaporator composite curves: the pinch is *interior*
 
 This is the figure that explains the gap. The water glides down from
 $T_\mathrm{2d}$ to $T_\mathrm{3d}$ as a nearly straight sensible line; the
@@ -977,7 +978,7 @@ is read off the assembled composite instead of re-derived --- re-deriving it
 is how the marker ends up a few points away from the pinch it is supposed to
 coincide with.
 
-### 8.3b Look at the gap between $T_\mathrm{2d}$ and $3\mathrm{e}$
+### 10.3b Look at the gap between $T_\mathrm{2d}$ and $3\mathrm{e}$
 
 In the reference case the store delivers water at $T_\mathrm{2d}$ but the ORC
 evaporates well below it. Which constraint is binding is reported by the model
@@ -1002,7 +1003,7 @@ print(f"eta_ORC                           {rank['rank_eff']:8.4f}"
 """))
 
 cells.append(md(r"""
-### 8.4 State points and the scalar summary
+### 10.4 State points and the scalar summary
 """))
 
 cells.append(code(r"""
@@ -1013,7 +1014,14 @@ st.to_csv('BOREAS_state_points.csv')
 # h is kJ/kg in the model's dictionaries while s is J/kg/K. The mixed units
 # are the model's; state_table converts s and leaves h alone. Do not "fix"
 # this by dividing h -- that was a real error earlier in this work.
-print(st.to_latex(float_format='%.3f'))
+# to_latex routes through the Styler in pandas 2.x and wants
+# jinja2 >= 3.1.2. Degrade instead of crashing the notebook on a stack that
+# has an older one.
+try:
+    print(st.to_latex(float_format='%.3f'))
+except ImportError as e:
+    print(f'(to_latex unavailable: {e})\n')
+    print(st.to_string())
 """))
 
 cells.append(code(r"""
@@ -1021,7 +1029,7 @@ display(BP.cycle_summary(rank, hp))
 """))
 
 cells.append(md(r"""
-### 8.5 What actually moves the cycles
+### 10.5 What actually moves the cycles
 
 Worth running before assuming otherwise. The geothermal source temperature
 moves the **COP** --- it sets the heat-pump lift --- and *nothing on the ORC
@@ -1044,7 +1052,7 @@ print(f"COP    {hp['hp_cop']:7.4f} ->{hp_a['hp_cop']:7.4f}")
 ### ------------------------------------------- 9. well profiles
 cells.append(md(r"""
 ---
-## 9. Thermal behaviour along the well
+## 11. Thermal behaviour along the well
 
 The figures above are about the surface machines. These are about the store
 itself, and they need a RECORDED march:
@@ -1119,7 +1127,7 @@ fig.tight_layout(); fig.show()
 """))
 
 cells.append(md(r"""
-### 9.1 Animation of the full cycle
+### 11.1 Animation of the full cycle
 
 Charge then discharge, three panels, with the frames resampled onto a
 **uniform** time grid --- the march records on a roughly logarithmic one,
