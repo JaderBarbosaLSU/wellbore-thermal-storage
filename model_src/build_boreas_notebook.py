@@ -755,6 +755,93 @@ support of order **30 MWe** — if every one of them were converted.
 
 cells.append(md(r"""
 ---
+## 8b. Grissom Island: packing $\times$ angle $\times$ kickoff
+
+The baseline above is the whole THUMS field. **Grissom** is the largest
+island on its own: about 350 wells in a single double row, 6 ft between
+adjacent wells and 12 ft between the rows.
+
+Three factors describe the arrangement, and they are not interchangeable:
+
+| factor | levels | what it controls |
+|---|---|---|
+| `packing` | rows, disc | the plan view of the wellheads |
+| `fan_angle_deg` | 0, 15, 30, 45, 60 | how fast the wells diverge below the kickoff |
+| `z_kickoff_m` | 150, 300, 600, 1200 m | from what depth they diverge |
+
+The last two **interact**, which is why they are crossed rather than swept
+one at a time: at $\theta = 0$ the kickoff cannot matter, and at large
+$\theta$ it is most of the answer.
+
+**One island is not a smaller version of four.** For a double row
+$P_0 \approx N B_0 + 2 w_\mathrm{row}$, so the perimeter *per well* tends
+to $B_0$ whatever $N$ is: 1.851 m for Grissom against 1.859 m for the whole
+four-island field, a 0.4 % difference. A disc, by contrast, goes as
+$1/\sqrt{N}$, so shrinking the field *hurts* the disc and leaves the rows
+alone. The disc-to-rows ratio falls from 9.1 at 1000 wells to 5.3 at 350.
+"""))
+
+cells.append(code(r"""
+import itertools, pandas as pd
+GRISSOM = dict(n_wells_field=350.0, n_islands=1,
+               B_surface_m=1.83, row_gap_m=3.66)   # 6 ft and 12 ft
+THETA = (0., 15., 30., 45., 60.)
+ZKOP  = (150., 300., 600., 1200.)
+
+doe = {}
+for pk, th, zk in itertools.product(('rows', 'disc'), THETA, ZKOP):
+    cc = CASE.with_(packing=pk, fan_angle_deg=th, z_kickoff_m=zk, **GRISSOM)
+    r = B.simulate_css_corrected(cc)
+    k = B.performance_indices(cc, r)
+    doe[(pk, th, zk)] = {'loss %': 100 * k['f_formation_loss'],
+                         'eta_RTE': k['eta_RTE'],
+                         'wells/MWe': k['wells_per_MWe']}
+    print(f'  {pk:5s} theta={th:4.0f} z_kop={zk:6.0f}  '
+          f"loss {doe[(pk, th, zk)]['loss %']:5.1f} %", flush=True)
+
+df = pd.DataFrame(doe).T
+df.index.names = ['packing', 'theta', 'z_kop']
+display(df.round(4))
+"""))
+
+cells.append(code(r"""
+# loss as a table per packing, and the invariance that must hold
+for pk in ('rows', 'disc'):
+    print(f'\nLOSS [%]  packing = {pk}')
+    print('  z_kop \\ theta' + ''.join(f'{t:>8.0f}' for t in THETA))
+    for zk in ZKOP:
+        print(f'  {zk:>8.0f} m  ' +
+              ''.join(f"{doe[(pk, t, zk)]['loss %']:>8.1f}" for t in THETA))
+
+print('\nCHECK -- at theta = 0 nothing diverges, so the kickoff cannot matter:')
+for pk in ('rows', 'disc'):
+    v = [doe[(pk, 0., zk)]['loss %'] for zk in ZKOP]
+    print(f'  {pk:5s} {[round(x, 3) for x in v]}   spread {max(v)-min(v):.2e} %')
+"""))
+
+cells.append(md(r"""
+Three things come out of it.
+
+**At $\theta = 0$ Grissom alone is the whole field.** The rows case gives
+7.9 % loss, the same as the four-island 1000-well array, because the
+per-well perimeter of a double row does not depend on how many wells are in
+it. If the storage is confined to vertical wells, the island count is not a
+design variable.
+
+**Once the wells deviate, the kickoff dominates the packing.** At
+$\theta = 60^\circ$ in rows the loss runs from 70.6 % at a 150 m kickoff to
+21.0 % at 1200 m — a bigger swing than disc-against-rows produces at any
+fixed geometry. A deep kickoff keeps the store inside the tightly spaced
+section, which is the whole mechanism.
+
+**The disc advantage shrinks with the field.** At 350 wells the vertical
+disc loses 1.6 % against 0.9 % for 1000 wells, because disc perimeter per
+well goes as $1/\sqrt{N}$ while the rows figure is pinned near $B_0$. The
+compact packing is a large-field idealisation in more ways than one.
+"""))
+
+cells.append(md(r"""
+---
 ## 9. Change something
 
 Every parameter is a field of `Case`. The ones BOREAS adds:

@@ -88,3 +88,26 @@ CONFIGS += [
 ]
 
 CONFIG_FIXED = dict(n_segments=99)
+
+# ---- Grissom Island DOE ------------------------------------------------
+# The largest THUMS island on its own: ~350 wells in a single double row,
+# 6 ft between adjacent wells and 12 ft between the two rows.
+#
+# Note on scale: for a double row P0 ~ N*B0 + 2*gap, so the perimeter PER
+# WELL tends to B0 whatever N is -- 1.851 m here against 1.859 m for the
+# whole four-island field. The island count was never the lever. Disc, by
+# contrast, goes as 1/sqrt(N), so the disc-to-rows ratio FALLS from 9.1x at
+# 1000 wells to 5.3x at 350.
+GRISSOM = dict(n_wells_field=350.0, n_islands=1,
+               B_surface_m=1.83, row_gap_m=3.66)
+
+DOE_PACKING = ('rows', 'disc')
+DOE_THETA = (0, 15, 30, 45, 60)          # deg; 0 is the vertical array
+DOE_ZKOP = (150., 300., 600., 1200.)     # m; storage interval is 0-1524 m
+
+# theta = 0 is invariant to the kickoff, so eight of these forty points are
+# physically redundant. They are run anyway: reproducing that invariance is
+# a check on field_radius, and costs four minutes.
+DOE_GRISSOM = [dict(packing=pk, fan_angle_deg=float(th), z_kickoff_m=zk)
+               for pk in DOE_PACKING for th in DOE_THETA for zk in DOE_ZKOP]
+DOE_FIXED = dict(n_segments=99, **GRISSOM)
