@@ -37,7 +37,7 @@ Latent-heat storage in repurposed oil-and-gas wells. **A new series, not a new
 version of P2H2P/THUMS** — that model is frozen at v0.16 and still runs; its
 notebook is untouched.
 
-*v1.3 · built {STAMP}*
+*v1.4 · built {STAMP}*
 
 ---
 
@@ -456,7 +456,7 @@ cells.append(md(r"""
 ## 6. Run it
 
 `n_wells_field=None` is the **isolated well** --- the conservative bound,
-and the v1.3 default. It is not a pessimistic estimate of the real loss; it
+and the v1.4 default. It is not a pessimistic estimate of the real loss; it
 is a different configuration, and one nobody would build.
 
 **What the four words mean.** Two of them describe the *trajectories*, two
@@ -472,6 +472,22 @@ the *plan view* of the wellheads:
 
 So *array* and *fan* are alternatives, and *disc*, *rows* and *ring* are
 alternatives; every field case is one of each.
+
+**v1.4 reports whether the store actually delivers.** Until v1.3
+`simulate_css` stored `abs(Q_cum_J)` for the discharge. The march returns
+heat *into* the store, so a delivering discharge is negative and the sign
+flip was all that was wanted --- but `abs()` also turned a store that
+*absorbs* on discharge into one that appears to deliver. That happens
+whenever $\overline{T}_\mathrm{2d} < T_\mathrm{3d}$, i.e. isolated wells
+shorter than about 700 m: an isolated 300 m well integrates to
+$+8.7\times10^{7}$ J/m at 85.5 $^\circ$C against 91.1 $^\circ$C.
+
+The value is now signed, `delivers` is reported in the table below, and
+$e'$ and $\eta_\mathrm{RTE}$ are zeroed when it is False while the loss is
+reported as computed --- 108.7 % for that well, which `abs()` had been
+hiding. **No result in this notebook moves**: every configuration here is
+shielded or long enough to deliver, so the integral was already negative
+and `abs()` was inert. The reference is bit-identical.
 
 **Packing must be named explicitly, and that is not decoration.** The model
 default is `packing='disc'`, which *minimises* perimeter for a given well
@@ -534,7 +550,8 @@ for lab, kw in CONFIGS:
                  'eta_RTE': k['eta_RTE'],
                  'eps_cycled': k['eps_cycled'],
                  'wells/MWe': k['wells_per_MWe'],
-                 'T_2d [C]': r['T_2d_realised'] - 273.15}
+                 'T_2d [C]': r['T_2d_realised'] - 273.15,
+                 'delivers': k['delivers']}
     print(f'  {lab:26s} loss {rows[lab]["loss %"]:5.1f} %', flush=True)
 display(pd.DataFrame(rows).T.round(4))
 """))
