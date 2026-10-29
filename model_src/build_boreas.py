@@ -17,7 +17,7 @@ import pathlib
 import subprocess
 import sys
 
-VERSION = "1.3"
+VERSION = "1.4"
 SERIES = "BOREAS"
 
 HERE = pathlib.Path(__file__).parent

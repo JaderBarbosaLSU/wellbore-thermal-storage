@@ -2670,7 +2670,15 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False, T_2d=None):
     for k in range(n_cycles):
         ch, dc = cycle(E)
         Q_ch = ch["Q_cum_J"] * case.n_ft * N / 1000.0          # kJ, field
-        Q_dc = abs(dc["Q_cum_J"]) * case.n_ft * N / 1000.0
+        # SIGNED, not abs(). The march returns heat INTO the store, so a
+        # delivering discharge is negative and the sign flip is all that is
+        # wanted. abs() instead reports a store that ABSORBS on discharge --
+        # which happens whenever T_2d < T_3d, i.e. isolated wells shorter
+        # than ~700 m -- as though it had delivered, and every downstream
+        # quantity inherits the lie (e', RTE, and eta_storage = 1 - loss
+        # with loss > 1). Verified: an isolated 300 m well integrates to
+        # +8.7e7 J/m with T_2d = 85.5 C against T_3d = 91.1 C.
+        Q_dc = -dc["Q_cum_J"] * case.n_ft * N / 1000.0
         drift = float(np.max(np.abs(dc["E"][::-1] - E)))
         history.append(dict(cycle=k + 1, Q_charge_kJ=Q_ch, Q_discharge_kJ=Q_dc,
                             drift=drift,
@@ -2705,6 +2713,9 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False, T_2d=None):
         cycles=len(history), converged=history[-1]["drift"] < tol, tol=tol,
         history=history, charge=ch, discharge=dc, E_css=E,
         Q_charge_kJ=Q_ch, Q_discharge_kJ=Q_dc, required_kJ=req,
+        # Does the store actually give heat back? Both conditions, because
+        # either alone can be satisfied by a store that does not.
+        delivers=bool(T_2d_realised > T["T_3d"] and Q_dc > 0.0),
         deviation=deviation,
         W_el_out_implied=case.W_dot_el_out * (1.0 + deviation),
         # ---- THE NUMBER THAT WAS 1.0000 BY CONSTRUCTION ------------------
@@ -3186,7 +3197,8 @@ def performance_indices(case, r):
     dE_therm = r["Q_discharge_kJ"] / 3600.0 / N          # kWh per well
     out = dict(
         eta_T=eta_T, eta_T_eff=eta_T_eff,
-        eta_RTE=eta_RTE, eps_RTE=eta_RTE * eps_cycled,
+        eta_RTE=(eta_RTE if r.get("delivers", True) else 0.0),
+        eps_RTE=((eta_RTE * eps_cycled) if r.get("delivers", True) else 0.0),
         eps_cycled=eps_cycled,
         # ---- THE SCALE-FREE NUMBER --------------------------------------
         # Deliverable electricity per metre of well per cycle. This is the
@@ -3205,7 +3217,14 @@ def performance_indices(case, r):
         # model is exactly linear in plant size (a 4x plant gives 4.0000x
         # the wells and bit-identical per-well numbers), so the plant size
         # cancels out of every per-well and per-metre quantity.
-        kWh_per_m_well=dE_therm * eta_T_eff / case.L_well,
+        # Zeroed when the store does not deliver (section 1.4 of the v0.2
+        # handoff): a non-delivering store has no electricity per metre and
+        # no round trip, and reporting the signed numbers instead invites
+        # them to be averaged into a sweep as though they were small
+        # positives. The loss is still reported as computed.
+        kWh_per_m_well=(dE_therm * eta_T_eff / case.L_well
+                        if r.get("delivers", True) else 0.0),
+        delivers=bool(r.get("delivers", True)),
         eta_storage=r["eta_storage"],
         Q_loss_kJ=Q_loss, f_formation_loss=f_loss,
         Q_bypass_ch_kJ=dc_ch, Q_bypass_dc_kJ=dc_dc, f_bypass=f_bypass,
