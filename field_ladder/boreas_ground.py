@@ -294,3 +294,114 @@ def run_boreas(B, L, md_prof, Rg_prof, tvd_prof=None, n_segments=99, **case_kw):
                 eta_storage=k["eta_storage"], e_prime=k["kWh_per_m_well"],
                 E_out_kWh=E_out, E_in_kWh=E_in, T2d_C=r["T_2d_realised"] - 273.15,
                 N_wells_1MW=Nw, R_near=R_near)
+
+
+# ======================================================================
+#  Making the measured field the DEFAULT, not an add-on.
+#
+#  A notebook declares the field once and every later cell -- profiles,
+#  animation, parametric studies -- inherits it. Without this the
+#  idealised R_field(z) leaks back in wherever someone calls
+#  simulate_css_corrected directly, which is most places.
+# ======================================================================
+from contextlib import contextmanager as _ctx
+
+
+def reference_field(B, case, csv, island='Grissom', trajectory='s_curve',
+                    kop_rule='staggered', theta_max=55.0, kop_ft=300.0,
+                    L_md=None, verbose=True):
+    """Positions, trajectories and R_g,eff(MD) for the design point.
+
+    Returns (md, Rg, tvd, info). Hand the first three to `field_ground`.
+
+    Station counts stride GEOMETRICALLY: stepping down one at a time from
+    50 costs ~26 sparse solves at L = 1250 m, slower than the march it
+    feeds, and the clean counts are scattered anyway.
+    """
+    import numpy as _np
+    L = float(L_md if L_md is not None else case.L_well)
+    if island != 'Grissom':
+        raise ValueError(f'no slot data for island {island!r}')
+    P = grissom_positions(csv)
+    kop = None
+    if trajectory == 's_curve':
+        kop = (staggered_kop(P)[0] if kop_rule == 'staggered'
+               else _np.full(len(P), kop_ft * FT))
+    md, X = trajectories(P, L, kind=trajectory, kop=kop, theta_max=theta_max)
+    R_near = float(_np.atleast_1d(
+        B.formation_resistance(case, _np.array([0.0])))[0]
+        - B.ground_resistance(case))
+    gr = Ground(k=case.k_rock, rhocp=case.rho_cp_rock,
+                t_yr=case.t_operation_yr, rb=case.r_bore)
+    nst0 = Ground.stations_for(L)
+    cands = sorted({max(3, int(round(nst0 * f)))
+                    for f in (1.0, 0.85, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1)},
+                   reverse=True)
+    pr = nst = None
+    for cand in cands:
+        pr = gr.profiles(md, X, R_near, nst=cand)
+        if getattr(gr, 'n_negative', 0) == 0:
+            nst = cand
+            break
+    if nst is None:
+        raise RuntimeError(f'no clean station count among {cands} at L={L}')
+    info = dict(N=len(P), L_md=L, n_stations=nst, R_near=R_near,
+                Rg_mean=float(_np.mean(pr['temp'])),
+                Rg_top=float(pr['temp'][0]), Rg_bottom=float(pr['temp'][-1]),
+                tvd_bottom=float(pr['tvd'][-1]), island=island,
+                trajectory=trajectory, kop_rule=kop_rule,
+                theta_max=theta_max, positions=P, kop=kop)
+    if verbose:
+        print(f"field: {info['N']} {island} slots, {trajectory}, "
+              f"L = {L:.0f} m MD -> TVD {info['tvd_bottom']:.0f} m")
+        print(f"  R_g,eff {info['Rg_top']:.2f} (top) to "
+              f"{info['Rg_bottom']:.2f} (bottom), mean {info['Rg_mean']:.2f} "
+              f"m K/W over {nst} stations")
+    return pr['md'], pr['temp'], pr['tvd'], info
+
+
+@_ctx
+def field_ground(B, md, Rg, tvd):
+    """Run the model against a measured field, not the idealised R_field(z).
+
+    Patches formation_profile and formation_resistance for the duration, so
+    ANY call inside -- including simulate_css_corrected(record=True), which
+    is what the profile and animation figures need -- sees the
+    superposition resistance and the true vertical depth. Restored on exit
+    even if the body raises.
+    """
+    import numpy as _np
+    fp0, fr0 = B.formation_profile, B.formation_resistance
+    md_a = _np.asarray(md, float)
+    Rg_a = _np.asarray(Rg, float)
+    tvd_a = _np.asarray(tvd, float)
+    x = _np.r_[0.0, md_a]
+    y = _np.r_[0.0, tvd_a]
+    slope = (y[-1] - y[-2]) / (x[-1] - x[-2])
+
+    def _tvd(mdv):
+        mdv = _np.asarray(mdv, float)
+        return _np.where(mdv <= x[-1], _np.interp(mdv, x, y),
+                         y[-1] + slope * (mdv - x[-1]))
+
+    def fprof(c, n_segments=None, discharge=False):
+        n = n_segments or c.n_segments
+        xi = (_np.arange(n) + 0.5) / n
+        mdv = c.L_well * (1.0 - xi)          # charge frame: z = 0 is bottom
+        T = c.T_surface_C + 273.15 + c.grad_K_per_km / 1000.0 * _tvd(mdv)
+        if discharge:
+            return T[::-1].copy(), mdv[::-1].copy()
+        return T, mdv
+
+    def fres(c, depth=None):
+        if depth is None:
+            return fr0(c)
+        rn = float(_np.atleast_1d(fr0(c, _np.array([0.0])))[0]
+                   - B.ground_resistance(c))
+        return rn + _np.interp(_np.asarray(depth, float), md_a, Rg_a)
+
+    B.formation_profile, B.formation_resistance = fprof, fres
+    try:
+        yield
+    finally:
+        B.formation_profile, B.formation_resistance = fp0, fr0
