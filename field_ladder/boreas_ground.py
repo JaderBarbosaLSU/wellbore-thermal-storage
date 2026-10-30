@@ -310,43 +310,54 @@ class Ground:
         rowsum = np.bincount(r, weights=g, minlength=M)
         flux = (self_t + rowsum).reshape(N, nst).mean(0)
         del rowsum
-        # equal temperature: (R_near + self + G_sym) q = 1.
+        # equal temperature: (R_near + G_ii) q + G q = 1.
         #
-        # Assembled in ONE pass rather than as G, then G.T, then their sum.
-        # For the disc at 1250 m every one of the 363 wells is inside the
-        # 80 m cutoff at every station, so at 100 stations there are 13
-        # million entries; holding G and G.T and their sum at once is about
-        # a gigabyte of duplicates and is what killed the convergence run.
-        # Feeding (r, c) and (c, r) at half weight into a single COO gives
-        # exactly (G + G.T)/2 and allocates once.
+        # ASSEMBLED AS IT STANDS. Earlier versions solved
+        # (G + G^T)/2 instead, and that was wrong. G is not symmetric for
+        # inclined wells and has no reason to be: row (i, s) says "the
+        # temperature rise at MY location, on well i at station s, due to
+        # well k", and the nearest point on k from there is at some other
+        # station s'. The reverse entry is about a different target point
+        # and a different distance. Averaging the two mixes rows that are
+        # not about the same place.
+        #
+        # Measured here: ||G - G^T|| / ||G|| is 0.25 at 50 m station
+        # spacing and 0.90 at 25 m. The symmetrized system returns 130
+        # negative strengths at 25 m and 569 at 8 m; the system as
+        # assembled returns NONE at any spacing tested, and its mean
+        # R_g,eff moves under 0.8 % across a fourfold refinement. The
+        # negative strengths were an artifact of the symmetrization, not
+        # of the grid.
+        #
+        # For parallel vertical wells the nearest point IS at the same
+        # depth and the distances are mutual, so G is symmetric there and
+        # the symmetrization was a no-op -- which is why this went unseen.
         A = sp.coo_matrix(
-            (np.concatenate([g * 0.5, g * 0.5,
-                             np.full(M, R_near + self_t)]),
-             (np.concatenate([r, c, np.arange(M, dtype=r.dtype)]),
-              np.concatenate([c, r, np.arange(M, dtype=r.dtype)]))),
+            (np.concatenate([g, np.full(M, R_near + self_t)]),
+             (np.concatenate([r, np.arange(M, dtype=r.dtype)]),
+              np.concatenate([c, np.arange(M, dtype=r.dtype)]))),
             shape=(M, M))
         del g, r, c, d
-        # A is symmetric and strongly diagonally dominant: the diagonal is
-        # R_near + G_ii, about 0.48 m K/W, against off-diagonals that are
-        # E1 of a squared distance and fall off fast. A direct factorisation
-        # is exact but its fill-in is not bounded by the sparsity -- near the
-        # surface an S-curve puts all 363 wells inside the 80 m cutoff, and
-        # at 50 stations SuperLU exhausts 4 GB and the process is killed
-        # outright, with no MemoryError to catch. Above a size where that
-        # starts to bite, solve it iteratively instead: same matrix, same
-        # answer to the tolerance below, memory bounded by the nonzeros.
         b = np.ones(M)
         if M <= _DIRECT_MAX:
             q = spla.spsolve(A.tocsc(), b)
         else:
+            # NOT CG. CG needs a symmetric positive-definite matrix, and
+            # this one is neither symmetric nor diagonally dominant: the
+            # diagonal is R_near + G_ii = 0.567 m K/W against a largest
+            # off-diagonal row sum of 3.73, because near the surface all
+            # 363 wells are inside the 80 m cutoff. BiCGSTAB with a
+            # Jacobi preconditioner, checked against the direct solve
+            # wherever both run.
             Ac = A.tocsr()
             del A
             Mp = spla.LinearOperator(
-                (M, M), matvec=lambda x, d=Ac.diagonal(): x / d)
-            q, info = spla.cg(Ac, b, rtol=1e-12, atol=0.0, maxiter=5000, M=Mp)
+                (M, M), matvec=lambda x, dg=Ac.diagonal(): x / dg)
+            q, info = spla.bicgstab(Ac, b, rtol=1e-12, atol=0.0,
+                                    maxiter=5000, M=Mp)
             if info != 0:
-                raise RuntimeError(f'CG did not converge (info={info}) at '
-                                   f'M={M}')
+                raise RuntimeError(
+                    f'BiCGSTAB did not converge (info={info}) at M={M}')
         q = q.reshape(N, nst)
         # V11: every solved strength must be positive. All wells sit at the
         # same temperature and all are hotter than the far field, so every

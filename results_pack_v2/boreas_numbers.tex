@@ -1,16 +1,19 @@
 % boreas_numbers.tex -- GENERATED. Do not edit, and do not
 % retype any of these into the text: \input this file and use
 % the macros. Regenerate with mknumbers.py.
-% 151 macros, from pack_runs.json
+% 161 macros, from pack_runs.json
 
 \newcommand{\AdiabaticAllWellsPerMWe}{27.9}           
+\newcommand{\AdiabaticCyclesToCSS}{80}              
 \newcommand{\AdiabaticDEch}{3.948}                     
 \newcommand{\AdiabaticDEdc}{3.948}                     
+\newcommand{\AdiabaticEnergyConv}{5.2e-16}               % relative spread of dE_dc over the last 5 cycles
 \newcommand{\AdiabaticEprime}{0.4335}                   
 \newcommand{\AdiabaticEtaORC}{0.1462}                   % adiabatic: eta_ORC
 \newcommand{\AdiabaticEtaRTE}{0.3212}                   % adiabatic: eta_RTE
 \newcommand{\AdiabaticEtaStorage}{1.0000}               
 \newcommand{\AdiabaticGeoPerMWe}{9.4}                
+\newcommand{\AdiabaticHTHPInputPerMWe}{3.101}          % the same with no formation at all
 \newcommand{\AdiabaticLeakage}{1.83}                  
 \newcommand{\AdiabaticMdotTubeCh}{0.6376}               
 \newcommand{\AdiabaticMdotTubeDc}{0.6415}               
@@ -23,9 +26,9 @@
 \newcommand{\AdiabaticWellsPerMWe}{18.5}              % adiabatic: STORAGE wells per MWe, realized net basis
 \newcommand{\CasingGainEp}{118}                      % THUMS casing gain on e', %
 \newcommand{\CasingGainEpRthree}{36}                % same at R3, %
-\newcommand{\ConvEpSpread}{0.51}                      % e' spread over the same, %
-\newcommand{\ConvLossSpread}{0.29}                    % loss spread, 25 -> 200 stations, points
-\newcommand{\ConvNegAtTwoHundred}{490}               % negative strengths at 200 stations
+\newcommand{\ConvEpSpread}{0.23}                      % e' spread over the same, %
+\newcommand{\ConvLossSpread}{0.12}                    % loss spread, 25 -> 200 stations, points
+\newcommand{\ConvNegAtTwoHundred}{0}               % negative strengths at 200 stations
 \newcommand{\CutoffFirstHundred}{0.262}                % marginal RTE over the first 100 m
 \newcommand{\CutoffKopThreeHundred}{none within the sweep}             % R4_kop300 has no cutoff
 \newcommand{\CutoffRfourHi}{500}                     % cutoff upper bound, m MD
@@ -39,7 +42,7 @@
 \newcommand{\CutoffTopOneLo}{200}                    
 \newcommand{\DsStation}{50}                         % station spacing, m
 \newcommand{\DutyHPC}{16.18}                           % HTHP condenser: Q/W_net at R4
-\newcommand{\DutyHPE}{9.63}                           % HTHP evaporator: Q/W_net at R4
+\newcommand{\DutyHPE}{9.64}                           % HTHP evaporator: Q/W_net at R4
 \newcommand{\DutyORCC}{6.62}                          % ORC condenser: Q/W_net at R4
 \newcommand{\DutyORCE}{7.70}                          % ORC evaporator: Q/W_net at R4
 \newcommand{\FluxLossRFour}{52.1}                     % R4, equal-flux model, %
@@ -66,7 +69,7 @@
 \newcommand{\LadderRTERZeroI}{0.092}                   % R0i eta_RTE
 \newcommand{\LadderRTERZeroV}{0.107}                   % R0v eta_RTE
 \newcommand{\LadderSlotStep}{+3.2}                    % R2 -> R3, points of loss
-\newcommand{\LadderTrajectoryStep}{+39.0}              % R3 -> R4, points of loss
+\newcommand{\LadderTrajectoryStep}{+39.1}              % R3 -> R4, points of loss
 \newcommand{\LadderTvdRFour}{891}                    % R4 TVD at the shoe, m
 \newcommand{\LadderTvdROne}{1225}                     % R1 TVD at the shoe, m
 \newcommand{\LadderTvdRThree}{1225}                   % R3 TVD at the shoe, m
@@ -76,34 +79,39 @@
 \newcommand{\LegacyLossRfour}{70.6}                   
 \newcommand{\LegacyLossRthree}{17.4}                  
 \newcommand{\OffStationWeight}{5.2}                  % off-station kernel weight at the reference, %
+\newcommand{\RefChargeElecRatio}{2.2}                % charged electricity per MWh delivered, R4 / adiabatic
 \newcommand{\RefFieldMWePlant}{9.8}                  % MWe from the 363 Grissom slots at the reference case
-\newcommand{\RefFieldMWh}{97.7}                       % field MWh per cycle
+\newcommand{\RefFieldMWh}{97.6}                       % field MWh per cycle
 \newcommand{\RefFourAllWellsPerMWe}{56.2}             
-\newcommand{\RefFourDEch}{4.352}                       
-\newcommand{\RefFourDEdc}{2.072}                       
-\newcommand{\RefFourEprime}{0.2153}                     
+\newcommand{\RefFourCyclesToCSS}{20}                
+\newcommand{\RefFourDEch}{4.351}                       
+\newcommand{\RefFourDEdc}{2.070}                       
+\newcommand{\RefFourEnergyConv}{3.0e-15}                 % relative spread of dE_dc over the last 5 cycles
+\newcommand{\RefFourEprime}{0.2151}                     
 \newcommand{\RefFourEtaORC}{0.1401}                     % R4: eta_ORC
 \newcommand{\RefFourEtaRTE}{0.1447}                     % R4: eta_RTE
-\newcommand{\RefFourEtaStorage}{0.4761}                 
+\newcommand{\RefFourEtaStorage}{0.4758}                 
 \newcommand{\RefFourGeoPerMWe}{19.0}                  
 \newcommand{\RefFourLeakage}{0.89}                    
 \newcommand{\RefFourMdotTubeCh}{0.6376}                 
 \newcommand{\RefFourMdotTubeDc}{0.6415}                 
 \newcommand{\RefFourPinch}{5.00}                      % R4: ORC pinch, K
 \newcommand{\RefFourPinchAt}{15.3}                    % R4: pinch location, % of evaporator duty
-\newcommand{\RefFourPumping}{4.85}                    % R4: pumping, % of gross
+\newcommand{\RefFourPumping}{4.86}                    % R4: pumping, % of gross
 \newcommand{\RefFourTThreee}{90.0}                    % R4: T_3e, C
-\newcommand{\RefFourTTwod}{116.6}                      % R4: mean T_2d, C
-\newcommand{\RefFourUAPerMWe}{3480}                   % R4: total UA, kW/K per MWe
+\newcommand{\RefFourTTwod}{116.5}                      % R4: mean T_2d, C
+\newcommand{\RefFourUAPerMWe}{3481}                   % R4: total UA, kW/K per MWe
 \newcommand{\RefFourWellsPerMWe}{37.2}                % R4: STORAGE wells per MWe, realized net basis
-\newcommand{\RefHTHPInputPerMWe}{nan}                
+\newcommand{\RefHTHPInputPerMWe}{6.888}                % HTHP electrical input at R4, MW per MWe
 \newcommand{\RefLmd}{1250}                            % reference storage length, m MD
 \newcommand{\RefNwells}{363}                         % Grissom slots
-\newcommand{\RefRgMean}{0.913}                         % mean R_g,eff, m K/W
+\newcommand{\RefRgMean}{0.915}                         % mean R_g,eff, m K/W
 \newcommand{\RefStations}{25}                       % stations at the reference
 \newcommand{\RefThreeAllWellsPerMWe}{30.9}            
+\newcommand{\RefThreeCyclesToCSS}{80}               
 \newcommand{\RefThreeDEch}{4.152}                      
 \newcommand{\RefThreeDEdc}{3.597}                      
+\newcommand{\RefThreeEnergyConv}{4.3e-16}                % relative spread of dE_dc over the last 5 cycles
 \newcommand{\RefThreeEprime}{0.3913}                    
 \newcommand{\RefThreeEtaORC}{0.1451}                    % R3: eta_ORC
 \newcommand{\RefThreeEtaRTE}{0.2757}                    % R3: eta_RTE
@@ -119,11 +127,13 @@
 \newcommand{\RefThreeTTwod}{135.3}                     % R3: mean T_2d, C
 \newcommand{\RefThreeUAPerMWe}{2504}                  % R3: total UA, kW/K per MWe
 \newcommand{\RefThreeWellsPerMWe}{20.4}               % R3: STORAGE wells per MWe, realized net basis
-\newcommand{\RefTtwod}{116.6}                          % realized T_2d, C
+\newcommand{\RefTtwod}{116.5}                          % realized T_2d, C
 \newcommand{\RefTvd}{891}                            % reference TVD, m
 \newcommand{\RefZeroVAllWellsPerMWe}{71.4}            
+\newcommand{\RefZeroVCyclesToCSS}{8}               
 \newcommand{\RefZeroVDEch}{4.616}                      
 \newcommand{\RefZeroVDEdc}{1.656}                      
+\newcommand{\RefZeroVEnergyConv}{1.5e-08}                % relative spread of dE_dc over the last 5 cycles
 \newcommand{\RefZeroVEprime}{0.1693}                    
 \newcommand{\RefZeroVEtaORC}{0.1388}                    % R0v: eta_ORC
 \newcommand{\RefZeroVEtaRTE}{0.1074}                    % R0v: eta_RTE
@@ -139,18 +149,18 @@
 \newcommand{\RefZeroVWellsPerMWe}{47.2}               % R0v: STORAGE wells per MWe, realized net basis
 \newcommand{\SensKopThreeHundredEp}{0.292}             % R4_kop300 e'
 \newcommand{\SensKopThreeHundredLoss}{35.3}           % R4_kop300 loss, %
-\newcommand{\SensThFortyFiveEp}{0.227}                 % R4_th45 e'
+\newcommand{\SensThFortyFiveEp}{0.226}                 % R4_th45 e'
 \newcommand{\SensThFortyFiveLoss}{50.0}               % R4_th45 loss, %
 \newcommand{\SensThSeventyEp}{0.203}                   % R4_th70 e'
 \newcommand{\SensThSeventyLoss}{54.9}                 % R4_th70 loss, %
 \newcommand{\SensTopOneEp}{0.130}                      % R4_top1 e'
 \newcommand{\SensTopOneLoss}{71.7}                    % R4_top1 loss, %
 \newcommand{\SensTopThirtyEp}{0.273}                   % R4_top30 e'
-\newcommand{\SensTopThirtyLoss}{39.1}                 % R4_top30 loss, %
+\newcommand{\SensTopThirtyLoss}{39.2}                 % R4_top30 loss, %
 \newcommand{\SpacingMeasured}{1.65}                   % measured median spacing, m
 \newcommand{\SpacingNominal}{1.83}                    % nominal 6 ft, m
 \newcommand{\TopSpreadLoss}{32.6}                     % field-age spread, points of loss
 \newcommand{\UAHPCPerMWe}{553}                       
-\newcommand{\UAHPEPerMWe}{1058}                       
+\newcommand{\UAHPEPerMWe}{1059}                       
 \newcommand{\UAORCCPerMWe}{1255}                      
 \newcommand{\UAORCEPerMWe}{613}                      

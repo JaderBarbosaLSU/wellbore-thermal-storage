@@ -1,4 +1,4 @@
-# BOREAS results pack v2.1
+# BOREAS results pack v2.2
 
 Generated from `pack_runs.json` by `pack_writer.py`, `cutoffs.py`,
 `mktab_ladder.py`, `mknumbers.py` and `verify.py`. Nothing in this pack is
@@ -27,50 +27,66 @@ different run, not a replacement for one already there.
 
 ### Why a spacing and not a count
 
-The method treats each station as an infinite line source in the plane
-normal to the trajectory, so a station must represent a segment long
-compared with the distance to the neighboring wells. Fix the **count** and
-that condition changes with L: 50 stations is 25 m apart in a 1250 m hole
-and 2 m apart in a 100 m one, against a well spacing of 1.65 m. The short
-case then returns negative strengths and R_g,eff goes negative with them —
-which is exactly the B1 defect.
+Fix the **count** and the station spacing changes with L: 50 stations is
+25 m apart in a 1250 m hole and 2 m apart in a 100 m one. Fix the
+**spacing** and the stations sit at the same measured depths whatever L is,
+which is what makes V10 a real check rather than an approximate one:
+R_g,eff at MD = 50 m agrees to **0.00 %** between L = 200 m and L = 2000 m.
 
-Fix the **spacing** and the condition is the same at every length, the
-stations sit at the same measured depths whatever L is, and V10 becomes
-meaningful rather than approximate: R_g,eff at MD = 50 m now agrees to
-**0.00 %** between L = 200 m and L = 2000 m.
+### The matrix is not symmetric, and v2.1 symmetrized it
 
-### The convergence test (`station_convergence.csv`)
+Each row says *the rise at my location, on well i at station s, due to
+well k*, and the nearest point on k seen from there is at some other
+station s′. The reverse entry is about a different target point at a
+different distance, so **G ≠ Gᵀ**: measured, ‖G−Gᵀ‖/‖G‖ is 0.25 at 50 m
+spacing and 0.90 at 25 m.
 
-R4, L = 1250 m:
+v2.1 solved (G + Gᵀ)/2, which averages rows that are not about the same
+place. It produced 130 negative well strengths at 25 m spacing and 569 at
+8 m, and v2.1 read those as the line-source assumption breaking under
+refinement. **They were an artifact of the symmetrization.** Solved as
+assembled there are no negative strengths at any spacing tested, and the
+v2.1 claim that "the coarse grid is the well-posed one" is **withdrawn**.
 
-| stations | ds (m) | ds/B₀ | negative strengths | off-station weight | loss | e′ |
-|---|---|---|---|---|---|---|
-| 25 | 50.0 | 30.3 | **0** | 5.2 % | 52.39 % | 0.2153 |
-| 50 | 25.0 | 15.2 | 130 | 25.8 % | 52.43 % | 0.2151 |
-| 100 | 12.5 | 7.6 | 67 | 27.6 % | 52.51 % | 0.2147 |
-| 200 | 6.25 | 3.8 | 490 | 32.7 % | 52.68 % | 0.2142 |
+Two solver consequences, both in `Ground.profiles`:
 
-Read it the other way round from a normal grid study. **Refining does not
-converge to a better answer here**: the loss moves 0.29 points and e′ 0.51 %
-across an eightfold refinement, which is small, while the negative
-strengths — the signature of the line-source assumption breaking — appear
-from 25 m spacing on. The coarse grid is the well-posed one. 50 m gives
-**zero negatives at every length from 100 to 2000 m**, for R1, R3 and R4.
+- the system is solved as assembled, `A = G + (R_near + G_ii) I`;
+- above `_DIRECT_MAX` it uses **BiCGSTAB** with a Jacobi preconditioner,
+  not CG. CG needs a symmetric positive-definite matrix, and this one is
+  neither symmetric nor diagonally dominant — the diagonal is 0.567 m K/W
+  against a largest off-diagonal row sum of 3.73, because near the surface
+  all 363 wells are inside the 80 m cutoff. The v2.1 code comment claiming
+  diagonal dominance was wrong and is corrected.
 
-Two structural results make most of the grid moot, and both are measured,
-not assumed:
+### The convergence test, redone (`station_convergence.csv`)
 
-- **Vertical fields are exactly block diagonal in station.** For parallel
-  vertical wells the nearest point on a neighbor is at the same depth, so
-  the off-station kernel weight is 0.00 % and every station block is the
-  same matrix. R_g,eff is then independent of both the count and L: R1
-  gives 15.783 m K/W and R3 gives 3.230 at every length and every count
-  tested. The solver now exploits this, which is what made the disc rung
-  tractable at all.
-- **The S-curve is block tridiagonal.** Neighbors' nearest points land at
-  most one station away, carrying 5.2 % of the kernel weight at the
-  reference. This is the only case where the count does anything.
+R4, L = 1250 m, no symmetrization:
+
+| Δs | stations | negatives | off-station weight | loss | e′ |
+|---|---|---|---|---|---|
+| 104 m | 12 | 0 | 25.9 % | 51.75 % | 0.2177 |
+| **50 m** | **25** | **0** | **5.2 %** | **52.42 %** | **0.2151** |
+| 25 m | 50 | 0 | 25.8 % | 52.42 % | 0.2150 |
+| 12.5 m | 100 | 0 | 27.6 % | 52.50 % | 0.2147 |
+| 6.25 m | 200 | 0 | 32.7 % | 52.53 % | 0.2146 |
+
+Δs = 50 m is adopted on **convergence**: the loss moves 0.001 points and e′
+0.05 % to the next finer grid, and 0.12 points across the whole eightfold
+refinement. 104 m is too coarse (0.67 points). At L = 400 m the same
+refinement leaves about 0.4 points of residual drift, so the honest
+statement is that the discretization is worth up to a few tenths of a point
+of loss — not that it is exact.
+
+Two structural results, both measured:
+
+- **Vertical fields are exactly block diagonal in station.** The
+  off-station kernel weight is 0.00 % and every block is the same matrix,
+  so R_g,eff is independent of both the spacing and L: R1 gives 15.783 m
+  K/W and R3 gives 3.230 everywhere. G is also symmetric there, which is
+  why the symmetrization went unnoticed. The solver exploits this, which is
+  what makes the disc rung computable at all.
+- **The S-curve is the only case where the grid does anything**, and there
+  5.2 % of the kernel weight sits off the diagonal block at 50 m.
 
 `q_spread` is the coefficient of variation of the solved well strengths at
 a station, `std(q)/mean(q)` over the field, averaged over stations. It
@@ -201,11 +217,20 @@ R3, and one isolated vertical well R0v.
 | `comp_a/b/c.pdf` | composite curves, adiabatic / R4 / R3, shared temperature range |
 | `intensive.json`, `composites.json` | the same numbers as data |
 
-The result worth reading off them: **the formation loss barely touches the
-cycle efficiency** (η_ORC 0.1462 adiabatic against 0.1401 at R4, a 4 %
-relative spread, because T_3e is set by the evaporator pinch) and instead
-**doubles the well count**, 18.5 → 37.2 storage wells per MWe. The loss is
-paid in drilling, not in thermodynamics.
+The result worth reading off them: **only the ORC conversion is
+insensitive to the loss.** η_ORC goes 0.1462 (adiabatic) → 0.1401 (R4), a
+4 % relative spread, because T_3e is set by the evaporator pinch and the
+pinch hardly moves. Everything else does move, and the loss is paid
+**twice**:
+
+- in wells — 18.5 → 37.2 storage wells per MWe;
+- in charged electricity — the HTHP draws 6.9 MW per MWe against about
+  3.1 adiabatic, so 2.2× the electricity per MWh delivered, and
+  η_RTE falls 0.321 → 0.145.
+
+An earlier version of this note said the loss is "paid in drilling, not in
+thermodynamics". That is half right and the half it drops is the larger
+one: the round trip more than halves.
 
 `chk_scale.py` verifies the model is exactly linear in plant size: R4 at
 1 MW and 10 MW gives identical per-tube flows, e′, RTE, loss and T_2d to

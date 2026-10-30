@@ -112,36 +112,45 @@ for key, tag in TAG.items():
     if key not in I:
         continue
     d = I[key]
-    add(f'{tag}TTwod', d['$\\overline{T}_\\mathrm{2d}$, $^\\circ$C'], '{:.1f}',
+    add(f'{tag}TTwod', d['T2d_C'], '{:.1f}',
         f'{key}: mean T_2d, C')
     add(f'{tag}TThreee', d['T_3e_C'], '{:.1f}', f'{key}: T_3e, C')
     add(f'{tag}EtaORC', d['eta_ORC'], '{:.4f}', f'{key}: eta_ORC')
-    add(f'{tag}EtaRTE', d['$\\eta_\\mathrm{RTE}$'], '{:.4f}', f'{key}: eta_RTE')
-    add(f'{tag}EtaStorage', d['$\\eta_\\mathrm{storage}$'], '{:.4f}', '')
-    add(f'{tag}WellsPerMWe', d['storage wells per MWe'], '{:.1f}',
+    add(f'{tag}EtaRTE', d['eta_RTE'], '{:.4f}', f'{key}: eta_RTE')
+    add(f'{tag}EtaStorage', d['eta_storage'], '{:.4f}', '')
+    add(f'{tag}CyclesToCSS', d['cycles'], '{:.0f}', '')
+    add(f'{tag}EnergyConv', d['energy_conv_last5'], '{:.1e}',
+        'relative spread of dE_dc over the last 5 cycles')
+    add(f'{tag}WellsPerMWe', d['wells_per_MWe'], '{:.1f}',
         f'{key}: STORAGE wells per MWe, realized net basis')
-    add(f'{tag}GeoPerMWe', d['geothermal wells per MWe'], '{:.1f}', '')
-    add(f'{tag}AllWellsPerMWe', d['all wells per MWe'], '{:.1f}', '')
+    add(f'{tag}GeoPerMWe', d['N_geo_per_MWe'], '{:.1f}', '')
+    add(f'{tag}AllWellsPerMWe', d['wells_total_per_MWe'], '{:.1f}', '')
     add(f'{tag}UAPerMWe', d['UA_per_MWe'], '{:.0f}',
         f'{key}: total UA, kW/K per MWe')
-    add(f'{tag}Eprime', d["$e'$, kWh per m of well"], '{:.4f}', '')
-    add(f'{tag}DEch', d['$\\Delta E_\\mathrm{ch}$, MWh per well'], '{:.3f}', '')
-    add(f'{tag}DEdc', d['$\\Delta E_\\mathrm{dc}$, MWh per well'], '{:.3f}', '')
-    add(f'{tag}Pumping', d['pumping, \\% of gross output'], '{:.2f}',
+    add(f'{tag}Eprime', d['e_prime'], '{:.4f}', '')
+    add(f'{tag}DEch', d['dE_ch_MWh'], '{:.3f}', '')
+    add(f'{tag}DEdc', d['dE_dc_MWh'], '{:.3f}', '')
+    add(f'{tag}Pumping', d['pumping_pct'], '{:.2f}',
         f'{key}: pumping, % of gross')
     add(f'{tag}Leakage',
-        d['downcomer leakage, \\% of $\\Delta E_\\mathrm{ch}$'], '{:.2f}', '')
-    add(f'{tag}MdotTubeCh', d['charge flow per fin tube, kg/s'], '{:.4f}', '')
-    add(f'{tag}MdotTubeDc', d['discharge flow per fin tube, kg/s'], '{:.4f}', '')
+        d['leakage_pct'], '{:.2f}', '')
+    add(f'{tag}MdotTubeCh', d['m1_ch'], '{:.4f}', '')
+    add(f'{tag}MdotTubeDc', d['m1_dc'], '{:.4f}', '')
 if 'R4' in I:
     d = I['R4']
-    add('RefHTHPInputPerMWe', d.get('W_el_in_per_MWe', float('nan')), '{:.3f}', '')
+    add('RefHTHPInputPerMWe', d['HTHP_in_MW_per_MWe'], '{:.3f}',
+        'HTHP electrical input at R4, MW per MWe')
+    add('AdiabaticHTHPInputPerMWe', I['adiabatic']['HTHP_in_MW_per_MWe'],
+        '{:.3f}', 'the same with no formation at all')
+    add('RefChargeElecRatio',
+        d['HTHP_in_MW_per_MWe'] / I['adiabatic']['HTHP_in_MW_per_MWe'],
+        '{:.1f}', 'charged electricity per MWh delivered, R4 / adiabatic')
     for nm, tg in (('HTHP evaporator', 'hpe'), ('HTHP condenser', 'hpc'),
                    ('ORC evaporator', 'orce'), ('ORC condenser', 'orcc')):
         add(f'Duty{tg.upper()}', d[f'Q_{tg}_over_Wnet'], '{:.2f}',
             f'{nm}: Q/W_net at R4')
         add(f'UA{tg.upper()}PerMWe', d[f'UA_{tg}_per_MWe'], '{:.0f}', '')
-    add('RefFieldMWePlant', 363.0 / d['storage wells per MWe'], '{:.1f}',
+    add('RefFieldMWePlant', 363.0 / d['wells_per_MWe'], '{:.1f}',
         'MWe from the 363 Grissom slots at the reference case')
 try:
     C = json.load(open(f'{OUT}/composites.json'))
@@ -152,6 +161,15 @@ try:
             f'{key}: pinch location, % of evaporator duty')
 except FileNotFoundError:
     pass
+
+# No macro may expand to nan, inf or nothing. \RefHTHPInputPerMWe shipped
+# as 'nan' in v2.1 because the value it read was never written to
+# intensive.json, and nothing caught it: LaTeX sets 'nan' happily.
+BAD = [n for n, (v, _) in M.items()
+       if (not str(v).strip()) or str(v).strip().lower()
+       in ('nan', 'inf', '-inf', 'none', '--')]
+if BAD:
+    raise SystemExit('macros with no usable value: ' + ', '.join(sorted(BAD)))
 
 with open(f'{OUT}/boreas_numbers.tex', 'w') as f:
     f.write('% boreas_numbers.tex -- GENERATED. Do not edit, and do not\n'

@@ -39,7 +39,7 @@
   "id": "V7",
   "check": "legacy-casing rungs regress to the prototype",
   "pass_": true,
-  "detail": "R3 17.39% (17.4), R4 70.59% (70.7)"
+  "detail": "R3 17.39% (17.4), R4 70.61% (70.7)"
  },
  {
   "id": "V8",
@@ -82,5 +82,17 @@
   "check": "per-MWe outputs identical at 1 MW and 10 MW",
   "pass_": true,
   "detail": "worst relative difference 1.29e-10 over 7 keys"
+ },
+ {
+  "id": "V14",
+  "check": "G is asymmetric and is NOT symmetrized before solving",
+  "pass_": true,
+  "detail": "||G-G^T||/||G|| = 0.25; negatives 0 as assembled against 0 symmetrized"
+ },
+ {
+  "id": "V15",
+  "check": "the diagonal is NOT dominant, so CG would be invalid",
+  "pass_": true,
+  "detail": "diagonal 0.567 against a largest off-diagonal row sum of 3.73 m K/W"
  }
 ]

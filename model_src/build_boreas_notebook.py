@@ -250,13 +250,11 @@ FIELD = dict(
     ds_station = 50.0,        # superposition station spacing             [m]
                               #   ONE spacing for every run of every sweep,
                               #   not a count and not a per-run search.
-                              #   50 m is the shipped value: zero negative
-                              #   strengths at every length from 100 to
-                              #   2000 m, for R1, R3 and R4. Refining to
-                              #   25 m introduces them while moving the
-                              #   loss by 0.04 points, so the finer grid is
-                              #   worse posed and not more accurate.
-                              #   See section 5.2 and station_convergence.csv.
+                              #   50 m is the shipped value, chosen on
+                              #   CONVERGENCE: the loss moves 0.001 points
+                              #   and e' 0.05 % to the next finer grid.
+                              #   See section 5.2 and
+                              #   station_convergence.csv.
 )
 
 # The storage length reaches Case through L_ft, and ONLY from here.
@@ -552,53 +550,65 @@ cells.append(md(r"""
 ### 5.2 One station spacing, fixed, for every run
 
 Stations are the measured depths at which the interaction matrix is
-assembled. The method treats each as an infinite line source in the plane
-normal to the trajectory, so **a station must represent a segment long
-compared with the distance to the neighboring wells**.
+assembled. The input is a **spacing**, `FIELD['ds_station'] = 50 m`, and
+the count follows as $\max(3, \mathrm{round}(L/\Delta s))$ — one value for
+the ladder, the $L$ sweep and every sensitivity. Two things follow:
 
-Fix the *count* and that condition changes with length: 50 stations is 25 m
-apart in a 1250 m hole and 2 m apart in a 100 m one, against a well spacing
-of 1.65 m. The short case then returns *negative* strengths — wells
-absorbing heat from rock they are hotter than — and $R_{g,\mathrm{eff}}$
-goes negative with them.
-
-So the input is a **spacing**, `FIELD['ds_station'] = 50 m`, and the count
-follows as $\max(3, \mathrm{round}(L/\Delta s))$. One value for the
-ladder, the $L$ sweep and every sensitivity. Three things follow:
-
-* the validity condition is the same at every length;
 * the stations sit at the same measured depths whatever $L$ is, so
   $R_{g,\mathrm{eff}}$ at a given MD can be *compared* across lengths —
   that is check V10, and it agrees to 0.00 % between 200 m and 2000 m;
 * every run of a sweep is discretized identically, so a difference between
   two runs is the thing being varied and not the grid.
 
-**V11 is an assertion, not a search.** If the fixed spacing produces a
-negative strength the run fails and says so. It does not quietly try
-another count — that is what made two runs of the same sweep incomparable
-in v2.0.
+### What the matrix is, and what it is not
 
-### What the grid study actually says
+Each row of the system says *the temperature rise at my location, on well
+$i$ at station $s$, due to well $k$* — and the nearest point on $k$ seen
+from there sits at some other station $s'$. The reverse entry is about a
+**different target point** at a **different distance**. So
 
-Refining does *not* converge to a better answer here, and that is worth
-seeing rather than assuming. At the reference case:
+$$G_{(i,s),(k,s')} \ne G_{(k,s'),(i,s)}$$
 
-| stations | $\Delta s$ | negatives | off-station weight | loss | $e'$ |
+and $\mathbf{G}$ has no reason to be symmetric. Measured here:
+$\lVert \mathbf{G}-\mathbf{G}^\mathsf{T}\rVert / \lVert\mathbf{G}\rVert$
+is 0.25 at 50 m spacing and 0.90 at 25 m.
+
+**An earlier version solved $(\mathbf{G}+\mathbf{G}^\mathsf{T})/2$
+instead, and that was wrong.** Averaging mixes rows that are not about the
+same place. It also produced negative well strengths — 130 at 25 m
+spacing, 569 at 8 m — and those were then read as evidence that refining
+the grid broke the line-source assumption. They were not. Solved as
+assembled, **there are no negative strengths at any spacing tested**, and
+the claim that "the coarse grid is the well-posed one" is withdrawn.
+
+Two consequences for the solver, both in `Ground.profiles`:
+
+* the system is solved **as assembled**, $\mathbf{A} = \mathbf{G} +
+  (R_\mathrm{near}+G_{ii})\mathbf{I}$;
+* above `_DIRECT_MAX` it uses **BiCGSTAB** with a Jacobi preconditioner,
+  not CG. CG needs a symmetric positive-definite matrix and this one is
+  neither symmetric nor diagonally dominant — the diagonal is 0.567 m K/W
+  against a largest off-diagonal row sum of 3.73, because near the surface
+  all 363 wells are inside the 80 m cutoff.
+
+### The grid study, redone
+
+| $\Delta s$ | stations | negatives | off-station weight | loss | $e'$ |
 |---|---|---|---|---|---|
-| 25 | 50.0 m | **0** | 5.2 % | 52.39 % | 0.2153 |
-| 50 | 25.0 m | 130 | 25.8 % | 52.43 % | 0.2151 |
-| 100 | 12.5 m | 67 | 27.6 % | 52.51 % | 0.2147 |
-| 200 | 6.25 m | 490 | 32.7 % | 52.68 % | 0.2142 |
+| 104 m | 12 | 0 | 25.9 % | 51.75 % | 0.2177 |
+| **50 m** | **25** | **0** | **5.2 %** | **52.42 %** | **0.2151** |
+| 25 m | 50 | 0 | 25.8 % | 52.42 % | 0.2150 |
+| 12.5 m | 100 | 0 | 27.6 % | 52.50 % | 0.2147 |
+| 6.25 m | 200 | 0 | 32.7 % | 52.53 % | 0.2146 |
 
-The answer barely moves — 0.29 points of loss and 0.51 % of $e'$ across an
-eightfold refinement — while the negative strengths appear from 25 m
-spacing on. **The coarse grid is the well-posed one**; the fine ones are
-cheaper to compute than to justify. 50 m gives zero negatives at every
-length from 100 to 2000 m, for R1, R3 and R4.
+$\Delta s = 50$ m is adopted because it **converges**: the loss moves
+0.001 points and $e'$ 0.05 % to the next finer grid, and 0.12 points across
+the whole eightfold refinement. 104 m is too coarse (0.67 points). At
+$L = 400$ m the same refinement leaves about 0.4 points of residual drift,
+so the honest statement is that the discretization is worth **up to a few
+tenths of a point of loss**, not that it is exact.
 
-### Two structural results that make most of this moot
-
-Both measured, in the cell below, not assumed.
+### One structural result that makes most of this moot
 
 **Vertical fields are exactly block diagonal in station.** For parallel
 vertical wells the nearest point on a neighbor is at the same depth, so
@@ -606,15 +616,17 @@ every coupling stays within its own station — the off-station kernel weight
 is 0.00 % — and every block is the *same* matrix, because horizontal
 distances do not change with depth. $R_{g,\mathrm{eff}}$ is therefore
 independent of both the station count and $L$: R1 gives 15.783 m K/W and R3
-gives 3.230, at every length and every count tested. The solver exploits
-this directly, which is what makes the disc rung computable at all — at
-1.65 m spacing all 363 wells sit inside 18 m, so every target has about
-90 000 candidate samples inside the cutoff.
+gives 3.230, at every length and every spacing tested. $\mathbf{G}$ is also
+symmetric there, which is precisely why the symmetrization went unnoticed
+for so long.
 
-**The S-curve is block tridiagonal.** The wells converge and diverge, so a
-neighbor's nearest point lands at most one station away, carrying 5.2 % of
-the kernel weight at the reference. This is the only case in which the
-count does anything at all.
+The solver exploits this directly, which is what makes the disc rung
+computable at all — at 1.65 m spacing all 363 wells sit inside 18 m, so
+every target has about 90 000 candidate samples inside the cutoff.
+
+The S-curve is the only case where the count does anything: there the
+wells converge and diverge, a neighbor's nearest point lands at most one
+station away, and 5.2 % of the kernel weight sits off the diagonal block.
 """))
 
 cells.append(code(r"""

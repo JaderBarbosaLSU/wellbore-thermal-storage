@@ -3533,6 +3533,15 @@ def css_report(case, r):
     print(f"  m_dot discharge  {r['m1_dc']:10.4f} kg/s per leg-pair, pinned by the glide")
     print(f"  flow ratio       {r['flow_ratio']:10.4f}   a consequence, not a solve")
     print()
+    # Two convergence statements, because they can disagree and the one
+    # that matters is the second. The state drift stalls on round-off at
+    # about 2e-8 J/m for a lossless or well-shielded store, so those runs
+    # hit the cycle cap while their DISCHARGE INTEGRAL -- the quantity
+    # every result depends on -- has been constant for many cycles.
+    _h = r.get("history") or []
+    _q = [x["Q_discharge_kJ"] for x in _h[-5:]]
+    _ec = ((max(_q) - min(_q)) / abs(_q[-1])) if len(_q) > 1 and _q[-1] \
+        else float("nan")
     if r["converged"]:
         print(f"  converged in {r['cycles']} cycles"
               f"   (drift {r['history'][-1]['drift']:.1e})")
@@ -3550,6 +3559,8 @@ def css_report(case, r):
     # NOT "must be 1". That was true under THUMS hypothesis H6, which this
     # model exists to drop: eta_storage is a result now, and at the
     # reference case it is about 0.48.
+    print(f"  dE_dc spread, last 5 cycles  {_ec:.2e}"
+          f"   <- the convergence that matters")
     print(f"  eta_storage      {r['eta_storage']:10.6f}   "
           f"a result, not a constraint (1 only as k_rock -> 0)")
     print()

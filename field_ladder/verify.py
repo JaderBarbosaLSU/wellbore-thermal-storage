@@ -174,6 +174,38 @@ worst = max((abs(k10[q]/k[q] - 1) if k[q] else 0.0) for q in keys)
 check('V13', 'per-MWe outputs identical at 1 MW and 10 MW',
       worst < 1e-9, f"worst relative difference {worst:.2e} over {len(keys)} keys")
 
+# ---- V14: the system is solved as assembled, not symmetrized ----------
+# This is a regression guard, not a physics check. Symmetrizing G was the
+# v2.1 defect: it is not a symmetric operator -- row (i,s) is about the
+# rise at a different point from row (j,s') -- and averaging produced
+# negative strengths that were then misread as a grid problem.
+import scipy.sparse as sp
+import scipy.sparse.linalg as spla
+c = case(1250.0)
+gr = G.Ground(k=c.k_rock, rhocp=c.rho_cp_rock, t_yr=10.0, rb=c.r_bore)
+Rn = float(np.atleast_1d(B.formation_resistance(c, np.array([0.0])))[0]
+           - B.ground_resistance(c))
+md, X = G.trajectories(P, 1250.0, kind='s_curve', kop=KOP, theta_max=55.0)
+nst = G.Ground.stations_for(1250.0)
+st, rr, cc, dd, Nn = gr.pairs(md, X, nst)
+g = gr.kern(dd)
+M = Nn * nst
+self_t = gr.kern(np.array([gr.rb]))[0]
+Graw = sp.csr_matrix((g, (rr, cc)), shape=(M, M))
+asym = spla.norm(Graw - Graw.T) / spla.norm(Graw)
+qs = spla.spsolve(((Graw + Graw.T) * 0.5
+                   + sp.identity(M) * (Rn + self_t)).tocsc(), np.ones(M))
+qr = spla.spsolve((Graw + sp.identity(M) * (Rn + self_t)).tocsc(), np.ones(M))
+check('V14', 'G is asymmetric and is NOT symmetrized before solving',
+      asym > 0.1 and (qr < 0).sum() == 0,
+      f'||G-G^T||/||G|| = {asym:.2f}; negatives {int((qr<0).sum())} as '
+      f'assembled against {int((qs<0).sum())} symmetrized')
+
+check('V15', 'the diagonal is NOT dominant, so CG would be invalid',
+      float(np.asarray(Graw.sum(1)).ravel().max()) > (Rn + self_t),
+      f'diagonal {Rn + self_t:.3f} against a largest off-diagonal row sum '
+      f'of {float(np.asarray(Graw.sum(1)).ravel().max()):.2f} m K/W')
+
 json.dump(RES, open('results_pack_v2/verification.json', 'w'), indent=1)
 print(f"\n{len(RES) - FAIL}/{len(RES)} pass")
 raise SystemExit(1 if FAIL else 0)
