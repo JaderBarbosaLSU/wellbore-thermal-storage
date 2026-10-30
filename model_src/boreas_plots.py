@@ -441,7 +441,7 @@ def _staircase(ax, z, T_m_seg, vertical=False, **kw):
 
 
 def depth_axis(model, case, n=None):
-    """(depth of segment centres, depth of fluid nodes) in metres.
+    """(depth of segment centers, depth of fluid nodes) in meters.
 
     Taken from the model's own formation_profile so the plotting layer
     cannot drift from the solver's idea of which end is the bottom.
@@ -464,7 +464,7 @@ def well_profiles(r, case, field="T_fluid", axes=None, n_times=9,
     `depth_seg` / `depth_node` come from `depth_axis`; without them the raw
     solver coordinate is used, which runs from the BOTTOM of the well and is
     not depth.
-    `overlay` names a second field drawn dashed in the same colour per time
+    `overlay` names a second field drawn dashed in the same color per time
     (used for T_pcm beside T_fluid).
     """
     if figsize is None:
@@ -663,9 +663,9 @@ def heatmap(rows, xkey, ykey, zkey, xs, ys, ax=None, cmap="viridis",
             title="", cbar_label="", fmt="{:.3f}", mark=None, annotate=True,
             vmin=None, vmax=None, cbar=True, fontsize=7.6,
             best="max", box_ref=True):
-    """One metric over a two-parameter grid, with the cells labelled.
+    """One metric over a two-parameter grid, with the cells labeled.
 
-    Cells are ANNOTATED with their value. A heat map whose colour scale is
+    Cells are ANNOTATED with their value. A heat map whose color scale is
     the only channel invites the reader to misjudge small differences, and
     several of these maps are deliberately flat -- the flatness is the
     result, and it is only legible if the numbers are on the cells.
@@ -1000,7 +1000,7 @@ def _composites(model, case, rank, Tdict):
 
     `_orc_cold_composite` and `_water_curve` are reused rather than
     reimplemented, so what is plotted is by construction the same pair of
-    curves that `orc_pinch` minimises over. A composite curve redrawn by the
+    curves that `orc_pinch` minimizes over. A composite curve redrawn by the
     plotting layer is a second implementation of the physics, and the two
     drift apart exactly when it matters.
     """
@@ -1148,7 +1148,7 @@ def cycle_summary(rank, hp, res=None):
     }
     if res is not None:
         for key, lab, scale in (
-            ("T_2d_realised", "T_2d realised, C", None),
+            ("T_2d_realized", "T_2d realized, C", None),
             ("N_wells", "N wells", 1.0),
             ("m1_ch", "m_dot per tube, charge, kg/s", 1.0),
             ("m1_dc", "m_dot per tube, discharge, kg/s", 1.0),

@@ -2,7 +2,7 @@
 
 ONE definition of the geometry, used by every rung:
 
-  * idealised rungs (disc, double row) are built at the MEASURED Grissom
+  * idealized rungs (disc, double row) are built at the MEASURED Grissom
     spacing, 1.65 m, not the nominal 6 ft. Mixing the two is what made the
     prototype's R2 -> R3 step understate the layout penalty by 40 %;
   * R3 onwards use the real WellSTAR slot positions, 363 of them;
@@ -25,17 +25,12 @@ import boreas_ground as G
 
 CSV = 'THUMS_wells_WellSTAR_clean.csv'
 CACHE = 'pack_runs.json'
+# The station spacing is part of the SPECIFICATION, so it is in the cache
+# key: a run at a different discretization is a different run, not a
+# replacement for one already there.
+DS_STATION = G.DS_STATION
 N_FIELD = 363
 T_OP_DEFAULT = 10.0
-# (geometry) -> a station count already known to solve cleanly. Persisted,
-# because the search costs an extra sparse solve per rejected count and the
-# sensitivities repeat the same geometries with a different t_op or theta.
-_NST_MEMO_FILE = 'nst_memo.json'
-try:
-    _NST_MEMO = {tuple(k.split('|')): v
-                 for k, v in json.load(open(_NST_MEMO_FILE)).items()}
-except Exception:
-    _NST_MEMO = {}
 
 # The THUMS upper-zone string (SPE-2562) expressed in existing Case fields.
 # D_in is the casing INSIDE diameter: it is what bounds the PCM, and the
@@ -91,6 +86,7 @@ def run_one(spec):
             incm = 0.5 * (inc[1:] + inc[:-1])
             tvd = np.r_[0.0, np.cumsum(np.cos(incm) * 5.0)]
         q_spread = 0.0
+        off_w = 0.0
         nst_used = len(md)
     else:
         P = _positions(spec['positions'])
@@ -104,68 +100,24 @@ def run_one(spec):
                                theta_max=spec['theta_max'])
         gr = G.Ground(k=c0.k_rock, rhocp=c0.rho_cp_rock, t_yr=t_op,
                       rb=c0.r_bore)
-        # The station count is set by the GEOMETRY, not by the trajectory
-        # type: the superposition needs the station spacing to be large
-        # against the well spacing or the solve returns negative strengths.
-        # See Ground.stations_for. A vertical well's profile is constant in
-        # MD so it is insensitive to the count anyway; the S-curve is not,
-        # which is why the rule is applied to both rather than special-cased.
-        # STATION COUNT, chosen by the geometry and then verified.
-        #
-        # The superposition needs the station spacing to be large against
-        # the well spacing (Ground.stations_for). That rule removes the
-        # catastrophic failure -- at L = 100 m with 50 stations, 47 % of
-        # the strengths go negative and R_g,eff reads -0.18 m K/W -- but it
-        # does not by itself guarantee a clean solve: the count at which a
-        # few negatives appear is erratic, because it depends on which
-        # station of a neighbour happens to be nearest. Measured at
-        # L = 100 m, the negative count runs 0, 28, 0, 38, 59, 24, 115, 0
-        # for nst = 3..10 while R_g,eff stays within 3.11-3.18, so those
-        # few negatives are discretisation noise and not a physical error.
-        #
-        # So: take the rule's count, then step DOWN to the first count that
-        # solves with no negatives at all. Any of them gives the same
-        # answer; this one is also clean, and V11 then holds by
-        # construction rather than by tolerance.
-        # Memoised by geometry AND FIELD AGE. The first version of this
-        # key left t_op out, on the argument that the age enters only
-        # through R_near, which shifts the diagonal uniformly. That was
-        # wrong: t_op is inside the kernel, E1(d^2/4 a t), so it changes
-        # which neighbours are coupled at all and therefore which station
-        # count solves cleanly. The t_op = 30 yr sweep failed outright at
-        # two lengths because it was handed the 10 yr count as its only
-        # candidate -- which is also why the memo is now a STARTING POINT
-        # and never the whole candidate list.
-        memo_key = tuple(str(x) for x in
-                         (spec['positions'], spec['trajectory'], L,
-                          spec['theta_max'], spec['kop_rule'], t_op))
-        nst0 = _NST_MEMO.get(memo_key) or G.Ground.stations_for(L)
-        # GEOMETRIC stride, not one at a time. Stepping down singly from 50
-        # costs up to 47 sparse solves -- over an hour for one ladder point,
-        # and the clean counts are scattered anyway, so the fine search buys
-        # nothing. The same stride reference_field uses, so the notebook and
-        # the pack can land on the same count.
-        cands = sorted({max(3, int(round(nst0 * f)))
-                        for f in (1.0, .85, .7, .6, .5, .4, .3, .2, .1)},
-                       reverse=True)
-        pr, nst, n_neg = None, None, None
-        for cand in cands:
-            try:
-                pr = gr.profiles(md, X, R_near, nst=cand)
-            except MemoryError:
-                continue          # a resource failure, not a result
-            n_neg = getattr(gr, 'n_negative', 0)
-            if n_neg == 0:
-                nst = cand
-                break
-        if nst is not None:
-            _NST_MEMO[memo_key] = nst
-        if nst is None:
+        # ONE FIXED STATION SPACING for every run (Ground.stations_for).
+        # v2.0 chose the count per run, as the first count that solved
+        # with no negative strengths, and that made runs of the same sweep
+        # incomparable: at L = 500 m the reference case landed on 25
+        # stations and the 45 deg variant on 6, which moved e' by 2.8 %
+        # against the 0.4 % the inclination was actually worth.
+        nst = G.Ground.stations_for(L, spec.get('ds_station'))
+        pr = gr.profiles(md, X, R_near, nst=nst)
+        n_neg = getattr(gr, 'n_negative', 0)
+        if n_neg:
+            # V11 is an assertion now. No fallback.
             raise RuntimeError(
-                f'no clean station count among {cands} at L={L}')
+                f'V11 FAILED: {n_neg} of {len(P) * nst} strengths negative '
+                f'at L = {L:.0f} m, ds = {spec.get("ds_station") or G.DS_STATION:.0f} m')
         key = {'superposition': 'temp', 'flux': 'flux'}[spec['ground']]
         md, Rg, tvd = pr['md'], pr[key], pr['tvd']
         q_spread = float(np.mean(pr['q_spread']))
+        off_w = gr.off_station_weight
         nst_used = nst
 
     r = G.run_boreas(B, L, md, Rg, tvd_prof=tvd, n_segments=99,
@@ -178,6 +130,8 @@ def run_one(spec):
                tvd_bottom=float(tvd[-1]), R_near=R_near,
                Rg_mean=float(np.mean(Rg)), q_spread=q_spread,
                n_stations=int(nst_used), n_negative=0,
+               ds_station=float(spec.get('ds_station') or G.DS_STATION),
+               off_station_weight=float(off_w),
                field_MWh_per_cycle=N_FIELD * r['e_prime'] * L / 1000.0,
                beyond_shoe=bool(L > L_SHOE))
     return out
@@ -194,7 +148,8 @@ def build_specs():
             S.append(dict(step=step, positions=positions,
                           trajectory=trajectory, L_md=float(L),
                           ground=ground, kop_rule=kop_rule, kop_ft=kop_ft,
-                          theta_max=theta_max, t_op_yr=t_op, casing=casing))
+                          theta_max=theta_max, t_op_yr=t_op, casing=casing,
+                          ds_station=float(DS_STATION)))
 
     # --- the ladder, §5
     add('R0v', 'isolated', 'vertical', LENGTHS)

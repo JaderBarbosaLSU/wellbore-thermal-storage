@@ -1,0 +1,86 @@
+[
+ {
+  "id": "V1",
+  "check": "charge closes and the Clausius gate is positive",
+  "pass_": true,
+  "detail": "closure 3.44e-16, clausius +1.551e+11"
+ },
+ {
+  "id": "V2",
+  "check": "G_ii degenerates to the shipped isolated R_g",
+  "pass_": true,
+  "detail": "0.329468854 vs 0.329468283"
+ },
+ {
+  "id": "V3",
+  "check": "one well in the field solver = isolated well",
+  "pass_": true,
+  "detail": "0.329469 vs 0.329468 m K/W, rel 1.7e-06"
+ },
+ {
+  "id": "V4",
+  "check": "equal flux is the optimistic model (R_flux > R_temp)",
+  "pass_": true,
+  "detail": "flux 3.3425 > temp 3.2304 m K/W"
+ },
+ {
+  "id": "V5",
+  "check": "k_rock -> 0 gives zero loss and eta_storage = 1",
+  "pass_": true,
+  "detail": "Q_loss 0.0e+00 kJ, eta_storage 1.000000000"
+ },
+ {
+  "id": "V6",
+  "check": "short isolated legacy well reports non-delivery",
+  "pass_": true,
+  "detail": "delivers False, e' 0.0000, T_2d 85.5 C"
+ },
+ {
+  "id": "V7",
+  "check": "legacy-casing rungs regress to the prototype",
+  "pass_": true,
+  "detail": "R3 17.39% (17.4), R4 70.59% (70.7)"
+ },
+ {
+  "id": "V8",
+  "check": "R4 short-length agreement with the prototype wrapper",
+  "pass_": true,
+  "detail": "L=100 18.6% (19.3), L=300 26.5% (26.8)"
+ },
+ {
+  "id": "V9",
+  "check": "disc < double row < real slots, all vertical",
+  "pass_": true,
+  "detail": "3.05% < 10.18% < 13.37%"
+ },
+ {
+  "id": "V10",
+  "check": "R_g,eff at MD = 50 m is the same for L = 200 and 2000 m",
+  "pass_": true,
+  "detail": "3.1748 vs 3.1748 m K/W, 0.00 %"
+ },
+ {
+  "id": "V10b",
+  "check": "the same at L = 100 m, where the 3-station floor bites",
+  "pass_": true,
+  "detail": "3.2155 vs 3.1748 m K/W, 1.28 % (floor: 3 stations, ds 33.3 m)"
+ },
+ {
+  "id": "V11",
+  "check": "no negative well strengths in any cached run",
+  "pass_": true,
+  "detail": "111 runs, 0 with negatives"
+ },
+ {
+  "id": "V12",
+  "check": "wells per MWe = t_dc / (e' L)",
+  "pass_": true,
+  "detail": "47.243 vs 47.243, rel 1.11e-16"
+ },
+ {
+  "id": "V13",
+  "check": "per-MWe outputs identical at 1 MW and 10 MW",
+  "pass_": true,
+  "detail": "worst relative difference 1.29e-10 over 7 keys"
+ }
+]

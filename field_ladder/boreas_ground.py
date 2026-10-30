@@ -9,7 +9,7 @@ Geometry
     rows_positions      one straight double row, B0 along a row, w between rows
     grissom_positions   Active+Idle Grissom slots on the ring (WellSTAR)
     trajectories        vertical, or literature S-curves radiating from the
-                        island centre (Clark & Barth 1983; Truex & Hunter 1969;
+                        island center (Clark & Barth 1983; Truex & Hunter 1969;
                         Robertson et al. 1987)
 
 Ground models (all evaluated at the age of the field, t_op)
@@ -26,7 +26,7 @@ Line-source interaction is local and two-dimensional: a target point on well i
 interacts with well k through the infinite line source E1(d^2/4at)/(4 pi k),
 where d is the SHORTEST distance from the target to well k's trajectory. For
 parallel vertical wells this is the classical superposition; for inclined
-wells it is the perpendicular distance to the locally straight neighbour.
+wells it is the perpendicular distance to the locally straight neighbor.
 The ground surface and the well ends are not represented (as in Eq. (Rg)).
 """
 import numpy as np
@@ -39,8 +39,8 @@ import scipy.sparse.linalg as spla
 FT = 0.3048
 # Nominal wellhead spacing, 6 ft and 12 ft, from the Oxy Long Beach
 # drilling deck. B0_MEASURED is what the WellSTAR slot coordinates actually
-# show for Grissom: median nearest-neighbour 1.65 m over 363 slots, 10 %
-# tighter than nominal. The idealised rungs (disc, double row) are built at
+# show for Grissom: median nearest-neighbor 1.65 m over 363 slots, 10 %
+# tighter than nominal. The idealized rungs (disc, double row) are built at
 # the MEASURED value so that the step from them to the real slot positions
 # isolates the LAYOUT and is not contaminated by a spacing change.
 # Above this many unknowns the direct sparse solve is replaced by CG; see
@@ -48,6 +48,11 @@ FT = 0.3048
 # factorisation has been seen to exhaust memory, and the two agree to 1e-12
 # wherever both run.
 _DIRECT_MAX = 6000
+
+# THE station spacing, in meters of measured depth. One number, used by
+# every run of the ladder, the L sweep and the sensitivities. See
+# Ground.stations_for for why this is a spacing and not a count.
+DS_STATION = 50.0
 
 B0_NOMINAL, W_DEF = 1.83, 3.66
 B0_MEASURED = 1.65
@@ -158,7 +163,7 @@ class Ground:
 
     def pairs(self, md, X, nst=50):
         """For targets at nst MD stations on every well: shortest distance to
-        every other well within the cutoff, and the neighbour's station."""
+        every other well within the cutoff, and the neighbor's station."""
         N, n, _ = X.shape
         st = (np.arange(nst) + 0.5) * md[-1] / nst
         ist = np.clip(np.searchsorted(md, st), 1, n - 1)
@@ -201,44 +206,126 @@ class Ground:
                 keep = d_u < self.cutoff
                 o_u, d_u, j_u = o_u[keep], d_u[keep], j_u[keep]
                 s_nb = np.clip(np.searchsorted(st, md[j_u]), 0, nst - 1)
-                rows.append(np.full(len(o_u), t_id)); cols.append(o_u * nst + s_nb)
+                rows.append(np.full(len(o_u), t_id, dtype=np.int32))
+                cols.append((o_u * nst + s_nb).astype(np.int32))
                 dist.append(np.maximum(d_u, self.rb))
+        if not rows:
+            # A single well, or a field so spread that nothing is inside
+            # the cutoff: no interactions at all. The caller must still get
+            # arrays, and the solve then returns the isolated R_g, which is
+            # what V3 checks.
+            z32 = np.zeros(0, np.int32)
+            return st, z32, z32, np.zeros(0), N
         return st, np.concatenate(rows), np.concatenate(cols), np.concatenate(dist), N
 
     @staticmethod
-    def stations_for(L, B0=1.65, ratio=10.0, lo=3, hi=50):
-        """How many MD stations the superposition can actually support.
+    def stations_for(L, ds=None):
+        """How many MD stations to assemble the superposition on.
 
-        THE METHOD NEEDS THE STATION SPACING TO BE LARGE COMPARED WITH THE
-        WELL SPACING. Each station is treated as an infinite line source in
-        the plane normal to the trajectory, and that is only meaningful if
-        the station represents a segment much longer than the distance to
-        the neighbouring wells. Violate it and the solve returns NEGATIVE
-        strengths -- wells absorbing heat while hotter than the rock, which
-        cannot happen -- and R_g,eff comes out nonsensical or negative.
+        ONE FIXED STATION SPACING, ds, for every run. Not a count, and not
+        a per-run search.
 
-        Measured: at L = 100 m with 50 stations the spacing is 2.0 m
-        against a well spacing of 1.65 m, 8565 of 18150 strengths go
-        negative and R_g,eff reads -0.18 m K/W. Cutting to 10 stations
-        (11.1 m, ratio 6.7) gives no negatives and 3.16; 5 and 3 stations
-        give 3.17 and 3.16, so the answer is converged once the ratio is
-        respected. The old fixed nst=50 was silently wrong for every
-        trajectory shorter than about 800 m.
+        The method treats each station as an infinite line source in the
+        plane normal to the trajectory, so a station must represent a
+        segment long compared with the distance to the neighboring wells.
+        Fix the COUNT instead and that condition changes with L: 50
+        stations is 25 m apart in a 1250 m hole and 2 m apart in a 100 m
+        one, against a well spacing of 1.65 m. The short case then returns
+        negative strengths -- wells absorbing heat from rock they are
+        hotter than -- and R_g,eff goes negative with them.
+
+        Fix the SPACING and the condition is the same at every length, the
+        stations sit at the same measured depths whatever L is (which is
+        what makes V10 meaningful), and every run of a sweep is discretized
+        identically.
+
+        ds = 50 m is the shipped value. Measured over the whole L sweep,
+        100 to 2000 m: zero negative strengths at every length for R1, R3
+        and R4, with the off-station kernel weight rising smoothly from
+        0 to 6.4 %. Refining to 25 m introduces negatives at L = 1250 m
+        while moving the loss by 0.04 points, so the fine grid is worse
+        posed and not more accurate. See station_convergence.csv.
         """
-        import math
-        return int(min(hi, max(lo, math.floor(L / (ratio * B0)) + 1)))
+        return int(max(3, round(L / float(ds if ds else DS_STATION))))
+
+    @staticmethod
+    def _is_vertical(X, tol=1e-9):
+        """True when every trajectory keeps its surface (x, y)."""
+        return bool(np.abs(X[:, :, :2] - X[:, :1, :2]).max() <= tol)
 
     def profiles(self, md, X, R_near, nst=50, perimeter=None):
-        """Field-mean R_g,eff(MD) for 'flux' and 'temp' (and 'per' if given)."""
+        """Field-mean R_g,eff(MD) for 'flux' and 'temp' (and 'per' if given).
+
+        VERTICAL FIELDS ARE SOLVED ONCE, NOT nst TIMES. For parallel
+        vertical wells the nearest point on a neighbor is at the same
+        depth, so the interaction matrix is exactly block diagonal in
+        station (measured: off-station kernel weight 0.00 %) and every
+        block is the same matrix -- the horizontal distances do not change
+        with depth. R_g,eff is then a single number, independent of both
+        nst and L, which is what the measured sweep shows (R1: 15.783 m K/W
+        at every length and every count; R3: 3.230).
+
+        This is not an approximation, and it is what makes the disc rung
+        tractable: at 1.65 m spacing all 363 wells sit inside 18 m, so
+        every target has ~90 000 candidate samples inside the 80 m cutoff
+        and doing that 25 times over was not finishing.
+        """
+        if self._is_vertical(X) and nst > 1:
+            # One station, on a two-sample stub of the same trajectories.
+            # The kernel sees only the horizontal distance, which is the
+            # same at every depth for vertical wells, so the stub gives the
+            # identical matrix at a fraction of the cost. Its own tvd is
+            # meaningless and is discarded; the real one is taken below.
+            one = self.profiles(md[:2], X[:, :2, :], R_near, nst=1)
+            st = (np.arange(nst) + 0.5) * md[-1] / nst
+            rep = lambda v: np.repeat(np.asarray(v).reshape(-1)[:1], nst)
+            out = dict(md=st, flux=rep(one['flux']), temp=rep(one['temp']),
+                       flux_raw=rep(one['flux_raw']),
+                       temp_raw=rep(one['temp_raw']),
+                       q_spread=rep(one['q_spread']),
+                       tvd=X[:, np.clip(np.searchsorted(md, st), 0,
+                                        len(md) - 1), 2].mean(0))
+            self.n_negative = one and self.n_negative
+            self.off_station_weight = 0.0
+            if perimeter is not None:
+                out['per'] = np.maximum(
+                    self.Rg, N_ := X.shape[0] * np.sqrt(np.pi * self.a * self.t)
+                    / (self.k * perimeter(st)))
+            return out
         st, r, c, d, N = self.pairs(md, X, nst)
         g = self.kern(d)
         M = N * nst
-        G = sp.csr_matrix((g, (r, c)), shape=(M, M))
         self_t = self.kern(np.array([self.rb]))[0]
-        # equal flux: mean wall rise per unit q
-        flux = (self_t + np.asarray(G.sum(1)).ravel()).reshape(N, nst).mean(0)
-        # equal temperature: (R_near + self + G) q = 1
-        A = (G + G.T) * 0.5 + sp.identity(M) * (R_near + self_t)
+        # equal flux: mean wall rise per unit q. Row sums only, so this
+        # needs no matrix at all.
+        # Structural diagnostic, recorded while the entries are in hand:
+        # how much kernel weight couples a target to a neighbor at a
+        # DIFFERENT station. Zero means the system is exactly block
+        # diagonal in station and the answer cannot depend on nst; a large
+        # value means the stations have been refined past the point where
+        # a station still represents a line source, which is the same
+        # failure that produces negative strengths.
+        self.off_station_weight = float(
+            g[(r % nst) != (c % nst)].sum() / g.sum()) if len(g) else 0.0
+        rowsum = np.bincount(r, weights=g, minlength=M)
+        flux = (self_t + rowsum).reshape(N, nst).mean(0)
+        del rowsum
+        # equal temperature: (R_near + self + G_sym) q = 1.
+        #
+        # Assembled in ONE pass rather than as G, then G.T, then their sum.
+        # For the disc at 1250 m every one of the 363 wells is inside the
+        # 80 m cutoff at every station, so at 100 stations there are 13
+        # million entries; holding G and G.T and their sum at once is about
+        # a gigabyte of duplicates and is what killed the convergence run.
+        # Feeding (r, c) and (c, r) at half weight into a single COO gives
+        # exactly (G + G.T)/2 and allocates once.
+        A = sp.coo_matrix(
+            (np.concatenate([g * 0.5, g * 0.5,
+                             np.full(M, R_near + self_t)]),
+             (np.concatenate([r, c, np.arange(M, dtype=r.dtype)]),
+              np.concatenate([c, r, np.arange(M, dtype=r.dtype)]))),
+            shape=(M, M))
+        del g, r, c, d
         # A is symmetric and strongly diagonally dominant: the diagonal is
         # R_near + G_ii, about 0.48 m K/W, against off-diagonals that are
         # E1 of a squared distance and fall off fast. A direct factorisation
@@ -253,6 +340,7 @@ class Ground:
             q = spla.spsolve(A.tocsc(), b)
         else:
             Ac = A.tocsr()
+            del A
             Mp = spla.LinearOperator(
                 (M, M), matvec=lambda x, d=Ac.diagonal(): x / d)
             q, info = spla.cg(Ac, b, rtol=1e-12, atol=0.0, maxiter=5000, M=Mp)
@@ -262,7 +350,7 @@ class Ground:
         q = q.reshape(N, nst)
         # V11: every solved strength must be positive. All wells sit at the
         # same temperature and all are hotter than the far field, so every
-        # one of them rejects heat; a negative q is the discretisation
+        # one of them rejects heat; a negative q is the discretization
         # failing, not a result. Recorded so the caller can assert on it.
         self.n_negative = int((q < 0).sum())
         temp = 1.0 / q.mean(0) - R_near
@@ -325,7 +413,7 @@ def run_boreas(B, L, md_prof, Rg_prof, tvd_prof=None, n_segments=99, **case_kw):
                 # non-delivering rung look like a small positive.
                 delivers=bool(k.get("delivers", r.get("delivers", True))),
                 eta_storage=k["eta_storage"], e_prime=k["kWh_per_m_well"],
-                E_out_kWh=E_out, E_in_kWh=E_in, T2d_C=r["T_2d_realised"] - 273.15,
+                E_out_kWh=E_out, E_in_kWh=E_in, T2d_C=r["T_2d_realized"] - 273.15,
                 N_wells_1MW=Nw, R_near=R_near)
 
 
@@ -334,7 +422,7 @@ def run_boreas(B, L, md_prof, Rg_prof, tvd_prof=None, n_segments=99, **case_kw):
 #
 #  A notebook declares the field once and every later cell -- profiles,
 #  animation, parametric studies -- inherits it. Without this the
-#  idealised R_field(z) leaks back in wherever someone calls
+#  idealized R_field(z) leaks back in wherever someone calls
 #  simulate_css_corrected directly, which is most places.
 # ======================================================================
 from contextlib import contextmanager as _ctx
@@ -342,14 +430,13 @@ from contextlib import contextmanager as _ctx
 
 def reference_field(B, case, csv, island='Grissom', trajectory='s_curve',
                     kop_rule='staggered', theta_max=55.0, kop_ft=300.0,
-                    L_md=None, verbose=True):
+                    L_md=None, ds=None, verbose=True):
     """Positions, trajectories and R_g,eff(MD) for the design point.
 
     Returns (md, Rg, tvd, info). Hand the first three to `field_ground`.
 
-    Station counts stride GEOMETRICALLY: stepping down one at a time from
-    50 costs ~26 sparse solves at L = 1250 m, slower than the march it
-    feeds, and the clean counts are scattered anyway.
+    The station count follows from ONE fixed spacing, `ds` (default
+    DS_STATION = 50 m). There is no search: V11 is asserted instead.
     """
     import numpy as _np
     L = float(L_md if L_md is not None else case.L_well)
@@ -366,34 +453,23 @@ def reference_field(B, case, csv, island='Grissom', trajectory='s_curve',
         - B.ground_resistance(case))
     gr = Ground(k=case.k_rock, rhocp=case.rho_cp_rock,
                 t_yr=case.t_operation_yr, rb=case.r_bore)
-    nst0 = Ground.stations_for(L)
-    cands = sorted({max(3, int(round(nst0 * f)))
-                    for f in (1.0, 0.85, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1)},
-                   reverse=True)
-    pr = nst = None
-    for cand in cands:
-        # The largest candidates can exhaust memory before they can be
-        # rejected on their physics: at nst = 50 the S-curve assembles a
-        # 363 x 50 = 18150-unknown system whose near-surface block is
-        # effectively dense. That is a resource failure, not a result, so
-        # it steps down rather than aborting -- but it is never swallowed
-        # silently, because a run that quietly used fewer stations than it
-        # reported would be worse than one that stopped.
-        try:
-            pr = gr.profiles(md, X, R_near, nst=cand)
-        except MemoryError:
-            if verbose:
-                print(f'  nst = {cand}: out of memory, stepping down')
-            continue
-        if getattr(gr, 'n_negative', 0) == 0:
-            nst = cand
-            break
-        if verbose:
-            print(f'  nst = {cand}: {gr.n_negative} negative strengths, '
-                  f'stepping down')
-    if nst is None:
-        raise RuntimeError(f'no clean station count among {cands} at L={L}')
-    info = dict(N=len(P), L_md=L, n_stations=nst, R_near=R_near,
+    nst = Ground.stations_for(L, ds)
+    pr = gr.profiles(md, X, R_near, nst=nst)
+    # V11, as an assertion and not a search. Every well sits at the same
+    # temperature and every one of them is hotter than the far field, so
+    # every solved strength must be positive. A negative one is the
+    # discretization failing, and the response is to report it, not to
+    # quietly try a different station count -- that is what made two runs
+    # of the same sweep incomparable in v2.0.
+    if gr.n_negative:
+        raise RuntimeError(
+            f'V11 FAILED: {gr.n_negative} of {len(P) * nst} strengths are '
+            f'negative at L = {L:.0f} m with ds = {ds or DS_STATION:.0f} m '
+            f'({nst} stations). This is a geometry or kernel problem; do '
+            f'not work around it by changing the station count.')
+    info = dict(N=len(P), L_md=L, n_stations=nst,
+                ds_station=float(ds or DS_STATION),
+                off_station_weight=gr.off_station_weight, R_near=R_near,
                 Rg_mean=float(_np.mean(pr['temp'])),
                 Rg_top=float(pr['temp'][0]), Rg_bottom=float(pr['temp'][-1]),
                 tvd_bottom=float(pr['tvd'][-1]), island=island,
@@ -417,7 +493,8 @@ _REF_URL = ('https://raw.githubusercontent.com/JaderBarbosaLSU/'
             'wellbore-thermal-storage/notebook-model/field_ladder/')
 
 
-def _ref_key(case, island, trajectory, kop_rule, theta_max, kop_ft, L):
+def _ref_key(case, island, trajectory, kop_rule, theta_max, kop_ft, L,
+             ds=None):
     """Everything the profile depends on, and nothing else.
 
     The case enters only through r_bore (the kernel's inner radius), the
@@ -428,7 +505,7 @@ def _ref_key(case, island, trajectory, kop_rule, theta_max, kop_ft, L):
     bits = [island, trajectory, kop_rule, f'{theta_max:.4g}',
             f'{kop_ft:.4g}', f'{L:.6g}', f'{case.r_bore:.6g}',
             f'{case.k_rock:.6g}', f'{case.rho_cp_rock:.6g}',
-            f'{case.t_operation_yr:.6g}']
+            f'{case.t_operation_yr:.6g}', f'ds{float(ds or DS_STATION):.4g}']
     return 'fieldref_' + '_'.join(bits).replace('.', 'p').replace('+', '')
 
 
@@ -449,7 +526,8 @@ def cached_reference_field(B, case, csv, cache_dir='.', fetch=True,
                    kw.get('trajectory', 's_curve'),
                    kw.get('kop_rule', 'staggered'),
                    float(kw.get('theta_max', 55.0)),
-                   float(kw.get('kop_ft', 300.0)), L)
+                   float(kw.get('kop_ft', 300.0)), L,
+                   kw.get('ds'))
     path = os.path.join(cache_dir, key + '.npz')
     if not os.path.exists(path) and fetch:
         try:
@@ -475,9 +553,8 @@ def cached_reference_field(B, case, csv, cache_dir='.', fetch=True,
             pass
     if verbose:
         print('no cached field for this specification -- solving the '
-              'superposition.\n  363 wells, several station counts: '
-              'expect 5-15 minutes. The result is written to\n  '
-              f'{path} and reused from then on.', flush=True)
+              f'superposition.\n  Written to {path} and reused from then '
+              'on.', flush=True)
     md, Rg, tvd, info = reference_field(B, case, csv, verbose=verbose, **kw)
     info['cached'] = False
     try:
@@ -490,7 +567,7 @@ def cached_reference_field(B, case, csv, cache_dir='.', fetch=True,
 
 @_ctx
 def field_ground(B, md, Rg, tvd):
-    """Run the model against a measured field, not the idealised R_field(z).
+    """Run the model against a measured field, not the idealized R_field(z).
 
     Patches formation_profile and formation_resistance for the duration, so
     ANY call inside -- including simulate_css_corrected(record=True), which

@@ -53,7 +53,7 @@ Charge water enters at $T_m + 10$ K and glides 55 K down, so the **return leg
 runs about 45 K below the melting point**. Graded by depth it would refreeze
 whatever the down leg had just melted. So THUMS graded the cascade along the
 **tube path** instead — which works, but then two different melting points
-have to coexist at the same depth, centimetres apart, in contiguous PCM with
+have to coexist at the same depth, centimeters apart, in contiguous PCM with
 no wall between them. Conduction across that gap is
 
 | hairpins | leg-to-leg short circuit | % of a ~120 kW duty |
@@ -138,7 +138,7 @@ print(f'\ndefault case: {c.n_ft} fin tubes + 1 downcomer, '
 ### --------------------------------------------- THE DESIGN POINT
 cells.append(md(r"""
 ---
-## 2. The design point — **edit here, nowhere else**
+## 2. The reference case (R4) — **edit here, nowhere else**
 
 Every parameter you are likely to change lives in the next cell. Nothing
 below it hard-codes a number: each later section starts from `CASE` and
@@ -179,7 +179,10 @@ CASE = B.Case(
                              #   setting DT_cascade EQUAL to this is a no-op.
 
     # --- the well ------------------------------------------------------------
-    L_ft       = 5000.0,     # useful storage length                       [ft]
+    #   NOTE  the storage length is NOT here. It is L_md in FIELD below,
+    #   in meters of MEASURED depth, because that is what the trajectory
+    #   and the casing shoe are quoted in. Setting L_ft here as well is an
+    #   error and the guard below says so rather than silently winning.
     n_ft       = 3,          # fin tubes per well, all downward             [-]
     num_fins   = 24,         # fins per tube                                [-]
     fin_L      = 0.0035,     # fin length                                   [m]
@@ -227,7 +230,7 @@ CASE = B.Case(
 
 # =============================================================================
 #  THE FIELD.  Measured slot positions and real trajectories, not an
-#  idealised arrangement. The old packing / n_islands / fan_angle_deg
+#  idealized arrangement. The old packing / n_islands / fan_angle_deg
 #  description is retired: it could not represent where the wells actually
 #  are, and at this spacing the difference is not small.
 #
@@ -244,24 +247,47 @@ FIELD = dict(
     theta_max  = 55.0,        # maximum inclination                     [deg]
     kop_ft     = 300.0,       # used only when kop_rule = 'fixed'        [ft]
     L_md       = 1250.0,      # storage length in measured depth          [m]
+    ds_station = 50.0,        # superposition station spacing             [m]
+                              #   ONE spacing for every run of every sweep,
+                              #   not a count and not a per-run search.
+                              #   50 m is the shipped value: zero negative
+                              #   strengths at every length from 100 to
+                              #   2000 m, for R1, R3 and R4. Refining to
+                              #   25 m introduces them while moving the
+                              #   loss by 0.04 points, so the finer grid is
+                              #   worse posed and not more accurate.
+                              #   See section 5.2 and station_convergence.csv.
 )
 
+# The storage length reaches Case through L_ft, and ONLY from here.
 REF = CASE.with_(L_ft=FIELD['L_md'] / 0.3048)
+G.DS_STATION = FIELD['ds_station']
+
+# ---- no silent overrides ----------------------------------------------
+# If L_ft was also set in CASE above and disagrees with L_md, that is an
+# error, not a warning: the student would otherwise edit L_ft, see nothing
+# change, and have no way to find out why.
+_L_ft_default = B.Case().L_ft
+if abs(CASE.L_ft - _L_ft_default) > 1e-9 and \
+        abs(CASE.L_ft * 0.3048 - FIELD['L_md']) > 1e-6:
+    raise ValueError(
+        f"two storage lengths: CASE.L_ft = {CASE.L_ft:.1f} ft "
+        f"({CASE.L_ft * 0.3048:.1f} m) against FIELD['L_md'] = "
+        f"{FIELD['L_md']:.1f} m. Set the length in FIELD['L_md'] only.")
 
 # The superposition profile for that field. Built once here and reused by
 # every later cell through `field_ground`, so no section can quietly fall
-# back to the idealised geometry.
+# back to the idealized geometry.
 #
-# Cached by specification. Solving it is an 18150-unknown sparse system and
-# takes 5-15 minutes; the file for the default FIELD is fetched from the
-# repository, and editing FIELD above forces a fresh solve, which the cell
-# warns about before it starts.
+# Cached by specification, including the station spacing. The file for the
+# default FIELD is fetched from the repository; editing FIELD above forces
+# a fresh solve, which the cell says it is doing.
 MD, RG, TVD, FINFO = G.cached_reference_field(
     B, REF, CSV, island=FIELD['island'], trajectory=FIELD['trajectory'],
     kop_rule=FIELD['kop_rule'], theta_max=FIELD['theta_max'],
-    kop_ft=FIELD['kop_ft'], L_md=FIELD['L_md'])
+    kop_ft=FIELD['kop_ft'], L_md=FIELD['L_md'], ds=FIELD['ds_station'])
 SLOTS = G.grissom_positions(CSV)        # plan view, for the figures below
-print('design point set.  REF = CASE at the field length; '
+print('reference case (R4) set.  REF = CASE at the field length; '
       'MD/RG/TVD describe the field.')
 """))
 
@@ -284,6 +310,24 @@ print(f"  {'field':18s}{'default':>14}  ->  {'yours':<14}")
 for n, d, v in diff:
     print(f'  {n:18s}{str(d):>14}  ->  {str(v):<14}')
 
+# No later cell may correct an input. Every .with_(...) below section 2
+# is a VISIBLE sensitivity, never a fix; this prints what section 2 itself
+# changed between CASE and REF so an override cannot hide.
+_ref_vs_case = [(f.name, getattr(CASE, f.name), getattr(REF, f.name))
+                for f in dataclasses.fields(CASE)
+                if getattr(CASE, f.name) != getattr(REF, f.name)]
+print(f'\nREF differs from CASE in {len(_ref_vs_case)} field(s) '
+      f'(should be L_ft alone, set from FIELD["L_md"]):')
+for n, a, b in _ref_vs_case:
+    print(f'  {n:18s}{str(a):>14}  ->  {str(b):<14}')
+if [n for n, _, _ in _ref_vs_case] not in ([], ['L_ft']):
+    raise ValueError('section 2 changed something other than the storage '
+                     'length between CASE and REF')
+
+print(f'\nstation spacing {FIELD["ds_station"]:.0f} m -> '
+      f'{G.Ground.stations_for(FIELD["L_md"], FIELD["ds_station"])} stations '
+      f'at L = {FIELD["L_md"]:.0f} m')
+
 print('\nvalidate_case on REF:')
 msgs = B.validate_case(REF, verbose=False)
 if not msgs:
@@ -304,7 +348,7 @@ pumping: the downcomer carries the flow of all `n_ft` tubes through `n_ft`
 times the area, so the velocity is the same everywhere and the total path is
 still $2L_{well}$ — exactly what the hairpin had.
 
-The downcomer runs **off-centre**, as in the schematic. A concentric
+The downcomer runs **off-center**, as in the schematic. A concentric
 arrangement does not close for three 1¼″ tubes in a 7″ hole; an offset one
 packs comfortably. `validate_case` says so rather than leaving it to a comment.
 """))
@@ -453,8 +497,8 @@ So the geometry is now read from the **CalGEM WellSTAR export**: 363 Grissom
 slots, deduplicated and stripped of strays. Three facts about them, all
 from the data rather than from a description:
 
-* the measured median nearest-neighbour spacing is **1.65 m**, 10 % tighter
-  than the nominal 6 ft. The idealised rungs below are built at the measured
+* the measured median nearest-neighbor spacing is **1.65 m**, 10 % tighter
+  than the nominal 6 ft. The idealized rungs below are built at the measured
   value, so that the step from them to the real slots isolates the *layout*;
 * Grissom is a **thick closed ring**, not a filled disc and not a straight
   double row: no slot lies inside $0.3\,R_\mathrm{max}$ and 72 % lie beyond
@@ -468,7 +512,7 @@ from the data rather than from a description:
 ### The ground model
 
 Every well in the field is a line source. At a given MD, well $i$ sees its
-own wall rise plus the rise its neighbours impose,
+own wall rise plus the rise its neighbors impose,
 
 $$\Delta T_i = R_\mathrm{near}\,q_i + \sum_k G_{ik}\,q_k, \qquad
 G_{ik} = \frac{1}{4\pi k}\,E_1\!\left(\frac{d_{ik}^{2}}{4\alpha t}\right)$$
@@ -494,7 +538,7 @@ ground model to the old one rather than to a reference value.
 """))
 
 cells.append(code(r"""
-# the degeneracy check: one well, no neighbours
+# the degeneracy check: one well, no neighbors
 _c = REF
 _g = G.Ground(k=_c.k_rock, rhocp=_c.rho_cp_rock, t_yr=_c.t_operation_yr,
               rb=_c.r_bore)
@@ -505,23 +549,95 @@ print(f'  difference                       '
 """))
 
 cells.append(md(r"""
-### The one numerical trap
+### 5.2 One station spacing, fixed, for every run
 
-The superposition needs the **station spacing to be large against the well
-spacing**. Stations are the points along MD at which the interaction matrix
-is assembled; if they are packed more tightly than the wells themselves,
-the solve returns *negative* well strengths — wells absorbing heat from
-their neighbours — and $R_{g,\mathrm{eff}}$ goes negative with them. At
-$L = 100$ m with 50 stations the station spacing is 2.04 m against a well
-spacing of 1.65 m, and 47 % of the strengths come out negative.
+Stations are the measured depths at which the interaction matrix is
+assembled. The method treats each as an infinite line source in the plane
+normal to the trajectory, so **a station must represent a segment long
+compared with the distance to the neighboring wells**.
 
-`Ground.stations_for` sets the count from the geometry, at a ratio of 10,
-and `reference_field` then steps down to the first count that solves with
-no negatives at all. Between 3 and 10 stations at $L = 100$ m the negative
-count runs 0, 28, 0, 38, 59, 24, 115, 0 while $R_{g,\mathrm{eff}}$ stays
-within 3.11–3.18 m K/W, so the scattered negatives are discretisation
-noise rather than a physical error — but a clean solve is free, so it is
-what the code takes.
+Fix the *count* and that condition changes with length: 50 stations is 25 m
+apart in a 1250 m hole and 2 m apart in a 100 m one, against a well spacing
+of 1.65 m. The short case then returns *negative* strengths — wells
+absorbing heat from rock they are hotter than — and $R_{g,\mathrm{eff}}$
+goes negative with them.
+
+So the input is a **spacing**, `FIELD['ds_station'] = 50 m`, and the count
+follows as $\max(3, \mathrm{round}(L/\Delta s))$. One value for the
+ladder, the $L$ sweep and every sensitivity. Three things follow:
+
+* the validity condition is the same at every length;
+* the stations sit at the same measured depths whatever $L$ is, so
+  $R_{g,\mathrm{eff}}$ at a given MD can be *compared* across lengths —
+  that is check V10, and it agrees to 0.00 % between 200 m and 2000 m;
+* every run of a sweep is discretized identically, so a difference between
+  two runs is the thing being varied and not the grid.
+
+**V11 is an assertion, not a search.** If the fixed spacing produces a
+negative strength the run fails and says so. It does not quietly try
+another count — that is what made two runs of the same sweep incomparable
+in v2.0.
+
+### What the grid study actually says
+
+Refining does *not* converge to a better answer here, and that is worth
+seeing rather than assuming. At the reference case:
+
+| stations | $\Delta s$ | negatives | off-station weight | loss | $e'$ |
+|---|---|---|---|---|---|
+| 25 | 50.0 m | **0** | 5.2 % | 52.39 % | 0.2153 |
+| 50 | 25.0 m | 130 | 25.8 % | 52.43 % | 0.2151 |
+| 100 | 12.5 m | 67 | 27.6 % | 52.51 % | 0.2147 |
+| 200 | 6.25 m | 490 | 32.7 % | 52.68 % | 0.2142 |
+
+The answer barely moves — 0.29 points of loss and 0.51 % of $e'$ across an
+eightfold refinement — while the negative strengths appear from 25 m
+spacing on. **The coarse grid is the well-posed one**; the fine ones are
+cheaper to compute than to justify. 50 m gives zero negatives at every
+length from 100 to 2000 m, for R1, R3 and R4.
+
+### Two structural results that make most of this moot
+
+Both measured, in the cell below, not assumed.
+
+**Vertical fields are exactly block diagonal in station.** For parallel
+vertical wells the nearest point on a neighbor is at the same depth, so
+every coupling stays within its own station — the off-station kernel weight
+is 0.00 % — and every block is the *same* matrix, because horizontal
+distances do not change with depth. $R_{g,\mathrm{eff}}$ is therefore
+independent of both the station count and $L$: R1 gives 15.783 m K/W and R3
+gives 3.230, at every length and every count tested. The solver exploits
+this directly, which is what makes the disc rung computable at all — at
+1.65 m spacing all 363 wells sit inside 18 m, so every target has about
+90 000 candidate samples inside the cutoff.
+
+**The S-curve is block tridiagonal.** The wells converge and diverge, so a
+neighbor's nearest point lands at most one station away, carrying 5.2 % of
+the kernel weight at the reference. This is the only case in which the
+count does anything at all.
+"""))
+
+cells.append(code(r"""
+# the structure claim, measured rather than asserted
+import numpy as np
+_c, _P = REF, SLOTS
+_kopm, _ = G.staggered_kop(_P)
+_gr = G.Ground(k=_c.k_rock, rhocp=_c.rho_cp_rock, t_yr=_c.t_operation_yr,
+               rb=_c.r_bore)
+_Rn = float(np.atleast_1d(B.formation_resistance(_c, np.array([0.0])))[0]
+            - B.ground_resistance(_c))
+_nst = G.Ground.stations_for(FIELD['L_md'], FIELD['ds_station'])
+print(f"ds = {FIELD['ds_station']:.0f} m -> {_nst} stations "
+      f"at L = {FIELD['L_md']:.0f} m MD\n")
+for _t, _k in (('vertical', None), ('s_curve', _kopm)):
+    _md, _X = G.trajectories(_P, FIELD['L_md'], kind=_t, kop=_k,
+                             theta_max=FIELD['theta_max'])
+    _pr = _gr.profiles(_md, _X, _Rn, nst=_nst)
+    print(f"  {_t:9s} off-station kernel weight "
+          f"{100*_gr.off_station_weight:5.2f} %   "
+          f"negative strengths {_gr.n_negative:5d}   "
+          f"R_g,eff mean {_pr['temp'].mean():7.3f} m K/W")
+print('\n0.00 % is the block-diagonal case: the count cannot matter there.')
 """))
 
 cells.append(code(r"""
@@ -558,7 +674,7 @@ for kind, col in (('vertical', '#23356b'), ('s_curve', '#b03028')):
     ax[2].plot(m2[::8], nn, color=col, lw=1.8, label=kind)
 ax[2].set_yscale('log'); ax[2].legend(frameon=False)
 ax[2].set_xlabel('MD / m'); ax[2].set_ylabel('median spacing / m')
-ax[2].set_title('(c) nearest-neighbour spacing')
+ax[2].set_title('(c) nearest-neighbor spacing')
 plt.tight_layout(); plt.show()
 
 print(f"measured median spacing at the wellhead: "
@@ -608,16 +724,16 @@ changes exactly one thing and nothing else moves:
 | rung | geometry | what the step from the rung above isolates |
 |---|---|---|
 | **R0v** | isolated well, vertical | the bound. No field at all |
-| **R0i** | isolated well, S-curve | the **trajectory alone**: same MD, colder rock, no neighbours |
-| **R1** | disc, vertical, 1.65 m | the **field**: 363 neighbours in the most favourable packing |
+| **R0i** | isolated well, S-curve | the **trajectory alone**: same MD, colder rock, no neighbors |
+| **R1** | disc, vertical, 1.65 m | the **field**: 363 neighbors in the most favorable packing |
 | **R2** | straight double row, vertical | the **layout**: same count and spacing, strung out instead of compact |
-| **R3** | Grissom slots, vertical | the **real positions**: a ring, not an idealised row |
-| **R4** | Grissom slots, S-curve | the **real trajectories**: the design point |
+| **R3** | Grissom slots, vertical | the **real positions**: a ring, not an idealized row |
+| **R4** | Grissom slots, S-curve | the **real trajectories**: the **reference case** |
 
 Two rules make the comparison honest, and both were violated in an earlier
 draft:
 
-1. **Every rung is at the measured 1.65 m.** Building the idealised rungs at
+1. **Every rung is at the measured 1.65 m.** Building the idealized rungs at
    the nominal 6 ft mixes a layout change with a spacing change, and that
    understated the layout penalty by 40 % — R2 → R3 is $+4.2$ points, not
    $+3.0$.
@@ -657,7 +773,7 @@ import pandas as pd
 LADDER = ['R0v', 'R0i', 'R1', 'R2', 'R3', 'R4']
 WHAT = {'R0v': 'isolated, vertical', 'R0i': 'isolated, S-curve',
         'R1': 'disc, vertical', 'R2': 'double row, vertical',
-        'R3': 'Grissom slots, vertical', 'R4': 'Grissom slots, S-curve'}
+        'R3': 'Grissom slots, vertical (R3)', 'R4': 'Grissom slots, S-curve'}
 
 tab, prev = {}, None
 for s in LADDER:
@@ -673,7 +789,7 @@ for s in LADDER:
               'delivers': r['delivers']}
     prev = r['loss']
 display(pd.DataFrame(tab).T)
-print(f"field at the design point: "
+print(f"field at the reference case (R4): "
       f"{pick('R4', FIELD['L_md'])[0]['field_MWh_per_cycle']:.1f} MWh "
       f"per cycle from {pick('R4', FIELD['L_md'])[0]['N_field']:.0f} wells")
 """))
@@ -702,7 +818,7 @@ cells.append(md(r"""
 ### Reading the ladder
 
 **The field is worth an order of magnitude, and the trajectory takes a
-third of it back.** R0 → R1 is the big step: 363 neighbours cut the loss
+third of it back.** R0 → R1 is the big step: 363 neighbors cut the loss
 from 64 % to 3 %, because each well only has to push heat out through its
 share of the cluster boundary. R3 → R4 then puts 39 points back on,
 entirely through the trajectory: below the kickoff the wells separate, the
@@ -713,7 +829,7 @@ not share with anybody.
 for the same 363 wells at the same spacing — stringing them into a line
 roughly triples the perimeter per well. R2 → R3 is a further $+3$: the real
 ring is *better* than a straight double row of the same length, because a
-closed loop has no end-caps, but worse than the idealised row's uniformity
+closed loop has no end-caps, but worse than the idealized row's uniformity
 allows for.
 
 **Nothing here fails to deliver.** Earlier versions reported short isolated
@@ -793,11 +909,11 @@ cells.append(md(r"""
 ## 8. How deep should the storage go?
 
 With a real trajectory the question changes shape. A vertical well gains
-from every extra metre: the rock is hotter and the shielding does not
+from every extra meter: the rock is hotter and the shielding does not
 weaken, so $e'$ rises monotonically and there is no optimum — depth is a
 pure capital lever. **A deviated well does not.** Past the kickoff each
-extra metre of measured depth buys less true vertical depth and sits in
-rock the neighbours no longer share, so the marginal return falls away.
+extra meter of measured depth buys less true vertical depth and sits in
+rock the neighbors no longer share, so the marginal return falls away.
 
 The cutoff is defined on the **marginal** round-trip efficiency, not the
 average: $\Delta E_\mathrm{out}/\Delta E_\mathrm{in}$ across each interval
@@ -868,33 +984,34 @@ for s in LADDER:
 
 cells.append(md(r"""
 **Vertical wells have no cutoff; deviated ones stop paying between 400 and
-600 m MD**, and the design point's own crossing falls in 400--500. That is
+600 m MD**, and the reference case's own crossing falls in 400--500. That is
 not a statement about heat transfer in a tube — it is a statement about the
 kickoff. The S-curve reaches about 890 m TVD at 1250 m
 MD, and most of the shortfall is accumulated in the build section, where
 the wells are simultaneously diverging from each other and falling behind
 in depth.
 
-### How sharp is that number? Not very, and for a specific reason
+### How sharp is that number?
 
 The marginal curve is flat where it crosses the threshold — 0.123 against
-0.131 over 400--500 m — so the crossing is resolved only to one interval of
-the $L$ grid. Worse, the station count is chosen per run, as the first count
-that solves with no negative strengths, and it is not the same from one run
-to the next: at $L = 500$ m the design point lands on 25 stations and the
-45$^\circ$ variant on 6.
+0.131 over 400--500 m — so the crossing is resolved to one interval of the
+$L$ grid and no finer. Within that limit it is now **stable**: the
+45$^\circ$ and 70$^\circ$ variants put it in the same 400--500 m interval
+as the reference case.
 
-That difference is not negligible against the effect being measured. At
-$L = 500$ m, going from 45$^\circ$ to 70$^\circ$ moves $e'$ by 0.4 %; going
-from 6 stations to 25 moves it by 2.8 %. **The discretisation is the larger
-of the two**, which is why the inclination variants put the cutoff one
-interval later than the design point does, in an order that is not monotonic
-in angle. Read that as the grid, not as physics.
+They did not, in v2.0. There the station count was chosen per run, as the
+first count that solved with no negative strengths, so two runs of the same
+sweep were discretized differently — at $L = 500$ m the reference case
+landed on 25 stations and the 45$^\circ$ variant on 6 — and that moved $e'$
+by 2.8 % against the 0.4 % the inclination was worth. The cutoff came out
+one interval later for both inclination variants, in an order that was not
+monotonic in angle. **That was the grid, not physics**, and section 5.2
+describes the fixed spacing that removed it.
 
-Two things are solid underneath it. Below the kickoff the three inclinations
-are *identical* to four decimals, as they must be — there is nothing to
-deviate yet. And at $L = 1250$ m every R4 variant lands on the same 25
-stations, so the sensitivity table in 8b compares like with like.
+Two things are solid underneath. Below the kickoff the three inclinations
+are now *identical to four decimals*, as they must be — there is nothing to
+deviate yet, and in v2.0 they were not. And a deep kickoff removes the
+cutoff altogether: `R4_kop300` has none within the sweep.
 
 The grey band marks measured depths beyond the provisional casing shoe.
 **The shoe depth is the one genuinely blocking unknown in the geometry**:
@@ -916,7 +1033,7 @@ superposition from scratch rather than rescaling anything.
 
 cells.append(code(r"""
 import pandas as pd
-SENS = [('R4', 'design point: staggered KOP, 55 deg, 10 yr'),
+SENS = [('R4', 'reference case: staggered KOP, 55 deg, 10 yr'),
         ('R4_kop300', 'every well kicks off at 300 ft'),
         ('R4_th45', 'theta_max = 45 deg'),
         ('R4_th70', 'theta_max = 70 deg'),
@@ -960,7 +1077,7 @@ is at ten years.
 
 The `flux` rows in the cache are the equal-strength alternative at the same
 geometry. They are kept because the difference between them is the size of
-the modelling choice, and that belongs in the limitations rather than in a
+the modeling choice, and that belongs in the limitations rather than in a
 footnote.
 """))
 
@@ -1006,6 +1123,14 @@ Every parameter is a field of `Case`. The ones BOREAS adds:
 | `k_rock`, `rho_cp_rock`, `k_cement` | formation and annulus |
 | `t_operation_yr` | how old the field is when you evaluate it |
 | `D_in`, `r_casing_o`, `r_bore` | the casing string; `D_in` is what bounds the PCM |
+
+**Nothing below section 2 may correct an input.** Every `.with_(...)` in
+the sections above is a *sensitivity* --- a visible, commented variation
+on the reference case --- and never a fix for something set in section 2.
+The audit cell enforces the one case that used to break this rule: the
+storage length, which section 2 set as `L_ft = 5000` and then silently
+replaced with 1250 m. There is now one length input, `FIELD['L_md']`, and
+setting `L_ft` as well raises.
 
 The field is **not** a `Case` field any more. `n_wells_field`,
 `B_surface_m`, `fan_angle_deg` and `packing` still exist for backward
@@ -1076,9 +1201,9 @@ ref = REF
 
 # THE CYCLES ARE DRAWN AT THE OUTLET THE GRISSOM FIELD ACTUALLY DELIVERS.
 # cycle_state_points' own T_2d is provisional -- the value the outlet WOULD
-# take if the top layer stayed fully molten -- and at the design point the
+# take if the top layer stayed fully molten -- and at the reference case the
 # field misses it by nearly 30 K. Drawing the T-s diagram at the provisional
-# value while the tables report the realised one is how an earlier version
+# value while the tables report the realized one is how an earlier version
 # ended up with a figure and a state-point table that were not the same case.
 import pickle, os
 if os.path.exists('rec_field.pkl'):
@@ -1089,12 +1214,12 @@ else:
     pickle.dump(dict(rec=REC), open('rec_field.pkl', 'wb'))
 
 _prov = B.cycle_state_points(ref)[2]['T_2d'] - 273.15
-rank, hp, Tdict = B.cycle_state_points(ref, T_2d=REC['T_2d_realised'])
+rank, hp, Tdict = B.cycle_state_points(ref, T_2d=REC['T_2d_realized'])
 print(f'T_2d provisional (top layer fully molten)   {_prov:7.2f} C')
-print(f"T_2d realised on the Grissom field          "
-      f"{REC['T_2d_realised'] - 273.15:7.2f} C"
-      f"   ({REC['T_2d_realised'] - 273.15 - _prov:+.1f} K)")
-print('every diagram and state-point table below is at the realised value.')
+print(f"T_2d realized on the Grissom field          "
+      f"{REC['T_2d_realized'] - 273.15:7.2f} C"
+      f"   ({REC['T_2d_realized'] - 273.15 - _prov:+.1f} K)")
+print('every diagram and state-point table below is at the realized value.')
 """))
 
 cells.append(md(r"""
@@ -1218,7 +1343,7 @@ backwards.
 
 The curves here are the model's own: `orc_composite` calls
 `_orc_cold_composite` and `_water_curve` rather than rebuilding them, so what
-is plotted is by construction what `orc_pinch` minimises over. The returned
+is plotted is by construction what `orc_pinch` minimizes over. The returned
 `pinch_K` should agree with `rank['pinch']` to rounding --- that agreement is
 the figure's self-check, and it is worth reading rather than trusting.
 """))
@@ -1259,7 +1384,7 @@ T_2d = Tdict['T_2d'] - 273.15
 print(f"water from the store, T_2d        {T_2d:8.2f} C")
 print(f"hot-end rule would give T_3e      {rank['T_3e_hot_end'] - 273.15:8.2f} C"
       f"   (approach {T_2d - (rank['T_3e_hot_end'] - 273.15):.1f} K)")
-print(f"realised T_3e                     {rank['T_3e'] - 273.15:8.2f} C"
+print(f"realized T_3e                     {rank['T_3e'] - 273.15:8.2f} C"
       f"   (approach {T_2d - (rank['T_3e'] - 273.15):.1f} K)")
 print(f"binding constraint                {rank['T_3e_binding']}")
 print()
@@ -1319,7 +1444,7 @@ print(f"COP    {hp['hp_cop']:7.4f} ->{hp_a['hp_cop']:7.4f}")
 ### ------------------------------------------- 9. well profiles
 cells.append(md(r"""
 ---
-## 11. Thermal behaviour along the well
+## 11. Thermal behavior along the well
 
 The figures above are about the surface machines. These are about the store
 itself, and they need a RECORDED march:
@@ -1348,9 +1473,9 @@ one.
 
 Read the two numbers for what they are. The forward reading is the one that
 has to pass, and it does, at `+0.00` K. The reversed reading is *evidence*
-only when it fails — on the idealised vertical geometry it came out at
+only when it fails — on the idealized vertical geometry it came out at
 `+26.9` K, a flagrant violation. On the Grissom S-curve it comes out
-negative too, because the cascade and the realised PCM temperatures both
+negative too, because the cascade and the realized PCM temperatures both
 fall towards the top and the mirrored comparison happens not to break. **A
 reversed reading that passes is not a second confirmation**; it means this
 particular test has stopped discriminating for this geometry, and the

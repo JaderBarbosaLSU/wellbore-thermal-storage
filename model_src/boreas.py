@@ -808,7 +808,7 @@ class Case:
     # RETURN leg runs ~45 K BELOW the melting point. Graded by depth it
     # refreezes what the down leg just melted. So THUMS graded the cascade
     # along the TUBE PATH instead -- which works, but requires two different
-    # melting points to coexist at the same depth, centimetres apart, with
+    # melting points to coexist at the same depth, centimeters apart, with
     # contiguous PCM and no wall between them. Conduction between those legs
     # is 43 kW at one hairpin and 92 kW at three, against a ~120 kW duty, and
     # it is a short circuit straight across the cascade the model exists to
@@ -856,13 +856,13 @@ class Case:
     L_producing_ft: float = 8000.0   # depth the geothermal water comes from
 
     # ---- THE WELL FIELD IS A CONE, NOT AN ARRAY -------------------------
-    # THUMS wellheads sit on 6 ft centres with 12 ft between double rows,
+    # THUMS wellheads sit on 6 ft centers with 12 ft between double rows,
     # and over 1200 wells are drilled DIRECTIONALLY from four islands with
     # drift angles to 84 deg, reaching 6500 acres. So the spacing is not a
-    # number, it is a function of depth: metres apart at the wellhead, of
+    # number, it is a function of depth: meters apart at the wellhead, of
     # order 150 m at reservoir depth.
     #
-    # That matters more than any other single parameter here. Neighbours
+    # That matters more than any other single parameter here. Neighbors
     # merge thermally in r^2/alpha, which at 6 ft is 36 DAYS and at 160 m is
     # eight centuries. The shallow section is one thermal body within a month
     # and barely loses at all; the deep section is a field of isolated wells.
@@ -874,7 +874,7 @@ class Case:
     # single resistance can represent that, which is why B is B(z).
     #
     # n_wells_field = None recovers the isolated well, which is the
-    # conservative bound and the v1.0 default behaviour.
+    # conservative bound and the v1.0 default behavior.
     n_wells_field: float = None   # wells sharing the formation; None = alone
     B_surface_m: float = 1.83     # wellhead spacing, 6 ft                [m]
     z_kickoff_m: float = 300.0    # vertical above the kickoff point      [m]
@@ -887,7 +887,7 @@ class Case:
     # 1/perimeter.
     #
     # The THUMS islands are nothing like a disc. Wellheads sit in LINEAR
-    # DOUBLE ROWS along the island rim -- 6 ft centre to centre, 12 ft
+    # DOUBLE ROWS along the island rim -- 6 ft center to center, 12 ft
     # between the rows -- and the field is split across FOUR islands, each
     # with its own perimeter. That presents 1.86 m of perimeter per well
     # against 0.205 m for the disc: 9.1x more, hence 9.1x the loss.
@@ -983,7 +983,7 @@ class Case:
     # identically the borehole discharging glide. Until v0.9b this was not a
     # field at all: both mass flows were divided by DT_3C_2C, which silently
     # asserted that the two half-cycles glide by the same amount. They need
-    # not. None keeps the old behaviour exactly. See DN-18.
+    # not. None keeps the old behavior exactly. See DN-18.
     DT_3D_2D: float = None        # discharging water glide        [K]
     # The cascade grading parameter. Layer spacing is DT_cascade / N_lay and
     # the top-to-bottom SPAN is DT_cascade * (N_lay - 1) / N_lay, one layer
@@ -1161,7 +1161,7 @@ class Case:
         downcomer occupies area but exchanges no heat with the PCM it
         displaces, so it is SUBTRACTED before the division rather than
         counted as a participant -- a fin tube's cell is bounded by its
-        neighbours and by the downcomer's outer wall, not by a share of it.
+        neighbors and by the downcomer's outer wall, not by a share of it.
 
             pi r_cell^2 = (pi R^2 - pi r_id_outer^2) / n_ft
 
@@ -1176,7 +1176,7 @@ class Case:
 
     @property
     def delta_merge(self):
-        """Melt-layer thickness at which neighbouring fronts touch.
+        """Melt-layer thickness at which neighboring fronts touch.
 
         Hypothesis H3 (concentric annulus, no interaction between legs) is a
         statement about delta < delta_merge. At and beyond this thickness the
@@ -1335,7 +1335,7 @@ def pcm_state(E, T_m_seg, case):
     A_avail, E_lat, C_s, C_l = pcm_capacities(case)
     T_m_seg = np.asarray(T_m_seg, dtype=float)
     A = np.clip(E, 0.0, E_lat) / (case.rho_latent * case.h_m)
-    if not case.sensible_heat:                    # v0.3 behaviour: PCM pinned at T_m
+    if not case.sensible_heat:                    # v0.3 behavior: PCM pinned at T_m
         return A, T_m_seg.copy()
     T = np.where(E < 0.0, T_m_seg + E / C_s,
                  np.where(E > E_lat, T_m_seg + (E - E_lat) / C_l, T_m_seg))
@@ -1468,7 +1468,7 @@ def bulk_shape_factor(case):
     lumped state T_pcm is the VOLUME MEAN. The resistance that belongs with that
     mean is not the surface-to-surface annulus value.
 
-    Take the cell as an annulus r_e <= r <= r_o, adiabatic at r_o (its neighbour
+    Take the cell as an annulus r_e <= r <= r_o, adiabatic at r_o (its neighbor
     is identical, so the boundary is a symmetry plane), storing sensible heat at
     a uniform volumetric rate s = rho c dT/dt. Quasi-steady, the heat crossing
     radius r is what the material beyond it stores,
@@ -1582,7 +1582,7 @@ def conduction_shell(case, A_melt, A_avail, melting, E=None, E_lat=None):
 
     # ---- single phase: there is no front, so there is no side ------------
     # `E` is optional only so that callers which do not have it (none, now)
-    # keep the two-phase behaviour; when it is given, the single-phase cells
+    # keep the two-phase behavior; when it is given, the single-phase cells
     # get the bulk resistance of `bulk_shape_factor`, the SAME in both
     # directions, because a one-phase cell has no front and cannot care which
     # way the heat is going.
@@ -1653,7 +1653,7 @@ def unmirror_march(res):
 # for a borehole storage paper and it is the first thing a reviewer attacks.
 #
 # The resistances are wildly unequal and it is worth knowing which one is the
-# model. At the design point, per metre of borehole:
+# model. At the design point, per meter of borehole:
 #
 #     casing steel        0.0003 m K/W     0.1 %
 #     cement              0.018            5 %
@@ -1673,7 +1673,7 @@ def unmirror_march(res):
 
 
 def ground_resistance(case):
-    """Quasi-steady line-source resistance of the formation, per metre.
+    """Quasi-steady line-source resistance of the formation, per meter.
 
     At time t the disturbance has spread to a radius of order sqrt(alpha t),
     and the resistance is the log of that over the borehole radius. It is
@@ -1689,7 +1689,7 @@ def ground_resistance(case):
 
     SINGLE WELL, NO FIELD SHIELDING. This is deliberate and it is the
     conservative choice: an isolated well is the worst case, because in a
-    field the neighbours hold the ground between them warm and only the
+    field the neighbors hold the ground between them warm and only the
     perimeter leaks. The shielding factor is 29x to 42x, essentially
     independent of the driving temperature and only weakly dependent on rock
     conductivity, so a field result can be obtained by dividing. Nothing here
@@ -1754,7 +1754,7 @@ def field_perimeter(case, depth):
 
     THIS, NOT 2*pi*R, IS WHAT THE SHIELDING ACTUALLY USES. The perimeter
     model says a cluster loses heat across its boundary and the wells inside
-    share it, so the quantity that matters is metres of boundary per well.
+    share it, so the quantity that matters is meters of boundary per well.
     Expressing that as a radius silently assumes the wells fill a circle.
 
         disc   P = 2 pi R0                    compact, minimum perimeter
@@ -1803,7 +1803,7 @@ def field_radius(case, depth):
 
 
 def well_spacing(case, depth):
-    """Centre-to-centre spacing at depth, scaled with the fan radius [m]."""
+    """Centre-to-center spacing at depth, scaled with the fan radius [m]."""
     Rf = field_radius(case, depth)
     if Rf is None:
         return None
@@ -1814,7 +1814,7 @@ def well_spacing(case, depth):
 def formation_resistance(case, depth=None):
     """Total series resistance, PCM bulk to undisturbed rock [m K / W].
 
-    Per metre of BOREHOLE, not per metre of tube. The PCM-to-casing term is
+    Per meter of BOREHOLE, not per meter of tube. The PCM-to-casing term is
     the crude one: n_ft parallel paths from the tube walls out to the casing,
 
         R_pcm = ln(R_casing_i / r_e) / (2 pi n_ft k_pcm)
@@ -1836,7 +1836,7 @@ def formation_resistance(case, depth=None):
 
     # ---- FIELD SHIELDING -------------------------------------------------
     # A well inside a cluster cannot lose what an isolated one would: its
-    # neighbours hold the rock between them warm, and once the cells have
+    # neighbors hold the rock between them warm, and once the cells have
     # merged the only heat leaving is across the cluster PERIMETER, shared
     # among N wells. Writing that as a resistance,
     #
@@ -1881,7 +1881,7 @@ def formation_profile(case, n_segments=None, discharge=False):
     to avoid -- so it is asserted in `validate_case`, not left to a comment.
     """
     n = n_segments or case.n_segments
-    xi = (np.arange(n) + 0.5) / n                 # cell centres, 0 at inlet
+    xi = (np.arange(n) + 0.5) / n                 # cell centers, 0 at inlet
     depth = case.L_well * (1.0 - xi)              # charge frame: z=0 is bottom
     T_rock = case.T_surface_C + 273.15 + case.grad_K_per_km / 1000.0 * depth
     if discharge:
@@ -2405,7 +2405,7 @@ def cycle_state_points(case, T_2d=None):
     """ORC and heat-pump state points, and the two cycle efficiencies.
 
     Note the expansions and compressions carry no isentropic efficiency, so
-    eta_ORC and COP are idealised -- only the electrical and mechanical
+    eta_ORC and COP are idealized -- only the electrical and mechanical
     efficiencies appear.
 
     THE DISCHARGE CLOSURE (changed in v0.6). Only the two exchanger INLETS are
@@ -2427,14 +2427,14 @@ def cycle_state_points(case, T_2d=None):
     and T_2d is DEMOTED to a provisional estimate, the value it would take if
     the water achieved the full glide. It is provisional because the ORC needs
     an evaporating temperature before the store has been marched: T_3e is tied
-    to T_2d. Pass the realised outlet back in as `T_2d` for the correction pass
+    to T_2d. Pass the realized outlet back in as `T_2d` for the correction pass
     (see `simulate_css`); the estimate is good enough that one pass suffices.
 
     Setting DT_M_1D = DT_3C_2C / N_lay recovers the retired closure exactly,
     which is how the change is verified to be a no-op.
     """
     T_3d_C = T_m_bottom(case) - 273.15 - case.DT_M_1D
-    # provisional unless the caller supplies the realised value
+    # provisional unless the caller supplies the realized value
     T_2d_C = (T_3d_C + case.glide_dc_spec) if T_2d is None else (T_2d - 273.15)
     T = dict(
         T_1e=case.T_sink_C + case.DT_sink_glide + case.DT_E_sink + 273.15,
@@ -2460,7 +2460,7 @@ def cycle_state_points(case, T_2d=None):
     # the whole evaporator, so the boiling temperature comes back from the
     # pinch check and is written into T -- otherwise the reported state points
     # and the efficiency would describe different cycles. This runs on the
-    # correction pass too, with the realised T_2d.
+    # correction pass too, with the realized T_2d.
     rank = feasible_rankine(case, T["T_1e"], T["T_2d"], T["T_3d"])
     T["T_3e_hot_end_rule"] = T["T_3e"]
     T["T_3e"] = rank["T_3e"]
@@ -2594,7 +2594,7 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False, T_2d=None):
 
     One pass. `T_2d` overrides the provisional exchanger outlet used to set the
     ORC evaporating temperature; `simulate_css_corrected` is the wrapper that
-    supplies the realised value. Called directly, this is the uncorrected
+    supplies the realized value. Called directly, this is the uncorrected
     result.
 
     No root-finding. `N` defaults to the latent-heat-only well count and both
@@ -2641,8 +2641,8 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False, T_2d=None):
                                    - water_h(case, T["T_2c"]))
              / (N * case.n_ft))
     # NOTE the discharge flow stays pinned by the SPECIFIED glide, as it has
-    # been since v0.6, and not by the realised T_2d that the correction pass
-    # knows about. Using the realised outlet here is tempting -- it cuts the
+    # been since v0.6, and not by the realized T_2d that the correction pass
+    # knows about. Using the realized outlet here is tempting -- it cuts the
     # reported deviation from +4.46 % to +1.45 % and lifts eta_RTE by 0.28 %
     # -- but that is partly circular: feeding last pass's outlet into this
     # pass's flow definition drives the delivered energy toward the target by
@@ -2704,10 +2704,10 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False, T_2d=None):
     deviation = Q_dc / req - 1.0
 
     # ---- the outlet temperatures, which are results and not inputs ---------
-    T_2d_realised = mixed_mean_outlet(dc)      # what the ORC evaporator sees
-    T_2c_realised = mixed_mean_outlet(ch)      # what returns to the HP condenser
-    glide_dc = T_2d_realised - T["T_3d"]
-    glide_ch = T["T_4c"] - T_2c_realised
+    T_2d_realized = mixed_mean_outlet(dc)      # what the ORC evaporator sees
+    T_2c_realized = mixed_mean_outlet(ch)      # what returns to the HP condenser
+    glide_dc = T_2d_realized - T["T_3d"]
+    glide_ch = T["T_4c"] - T_2c_realized
     return dict(
         N_wells=N, m1_ch=m1_ch, m1_dc=m1_dc, flow_ratio=m1_dc / m1_ch,
         cycles=len(history), converged=history[-1]["drift"] < tol, tol=tol,
@@ -2715,7 +2715,7 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False, T_2d=None):
         Q_charge_kJ=Q_ch, Q_discharge_kJ=Q_dc, required_kJ=req,
         # Does the store actually give heat back? Both conditions, because
         # either alone can be satisfied by a store that does not.
-        delivers=bool(T_2d_realised > T["T_3d"] and Q_dc > 0.0),
+        delivers=bool(T_2d_realized > T["T_3d"] and Q_dc > 0.0),
         deviation=deviation,
         W_el_out_implied=case.W_dot_el_out * (1.0 + deviation),
         # ---- THE NUMBER THAT WAS 1.0000 BY CONSTRUCTION ------------------
@@ -2738,8 +2738,8 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False, T_2d=None):
                       well_spacing(case, case.L_well))[0])),
         R_ground=ground_resistance(case),
         eta_storage=Q_dc / Q_ch, lambda_overridden=lambda_overridden,
-        T_2d_assumed=T["T_2d"], T_2d_realised=T_2d_realised,
-        T_2c_assumed=T["T_2c"], T_2c_realised=T_2c_realised,
+        T_2d_assumed=T["T_2d"], T_2d_realized=T_2d_realized,
+        T_2c_assumed=T["T_2c"], T_2c_realized=T_2c_realized,
         glide_dc=glide_dc, glide_ch=glide_ch,
         glide_ratio_dc=glide_dc / case.glide_dc_spec,
         T_2d_was_provisional=T_2d is None,
@@ -2786,8 +2786,11 @@ def geothermal_resource(case, r):
         Q_src_kW=Q_src, m_geo=m_geo, m_ref=m_ref,
         T_reinject_C=T_rei - 273.15,
         Ex_full_kW=ex_full, Ex_reinject_kW=ex_rei, Ex_stripped_kW=ex_stripped,
-        utilisation=ex_stripped / ex_full if ex_full else float("nan"),
-        N_geo=N_geo, N_geo_per_MWe=N_geo / (case.W_dot_el_out / 1000.0),
+        utilization=ex_stripped / ex_full if ex_full else float("nan"),
+        N_geo=N_geo,
+        # TARGET basis, kept for traceability only. The reported
+        # N_geo_per_MWe is in performance_indices, on W_net.
+        N_geo_per_MWe_target=N_geo / (case.W_dot_el_out / 1000.0),
         # which of the two the audit will charge for
         Ex_charged_kW=(ex_full if case.exergy_convention == "resource"
                        else ex_stripped),
@@ -2796,7 +2799,7 @@ def geothermal_resource(case, r):
 
 
 def borehole_pumping(case, r):
-    """Field pumping power for both half-cycles, kW, at the realised flows.
+    """Field pumping power for both half-cycles, kW, at the realized flows.
 
     ONE copy, called by `performance_indices` and by `exergy_audit`. It was
     briefly written twice -- which is the DN-24 trap exactly, a formula
@@ -2805,9 +2808,9 @@ def borehole_pumping(case, r):
     gv = case.geom_vector()
     N, T = r["N_wells"], r["T"]
     _, pp_dc = calculate_pressure_drop(gv, r["m1_dc"], case.fluid2,
-                                       r["T_2d_realised"], T["T_3d"], case.P)
+                                       r["T_2d_realized"], T["T_3d"], case.P)
     _, pp_ch = calculate_pressure_drop(gv, r["m1_ch"], case.fluid2,
-                                       T["T_4c"], r["T_2c_realised"], case.P)
+                                       T["T_4c"], r["T_2c_realized"], case.P)
     f = case.n_ft * N / 1000.0
 
     # ---- THE DOWNCOMER IS ALSO A PIPE -----------------------------------
@@ -2855,7 +2858,7 @@ def downcomer_leak(case, r):
     difference is larger.
 
     Quasi-steady and evaluated against the CASCADE temperature rather than the
-    realised PCM temperature: the downcomer is a boundary condition on the
+    realized PCM temperature: the downcomer is a boundary condition on the
     store, not a participant in its march, and resolving it properly would
     mean coupling it segment by segment into `march_h`. Reported separately so
     it is never silently folded into the formation loss, which is a different
@@ -2869,7 +2872,7 @@ def downcomer_leak(case, r):
 
     # charge: supply descends at T_4c; discharge: return ascends at T_2d
     q_ch = float(np.sum((T["T_4c"] - T_m_seg) / R_ins) * dz)
-    q_dc = float(np.sum((r["T_2d_realised"] - T_m_seg) / R_ins) * dz)
+    q_dc = float(np.sum((r["T_2d_realized"] - T_m_seg) / R_ins) * dz)
     N = r["N_wells"]
     return (q_ch * N * case.t_ch * 3600.0 / 1e3,      # kJ, into the store
             q_dc * N * case.t_dc * 3600.0 / 1e3)
@@ -3004,13 +3007,13 @@ def exergy_audit(case, r):
     I["borehole"] = dEx_ch - dEx_dc
 
     # The water loop does NOT in fact close at CSS: the well returns water at
-    # T_2c_realised, not at the T_2c the condenser assumes, and likewise on
+    # T_2c_realized, not at the T_2c the condenser assumes, and likewise on
     # discharge. Reported rather than absorbed silently.
     mism = float("nan")
-    if r.get("T_2c_realised") is not None:
+    if r.get("T_2c_realized") is not None:
         mism = (stream_exergy_rate(case, m_w_ch, T["T_3c"],
-                                   r["T_2c_realised"]) * t_ch - dEx_ch
-                - (stream_exergy_rate(case, m_w_dc, r["T_2d_realised"],
+                                   r["T_2c_realized"]) * t_ch - dEx_ch
+                - (stream_exergy_rate(case, m_w_dc, r["T_2d_realized"],
                                       T["T_3d"]) * t_dc - dEx_dc))
 
     # ---- REALISED BASIS, and the same boundary as eta_RTE ----------------
@@ -3036,7 +3039,7 @@ def exergy_audit(case, r):
     # The borehole parasitics are work in, dissipated as friction in the
     # well, so they are an input AND a destruction. Charged with eta_RTE's
     # sign convention: the charge pump adds to the input, the discharge pump
-    # subtracts from the output. They are computed at the realised flows
+    # subtracts from the output. They are computed at the realized flows
     # already, so they are not scaled.
     pump_ch, pump_dc = borehole_pumping(case, r)
     P_ch, P_dc = pump_ch * t_ch, pump_dc * t_dc
@@ -3093,7 +3096,7 @@ def exergy_report(case, r, a=None):
     print(f"  OUT  electrical           {a['W_el_out_kWh']:10.1f} kWh")
     print(f"  OUT  reinjected (LOSS)    {a['Ex_reinject_kWh']:10.1f} kWh   "
           f"at {g['T_reinject_C']:.1f} C, "
-          f"{100 * (1 - g['utilisation']):.1f} % of the resource discarded")
+          f"{100 * (1 - g['utilization']):.1f} % of the resource discarded")
     print(f"  {'-' * 56}")
     for k, v in sorted(a["components_kWh"].items(), key=lambda kv: -kv[1]):
         print(f"    {k:<26}{v:10.1f} kWh{100 * a['shares'][k]:7.1f} %")
@@ -3129,7 +3132,7 @@ def performance_indices(case, r):
     the target energy by construction. At cyclic steady state it delivers
     whatever it delivers, so every one of them is computed from the ENERGY THE
     FIELD ACTUALLY MOVES rather than from the target. That matters: charging
-    with the target input while crediting the realised output would flatter the
+    with the target input while crediting the realized output would flatter the
     round-trip efficiency by exactly the deviation.
 
         eta_T       thermal -> net electric conversion on the discharge side,
@@ -3173,8 +3176,27 @@ def performance_indices(case, r):
     cop = Eb["Q_dot_out_HP"] / (Eb["W_dot_el_in"] * case.ElH_eff)
     W_el_in = Q_dot_out_HP / cop / case.ElH_eff
 
-    # ---- parasitics, at the realised temperatures ------------------------
+    # ---- parasitics, at the realized temperatures ------------------------
     pumping_ch, pumping_dc = borehole_pumping(case, r)
+
+    # ---- ONE NORMALIZATION BASIS ----------------------------------------
+    # Every per-MWe quantity below is divided by W_net, the REALISED NET
+    # output of the field, and by nothing else.
+    #
+    #     W_net = W*_el,out - W_f,dc
+    #
+    # which is the numerator of eta_RTE. v1.4 used three different bases --
+    # UA from the TARGET budget duties over the realized GROSS output,
+    # wells over the realized gross, N_geo over the TARGET -- so no two
+    # per-MWe numbers in the same table were comparable. At the reference
+    # case this matters: R4 loses 52 % of the charge, so a store sized for
+    # 1 MWe of latent inventory delivers roughly half that, and anything
+    # per TARGET MWe understates the real plant by about a factor of two.
+    W_net = W_el_out - pumping_dc
+
+    def per_MWe(x):
+        """x per MWe of realized net output. The only divisor in use."""
+        return x / (W_net / 1000.0) if W_net else float('nan')
 
     # ---- the indicators --------------------------------------------------
     eta_T = W_el_out / Q_dot_in_ORC
@@ -3201,7 +3223,7 @@ def performance_indices(case, r):
         eps_RTE=((eta_RTE * eps_cycled) if r.get("delivers", True) else 0.0),
         eps_cycled=eps_cycled,
         # ---- THE SCALE-FREE NUMBER --------------------------------------
-        # Deliverable electricity per metre of well per cycle. This is the
+        # Deliverable electricity per meter of well per cycle. This is the
         # only quantity the model produces that is independent of plant size,
         # well count and field geometry, and it is therefore the one to
         # report and the one that transfers to another field.
@@ -3209,16 +3231,16 @@ def performance_indices(case, r):
         # It is also nearly a constant: 0.336 to 0.340 kWh/m across a 4x
         # range of well depth at island spacing, a spread of 1.3 %. Depth,
         # within that range, buys capacity strictly in proportion to the
-        # metres drilled and changes almost nothing else.
+        # meters drilled and changes almost nothing else.
         #
         # Everything else is then arithmetic. For a field of n(L) wells
         # vertical to depth L,  E_total = n(L) * L * e'  -- see
         # `field_capacity`. Prescribing W_dot_el_out is scaffolding: the
         # model is exactly linear in plant size (a 4x plant gives 4.0000x
         # the wells and bit-identical per-well numbers), so the plant size
-        # cancels out of every per-well and per-metre quantity.
+        # cancels out of every per-well and per-meter quantity.
         # Zeroed when the store does not deliver (section 1.4 of the v0.2
-        # handoff): a non-delivering store has no electricity per metre and
+        # handoff): a non-delivering store has no electricity per meter and
         # no round trip, and reporting the signed numbers instead invites
         # them to be averaged into a sweep as though they were small
         # positives. The loss is still reported as computed.
@@ -3236,11 +3258,11 @@ def performance_indices(case, r):
         W_el_out_kW=W_el_out, W_el_in_kW=W_el_in,
         rho_E_kWh_m3=dE_therm / case.V_well,
         # ---- POWER density, which is not energy density -----------------
-        # rho_E says how much energy a cubic metre of store holds; it says
+        # rho_E says how much energy a cubic meter of store holds; it says
         # nothing about how fast it can be delivered, and the two are traded
         # against each other by the discharge window. A store with twice the
         # energy density and half the discharge rate is a different machine.
-        # Per unit DEPTH as well, because drilling is priced by the metre.
+        # Per unit DEPTH as well, because drilling is priced by the meter.
         rho_P_kW_m3=(W_el_out / N) / case.V_well,
         rho_P_kW_per_m=(W_el_out / N) / case.L_well,
         t_discharge_h=case.t_dc)
@@ -3252,13 +3274,27 @@ def performance_indices(case, r):
     # unit of delivered electricity as well, which is the form that lets two
     # designs of different size be compared.
     if "rank" in r and "hp" in r:
-        ua = exchanger_UA(case, r["rank"], r["hp"], r["T"], r["budget"])
+        # UA at the duties the field ACTUALLY moves, not at the target
+        # budget's. UA is linear in duty at fixed temperatures, so this is
+        # the same integration over the same composite curves with the two
+        # duties replaced; the temperatures are already realized (T_2d).
+        Eb_real = dict(Eb, Q_dot_in_ORC=Q_dot_in_ORC,
+                       Q_dot_out_HP=Q_dot_out_HP)
+        ua = exchanger_UA(case, r["rank"], r["hp"], r["T"], Eb_real)
+        ua_target = exchanger_UA(case, r["rank"], r["hp"], r["T"], Eb)
         out["UA_total_kW_K"] = ua["TOTAL"]["UA_kW_per_K"]
-        out["UA_per_MWe"] = ua["TOTAL"]["UA_kW_per_K"] / (W_el_out / 1000.0)
+        out["UA_per_MWe"] = per_MWe(ua["TOTAL"]["UA_kW_per_K"])
+        # kept only so a v1.4 number can be traced; the paper does not use it
+        out["UA_per_MWe_target"] = (ua_target["TOTAL"]["UA_kW_per_K"]
+                                    / (case.W_dot_el_out / 1000.0))
         out["pinch_min_K"] = ua["TOTAL"]["pinch_K"]
         for key, tag in (("HTHP evaporator", "hpe"), ("HTHP condenser", "hpc"),
                          ("ORC evaporator", "orce"), ("ORC condenser", "orcc")):
             out[f"UA_{tag}_kW_K"] = ua[key]["UA_kW_per_K"]
+            out[f"UA_{tag}_per_MWe"] = per_MWe(ua[key]["UA_kW_per_K"])
+            # duty made dimensionless by the same basis: Q / W_net
+            out[f"Q_{tag}_over_Wnet"] = ua[key]["duty_kW"] / W_net
+            out[f"duty_{tag}_kW"] = ua[key]["duty_kW"]
             out[f"dTeff_{tag}_K"] = ua[key]["dT_eff_K"]
             # The four pinches individually, not just their minimum. Which
             # exchanger is tightest is design information; `pinch_min_K`
@@ -3277,21 +3313,41 @@ def performance_indices(case, r):
         out["psi_stripped"] = ex["psi_stripped"]
         out["I_total_kWh"] = ex["total_kWh"]
         out["Ex_reinject_kWh"] = ex["Ex_reinject_kWh"]
-        out["resource_utilisation"] = ex["geo"]["utilisation"]
+        out["resource_utilization"] = ex["geo"]["utilization"]
         out["m_geo_kg_s"] = ex["geo"]["m_geo"]
         out["N_geo"] = ex["geo"]["N_geo"]
+        out["W_net_kW"] = W_net
+        out["W_el_in_per_MWe"] = per_MWe(W_el_in)
+        out["m_w_ch_per_MWe"] = per_MWe(Q_dot_out_HP / max(
+            water_h(case, T["T_3c"]) - water_h(case, T["T_2c"]), 1e-9))
+        out["m_w_dc_per_MWe"] = per_MWe(Q_dot_in_ORC / max(
+            water_h(case, T["T_2d"]) - water_h(case, T["T_3d"]), 1e-9))
         out["T_reinject_C"] = ex["geo"]["T_reinject_C"]
         N_st = r.get("N_wells")
         if N_st is not None:
             out["N_wells_total"] = N_st + ex["geo"]["N_geo"]
-            out["wells_per_MWe"] = ((N_st + ex["geo"]["N_geo"])
-                                    / (W_el_out / 1000.0))
+            # STORAGE wells per MWe. v1.4 added the geothermal producers
+            # into this number and divided by the gross output, so it was
+            # neither the storage count nor on the reporting basis.
+            out["wells_per_MWe"] = per_MWe(N_st)
+            out["N_geo_per_MWe"] = per_MWe(ex["geo"]["N_geo"])
+            out["wells_total_per_MWe"] = per_MWe(N_st + ex["geo"]["N_geo"])
+
+            # V12: wells per MWe must equal t_dc / (e' L), paper Eq.
+            # wells-per-MW, with e' net of pumping. This ties the plant
+            # count to the scale-free number; if they disagree, one of the
+            # two is not what it claims to be.
+            e_prime = out.get("kWh_per_m_well", 0.0)
+            if e_prime > 0:
+                v12 = 1000.0 * case.t_dc / (e_prime * case.L_well)
+                out["wells_per_MWe_from_eprime"] = v12
+                out["V12_rel_error"] = abs(v12 / out["wells_per_MWe"] - 1.0)
         for name, v in ex["components_kWh"].items():
             out["I_" + name.replace(" ", "_").replace("-", "")] = v
         out["exergy_gates_pass"] = ex["gates_pass"]
 
         # ---- per-well productivity, and one scalar for the whole audit ----
-        # rho_P says power per cubic metre of store; this says power per WELL,
+        # rho_P says power per cubic meter of store; this says power per WELL,
         # which is the number an operator compares against a drilling cost.
         if N_st is not None:
             out["kW_per_well"] = W_el_out / N_st
@@ -3326,7 +3382,7 @@ def field_capacity(case, r, n_wells_total, survival=None, k=None):
 
         E_total(L) = n(L) * L * e'(L)
 
-    with e' the per-metre figure above and n(L) the number of wells still
+    with e' the per-meter figure above and n(L) the number of wells still
     USABLE to depth L.
 
     `survival` is a callable s(depth_m) -> fraction in [0, 1], the share of
@@ -3345,7 +3401,7 @@ def field_capacity(case, r, n_wells_total, survival=None, k=None):
     WHY THERE IS AN OPTIMUM once `survival` is supplied. Per-well energy
     grows with L while n(L) falls, so the product has a maximum -- at the
     shallowest kickoff, i.e. drill to the knee and stop. Without a survival
-    function capacity rises monotonically with depth, which is an artefact of
+    function capacity rises monotonically with depth, which is an artifact of
     assuming every well reaches every depth.
     """
     k = k or performance_indices(case, r)
@@ -3375,7 +3431,7 @@ def kpi_report(case, r, k=None):
     print(f"  rho_E       thermal energy density       {k['rho_E_kWh_m3']:12.2f} kWh/m3")
     print(f"  rho_P       electric POWER density      {k['rho_P_kW_m3']:12.4f} kW/m3"
           f"   ({k['t_discharge_h']:.0f} h window)")
-    print(f"              per metre of well           {k['rho_P_kW_per_m']:12.4f} kW/m")
+    print(f"              per meter of well           {k['rho_P_kW_per_m']:12.4f} kW/m")
     print("      rho_E and rho_P are traded against each other by the")
     print("      discharge window; a store with twice the energy density and")
     print("      half the rate is a different machine, not a better one.")
@@ -3406,9 +3462,18 @@ def kpi_report(case, r, k=None):
         print("      Read UA beside eta_RTE. Every approach temperature is")
         print("      bought here; `ua_report` breaks it down.")
     print()
-    print("  eta_RTE is independent of the deviation: a field that delivers")
-    print("  1 % above target also drew 1 % more in. The deviation is a")
-    print("  statement about plant SIZE, not about efficiency.")
+    # This used to say eta_RTE was independent of the deviation, because a
+    # field delivering 1 % above target also drew 1 % more in. That is true
+    # of an ADIABATIC store only. With a lossy one the two are tied:
+    # eta_RTE ~= eta_RTE,adiabatic * eta_storage, and at the reference case
+    # (R4) the deviation is dominated by the formation loss rather than by
+    # any sizing residual.
+    print(f"  deviation {100 * r.get('deviation', float('nan')):+7.2f} %   "
+          f"eta_storage {r['eta_storage']:8.4f}")
+    print("  These are not independent. The deviation is a statement about")
+    print("  plant SIZE only when the store is adiabatic; with a lossy store")
+    print("  eta_RTE carries the loss, eta_RTE ~ eta_RTE,ad * eta_storage,")
+    print("  and at R4 the loss is most of what the deviation is reporting.")
 
 
 def simulate_css_corrected(case, N=None, record=False, **kw):
@@ -3424,7 +3489,7 @@ def simulate_css_corrected(case, N=None, record=False, **kw):
     ONE pass is enough, and that is a property of the problem rather than a
     hopeful choice: the outlet is pinned by the store, not by the plant. Over a
     sweep of the discharge subcooling from 6 to 15 K -- which moves the inlet by
-    9 K and the deviation by twelve percentage points -- the realised outlet
+    9 K and the deviation by twelve percentage points -- the realized outlet
     moves by less than 0.3 K. `dT_2d_pass` is returned so the assumption is
     visible rather than assumed; if it is ever large, iterate.
 
@@ -3434,9 +3499,9 @@ def simulate_css_corrected(case, N=None, record=False, **kw):
     """
     first = simulate_css(case, N=N, record=False, **kw)
     second = simulate_css(case, N=N, record=record,
-                          T_2d=first["T_2d_realised"], **kw)
+                          T_2d=first["T_2d_realized"], **kw)
     second["pass1"] = first
-    second["dT_2d_pass"] = second["T_2d_realised"] - first["T_2d_realised"]
+    second["dT_2d_pass"] = second["T_2d_realized"] - first["T_2d_realized"]
     second["corrected"] = True
     return second
 
@@ -3482,7 +3547,11 @@ def css_report(case, r):
               f" tolerance {r['tol']:.0e}")
         print("      Re-run with a larger n_cycles. Everything below assumes")
         print("      the state has returned to itself, and it has not.")
-    print(f"  eta_storage      {r['eta_storage']:10.6f}   must be 1: adiabatic, closed cycle")
+    # NOT "must be 1". That was true under THUMS hypothesis H6, which this
+    # model exists to drop: eta_storage is a result now, and at the
+    # reference case it is about 0.48.
+    print(f"  eta_storage      {r['eta_storage']:10.6f}   "
+          f"a result, not a constraint (1 only as k_rock -> 0)")
     print()
     print(f"  required   D_E_in_ORC  {r['required_kJ']:12.5e} kJ")
     print(f"  delivered  at CSS      {r['Q_discharge_kJ']:12.5e} kJ")
@@ -3492,19 +3561,19 @@ def css_report(case, r):
           f"   (target {case.W_dot_el_out/1000:.4f})")
     print()
     print("  the deviation IS the glide shortfall")
-    print(f"    realised discharge glide / assumed   {r['glide_ratio_dc']:10.6f}")
+    print(f"    realized discharge glide / assumed   {r['glide_ratio_dc']:10.6f}")
     print(f"    delivered energy / required          "
           f"{r['Q_discharge_kJ']/r['required_kJ']:10.6f}")
     print("    The flow is pinned by the ASSUMED glide, so the energy")
-    print("    delivered is just the ratio of realised to assumed glide.")
+    print("    delivered is just the ratio of realized to assumed glide.")
     print()
     print("  exchanger outlets are RESULTS, not inputs (v0.6)")
     print(f"    discharge, to the ORC       assumed {r['T_2d_assumed']-273.15:8.3f} C"
-          f"   realised {r['T_2d_realised']-273.15:8.3f} C")
+          f"   realized {r['T_2d_realized']-273.15:8.3f} C")
     print(f"    charge, to the HP condenser assumed {r['T_2c_assumed']-273.15:8.3f} C"
-          f"   realised {r['T_2c_realised']-273.15:8.3f} C")
+          f"   realized {r['T_2c_realized']-273.15:8.3f} C")
     if r.get("corrected"):
-        print(f"    ORC corrected at the realised outlet; second pass moved it"
+        print(f"    ORC corrected at the realized outlet; second pass moved it"
               f" {r['dT_2d_pass']:+.4f} K")
     elif r["T_2d_was_provisional"]:
         print("    UNCORRECTED: the ORC still runs on the provisional outlet.")
@@ -3656,7 +3725,7 @@ def validate_case(case, verbose=True):
              f'default limit is a placeholder: the project has no measured '
              f'value for it yet. The second law pushes DT_3A_4A UP -- it '
              f'cuts m_geo far faster than it cuts COP -- so this bound is '
-             f'the one that will bind in an optimisation.')
+             f'the one that will bind in an optimization.')
     if T_rei <= case.T_sink_C:
         err(f'reinjection at {T_rei:.1f} C is at or below the sink '
             f'({case.T_sink_C} C), which is the dead state. The source would '
@@ -3819,7 +3888,7 @@ def validate_case(case, verbose=True):
     # Area is NECESSARY but not sufficient; 0.85 is a generous packing bound
     # for a handful of unequal circles and is used only to catch the gross
     # case. The arrangement is the one in the schematic -- the downcomer
-    # OFFSET, not centred -- which packs better than a concentric annulus.
+    # OFFSET, not centered -- which packs better than a concentric annulus.
     if np.pi * (b ** 2 + case.n_ft * a ** 2) > 0.85 * np.pi * R ** 2:
         err(f'the downcomer ({2000 * b:.0f} mm OD) and {case.n_ft} finned '
             f'tubes ({2000 * a:.0f} mm over fins) cannot pack into a '
