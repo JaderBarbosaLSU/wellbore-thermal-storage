@@ -1,8 +1,26 @@
 % boreas_numbers.tex -- GENERATED. Do not edit, and do not
 % retype any of these into the text: \input this file and use
 % the macros. Regenerate with mknumbers.py.
-% 71 macros, from pack_runs.json
+% 151 macros, from pack_runs.json
 
+\newcommand{\AdiabaticAllWellsPerMWe}{27.9}           
+\newcommand{\AdiabaticDEch}{3.948}                     
+\newcommand{\AdiabaticDEdc}{3.948}                     
+\newcommand{\AdiabaticEprime}{0.4335}                   
+\newcommand{\AdiabaticEtaORC}{0.1462}                   % adiabatic: eta_ORC
+\newcommand{\AdiabaticEtaRTE}{0.3212}                   % adiabatic: eta_RTE
+\newcommand{\AdiabaticEtaStorage}{1.0000}               
+\newcommand{\AdiabaticGeoPerMWe}{9.4}                
+\newcommand{\AdiabaticLeakage}{1.83}                  
+\newcommand{\AdiabaticMdotTubeCh}{0.6376}               
+\newcommand{\AdiabaticMdotTubeDc}{0.6415}               
+\newcommand{\AdiabaticPinch}{5.01}                    % adiabatic: ORC pinch, K
+\newcommand{\AdiabaticPinchAt}{16.0}                  % adiabatic: pinch location, % of evaporator duty
+\newcommand{\AdiabaticPumping}{2.43}                  % adiabatic: pumping, % of gross
+\newcommand{\AdiabaticTThreee}{93.9}                  % adiabatic: T_3e, C
+\newcommand{\AdiabaticTTwod}{139.5}                    % adiabatic: mean T_2d, C
+\newcommand{\AdiabaticUAPerMWe}{2351}                 % adiabatic: total UA, kW/K per MWe
+\newcommand{\AdiabaticWellsPerMWe}{18.5}              % adiabatic: STORAGE wells per MWe, realized net basis
 \newcommand{\CasingGainEp}{118}                      % THUMS casing gain on e', %
 \newcommand{\CasingGainEpRthree}{36}                % same at R3, %
 \newcommand{\ConvEpSpread}{0.51}                      % e' spread over the same, %
@@ -20,6 +38,10 @@
 \newcommand{\CutoffTopOneHi}{300}                    
 \newcommand{\CutoffTopOneLo}{200}                    
 \newcommand{\DsStation}{50}                         % station spacing, m
+\newcommand{\DutyHPC}{16.18}                           % HTHP condenser: Q/W_net at R4
+\newcommand{\DutyHPE}{9.63}                           % HTHP evaporator: Q/W_net at R4
+\newcommand{\DutyORCC}{6.62}                          % ORC condenser: Q/W_net at R4
+\newcommand{\DutyORCE}{7.70}                          % ORC evaporator: Q/W_net at R4
 \newcommand{\FluxLossRFour}{52.1}                     % R4, equal-flux model, %
 \newcommand{\FluxLossROne}{2.6}                      % R1, equal-flux model, %
 \newcommand{\FluxLossRThree}{13.0}                    % R3, equal-flux model, %
@@ -54,13 +76,67 @@
 \newcommand{\LegacyLossRfour}{70.6}                   
 \newcommand{\LegacyLossRthree}{17.4}                  
 \newcommand{\OffStationWeight}{5.2}                  % off-station kernel weight at the reference, %
+\newcommand{\RefFieldMWePlant}{9.8}                  % MWe from the 363 Grissom slots at the reference case
 \newcommand{\RefFieldMWh}{97.7}                       % field MWh per cycle
+\newcommand{\RefFourAllWellsPerMWe}{56.2}             
+\newcommand{\RefFourDEch}{4.352}                       
+\newcommand{\RefFourDEdc}{2.072}                       
+\newcommand{\RefFourEprime}{0.2153}                     
+\newcommand{\RefFourEtaORC}{0.1401}                     % R4: eta_ORC
+\newcommand{\RefFourEtaRTE}{0.1447}                     % R4: eta_RTE
+\newcommand{\RefFourEtaStorage}{0.4761}                 
+\newcommand{\RefFourGeoPerMWe}{19.0}                  
+\newcommand{\RefFourLeakage}{0.89}                    
+\newcommand{\RefFourMdotTubeCh}{0.6376}                 
+\newcommand{\RefFourMdotTubeDc}{0.6415}                 
+\newcommand{\RefFourPinch}{5.00}                      % R4: ORC pinch, K
+\newcommand{\RefFourPinchAt}{15.3}                    % R4: pinch location, % of evaporator duty
+\newcommand{\RefFourPumping}{4.85}                    % R4: pumping, % of gross
+\newcommand{\RefFourTThreee}{90.0}                    % R4: T_3e, C
+\newcommand{\RefFourTTwod}{116.6}                      % R4: mean T_2d, C
+\newcommand{\RefFourUAPerMWe}{3480}                   % R4: total UA, kW/K per MWe
+\newcommand{\RefFourWellsPerMWe}{37.2}                % R4: STORAGE wells per MWe, realized net basis
+\newcommand{\RefHTHPInputPerMWe}{nan}                
 \newcommand{\RefLmd}{1250}                            % reference storage length, m MD
 \newcommand{\RefNwells}{363}                         % Grissom slots
 \newcommand{\RefRgMean}{0.913}                         % mean R_g,eff, m K/W
 \newcommand{\RefStations}{25}                       % stations at the reference
+\newcommand{\RefThreeAllWellsPerMWe}{30.9}            
+\newcommand{\RefThreeDEch}{4.152}                      
+\newcommand{\RefThreeDEdc}{3.597}                      
+\newcommand{\RefThreeEprime}{0.3913}                    
+\newcommand{\RefThreeEtaORC}{0.1451}                    % R3: eta_ORC
+\newcommand{\RefThreeEtaRTE}{0.2757}                    % R3: eta_RTE
+\newcommand{\RefThreeEtaStorage}{0.8663}                
+\newcommand{\RefThreeGeoPerMWe}{10.5}                 
+\newcommand{\RefThreeLeakage}{1.59}                   
+\newcommand{\RefThreeMdotTubeCh}{0.6376}                
+\newcommand{\RefThreeMdotTubeDc}{0.6415}                
+\newcommand{\RefThreePinch}{5.00}                     % R3: ORC pinch, K
+\newcommand{\RefThreePinchAt}{15.9}                   % R3: pinch location, % of evaporator duty
+\newcommand{\RefThreePumping}{2.69}                   % R3: pumping, % of gross
+\newcommand{\RefThreeTThreee}{93.2}                   % R3: T_3e, C
+\newcommand{\RefThreeTTwod}{135.3}                     % R3: mean T_2d, C
+\newcommand{\RefThreeUAPerMWe}{2504}                  % R3: total UA, kW/K per MWe
+\newcommand{\RefThreeWellsPerMWe}{20.4}               % R3: STORAGE wells per MWe, realized net basis
 \newcommand{\RefTtwod}{116.6}                          % realized T_2d, C
 \newcommand{\RefTvd}{891}                            % reference TVD, m
+\newcommand{\RefZeroVAllWellsPerMWe}{71.4}            
+\newcommand{\RefZeroVDEch}{4.616}                      
+\newcommand{\RefZeroVDEdc}{1.656}                      
+\newcommand{\RefZeroVEprime}{0.1693}                    
+\newcommand{\RefZeroVEtaORC}{0.1388}                    % R0v: eta_ORC
+\newcommand{\RefZeroVEtaRTE}{0.1074}                    % R0v: eta_RTE
+\newcommand{\RefZeroVEtaStorage}{0.3589}                
+\newcommand{\RefZeroVGeoPerMWe}{24.2}                 
+\newcommand{\RefZeroVLeakage}{0.67}                   
+\newcommand{\RefZeroVMdotTubeCh}{0.6376}                
+\newcommand{\RefZeroVMdotTubeDc}{0.6415}                
+\newcommand{\RefZeroVPumping}{6.13}                   % R0v: pumping, % of gross
+\newcommand{\RefZeroVTThreee}{89.2}                   % R0v: T_3e, C
+\newcommand{\RefZeroVTTwod}{111.4}                     % R0v: mean T_2d, C
+\newcommand{\RefZeroVUAPerMWe}{4132}                  % R0v: total UA, kW/K per MWe
+\newcommand{\RefZeroVWellsPerMWe}{47.2}               % R0v: STORAGE wells per MWe, realized net basis
 \newcommand{\SensKopThreeHundredEp}{0.292}             % R4_kop300 e'
 \newcommand{\SensKopThreeHundredLoss}{35.3}           % R4_kop300 loss, %
 \newcommand{\SensThFortyFiveEp}{0.227}                 % R4_th45 e'
@@ -74,3 +150,7 @@
 \newcommand{\SpacingMeasured}{1.65}                   % measured median spacing, m
 \newcommand{\SpacingNominal}{1.83}                    % nominal 6 ft, m
 \newcommand{\TopSpreadLoss}{32.6}                     % field-age spread, points of loss
+\newcommand{\UAHPCPerMWe}{553}                       
+\newcommand{\UAHPEPerMWe}{1058}                       
+\newcommand{\UAORCCPerMWe}{1255}                      
+\newcommand{\UAORCEPerMWe}{613}                      

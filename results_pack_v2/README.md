@@ -186,10 +186,36 @@ provisional casing shoe, which is the one genuinely blocking unknown.
 
 ---
 
-## 6. Still owed
+## 6. The intensive tables (section 2b)
 
-The §2b intensive tables — `tab_cycles` and `tab_UA` per MWe, `tab_T3e` at
-the ladder steps, `comp_a/b/c.pdf`, `tab_ref_results` per well — are not in
-this pack. The machinery they need is in place (realized duties, the
-`per_MWe` helper, V12/V13 green), so they are assembly rather than physics,
-but they are assembly that has not been done yet.
+All at L = 1250 m MD, t_op = 10 yr, THUMS casing. Four cases: the adiabatic
+limit (k_rock → 0), the reference case R4, vertical wells on the same slots
+R3, and one isolated vertical well R0v.
+
+| file | what |
+|---|---|
+| `tab_cycles.tex` | duties as Q/W_net, HTHP input per MWe, water flows per MWe, per-tube flows |
+| `tab_UA.tex` | Q/W_net, UA in kW/K per MWe, ΔT_eff and pinch |
+| `tab_T3e.tex` | mean T_2d, T_3e and η_ORC at the four steps |
+| `tab_ref_results.tex` | 24 rows per storage well, four columns, nothing extensive |
+| `comp_a/b/c.pdf` | composite curves, adiabatic / R4 / R3, shared temperature range |
+| `intensive.json`, `composites.json` | the same numbers as data |
+
+The result worth reading off them: **the formation loss barely touches the
+cycle efficiency** (η_ORC 0.1462 adiabatic against 0.1401 at R4, a 4 %
+relative spread, because T_3e is set by the evaporator pinch) and instead
+**doubles the well count**, 18.5 → 37.2 storage wells per MWe. The loss is
+paid in drilling, not in thermodynamics.
+
+`chk_scale.py` verifies the model is exactly linear in plant size: R4 at
+1 MW and 10 MW gives identical per-tube flows, e′, RTE, loss and T_2d to
+2e-16, identical per-MWe quantities to 1.2e-11, and N_wells scaling
+10.000000×. The 1 MW runs in this pack are valid at any plant size.
+
+## 7. Still owed
+
+`BOREAS_parametric.ipynb` — the maps, the T_m study (to be capped at
+160 °C), the h_m study and the N_lay confound — is still on the idealized
+geometry, as are SM Table S1, the water-balance numbers and the
+glide-shortfall example. The T–s figure, the profiles and the animation are
+already at R4.
