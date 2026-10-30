@@ -1,0 +1,1726 @@
+Island,API,WellNumber,LeaseName,WellStatus,WellType,FieldName,AreaName,Latitude,Longitude,GISSource,isDirectionallyDrilled,SpudDate
+Chaffee,0423723045,C-101 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74060059,-118.13845825,Well Summary,Y,09/17/2021
+Chaffee,0423726880,C-102,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74059296,-118.13843536,Operator,Y,
+Chaffee,0423722872,C-103 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74058533,-118.1384201,Well Summary,N,
+Chaffee,0423721764,C-104,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74057388,-118.13840485,Well Summary,Y,04/17/2018
+Chaffee,0423722496,C-105 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74056244,-118.13838959,Operator,N,
+Chaffee,0423727314,C-106,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74055099,-118.13837433,Well Summary,Y,02/25/2012
+Chaffee,0423730375,C-107,Unspecified,Idle,OG,Belmont Offshore,Old,33.74053955,-118.1383667,Notice of Intent to Drill,Y,
+Chaffee,0423722433,C-108,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74052811,-118.13835144,Well Summary,N,12/28/2012
+Chaffee,0423723320,C-109,State Prc 186,Active,OG,Belmont Offshore,Old,33.74051666,-118.13833618,Operator,N,
+Chaffee,0423722847,C-110,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74050522,-118.13832092,Operator,N,
+Chaffee,0423722462,C-111 I,State Prc 186,Active,WF,Belmont Offshore,Old,33.74048996,-118.13831329,Operator,N,
+Chaffee,0423730036,C-112,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74047852,-118.13829803,Well Summary,Y,03/10/2013
+Chaffee,0423722419,C-113 I,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74046707,-118.13828278,Well Summary,N,
+Chaffee,0423722208,C-114,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74045563,-118.13826752,Operator,Y,
+Chaffee,0423722393,C-115,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74044037,-118.13825989,Operator,Y,
+Chaffee,0423722394,C-116,State Prc 186,Active,OG,Belmont Offshore,Old,33.74042892,-118.13824463,Operator,N,02/22/2011
+Chaffee,0423721789,C-117 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74041748,-118.13822937,Operator,Y,
+Chaffee,0423720217,C-125,State Prc 186,Active,OG,Belmont Offshore,Old,33.74030685,-118.13813019,Operator,N,
+Chaffee,0423720379,C-126 I,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.7402916,-118.13812256,Well Summary,Y,12/22/1967
+Chaffee,0423720167,C-127,State Prc 186,Active,OG,Belmont Offshore,Old,33.74027634,-118.1381073,Operator,Y,
+Chaffee,0423720958,C-128,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74026489,-118.13809967,Well Summary,Y,12/04/2013
+Chaffee,0423720168,C-129,State Prc 186,Active,OG,Belmont Offshore,Fault Block I,33.74024963,-118.13809204,Operator,N,
+Chaffee,0423720330,C-130,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74023438,-118.13808441,Operator,Y,
+Chaffee,0423722274,C-131,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.7402153,-118.13808441,Operator,N,
+Chaffee,0423720907,C-132,State Prc 186,Active,OG,Belmont Offshore,Old,33.74020004,-118.13807678,Operator,N,
+Chaffee,0423720979,C-133 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74018478,-118.13806915,Operator,N,
+Chaffee,0423720940,C-134,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74016953,-118.13806915,Well Summary,Y,11/04/1969
+Chaffee,0423721597,C-135,LBTHUMS,Canceled,OG,Old Wilmington (ABD),Fault Block II Offshore,33.7401619,-118.13804626,Operator,N,
+Chaffee,0423721940,C-135,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74015427,-118.13806152,Operator,Y,
+Chaffee,0423720661,C-136,State Prc 186,Active,OG,Belmont Offshore,Old,33.74013519,-118.13806152,Operator,N,
+Chaffee,0423720652,C-137 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74011993,-118.13806152,Well Summary,N,
+Chaffee,0423722698,C-138 I,State Prc 186,Active,WF,Belmont Offshore,Old,33.74010468,-118.13806152,Operator,N,
+Chaffee,0423720913,C-139,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.7400856,-118.13806152,Well Summary,Y,05/08/2018
+Chaffee,0423720331,C-140,State Prc 186,Active,OG,Belmont Offshore,Old,33.74007034,-118.13805389,Operator,N,12/21/2011
+Chaffee,0423722863,C-141,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74039459,-118.1384964,Well Summary,N,
+Chaffee,0423726869,C-142,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74038315,-118.13848877,Operator,N,
+Chaffee,0423723112,C-143 I,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.7403717,-118.13847351,Well Summary,Y,11/21/1984
+Chaffee,0423726898,C-144 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74035645,-118.13845825,Operator,Y,
+Chaffee,0423723614,C-145,State Prc 186,Active,OG,Belmont Offshore,Old,33.740345,-118.13844299,Operator,N,05/12/2010
+Chaffee,0423723006,C-146 I,LBTHUMS,Plugged,WF,Wilmington,Fault Block 90,33.74033356,-118.13843536,Operator,Y,
+Chaffee,0423720291,C-201,LBTHUMS,Plugged,Multi,Wilmington,Fault Block 90,33.74005508,-118.13806152,Operator,N,
+Chaffee,0423720892,C-202 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74003983,-118.13806152,Operator,Y,
+Chaffee,0423722497,C-203 I,State Prc 186,Active,WF,Belmont Offshore,Old,33.74002075,-118.13806152,Operator,N,01/13/2010
+Chaffee,0423722202,C-204,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74000549,-118.13806915,Operator,Y,
+Chaffee,0423721596,C-205,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73999023,-118.13806915,Operator,N,
+Chaffee,0423727049,C-206 I,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73997116,-118.13807678,Well Summary,Y,01/14/2013
+Chaffee,0423722007,C-207 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73995972,-118.13808441,Operator,N,04/05/2014
+Chaffee,0423721623,C-208 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73994064,-118.13808441,Operator,Y,
+Chaffee,0423721645,C-209,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73992538,-118.13809204,Operator,Y,
+Chaffee,0423721498,C-210 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73991013,-118.13809967,Well Summary,Y,
+Chaffee,0423721423,C-211,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73989487,-118.1381073,Well Summary,N,
+Chaffee,0423721429,C-212,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73987961,-118.13811493,Well Summary,Y,03/16/1974
+Chaffee,0423721508,C-213,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.73986435,-118.13811493,Operator,Y,
+Chaffee,0423721578,C-214,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73984909,-118.13812256,Well Summary,Y,08/09/1990
+Chaffee,0423721999,C-216,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73981476,-118.13813782,Operator,Y,
+Chaffee,0423727054,C-217M,State Prc 186,Active,OG,Belmont Offshore,Old,33.7397995,-118.13813782,Operator,N,
+Chaffee,0423722646,C-218,State PRC 186,Active,OG,Wilmington,Fault Block 90,33.73978424,-118.13814545,Operator,N,
+Chaffee,0423722612,C-219 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73976898,-118.13815308,Operator,N,
+Chaffee,0423722855,C-220,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73975372,-118.13816071,Operator,N,
+Chaffee,0423730034,C-221,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.73973846,-118.13816833,Well Summary,Y,02/23/2013
+Chaffee,0423722856,C-222,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.739704,-118.137272,Well Summary,Y,05/09/1983
+Chaffee,0423722463,C-223,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73970413,-118.13817596,Well Summary,Y,05/16/1981
+Chaffee,0423721793,C-224 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73968887,-118.13818359,Operator,N,
+Chaffee,0423723787,C-225 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.73967361,-118.13819122,Operator,Y,
+Chaffee,0423727055,C-226,State Prc 186,Active,OG,Belmont Offshore,Old,33.73965836,-118.13819122,Operator,N,
+Chaffee,0423723613,C-227,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.7396431,-118.13819885,Well Summary,N,
+Chaffee,0423727205,C-228,State Prc 186,Canceled,OG,Belmont Offshore,Old,33.73962784,-118.13820648,Unknown,Y,
+Chaffee,0423730108,C-228,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73962784,-118.13820648,Well Summary,Y,01/01/2014
+Chaffee,0423723794,C-229 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73961258,-118.13821411,Operator,Y,
+Chaffee,0423727047,C-230 I,State Prc 186,Active,WF,Belmont Offshore,Old,33.73959732,-118.13822174,Operator,N,
+Chaffee,0423721965,C-231,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73957825,-118.13822174,Operator,Y,
+Chaffee,0423721654,C-232,State Prc 186,Idle,OG,Belmont Offshore,Old,33.7395668,-118.13822937,Operator,N,
+Chaffee,0423721929,C-233,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73954773,-118.138237,Well Summary,Y,06/27/1978
+Chaffee,0423727030,C-234 I,State Prc 186,Active,WF,Belmont Offshore,Old,33.73953247,-118.13824463,Operator,N,
+Chaffee,0423723792,C-235 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73951721,-118.13825226,Operator,Y,
+Chaffee,0423727031,C-236,State Prc 186,Active,OG,Belmont Offshore,Old,33.73950195,-118.13825989,Operator,N,
+Chaffee,0423721651,C-237 I,State Prc 186,Active,WF,Belmont Offshore,Old,33.73948669,-118.13826752,Operator,Y,
+Chaffee,0423727051,C-238,State Prc 186,Active,OG,Belmont Offshore,Old,33.73947144,-118.13827515,Operator,Y,04/15/2006
+Chaffee,0423723782,C-239,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73945999,-118.13828278,Operator,N,
+Chaffee,0423729974,C-240,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.7400322,-118.13828278,Well Summary,Y,11/14/2012
+Chaffee,0423723032,C-241,State Prc 186,Active,OG,Belmont Offshore,Old,33.74001694,-118.13829041,Well Summary,Y,02/22/1984
+Chaffee,0423723046,C-242,State Prc 186,Active,OG,Belmont Offshore,Old,33.74000168,-118.13829041,Well Summary,Y,04/10/2011
+Chaffee,0423727077,C-243,State Prc 186,Idle,OG,Belmont Offshore,Old,33.73998642,-118.13829803,Operator,N,
+Chaffee,0423730107,C-244,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73997116,-118.13830566,Notice of Intent to Drill,Y,01/11/2014
+Chaffee,0423723033,C-245,State Prc 186,Idle,OG,Belmont Offshore,Fault Block I,33.7399559,-118.13831329,Well Summary,Y,05/31/2011
+Chaffee,0423723047,C-246,State Prc 186,Active,OG,Belmont Offshore,Old,33.73994064,-118.13831329,Operator,N,
+Chaffee,0423727033,C-247,State Prc 186,Active,OG,Belmont Offshore,Old,33.73992157,-118.13832092,Operator,N,
+Chaffee,0423730068,C-248,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73990631,-118.13832855,Operator,Y,05/22/2013
+Chaffee,0423730069,C-249,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73989105,-118.13833618,Notice of Intent to Drill,Y,06/28/2013
+Chaffee,0423726867,C-250,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73987579,-118.13834381,Well Summary,Y,
+Chaffee,0423727414,C-251 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73986053,-118.13834381,Operator,Y,
+Chaffee,0423727278,C-252,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73984528,-118.13835144,Well Summary,Y,10/01/2012
+Chaffee,0423727061,C-301,State Prc 186,Active,OG,Belmont Offshore,Old,33.73944473,-118.13829803,Operator,N,
+Chaffee,0423723835,C-302 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.73943329,-118.13830566,Well Summary,Y,11/28/1995
+Chaffee,0423723733,C-303 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.73941803,-118.13832092,Operator,N,02/04/2013
+Chaffee,0423721547,C-310,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73933411,-118.13841248,Well Summary,N,
+Chaffee,0423721506,C-311 I,LBTHUMS,Idle,WF,Wilmington,Fault Block 90,33.73932266,-118.1384201,Operator,Y,
+Chaffee,0423720945,C-312 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73931122,-118.13843536,Well Summary,N,12/02/1969
+Chaffee,0423721282,C-313 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.73929977,-118.13845062,Well Summary,Y,08/22/1972
+Chaffee,0423721675,C-314,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73928833,-118.13846588,Operator,Y,
+Chaffee,0423720276,C-315,LBTHUMS,Canceled,OG,Old Wilmington (ABD),Fault Block II Offshore,33.73928452,-118.13846588,Operator,N,
+Chaffee,0423721408,C-315 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73927689,-118.13848114,Well Summary,N,12/02/1973
+Chaffee,0423721565,C-316,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73926544,-118.1384964,Operator,N,
+Chaffee,0423721212,C-317,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73925018,-118.13850403,Operator,N,
+Chaffee,0423723712,C-318,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73924255,-118.13851929,Operator,N,
+Chaffee,0423720999,C-319,LBTHUMS,Canceled,OG,Old Wilmington (ABD),Fault Block II Offshore,33.73923874,-118.13851929,Operator,N,
+Chaffee,0423721402,C-319,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73922729,-118.13853455,Operator,Y,
+Chaffee,0423720593,C-320,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73921585,-118.1385498,Well Summary,Y,08/03/1968
+Chaffee,0423721409,C-321 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73920441,-118.13856506,Operator,N,
+Chaffee,0423721395,C-322,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73919296,-118.13857269,Operator,N,
+Chaffee,0423720653,C-323,LBTHUMS,Idle,UNK,Wilmington,Fault Block 90,33.73918152,-118.13858795,Operator,N,
+Chaffee,0423720919,C-324 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73917007,-118.13860321,Operator,N,
+Chaffee,0423721207,C-325,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73915863,-118.13861847,Operator,N,
+Chaffee,0423720897,C-326 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73914719,-118.13863373,Operator,N,
+Chaffee,0423720980,C-327,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73913574,-118.13864899,Operator,Y,
+Chaffee,0423721016,C-328,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.7391243,-118.13865662,Operator,Y,
+Chaffee,0423721158,C-329 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.73911285,-118.13867188,Well Summary,Y,08/31/1971
+Chaffee,0423720938,C-330,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73910141,-118.13868713,Well Summary,Y,11/02/1969
+Chaffee,0423720797,C-331 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73908615,-118.13870239,Operator,Y,
+Chaffee,0423720507,C-332,State Prc 186,Active,OG,Belmont Offshore,Old,33.73907852,-118.13871765,Operator,N,
+Chaffee,0423720763,C-333 I,State Prc 186,Active,WF,Belmont Offshore,Old,33.73906326,-118.13872528,Well Summary,Y,08/02/2007
+Chaffee,0423720783,C-335,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73904419,-118.1387558,Operator,N,05/08/2011
+Chaffee,0423720798,C-336 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73903275,-118.13877106,Operator,Y,
+Chaffee,0423720543,C-337 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.7390213,-118.13878632,Operator,N,
+Chaffee,0423720442,C-338,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73901367,-118.13880157,Operator,N,
+Chaffee,0423720917,C-339 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.73900223,-118.13882446,Well Summary,N,
+Chaffee,0423721017,C-340 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.7389946,-118.13883972,Operator,N,
+Chaffee,0423726811,C-341 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73942947,-118.13860321,Well Summary,Y,
+Chaffee,0423723788,C-342 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73941803,-118.13861084,Operator,Y,
+Chaffee,0423727034,C-343 I,State Prc 186,Active,WF,Belmont Offshore,Old,33.73940659,-118.1386261,Operator,Y,
+Chaffee,0423727291,C-344,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73939514,-118.13864136,Well Summary,Y,01/23/2012
+Chaffee,0423721659,C-345,State Prc 186,Active,OG,Belmont Offshore,Old,33.7393837,-118.13865662,Operator,Y,
+Chaffee,0423730301,C-346,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73937225,-118.13867188,Notice of Intent to Drill,Y,07/08/2014
+Chaffee,0423727032,C-347 I,State Prc 186,Active,WF,Belmont Offshore,Old,33.73936081,-118.13868713,Operator,Y,
+Chaffee,0423727177,C-348,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.73934937,-118.13869476,Well Summary,Y,10/05/2012
+Chaffee,0423727149,C-349,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73933792,-118.13871002,Well Summary,Y,12/17/2010
+Chaffee,0423730090,C-350,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73932648,-118.13872528,Well Summary,Y,09/03/2013
+Chaffee,0423727035,C-351,State Prc 186,Active,OG,Belmont Offshore,Fault Block I,33.73931122,-118.13874054,Operator,N,
+Chaffee,0423727150,C-352,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73929977,-118.1387558,Operator,N,
+Chaffee,0423727036,C-353,State Prc 186,Active,OG,Belmont Offshore,Fault Block I,33.73928833,-118.13876343,Operator,N,
+Chaffee,0423727053,C-354,State Prc 186,Active,OG,Belmont Offshore,Old,33.7392807,-118.13877869,Operator,Y,
+Chaffee,0423727029,C-355,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73926544,-118.13879395,Well Summary,Y,07/09/2009
+Chaffee,0423726650,C-356,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.739254,-118.1388092,Operator,N,
+Chaffee,0423723743,C-357 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73924255,-118.13882446,Operator,Y,
+Chaffee,0423723756,C-358 I,LBTHUMS,Idle,WF,Wilmington,Fault Block 90,33.73923111,-118.13883972,Operator,Y,
+Chaffee,0423720964,C-401,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73898697,-118.13885498,Operator,N,
+Chaffee,0423720696,C-402,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73897934,-118.13887024,Operator,Y,
+Chaffee,0423721070,C-403 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73897171,-118.13889313,Operator,N,
+Chaffee,0423720949,C-404,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.7389679,-118.13890839,Well Summary,Y,11/06/1969
+Chaffee,0423720995,C-405,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.738945,-118.13803,Well Summary,Y,02/21/1970
+Chaffee,0423720799,C-406 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73895645,-118.13894653,Operator,Y,
+Chaffee,0423721012,C-407,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73895264,-118.13896942,Operator,N,
+Chaffee,0423721274,C-408 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73894882,-118.13898468,Operator,Y,
+Chaffee,0423720635,C-409 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73894501,-118.13900757,Operator,N,
+Chaffee,0423720800,C-410,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73894501,-118.13902283,Operator,N,
+Chaffee,0423720773,C-411 I,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73894119,-118.13904572,Operator,N,
+Chaffee,0423720724,C-412,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73894119,-118.13906097,Well Summary,N,08/18/2011
+Chaffee,0423720893,C-413 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73893738,-118.13908386,Operator,N,
+Chaffee,0423720894,C-414 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.73894119,-118.13910675,Well Summary,Y,08/01/1969
+Chaffee,0423720930,C-415 I,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73894119,-118.13912201,Well Summary,Y,09/16/1969
+Chaffee,0423721048,C-416,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73894119,-118.1391449,Well Summary,Y,11/23/2011
+Chaffee,0423720801,C-417 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73894501,-118.13916016,Operator,Y,
+Chaffee,0423721034,C-418 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73894501,-118.13918304,Operator,N,
+Chaffee,0423720392,C-419 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73894882,-118.1391983,Operator,N,
+Chaffee,0423720993,C-420,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73895264,-118.13922119,Operator,Y,
+Chaffee,0423720391,C-421,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73895645,-118.13923645,Operator,Y,
+Chaffee,0423720608,C-422,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73896027,-118.13925934,Operator,Y,
+Chaffee,0423720918,C-423 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73896408,-118.1392746,Well Summary,Y,08/23/1969
+Chaffee,0423720976,C-424,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.7389679,-118.13929749,Operator,Y,
+Chaffee,0423720262,C-425,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73897171,-118.13931274,Well Summary,N,04/16/1970
+Chaffee,0423721338,C-426 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73897552,-118.13933563,Operator,N,
+Chaffee,0423721476,C-427 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73897934,-118.13935852,Operator,Y,
+Chaffee,0423721559,C-428,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73898315,-118.13937378,Operator,Y,
+Chaffee,0423722431,C-429,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73898697,-118.13939667,Well Summary,Y,03/21/1981
+Chaffee,0423722432,C-430,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73899078,-118.13941193,Operator,N,
+Chaffee,0423723324,C-431 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.7389946,-118.13943481,Operator,N,
+Chaffee,0423721487,C-432 I,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73899841,-118.13945007,Well Summary,Y,10/22/1999
+Chaffee,0423721648,C-433 I,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73900604,-118.13946533,Well Summary,Y,06/15/1976
+Chaffee,0423721492,C-434,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73900986,-118.13948822,Well Summary,Y,04/30/2018
+Chaffee,0423723774,C-440,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73914337,-118.13896942,Well Summary,Y,08/05/1993
+Chaffee,0423723901,C-441 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73913574,-118.13898468,Operator,N,
+Chaffee,0423723740,C-442,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73913193,-118.13900757,Operator,Y,
+Chaffee,0423723195,C-443 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73912811,-118.13902283,Well Summary,Y,07/01/1985
+Chaffee,0423723800,C-444 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.7391243,-118.13904572,Operator,N,
+Chaffee,0423723034,C-445 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73912048,-118.13906097,Operator,N,
+Chaffee,0423723637,C-446,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73912048,-118.13908386,Operator,N,
+Chaffee,0423723717,C-447,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73912048,-118.13910675,Operator,Y,
+Chaffee,0423723724,C-448,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.7391243,-118.13912201,Operator,Y,
+Chaffee,0423723325,C-449,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.7391243,-118.1391449,Operator,N,
+Chaffee,0423723919,C-450,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73912811,-118.13916016,Well Summary,Y,07/30/1996
+Chaffee,0423723710,C-451 AI,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73913193,-118.13918304,Operator,N,
+Chaffee,0423723007,C-452 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73913574,-118.1391983,Operator,Y,
+Chaffee,0423723005,C-453 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73913956,-118.13922119,Operator,N,
+Chaffee,0423723908,C-454 I,LBTHUMS,Idle,WF,Wilmington,Fault Block 90,33.73914337,-118.13923645,Operator,Y,
+Chaffee,0423723904,C-455,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73914719,-118.13925934,Operator,N,
+Chaffee,0423723905,C-456,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.739151,-118.1392746,Operator,Y,
+Chaffee,0423723716,C-457 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73915482,-118.13929749,Operator,Y,
+Chaffee,0423723850,C-458,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73915863,-118.13931274,Operator,N,
+Chaffee,0423723618,C-459 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73916245,-118.13933563,Well Summary,Y,03/12/1989
+Chaffee,0423723126,C-460,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73916626,-118.13935089,Operator,Y,
+Chaffee,0423720218,C-512,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73917389,-118.13975525,Operator,N,
+Chaffee,0423720384,C-513,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73918533,-118.13977051,Well Summary,N,01/18/1968
+Chaffee,0423720754,C-514,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73919678,-118.13978577,Operator,N,
+Chaffee,0423720732,C-515 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73921204,-118.1397934,Operator,N,
+Chaffee,0423720461,C-516 IA,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73922348,-118.13980865,Operator,Y,
+Chaffee,0423720491,C-517,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73923492,-118.13982391,Operator,N,
+Chaffee,0423720535,C-518 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73924637,-118.13983917,Well Summary,Y,06/19/1968
+Chaffee,0423720791,C-519 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.73926163,-118.1398468,Well Summary,Y,04/02/1969
+Chaffee,0423720602,C-520,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73927307,-118.13986206,Operator,N,
+Chaffee,0423720590,C-522,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73929977,-118.13988495,Well Summary,Y,07/14/1968
+Chaffee,0423720393,C-523,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73931122,-118.13990021,Operator,N,
+Chaffee,0423720172,C-524,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.739325,-118.13991,Well Summary,Y,01/05/2014
+Chaffee,0423720991,C-525 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73933792,-118.1399231,Operator,N,
+Chaffee,0423720574,C-526,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73934937,-118.13993073,Operator,Y,
+Chaffee,0423721390,C-527 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73936462,-118.13993835,Operator,Y,
+Chaffee,0423720766,C-528,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73937988,-118.13995361,Well Summary,Y,02/25/1969
+Chaffee,0423720350,C-529,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73939514,-118.13996124,Operator,N,
+Chaffee,0423720705,C-530,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.7394104,-118.13996887,Operator,N,
+Chaffee,0423720238,C-531,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73942566,-118.1399765,Well Summary,Y,09/04/1967
+Chaffee,0423720737,C-532,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73944092,-118.1399765,Operator,Y,
+Chaffee,0423720332,C-533,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73945618,-118.13998413,Well Summary,Y,11/13/1967
+Chaffee,0423721022,C-534,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73947525,-118.13999176,Operator,N,
+Chaffee,0423720226,C-535 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73949051,-118.13999176,Well Summary,N,
+Chaffee,0423720749,C-536,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73950577,-118.13999939,Operator,Y,
+Chaffee,0423720169,C-537,LBTHUMS,Canceled,OG,Old Wilmington (ABD),Fault Block II Offshore,33.73953247,-118.13998413,Operator,N,
+Chaffee,0423721396,C-537 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73952103,-118.13999939,Operator,N,
+Chaffee,0423720465,C-538 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.7395401,-118.13999939,Operator,N,
+Chaffee,0423720792,C-539,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73955536,-118.13999939,Operator,N,
+Chaffee,0423720906,C-540,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73957062,-118.13999939,Well Summary,Y,07/26/1969
+Chaffee,0423723622,C-541,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73926926,-118.13956451,Operator,N,
+Chaffee,0423723209,C-542I,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.7392807,-118.13957977,Operator,N,
+Chaffee,0423723192,C-543,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73929214,-118.13959503,Operator,Y,
+Chaffee,0423723210,C-544 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.7393074,-118.13960266,Operator,Y,
+Chaffee,0423723127,C-545,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73931885,-118.13961792,Operator,Y,
+Chaffee,0423723048,C-546 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73933029,-118.13963318,Operator,Y,
+Chaffee,0423723836,C-547,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73934174,-118.13964844,Operator,N,
+Chaffee,0423722978,C-548,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73935318,-118.13965607,Well Summary,Y,10/16/1983
+Chaffee,0423723623,C-549 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73936844,-118.13967133,Operator,N,
+Chaffee,0423722989,C-550,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73937988,-118.13968658,Operator,Y,
+Chaffee,0423720443,C-601,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73958969,-118.14000702,Operator,Y,
+Chaffee,0423720911,C-602,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.73960495,-118.13999939,Operator,N,
+Chaffee,0423720394,C-603,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73962021,-118.13999939,Operator,N,
+Chaffee,0423720546,C-604,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.73963547,-118.13999176,Operator,N,
+Chaffee,0423720591,C-605 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73965454,-118.13999176,Well Summary,Y,01/19/1981
+Chaffee,0423720679,C-606 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.7396698,-118.13999176,Operator,N,
+Chaffee,0423720965,C-607 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.73968506,-118.13998413,Operator,Y,
+Chaffee,0423720263,C-608,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73970032,-118.1399765,Operator,N,
+Chaffee,0423720802,C-609 I,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73971558,-118.13996887,Operator,N,
+Chaffee,0423720951,C-610,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73973465,-118.13996887,Well Summary,Y,11/08/1969
+Chaffee,0423720638,C-611 I,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73974991,-118.13996124,Well Summary,Y,10/21/1968
+Chaffee,0423720418,C-612,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73976517,-118.13995361,Well Summary,Y,03/01/1968
+Chaffee,0423720351,C-613,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73978043,-118.13994598,Operator,Y,
+Chaffee,0423720170,C-614,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73979568,-118.13994598,Operator,N,
+Chaffee,0423722223,C-615,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73981094,-118.13993835,Operator,N,
+Chaffee,0423720975,C-616,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.7398262,-118.13993073,Well Summary,Y,04/01/1970
+Chaffee,0423721046,C-617 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.73984146,-118.1399231,Operator,Y,
+Chaffee,0423720516,C-618,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73986053,-118.13991547,Operator,N,
+Chaffee,0423720935,C-619,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73987579,-118.13991547,Operator,Y,
+Chaffee,0423720786,C-620,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73989105,-118.13990784,Operator,Y,
+Chaffee,0423720272,C-621 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.73990631,-118.13990021,Operator,N,
+Chaffee,0423721424,C-622,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73992157,-118.13989258,Operator,Y,
+Chaffee,0423720399,C-623,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73993683,-118.13989258,Operator,N,
+Chaffee,0423720295,C-624,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73995209,-118.13988495,Operator,Y,
+Chaffee,0423720370,C-625,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.739951,-118.138979,Well Summary,N,12/09/1967
+Chaffee,0423720380,C-626,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73998642,-118.13986969,Operator,N,
+Chaffee,0423720245,C-627,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74000168,-118.13986969,Operator,Y,
+Chaffee,0423722222,C-628 I,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74001694,-118.13986206,Well Summary,Y,08/15/1980
+Chaffee,0423722779,C-629,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.7400322,-118.13985443,Operator,N,03/04/2013
+Chaffee,0423722464,C-634 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74011612,-118.13982391,Operator,Y,
+Chaffee,0423722641,C-635 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74013138,-118.13981628,Operator,N,
+Chaffee,0423723203,C-636,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74014664,-118.13980865,Operator,Y,
+Chaffee,0423723461,C-637,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.7401619,-118.13980103,Operator,Y,
+Chaffee,0423723204,C-638 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74017715,-118.1397934,Operator,N,
+Chaffee,0423723099,C-639,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74019241,-118.13977814,Operator,Y,
+Chaffee,0423723049,C-641 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.73949814,-118.13977814,Operator,Y,
+Chaffee,0423723791,C-642 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.7395134,-118.13977814,Well Summary,Y,02/04/1994
+Chaffee,0423723113,C-643,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73952866,-118.13978577,Operator,N,
+Chaffee,0423723115,C-644,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73954773,-118.13978577,Well Summary,N,
+Chaffee,0423723720,C-645 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.739545,-118.138887,Well Summary,Y,09/03/1992
+Chaffee,0423723702,C-646,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.73957825,-118.13978577,Operator,Y,
+Chaffee,0423723353,C-647,LBTHUMS,Canceled,OG,Old Wilmington (ABD),Fault Block II Offshore,33.73960495,-118.13977051,Operator,N,
+Chaffee,0423723798,C-647 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73959732,-118.13978577,Well Summary,Y,04/21/1994
+Chaffee,0423723354,C-648,LBTHUMS,Canceled,OG,Old Wilmington (ABD),Fault Block II Offshore,33.73962021,-118.13976288,Operator,N,
+Chaffee,0423723691,C-648,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73961258,-118.13977814,Operator,N,
+Chaffee,0423723799,C-649,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73962784,-118.13977814,Operator,Y,
+Chaffee,0423723795,C-650 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.7396431,-118.13977051,Operator,N,
+Chaffee,0423723051,C-651,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73965836,-118.13977051,Well Summary,N,03/17/2011
+Chaffee,0423723052,C-652,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73967361,-118.13976288,Operator,N,
+Chaffee,0423723721,C-653 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73969269,-118.13975525,Operator,Y,
+Chaffee,0423723116,C-654,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73970795,-118.13974762,Operator,Y,
+Chaffee,0423723205,C-655,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73972321,-118.13973999,Operator,N,
+Chaffee,0423723196,C-656,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.73973846,-118.13973999,Operator,N,
+Chaffee,0423723197,C-657,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73975372,-118.13973236,Operator,N,
+Chaffee,0423723008,C-658 I,LBTHUMS,Idle,WF,Wilmington,Fault Block 90,33.73976898,-118.13972473,Operator,N,
+Chaffee,0423723722,C-659 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73978424,-118.1397171,Operator,Y,
+Chaffee,0423723400,C-660,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.7397995,-118.13970947,Operator,Y,
+Chaffee,0423723802,C-661,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.73981857,-118.13970947,Well Summary,Y,06/19/1994
+Chaffee,0423723100,C-662 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.739815,-118.138802,Well Summary,Y,08/03/1984
+Chaffee,0423723003,C-663 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.73984909,-118.13969421,Operator,Y,
+Chaffee,0423723790,C-664,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73986435,-118.13968658,Operator,Y,
+Chaffee,0423723793,C-665,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73987961,-118.13968658,Operator,Y,
+Chaffee,0423726438,C-666,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73989487,-118.13967896,Operator,N,
+Chaffee,0423723694,C-667,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73991013,-118.13967133,Operator,Y,
+Chaffee,0423723704,C-668,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73992538,-118.1396637,Well Summary,N,11/30/1991
+Chaffee,0423723355,C-669,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.73994446,-118.1396637,Operator,N,
+Chaffee,0423723678,C-670,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.73995972,-118.13965607,Operator,Y,
+Chaffee,0423723587,C-701,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74020767,-118.13977051,Operator,N,
+Chaffee,0423723344,C-702,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74021912,-118.13976288,Operator,Y,
+Chaffee,0423723616,C-703,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74023438,-118.13974762,Operator,N,
+Chaffee,0423723401,C-704,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74024582,-118.13973999,Operator,Y,
+Chaffee,0423723679,C-705,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74025726,-118.13972473,Operator,N,
+Chaffee,0423722465,C-706,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74027252,-118.13970947,Operator,N,
+Chaffee,0423722595,C-707,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.740266,-118.1388,Well Summary,Y,02/15/1982
+Chaffee,0423722780,C-708,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74029541,-118.13968658,Operator,N,
+Chaffee,0423721747,C-709,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74030685,-118.13967133,Operator,N,
+Chaffee,0423723326,C-710,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.7403183,-118.13965607,Operator,Y,
+Chaffee,0423723687,C-711 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.74032974,-118.13964081,Operator,N,
+Chaffee,0423722024,C-712,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74034119,-118.13963318,Operator,N,
+Chaffee,0423723688,C-713 I,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74035645,-118.13961792,Well Summary,Y,08/14/2019
+Chaffee,0423723327,C-714,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.74036789,-118.13960266,Well Summary,Y,12/11/1985
+Chaffee,0423721845,C-715,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74037933,-118.1395874,Operator,Y,
+Chaffee,0423722647,C-716 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74039078,-118.13957214,Operator,N,
+Chaffee,0423722615,C-717 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74040222,-118.13956451,Operator,N,10/01/2013
+Chaffee,0423722466,C-718 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74041367,-118.13954926,GPS,N,
+Chaffee,0423721758,C-719,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74042511,-118.139534,Operator,Y,
+Chaffee,0423721911,C-720,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74043655,-118.13951874,Operator,Y,
+Chaffee,0423723624,C-721 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.740448,-118.13950348,Operator,N,
+Chaffee,0423720352,C-731 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74057007,-118.13935852,Operator,N,
+Chaffee,0423720458,C-732,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74058151,-118.13934326,Operator,N,01/28/2011
+Chaffee,0423720353,C-733I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.74059296,-118.13933563,Well Summary,Y,04/11/1968
+Chaffee,0423720171,C-734,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.7406044,-118.13932037,Operator,Y,
+Chaffee,0423720400,C-735 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74061584,-118.13929749,Well Summary,Y,01/05/1968
+Chaffee,0423720803,C-736 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74062729,-118.13928223,Operator,Y,
+Chaffee,0423721532,C-737,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74063492,-118.1392746,Operator,N,
+Chaffee,0423720804,C-738,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74064636,-118.13925934,Operator,N,
+Chaffee,0423720235,C-739 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74065399,-118.13923645,Operator,Y,
+Chaffee,0423720634,C-740,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74066162,-118.13922119,Operator,Y,
+Chaffee,0423722889,C-741,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.740242,-118.13944244,Operator,Y,
+Chaffee,0423722890,C-742 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74025345,-118.13943481,Operator,Y,
+Chaffee,0423723727,C-743 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74026489,-118.13941956,Operator,Y,
+Chaffee,0423723328,C-744,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74027634,-118.1394043,Operator,N,
+Chaffee,0423726593,C-745,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74028778,-118.13938904,Well Summary,Y,
+Chaffee,0423723096,C-746,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74029922,-118.13937378,Operator,Y,
+Chaffee,0423723186,C-747,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74031067,-118.13935852,Well Summary,Y,06/01/1985
+Chaffee,0423723775,C-748,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74032211,-118.13935089,Operator,Y,
+Chaffee,0423722891,C-758,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74044418,-118.13920593,Well Summary,Y,11/01/1983
+Chaffee,0423723700,C-759,LBTHUMS,Canceled,OG,Old Wilmington (ABD),Fault Block II Offshore,33.74046707,-118.13917542,Operator,N,
+Chaffee,0423723783,C-759,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74045563,-118.13919067,Well Summary,Y,11/11/1993
+Chaffee,0423723744,C-760 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74046707,-118.13917542,Operator,N,
+Chaffee,0423723020,C-761,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74047852,-118.13916016,Well Summary,Y,12/02/2010
+Chaffee,0423723789,C-762 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74049377,-118.1391449,Operator,Y,
+Chaffee,0423726458,C-763,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.7405014,-118.13912964,Operator,N,
+Chaffee,0423725294,C-764,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74050522,-118.13911438,Operator,N,
+Chaffee,0423725181,C-765 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.74051285,-118.13909149,Operator,Y,
+Chaffee,0423722892,C-766 I,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74052048,-118.13907623,Operator,N,
+Chaffee,0423723843,C-767 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74052811,-118.13906097,Operator,N,06/19/2013
+Chaffee,0423723376,C-768 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74053192,-118.13903809,Well Summary,Y,02/22/1986
+Chaffee,0423722893,C-769 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74053574,-118.13902283,Operator,N,
+Chaffee,0423720264,C-801 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74066925,-118.13920593,Operator,N,
+Chaffee,0423720784,C-802 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74068069,-118.13918304,Well Summary,Y,05/17/2018
+Chaffee,0423721305,C-803 I,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74068451,-118.13916779,Well Summary,Y,05/03/1973
+Chaffee,0423721572,C-804,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74069214,-118.13915253,Well Summary,Y,08/23/1975
+Chaffee,0423720333,C-805,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74069595,-118.13912964,Operator,N,
+Chaffee,0423720521,C-806 I,LBTHUMS,Idle,WF,Wilmington,Fault Block 90,33.74069977,-118.13911438,Operator,N,
+Chaffee,0423720932,C-807 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.7407074,-118.13909149,Operator,N,
+Chaffee,0423721522,C-808,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74071121,-118.13907623,Operator,Y,
+Chaffee,0423720419,C-809,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74071121,-118.13905334,Well Summary,N,
+Chaffee,0423720676,C-810 I,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74071503,-118.13903809,Well Summary,N,03/01/2012
+Chaffee,0423720273,C-811,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74071884,-118.1390152,Well Summary,N,08/15/2009
+Chaffee,0423720556,C-812 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74071884,-118.13899994,Operator,N,08/13/1968
+Chaffee,0423720437,C-813,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74071884,-118.13897705,Operator,N,
+Chaffee,0423720764,C-814,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74071884,-118.13895416,Operator,N,
+Chaffee,0423721944,C-816,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74071503,-118.13891602,Operator,Y,
+Chaffee,0423720570,C-817,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74071503,-118.13890076,Operator,N,
+Chaffee,0423720922,C-818,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74071503,-118.13887787,Operator,Y,
+Chaffee,0423720969,C-819 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.74071121,-118.13886261,Well Summary,N,09/02/2011
+Chaffee,0423722616,C-820 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.7407074,-118.13883972,Well Summary,Y,10/18/1982
+Chaffee,0423721536,C-821 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74070358,-118.13882446,Well Summary,Y,04/06/1975
+Chaffee,0423720680,C-822 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74069977,-118.13880157,Operator,Y,
+Chaffee,0423723833,C-823,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74069595,-118.13878632,Operator,Y,
+Chaffee,0423721848,C-824,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74069214,-118.13876343,Operator,Y,
+Chaffee,0423722443,C-825,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74068832,-118.13874054,Operator,N,
+Chaffee,0423722395,C-826,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74068451,-118.13872528,Operator,Y,
+Chaffee,0423721762,C-837,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74062729,-118.13850403,Operator,Y,
+Chaffee,0423721775,C-838,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74061966,-118.13848877,Operator,Y,
+Chaffee,0423721935,C-839 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74060822,-118.13847351,Operator,Y,
+Chaffee,0423726549,C-840,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74052811,-118.13887787,Well Summary,Y,10/08/2005
+Chaffee,0423726479,C-841,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74052429,-118.13886261,Well Summary,N,
+Chaffee,0423722894,C-842 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74052048,-118.13883972,Operator,N,
+Chaffee,0423726485,C-843 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74051666,-118.13882446,Operator,Y,
+Chaffee,0423723187,C-844 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74051285,-118.13880157,Operator,Y,
+Chaffee,0423723110,C-845 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74050903,-118.13878632,Well Summary,N,
+Freeman,0423720028,D-101 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.74187088,-118.16183472,Operator,N,
+Freeman,0423720371,D-102,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74185562,-118.16182709,Operator,N,
+Freeman,0423720127,D-103,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74184418,-118.16181946,Operator,Y,
+Freeman,0423720277,D-104,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74182892,-118.1618042,Well Summary,N,
+Freeman,0423720246,D-105,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.74181366,-118.16179657,Operator,N,
+Freeman,0423720501,D-106 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.7417984,-118.16178894,Operator,Y,
+Freeman,0423720952,D-107,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.741767,-118.160879,Well Summary,Y,08/21/2018
+Freeman,0423720381,D-108,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.7417717,-118.16176605,Operator,N,
+Freeman,0423720485,D-109 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.74175644,-118.16175842,Operator,Y,
+Freeman,0423720648,D-110,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74174118,-118.16175079,Operator,N,
+Freeman,0423721389,D-111,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74172974,-118.16173553,Operator,N,
+Freeman,0423720180,D-112,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74171448,-118.16172791,Operator,N,
+Freeman,0423720805,D-113 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.74169922,-118.16172028,Operator,N,
+Freeman,0423720811,D-114,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.74168777,-118.16171265,Operator,N,
+Freeman,0423720230,D-115,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74167252,-118.16169739,Operator,N,
+Freeman,0423720137,D-116 I,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74165726,-118.16168976,Well Summary,Y,07/02/2019
+Freeman,0423720128,D-117,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.741642,-118.16168213,Operator,N,
+Freeman,0423720421,D-118,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74162674,-118.16166687,Operator,N,
+Freeman,0423720086,D-119,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.7416153,-118.16165924,Operator,N,
+Freeman,0423720678,D-120 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74160004,-118.16165161,Well Summary,Y,11/03/1968
+Freeman,0423720247,D-201,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74148941,-118.16168976,Operator,Y,
+Freeman,0423720402,D-202,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74147415,-118.16169739,Operator,N,
+Freeman,0423720029,D-203,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74145889,-118.16169739,Operator,N,
+Freeman,0423720438,D-204,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74143982,-118.16170502,Operator,N,
+Freeman,0423721787,D-205,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.74142456,-118.16171265,Well Summary,Y,06/23/1978
+Freeman,0423720254,D-206,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.7414093,-118.16171265,Operator,N,
+Freeman,0423721539,D-207,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74139404,-118.16172028,Operator,Y,
+Freeman,0423721557,D-208,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74137878,-118.16172791,Operator,N,
+Freeman,0423720219,D-209,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74135971,-118.16172791,Operator,Y,
+Freeman,0423720717,D-210,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74134445,-118.16173553,Well Summary,Y,01/22/1969
+Freeman,0423720278,D-211,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.74132919,-118.16174316,Operator,Y,
+Freeman,0423721426,D-212,LBTHUMS,Canceled,OG,Old Wilmington (ABD),Fault Block II Offshore,33.74131393,-118.16178894,Operator,N,
+Freeman,0423721727,D-212,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74131393,-118.16174316,Operator,N,
+Freeman,0423720483,D-213,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74129868,-118.16175079,Operator,Y,
+Freeman,0423720706,D-214 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74128342,-118.16175842,Operator,N,
+Freeman,0423721490,D-215,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74126434,-118.16175842,Operator,Y,
+Freeman,0423720106,D-216 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74124908,-118.16176605,Operator,N,
+Freeman,0423720812,D-217,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74123383,-118.16177368,Operator,Y,
+Freeman,0423720736,D-218,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74121857,-118.16177368,Operator,Y,
+Freeman,0423720403,D-301,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74081421,-118.16190338,Operator,Y,
+Freeman,0423720657,D-302,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74079895,-118.16191101,Operator,Y,
+Freeman,0423720107,D-303,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74078369,-118.16191864,Well Summary,Y,01/13/1968
+Freeman,0423721512,D-304,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74076462,-118.16191864,Operator,Y,
+Freeman,0423721519,D-305 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.74074936,-118.16192627,Operator,Y,
+Freeman,0423720606,D-306,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.7407341,-118.1619339,Well Summary,Y,05/30/2018
+Freeman,0423720030,D-307,LBTHUMS,Canceled,OG,Old Wilmington (ABD),Fault Block II Offshore,33.74071884,-118.16197968,Operator,N,
+Freeman,0423721393,D-307,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74071884,-118.16194153,Operator,N,
+Freeman,0423720088,D-308,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74070358,-118.16194153,Operator,N,
+Freeman,0423720031,D-309 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74068451,-118.16194916,Operator,N,
+Freeman,0423720313,D-310,LBTHUMS,Idle,OG,Wilmington,Fault Block 98,33.74066925,-118.16195679,Well Summary,Y,07/03/2019
+Freeman,0423720813,D-311,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74065399,-118.16195679,Operator,Y,
+Freeman,0423720060,D-312,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74063873,-118.16196442,Operator,Y,
+Freeman,0423720697,D-313,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74062347,-118.16197205,Operator,Y,
+Freeman,0423720334,D-314,LBTHUMS,Active,OG,Old Wilmington (ABD),Fault Block VIII Offshore,33.7406044,-118.16197205,Operator,N,12/07/1967
+Freeman,0423720814,D-315,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74058914,-118.16197968,Operator,Y,
+Freeman,0423720934,D-316 I,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74057388,-118.1619873,Well Summary,Y,10/09/1969
+Freeman,0423720718,D-401,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74049377,-118.16201019,Operator,Y,
+Freeman,0423720636,D-402 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74048615,-118.16202545,Operator,N,
+Freeman,0423720549,D-403 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74047852,-118.16204071,Operator,Y,
+Freeman,0423720336,D-404 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74047089,-118.16205597,Operator,N,
+Freeman,0423720404,D-405,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74046326,-118.16207886,Well Summary,Y,11/05/2018
+Freeman,0423720752,D-406,LBTHUMS,Active,OG,Old Wilmington (ABD),Fault Block 90 Offshore,33.74045563,-118.16209412,Well Summary,Y,02/25/1987
+Freeman,0423720789,D-407,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74044418,-118.16210938,Operator,Y,
+Freeman,0423720604,D-408 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74043655,-118.16212463,Operator,Y,
+Freeman,0423720924,D-409,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74042892,-118.16214752,Operator,N,
+Freeman,0423720768,D-410,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.7404213,-118.16216278,Well Summary,Y,02/08/1969
+Freeman,0423721494,D-411 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74041367,-118.16217804,Well Summary,Y,06/24/1974
+Freeman,0423720032,D-412,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74040222,-118.1621933,Well Summary,Y,05/28/2019
+Freeman,0423720709,D-413 I,LBTHUMS,Plugged,INJ,Wilmington,Fault Block 90,33.74039459,-118.16221619,Operator,N,
+Freeman,0423720571,D-414,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74038696,-118.16223145,Operator,N,
+Freeman,0423720241,D-415,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74037933,-118.1622467,Operator,N,
+Freeman,0423720183,D-416 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.7403717,-118.16226196,Well Summary,Y,08/02/1967
+Freeman,0423720033,D-417 I,LBTHUMS,Plugged,INJ,Wilmington,Fault Block VII,33.74036407,-118.16227722,Operator,N,
+Freeman,0423720061,D-418 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.74035645,-118.16230011,Operator,Y,
+Freeman,0423720668,D-419 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.74037552,-118.16239166,Well Summary,Y,06/16/2019
+Freeman,0423721290,D-420,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.740362,-118.161513,Well Summary,Y,11/17/2003
+Freeman,0423720700,D-421,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74038315,-118.16242981,Operator,Y,
+Freeman,0423720531,D-422 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.74039078,-118.1624527,Operator,N,
+Freeman,0423720681,D-423 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.74039459,-118.16246796,Operator,Y,
+Freeman,0423720695,D-424,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74039841,-118.16249084,Well Summary,Y,09/04/2018
+Freeman,0423720810,D-425 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.74040222,-118.1625061,Well Summary,Y,10/18/2018
+Freeman,0423720970,D-426,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74040604,-118.16252899,Operator,N,
+Freeman,0423722900,D-427 I,LBTHUMS,Plugged,WF,Wilmington,Fault Block VII,33.74040985,-118.16254425,Operator,Y,
+Freeman,0423722213,D-428,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74041367,-118.16256714,Operator,N,
+Freeman,0423722848,D-429 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.74041748,-118.1625824,Operator,Y,
+Freeman,0423722849,D-430 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.74042511,-118.16260529,Operator,Y,
+Freeman,0423722842,D-431,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74042892,-118.16262054,Operator,Y,
+Freeman,0423722262,D-432 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.74043274,-118.16264343,Well Summary,Y,08/06/2018
+Freeman,0423722275,D-433,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74043655,-118.16265869,Well Summary,Y,06/11/2018
+Freeman,0423722490,D-434,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74040985,-118.16194916,Operator,N,
+Freeman,0423722491,D-435,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74040222,-118.16196442,Operator,N,
+Freeman,0423722524,D-436 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74039459,-118.1619873,Operator,N,
+Freeman,0423722525,D-437 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74038696,-118.16200256,Well Summary,Y,08/19/1982
+Freeman,0423722492,D-438,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74037933,-118.16201782,Operator,N,
+Freeman,0423722526,D-439 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.7403717,-118.16203308,Operator,N,
+Freeman,0423722527,D-440,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74036026,-118.16205597,Operator,N,
+Freeman,0423722535,D-441 I,LBTHUMS,Plugged,WF,Wilmington,Fault Block VII,33.74035263,-118.16207123,Operator,Y,
+Freeman,0423722522,D-442 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.740345,-118.16208649,Operator,Y,
+Freeman,0423722528,D-443,LBTHUMS,Canceled,OG,Wilmington,Fault Block VII,33.74033737,-118.16214752,Operator,N,
+Freeman,0423722844,D-443,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74033737,-118.16210175,Operator,Y,
+Freeman,0423723339,D-444 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74032974,-118.16212463,Operator,Y,
+Freeman,0423722504,D-445 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.74032211,-118.16213989,Operator,Y,11/19/1981
+Freeman,0423722850,D-446,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74031,-118.162155,Well Summary,Y,02/13/2004
+Freeman,0423723703,D-447 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74030304,-118.16217041,Operator,Y,
+Freeman,0423722881,D-448 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74029541,-118.1621933,Well Summary,Y,07/08/1983
+Freeman,0423722276,D-449 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.74028778,-118.16220856,Operator,Y,
+Freeman,0423722529,D-450,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74028015,-118.16222382,Well Summary,Y,05/14/2018
+Freeman,0423723198,D-451 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74027252,-118.16223907,Operator,Y,
+Freeman,0423720713,D-489,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74048233,-118.16286469,Operator,Y,
+Freeman,0423720631,D-490,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74048615,-118.16287994,Operator,N,
+Freeman,0423721521,D-491,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74048996,-118.16290283,Operator,Y,
+Freeman,0423720630,D-492,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.74049377,-118.16291809,Well Summary,Y,10/30/2019
+Freeman,0423720548,D-493 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.74049759,-118.16294098,Operator,N,
+Freeman,0423720795,D-494,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.7405014,-118.16295624,Operator,Y,
+Freeman,0423721505,D-495,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74050903,-118.16297913,Operator,Y,
+Freeman,0423720714,D-496,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74051285,-118.16299438,Well Summary,Y,07/22/2018
+Freeman,0423720559,D-497 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74051666,-118.16301727,Operator,Y,
+Freeman,0423720594,D-498 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74052048,-118.16303253,Operator,Y,
+Freeman,0423720613,D-499,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74052429,-118.16305542,Operator,Y,
+Freeman,0423720698,D-500,LBTHUMS,Idle,WD,Wilmington,Fault Block VI,33.74052811,-118.16307068,Operator,N,
+Freeman,0423720062,D-501 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74055099,-118.16316986,Operator,Y,
+Freeman,0423720109,D-502 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.74056625,-118.16317749,Operator,N,
+Freeman,0423720034,D-503 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.7405777,-118.16318512,Operator,Y,
+Freeman,0423720157,D-504 I,LBTHUMS,Idle,WF,Wilmington,Fault Block VI,33.74059296,-118.16320038,Operator,N,
+Freeman,0423720265,D-505 I,LBTHUMS,Idle,INJ,Wilmington,Fault Block VI,33.74060822,-118.16320801,Operator,Y,
+Freeman,0423721523,D-506,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74062347,-118.16321564,Operator,Y,
+Freeman,0423720296,D-507 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74063492,-118.16322327,Operator,N,
+Freeman,0423720504,D-508,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74065018,-118.16323853,Operator,Y,
+Freeman,0423720677,D-509 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74066544,-118.16324615,Operator,Y,
+Freeman,0423720279,D-510,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74068069,-118.16325378,Operator,Y,
+Freeman,0423720220,D-511,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74069214,-118.16326904,Operator,Y,
+Freeman,0423720478,D-512 I,LBTHUMS,Plugged,INJ,Wilmington,Fault Block VI,33.7407074,-118.16327667,Operator,Y,
+Freeman,0423720280,D-513,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74072266,-118.1632843,Operator,Y,
+Freeman,0423720433,D-514,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7407341,-118.16329193,Operator,Y,
+Freeman,0423720158,D-515 I,LBTHUMS,Plugged,WF,Wilmington,Fault Block VI,33.74074936,-118.16330719,Operator,Y,
+Freeman,0423720138,D-516,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74076462,-118.16331482,Operator,Y,
+Freeman,0423720035,D-517 I,LBTHUMS,Plugged,INJ,Wilmington,Fault Block VI,33.74077988,-118.16332245,Operator,Y,
+Freeman,0423720312,D-518,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74079514,-118.16333771,Operator,Y,
+Freeman,0423720063,D-519,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74080658,-118.16334534,Operator,N,
+Freeman,0423720306,D-520 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74082184,-118.16335297,Operator,Y,06/20/1972
+Freeman,0423720286,D-521,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.7408371,-118.1633606,Operator,Y,
+Freeman,0423720036,D-522 I,LBTHUMS,Plugged,INJ,Wilmington,Fault Block VI,33.74085236,-118.16337585,Operator,N,
+Freeman,0423721388,D-523 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.7408638,-118.16338348,Operator,N,
+Freeman,0423720064,D-524,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74087906,-118.16339111,Operator,Y,
+Freeman,0423722500,D-525 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.7405014,-118.16326904,Operator,Y,12/30/1981
+Freeman,0423722523,D-526 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.74051666,-118.16327667,Well Summary,Y,
+Freeman,0423722678,D-527,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74053192,-118.1632843,Operator,Y,
+Freeman,0423722501,D-528 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74054718,-118.16329956,Operator,Y,
+Freeman,0423722873,D-529 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74055862,-118.16330719,Operator,Y,
+Freeman,0423722878,D-530,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74057388,-118.16331482,Operator,Y,
+Freeman,0423722901,D-531,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74058914,-118.16332245,Operator,Y,
+Freeman,0423722521,D-532 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.7406044,-118.16333771,Operator,N,
+Freeman,0423722530,D-533,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74061584,-118.16334534,Well Summary,Y,07/08/2018
+Freeman,0423722879,D-534 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.7406311,-118.16335297,Operator,Y,08/20/1983
+Freeman,0423723811,D-535,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74064636,-118.16336823,Well Summary,Y,04/17/2019
+Freeman,0423722994,D-536,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74066162,-118.16337585,Operator,Y,
+Freeman,0423722584,D-537,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74067307,-118.16338348,Operator,Y,
+Freeman,0423726971,D-538 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74068832,-118.16339874,Operator,Y,
+Freeman,0423722880,D-539,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74070358,-118.16340637,Operator,Y,
+Freeman,0423722493,D-540,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74071884,-118.163414,Well Summary,N,08/29/1981
+Freeman,0423722843,D-541 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74073029,-118.16342163,Operator,N,
+Freeman,0423722690,D-542 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74074554,-118.16343689,Operator,Y,07/23/1982
+Freeman,0423722693,D-543 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.7407608,-118.16344452,Operator,Y,
+Freeman,0423722691,D-544,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74077606,-118.16345215,Operator,Y,
+Freeman,0423722531,D-545 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74078751,-118.16346741,Operator,Y,02/10/1982
+Freeman,0423722694,D-546,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74080276,-118.16347504,Operator,Y,
+Freeman,0423722494,D-547,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74081802,-118.16348267,Operator,N,
+Freeman,0423722532,D-548,LBTHUMS,Plugged,OG,Wilmington,Fault Block VII,33.74083328,-118.1634903,Operator,Y,
+Freeman,0423722902,D-562,LBTHUMS,Active,WD,Wilmington,Fault Block VI,33.74100494,-118.16333771,Well Summary,Y,09/28/2018
+Freeman,0423722797,D-563 I,LBTHUMS,Active,OB,Wilmington,Fault Block VI,33.7410202,-118.16333771,Well Summary,Y,12/16/1982
+Freeman,0423723761,D-564 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74103546,-118.16333008,Operator,Y,
+Freeman,0423722903,D-565,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74105072,-118.16332245,Operator,Y,
+Freeman,0423723698,D-566,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74106979,-118.16332245,Operator,Y,
+Freeman,0423722904,D-567,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.74108505,-118.16331482,Operator,Y,
+Freeman,0423722264,D-568,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74110031,-118.16330719,Operator,N,
+Freeman,0423722010,D-569,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74111557,-118.16330719,Operator,N,
+Freeman,0423721966,D-570,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74113083,-118.16329956,Operator,Y,
+Freeman,0423721997,D-571 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.74114609,-118.16329193,Operator,Y,02/07/1979
+Freeman,0423720627,D-572,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74116135,-118.16329193,Operator,Y,
+Freeman,0423720550,D-573 I,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74118,-118.1632843,Well Summary,Y,05/13/2019
+Freeman,0423720569,D-574,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74119568,-118.16327667,Operator,Y,
+Freeman,0423720605,D-575,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74121094,-118.16327667,Operator,Y,
+Freeman,0423720464,D-576,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.7412262,-118.16326904,Operator,Y,
+Freeman,0423720654,D-577,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74124146,-118.16326141,Operator,Y,
+Freeman,0423720489,D-578,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74126053,-118.16326141,Operator,Y,
+Freeman,0423720536,D-579,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74127579,-118.16325378,Operator,Y,
+Freeman,0423720555,D-580,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74129105,-118.16324615,Well Summary,Y,05/29/1968
+Freeman,0423720568,D-581 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.7413063,-118.16324615,Well Summary,N,
+Freeman,0423720601,D-582,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74132156,-118.16323853,Operator,N,
+Freeman,0423720620,D-583,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74133682,-118.1632309,Operator,N,
+Freeman,0423720781,D-584 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.7415123,-118.16317749,Operator,N,
+Freeman,0423720655,D-585,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74152756,-118.16316986,Operator,Y,
+Freeman,0423721480,D-586,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74154282,-118.16316223,Well Summary,Y,08/18/2019
+Freeman,0423720639,D-587,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74156189,-118.16316223,Operator,N,
+Freeman,0423720663,D-588 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.74157715,-118.1631546,Well Summary,N,10/03/1968
+Freeman,0423721533,D-589 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74159241,-118.1631546,Well Summary,Y,01/28/1975
+Freeman,0423721906,D-590,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74160767,-118.16314697,Operator,Y,
+Freeman,0423720747,D-591,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74162292,-118.16313934,Operator,N,
+Freeman,0423721905,D-592 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74163818,-118.16313934,Operator,Y,
+Freeman,0423720493,D-593 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.74165726,-118.16313171,Well Summary,Y,
+Freeman,0423720454,D-594,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74167252,-118.16312408,Well Summary,Y,12/10/2018
+Freeman,0423720499,D-595,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74168777,-118.16311646,Operator,Y,
+Freeman,0423720518,D-596 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74170303,-118.16311646,Operator,Y,
+Freeman,0423722198,D-597,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74171829,-118.16310883,Operator,N,
+Freeman,0423722533,D-598,LBTHUMS,Idle,WF,Wilmington,Fault Block VI,33.74173355,-118.1631012,Well Summary,Y,11/04/1981
+Freeman,0423720534,D-599 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.74175262,-118.1631012,Operator,N,05/04/1968
+Freeman,0423720931,D-600 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74176788,-118.16309357,Operator,N,10/15/1969
+Freeman,0423720065,D-601,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74185181,-118.16307831,Well Summary,Y,04/19/1967
+Freeman,0423720184,D-602,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74185944,-118.16306305,Operator,Y,
+Freeman,0423720281,D-603 I,LBTHUMS,Idle,WF,Wilmington,Fault Block VI,33.74186707,-118.16304779,Operator,N,
+Freeman,0423720248,D-604 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74187469,-118.16303253,Operator,Y,08/28/1967
+Freeman,0423720037,D-605 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.74188232,-118.16300964,Well Summary,Y,
+Freeman,0423720133,D-606 I,LBTHUMS,Idle,INJ,Wilmington,Fault Block VI,33.74188995,-118.16299438,Operator,Y,
+Freeman,0423720318,D-607 I,LBTHUMS,Idle,WF,Wilmington,Fault Block VI,33.74189758,-118.16297913,Operator,Y,
+Freeman,0423720335,D-608,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74190521,-118.16296387,Operator,Y,
+Freeman,0423720161,D-609,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74191666,-118.16294098,Operator,Y,
+Freeman,0423720249,D-610 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74192429,-118.16292572,Well Summary,N,09/02/1967
+Freeman,0423720515,D-611,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74193192,-118.16291046,Operator,N,
+Freeman,0423720497,D-612,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74193954,-118.1628952,Operator,N,
+Freeman,0423720282,D-613,LBTHUMS,Plugged,OG,Wilmington,Fault Block VII,33.74194717,-118.16287231,Operator,Y,
+Freeman,0423720776,D-614 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.7419548,-118.16285706,GPS,N,
+Freeman,0423720539,D-615 I,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74196625,-118.1628418,Operator,N,
+Freeman,0423720565,D-616,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74197388,-118.16282654,Operator,N,
+Freeman,0423720474,D-617,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74198151,-118.16280365,Operator,N,
+Freeman,0423720159,D-618 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.74198914,-118.16278839,Operator,Y,
+Freeman,0423720452,D-619 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.74199677,-118.16277313,Operator,N,
+Freeman,0423720038,D-620 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.74200439,-118.16275787,Operator,Y,
+Freeman,0423720444,D-621 I,LBTHUMS,Active,OG,Wilmington,Fault Block 98,33.74201584,-118.16273499,Well Summary,Y,06/06/2018
+Freeman,0423720420,D-622,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74202347,-118.16271973,Operator,N,
+Freeman,0423720806,D-623,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.7420311,-118.16270447,Well Summary,Y,04/02/1969
+Freeman,0423720221,D-624,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74203873,-118.16268921,Operator,Y,
+Freeman,0423720185,D-625 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.74204636,-118.16266632,Operator,N,
+Freeman,0423720066,D-626,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74205399,-118.16265106,Well Summary,Y,06/24/2018
+Freeman,0423720686,D-627,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74203491,-118.16255951,Operator,N,
+Freeman,0423720771,D-628 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.74202728,-118.16253662,Well Summary,Y,01/27/2019
+Freeman,0423720669,D-629 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.74202347,-118.16252136,Operator,Y,
+Freeman,0423720616,D-630I,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74201965,-118.16249847,Operator,Y,
+Freeman,0423726922,D-631 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.74201584,-118.16248322,Well Summary,Y,09/13/2007
+Freeman,0423720707,D-632 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.74201202,-118.16246033,Operator,Y,
+Freeman,0423720595,D-633 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.74200821,-118.16244507,Well Summary,Y,12/15/2018
+Freeman,0423720728,D-634 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74200439,-118.16242218,Operator,Y,
+Freeman,0423721537,D-635,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74200058,-118.16240692,Operator,Y,
+Freeman,0423720750,D-636,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74199677,-118.16238403,Operator,N,
+Freeman,0423723786,D-637,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74193954,-118.16213989,Operator,Y,
+Freeman,0423722467,D-638 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.74193573,-118.162117,Operator,Y,08/30/1981
+Freeman,0423723686,D-639,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.7419281,-118.16210175,Operator,Y,
+Freeman,0423722468,D-640,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74192429,-118.16207886,Operator,N,
+Freeman,0423721976,D-641,LBTHUMS,Plugged,OG,Wilmington,Fault Block VII,33.74192047,-118.1620636,Operator,Y,
+Freeman,0423723340,D-701,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74236298,-118.16290283,Operator,Y,
+Freeman,0423726427,D-702,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74236679,-118.16287231,Operator,N,
+Freeman,0423723696,D-703 I,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74237823,-118.16290283,Operator,Y,
+Freeman,0423726815,D-704,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74238586,-118.16287231,Operator,N,
+Freeman,0423730522,D-705,Unspecified,Canceled,OG,Wilmington,Fault Block VIII,33.742395,-118.16289509,Notice of Intent to Drill,Y,
+Freeman,0423726966,D-706 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74240112,-118.16286469,Operator,Y,
+Freeman,0423723388,D-707,LBTHUMS,Canceled,OG,Old Wilmington (ABD),Fault Block II Offshore,33.74241257,-118.16293335,Operator,N,
+Freeman,0423723462,D-707,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74241257,-118.16288757,Well Summary,Y,09/07/1987
+Freeman,0423730512,D-708,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74241638,-118.16286469,Well Summary,Y,11/01/2018
+Freeman,0423723776,D-709,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74242783,-118.16288757,Operator,N,
+Freeman,0423727017,D-710,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.74243164,-118.16285706,Operator,N,
+Freeman,0423725016,D-712,LBTHUMS,Active,OG,Wilmington,Fault Block 98,33.7424469,-118.16284943,Operator,N,
+Freeman,0423726881,D-713 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74245834,-118.16287231,Operator,N,
+Freeman,0423723317,D-714,LBTHUMS,Active,OG,Wilmington,Fault Block 98,33.74246216,-118.1628418,Operator,Y,
+Freeman,0423722995,D-715 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.7424736,-118.16287231,Operator,Y,
+Freeman,0423726302,D-716,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74248123,-118.1628418,Operator,Y,
+Freeman,0423723106,D-717 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74248886,-118.16286469,Operator,N,
+Freeman,0423723091,D-718,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74249649,-118.16283417,Operator,Y,
+Freeman,0423726996,D-719,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.74250793,-118.16285706,Operator,N,
+Freeman,0423723009,D-720,LBTHUMS,Active,OG,Wilmington,Fault Block 98,33.74251175,-118.16282654,Well Summary,Y,09/06/2019
+Freeman,0423723002,D-721,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74252319,-118.16285706,Operator,Y,
+Freeman,0423723077,D-722,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74252701,-118.16282654,Well Summary,Y,07/26/2019
+Freeman,0423723014,D-723 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74253845,-118.16284943,Operator,Y,
+Freeman,0423723337,D-724 I,LBTHUMS,Active,WF,Wilmington,Fault Block 98,33.74254227,-118.16281891,Operator,Y,
+Freeman,0423726289,D-725,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74255371,-118.1628418,Operator,Y,
+Freeman,0423726407,D-726 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.74255753,-118.16281128,Well Summary,N,
+Freeman,0423723010,D-727 I,LBTHUMS,Idle,WF,Wilmington,Fault Block VI,33.74256897,-118.1628418,Operator,Y,
+Freeman,0423723199,D-728,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.7425766,-118.16281128,Operator,Y,
+Freeman,0423726392,D-729,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74258423,-118.16283417,Operator,N,
+Freeman,0423726424,D-730,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74259186,-118.16280365,Operator,N,
+Freeman,0423726425,D-731 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.7426033,-118.16282654,Well Summary,N,
+Freeman,0423726413,D-732,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74260712,-118.16279602,Operator,Y,
+Freeman,0423725382,D-733,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74261856,-118.16282654,Operator,N,
+Freeman,0423726405,D-734,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74262238,-118.16279602,Operator,N,
+Freeman,0423725348,D-735,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74263382,-118.16281891,Operator,N,
+Freeman,0423726429,D-736,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74263763,-118.16278839,Operator,N,
+Freeman,0423723813,D-737 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74264908,-118.16281128,Well Summary,Y,
+Freeman,0423723318,D-738,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74265671,-118.16278076,Operator,Y,
+Freeman,0423723772,D-739,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74266434,-118.16281128,Operator,Y,
+Freeman,0423723478,D-740,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74267197,-118.16278076,Operator,Y,
+Freeman,0423723107,D-741,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74268341,-118.16280365,Well Summary,N,
+Freeman,0423723108,D-742,LBTHUMS,Idle,OG,Wilmington,Fault Block 98,33.74268723,-118.16277313,Operator,Y,
+Freeman,0423723817,D-743,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74269867,-118.16279602,Well Summary,Y,04/21/1995
+Freeman,0423725378,D-744,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74270248,-118.1627655,Operator,N,
+Freeman,0423723114,D-745,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74271393,-118.16278839,Operator,Y,
+Freeman,0423725350,D-746,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.74271774,-118.1627655,Well Summary,Y,03/24/2002
+Freeman,0423723356,D-747,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74272919,-118.16278839,Operator,N,
+Freeman,0423723808,D-748,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74273682,-118.16275787,Well Summary,Y,09/18/2018
+Freeman,0423723239,D-749,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74274445,-118.16278076,Well Summary,Y,01/14/2020
+Freeman,0423723075,D-750,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.74274826,-118.16275024,Operator,N,
+Freeman,0423723454,D-751,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.7427597,-118.16278076,Operator,Y,
+Freeman,0423723452,D-752 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.74276733,-118.16275024,Operator,N,
+Freeman,0423723692,D-753 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.74277878,-118.16277313,Operator,Y,
+Freeman,0423723200,D-754 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.74278259,-118.16274261,Operator,Y,
+Freeman,0423725209,D-755,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.74279404,-118.1627655,Operator,N,
+Freeman,0423723076,D-756 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.74279785,-118.16273499,Operator,Y,
+Freeman,0423723689,D-801 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74223709,-118.16233826,Operator,Y,
+Freeman,0423725386,D-802,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74224091,-118.16230774,Well Summary,Y,07/23/2002
+Freeman,0423723169,D-803 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.74225235,-118.16233826,Operator,Y,
+Freeman,0423723814,D-804,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74225616,-118.16230774,Well Summary,Y,05/14/2018
+Freeman,0423723128,D-805 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.74226761,-118.16233063,Operator,N,
+Freeman,0423726363,D-806,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74227142,-118.16230011,Operator,N,
+Freeman,0423723105,D-807,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74228287,-118.162323,Operator,Y,
+Freeman,0423725390,D-808,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.7422905,-118.16229248,Operator,N,
+Freeman,0423723387,D-809,LBTHUMS,Canceled,OG,Old Wilmington (ABD),Fault Block II Offshore,33.74229813,-118.16236115,Operator,N,
+Freeman,0423723463,D-809,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.74229813,-118.16231537,Operator,Y,
+Freeman,0423726387,D-810,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74230576,-118.16229248,Well Summary,Y,03/25/2004
+Freeman,0423725340,D-811,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.7423172,-118.16231537,Operator,N,
+Freeman,0423725389,D-812,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74232101,-118.16228485,Operator,N,
+Freeman,0423723312,D-813 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74233246,-118.16230774,Operator,N,
+Freeman,0423726390,D-814 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.74233627,-118.16227722,Operator,Y,
+Freeman,0423723019,D-815 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74234772,-118.16230774,Operator,N,
+Freeman,0423725205,D-816,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74235153,-118.16227722,Operator,N,
+Freeman,0423725383,D-817,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74236298,-118.16230011,Operator,N,
+Freeman,0423726305,D-818,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74236679,-118.16226959,Operator,N,
+Freeman,0423723690,D-819,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74237823,-118.16229248,Well Summary,Y,06/30/1991
+Freeman,0423723777,D-820,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.74238586,-118.16226196,Operator,N,
+Freeman,0423723809,D-821 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.74239349,-118.16228485,Operator,Y,
+Freeman,0423723021,D-822,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.742382,-118.16136,Well Summary,Y,06/29/1984
+Freeman,0423723025,D-823,LBTHUMS,Canceled,OG,Wilmington,Fault Block 90,33.74241257,-118.162323,Operator,N,
+Freeman,0423723313,D-823,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74241257,-118.16228485,Operator,N,
+Freeman,0423723680,D-824,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74241638,-118.16225433,Well Summary,Y,03/24/1991
+Freeman,0423723319,D-825,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74242783,-118.16227722,Operator,N,
+Freeman,0423723017,D-826,LBTHUMS,Canceled,OG,Old Wilmington (ABD),Fault Block II Offshore,33.74243164,-118.16229248,Operator,N,
+Freeman,0423723444,D-826,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74243164,-118.1622467,Operator,N,
+Freeman,0423723206,D-827,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74244308,-118.16226959,Operator,Y,
+Freeman,0423723201,D-828 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.7424469,-118.1622467,Well Summary,Y,05/04/1985
+Freeman,0423723681,D-829,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74245834,-118.16226959,Operator,Y,
+Freeman,0423723314,D-830,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74246216,-118.16223907,Operator,Y,
+Freeman,0423723697,D-831,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.7424736,-118.16226196,Operator,Y,
+Freeman,0423723109,D-832,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74248123,-118.16223145,Operator,N,
+Freeman,0423722998,D-833,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74249268,-118.16225433,Operator,Y,
+Freeman,0423723767,D-834,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74249649,-118.16223145,Operator,Y,
+Freeman,0423723684,D-835,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74250793,-118.16225433,Operator,Y,
+Freeman,0423723207,D-836,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74251175,-118.16222382,Operator,Y,
+Freeman,0423723026,D-837 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.74252319,-118.1622467,Operator,N,06/09/1984
+Freeman,0423723315,D-838,LBTHUMS,Canceled,OG,Old Wilmington (ABD),Fault Block II Offshore,33.74252701,-118.16226196,Operator,N,
+Freeman,0423723701,D-838,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74252701,-118.16221619,Operator,Y,
+Freeman,0423723098,D-839,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74253845,-118.16223907,Well Summary,Y,10/29/1984
+Freeman,0423723022,D-840,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74254227,-118.16221619,Operator,Y,
+Freeman,0423723023,D-841,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74255371,-118.16223907,Operator,Y,
+Freeman,0423723208,D-842,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74255753,-118.16220856,Well Summary,Y,
+Freeman,0423723173,D-843,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74256897,-118.16223145,Operator,N,
+Freeman,0423723440,D-844,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.7425766,-118.16220093,Operator,Y,
+Freeman,0423723240,D-845,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74258423,-118.16222382,Operator,Y,
+Freeman,0423723693,D-846,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74259186,-118.16220093,Operator,Y,
+Freeman,0423723011,D-847,LBTHUMS,Canceled,OG,Wilmington,Any Block,33.7426033,-118.16226196,Operator,N,
+Freeman,0423723189,D-847,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.7426033,-118.16222382,Operator,Y,
+Freeman,0423723695,D-848,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74260712,-118.1621933,Operator,Y,
+Freeman,0423722999,D-849,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74261856,-118.16221619,Operator,Y,
+Freeman,0423722996,D-850 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.74262238,-118.16218567,Operator,N,
+Freeman,0423725133,D-851,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74263382,-118.16220856,Operator,N,
+Freeman,0423723759,D-852 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.74263763,-118.16218567,Operator,Y,07/02/1993
+Freeman,0423723810,D-853 I,LBTHUMS,Idle,OG,Wilmington,Fault Block 90,33.74264908,-118.16220856,Operator,Y,
+Freeman,0423723451,D-854,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74265671,-118.16217804,Operator,N,
+Freeman,0423723780,D-855,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.74266434,-118.16220093,Operator,N,
+Freeman,0423723464,D-856,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.74267197,-118.16217041,Operator,Y,
+Grissom,0423720466,A-101 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.760057,-118.180677,Well Summary,Y,05/15/1968
+Grissom,0423700601,A-102,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.76005173,-118.18157196,Operator,Y,
+Grissom,0423720937,A-103,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.76007462,-118.1815567,Operator,Y,
+Grissom,0423723708,A-104 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.76005173,-118.18154907,Well Summary,Y,04/08/1992
+Grissom,0423720730,A-105 I,LBTHUMS,Plugged,WF,Wilmington,Fault Block VI,33.7600708,-118.18154144,Operator,Y,
+Grissom,0423720524,A-106,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.76004791,-118.18153381,Operator,Y,
+Grissom,0423720982,A-107,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7600708,-118.18151855,Operator,Y,
+Grissom,0423722288,A-108 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.76004791,-118.18151093,Operator,N,10/11/2013
+Grissom,0423723216,A-109,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.76006699,-118.18149567,Operator,Y,
+Grissom,0423720199,A-110 I,LBTHUMS,Plugged,INJ,Wilmington,Fault Block VI,33.7600441,-118.18149567,Operator,N,
+Grissom,0423720341,A-111,LBTHUMS,Idle,OG,Wilmington,Fault Block V,33.76006317,-118.18148041,Operator,Y,12/26/1967
+Grissom,0423720582,A-112,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.76004028,-118.18147278,Operator,Y,
+Grissom,0423720302,A-113,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.76005936,-118.18145752,Operator,Y,
+Grissom,0423720423,A-114,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.76003647,-118.18145752,Operator,N,
+Grissom,0423720523,A-115,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.76005936,-118.18143463,Operator,N,
+Grissom,0423723673,A-116,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.76003265,-118.18143463,Operator,Y,
+Grissom,0423720103,A-117,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.76005554,-118.18141937,Operator,N,
+Grissom,0423722695,A-118 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.76002884,-118.18141937,Operator,N,11/09/2013
+Grissom,0423722696,A-119,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.76005173,-118.18139648,Operator,N,
+Grissom,0423723139,A-120,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.76002502,-118.18139648,Operator,Y,
+Grissom,0423720578,A-121 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.7600441,-118.18138123,Operator,N,09/18/1968
+Grissom,0423726710,A-122,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.76002121,-118.1813736,Operator,N,
+Grissom,0423722219,A-123 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.76004028,-118.18135834,Operator,N,
+Grissom,0423720743,A-124,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7600174,-118.18135834,Operator,Y,03/18/1969
+Grissom,0423723375,A-125,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.76003647,-118.18134308,Operator,Y,
+Grissom,0423720424,A-126 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.76001358,-118.18133545,Operator,N,04/29/1968
+Grissom,0423720408,A-127,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.76003265,-118.18132019,Operator,N,
+Grissom,0423722565,A-129,LBTHUMS,Canceled,OG,Old Wilmington (ABD),Fault Block VI Offshore,33.76002121,-118.1813736,Operator,N,
+Grissom,0423722590,A-129 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.76002884,-118.18130493,Operator,N,06/08/1982
+Grissom,0423720001,A-130 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.76000595,-118.1812973,Operator,N,02/03/1967
+Grissom,0423723140,A-131,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.76002502,-118.18128204,Operator,Y,
+Grissom,0423723141,A-132,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.76000214,-118.18128204,Operator,Y,
+Grissom,0423722243,A-133 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.76002121,-118.18126678,Well Summary,Y,08/19/1980
+Grissom,0423722546,A-134,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75999832,-118.18125916,Operator,Y,
+Grissom,0423720115,A-135,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.7600174,-118.1812439,Operator,Y,
+Grissom,0423721833,A-136,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75999451,-118.1812439,Operator,Y,
+Grissom,0423720710,A-137,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.76001358,-118.18122864,Operator,Y,12/21/1968
+Grissom,0423721908,A-138,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75999069,-118.18122101,Operator,Y,04/16/1978
+Grissom,0423722088,A-139 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.759993,-118.180307,Well Summary,N,10/31/1979
+Grissom,0423720526,A-140,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75998688,-118.18120575,Operator,Y,
+Grissom,0423720658,A-141,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.76000595,-118.18119049,Operator,Y,
+Grissom,0423720257,A-142 I,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75998306,-118.18118286,Well Summary,Y,08/23/2019
+Grissom,0423720905,A-143,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.76000214,-118.1811676,Operator,N,
+Grissom,0423723055,A-144 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75997925,-118.1811676,Operator,N,05/09/1984
+Grissom,0423720579,A-145,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75999832,-118.18115234,Well Summary,Y,09/01/1968
+Grissom,0423720409,A-146,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75997543,-118.18114471,Well Summary,Y,01/18/1968
+Grissom,0423720693,A-147,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75999451,-118.18112946,Operator,Y,
+Grissom,0423720486,A-148 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75997162,-118.18112946,Operator,N,
+Grissom,0423720719,A-149,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75999069,-118.1811142,Operator,Y,
+Grissom,0423720583,A-150,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7599678,-118.18110657,Operator,Y,
+Grissom,0423722220,A-151 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75998688,-118.18109131,Operator,Y,06/20/1981
+Grissom,0423720584,A-152,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75996399,-118.18109131,Operator,N,
+Grissom,0423722656,A-166,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75993729,-118.18095398,Operator,N,
+Grissom,0423720794,A-167,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75995636,-118.18093872,Operator,N,
+Grissom,0423722011,A-168,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75993347,-118.18093872,Well Summary,Y,05/29/1979
+Grissom,0423721225,A-169,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75994873,-118.18091583,Operator,N,
+Grissom,0423720002,A-170 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75992584,-118.18091583,Well Summary,Y,01/18/1967
+Grissom,0423720079,A-171 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75994492,-118.18090057,Well Summary,Y,03/22/1967
+Grissom,0423720699,A-172,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75992203,-118.18090057,Operator,Y,
+Grissom,0423721964,A-173,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75993729,-118.18087769,Operator,Y,11/13/1978
+Grissom,0423700603,A-174,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7599144,-118.18087769,Operator,N,
+Grissom,0423720735,A-201,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75993347,-118.18086243,Operator,Y,
+Grissom,0423720690,A-202,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75991058,-118.18086243,Operator,N,
+Grissom,0423720525,A-203,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75992584,-118.18084717,Operator,Y,
+Grissom,0423722231,A-204,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75990295,-118.18084717,Operator,N,
+Grissom,0423721398,A-205,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75991821,-118.18082428,Well Summary,Y,12/04/2019
+Grissom,0423722207,A-207,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75990677,-118.18080139,Operator,Y,
+Grissom,0423722289,A-208,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75988388,-118.18080902,Operator,N,
+Grissom,0423720580,A-209 I,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75989914,-118.18078613,Well Summary,Y,09/18/1968
+Grissom,0423700116,A-210,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.75987625,-118.18079376,Operator,N,09/21/1966
+Grissom,0423722657,A-211 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75989151,-118.18077087,Operator,Y,11/09/1982
+Grissom,0423720527,A-212,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75986862,-118.1807785,Operator,N,
+Grissom,0423720467,A-213,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75988388,-118.18075562,Operator,N,
+Grissom,0423722547,A-214 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75985718,-118.18076324,Operator,N,11/08/1981
+Grissom,0423721841,A-215,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75986862,-118.18073273,Operator,Y,
+Grissom,0423720410,A-216 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75984573,-118.18074799,Well Summary,Y,02/05/1968
+Grissom,0423721450,A-217,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75985718,-118.18071747,Operator,Y,
+Grissom,0423720019,A-218 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75983429,-118.18073273,Well Summary,Y,03/01/1967
+Grissom,0423720585,A-219,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75984573,-118.18070984,Operator,N,
+Grissom,0423720080,A-220,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75982666,-118.18071747,Operator,N,
+Grissom,0423720823,A-221,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75983429,-118.18069458,Operator,Y,
+Grissom,0423720586,A-222,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.7598114,-118.18070221,Operator,N,
+Grissom,0423722658,A-223 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75982285,-118.18067932,Operator,Y,08/20/1982
+Grissom,0423720468,A-224,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75980377,-118.18068695,Well Summary,Y,04/05/1968
+Grissom,0423722642,A-225 I,LBTHUMS,Idle,WF,Wilmington,Fault Block VI,33.75980759,-118.18066406,Operator,Y,07/05/1982
+Grissom,0423720152,A-226 I,LBTHUMS,Idle,WF,Wilmington,Fault Block VI,33.75978851,-118.18067932,Operator,N,06/28/1967
+Grissom,0423722659,A-227,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75979233,-118.1806488,Operator,Y,
+Grissom,0423720176,A-228,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75977325,-118.18066406,Well Summary,Y,12/18/2019
+Grissom,0423700604,A-229,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75978088,-118.18064117,Operator,Y,
+Grissom,0423720517,A-230,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75976181,-118.18065643,Operator,N,
+Grissom,0423722660,A-231 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75976563,-118.18062592,Operator,Y,12/13/1982
+Grissom,0423722765,A-232,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75974655,-118.18064117,Operator,Y,
+Grissom,0423720744,A-233,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75975418,-118.18061829,Operator,N,
+Grissom,0423700605,A-234 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75973511,-118.18063354,Operator,N,11/23/1966
+Grissom,0423722697,A-235,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75973511,-118.18060303,Operator,N,
+Grissom,0423720050,A-236 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75971985,-118.18062592,Operator,N,04/24/1967
+Grissom,0423720953,A-237,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75971985,-118.1805954,Operator,N,
+Grissom,0423720200,A-238 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75970459,-118.18061829,Well Summary,N,08/06/1967
+Grissom,0423722845,A-239 I,LBTHUMS,Canceled,OG,Old Wilmington (ABD),Fault Block II Offshore,33.75969696,-118.18066406,Operator,N,
+Grissom,0423723211,A-239 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75970459,-118.18058777,Operator,N,03/15/1985
+Grissom,0423720720,A-240 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75968933,-118.18061066,Operator,N,01/09/1969
+Grissom,0423720469,A-241 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75968933,-118.18058014,Well Summary,Y,01/19/2020
+Grissom,0423720984,A-242 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75967407,-118.18060303,Operator,N,02/16/1970
+Grissom,0423722766,A-243,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75967407,-118.18057251,Operator,Y,
+Grissom,0423723118,A-245 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75965881,-118.18056488,Operator,Y,10/15/1984
+Grissom,0423726664,A-246,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75964355,-118.18058777,Operator,N,
+Grissom,0423723160,A-247,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75964355,-118.18055725,Operator,Y,
+Grissom,0423730142,A-248,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7596283,-118.18058014,Operator,Y,09/10/2013
+Grissom,0423726361,A-249,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7596283,-118.18054962,Operator,N,
+Grissom,0423730258,A-250,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75961304,-118.18057251,Notice of Intent to Drill,Y,08/22/2015
+Grissom,0423726420,A-251,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75960922,-118.18054962,Well Summary,Y,05/29/2019
+Grissom,0423722914,A-252,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75959778,-118.18056488,Operator,Y,
+Grissom,0423722896,A-253,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.759597,-118.180541,Well Summary,Y,10/22/1983
+Grissom,0423723360,A-254,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75958252,-118.18055725,Operator,N,
+Grissom,0423723496,A-255,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7595787,-118.18053436,Operator,Y,
+Grissom,0423720081,A-256,LBTHUMS,Active,OG,Wilmington,Fault Block V,33.75956345,-118.18055725,Operator,N,
+Grissom,0423720425,A-257,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75956345,-118.18052673,Operator,N,02/25/1968
+Grissom,0423720426,A-258,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75954819,-118.18054962,Operator,N,
+Grissom,0423723137,A-259,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75954819,-118.1805191,Operator,Y,
+Grissom,0423720533,A-260,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75953293,-118.18054199,Operator,Y,
+Grissom,0423720587,A-261 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75952911,-118.1805191,Well Summary,Y,09/01/1968
+Grissom,0423720236,A-262 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75951767,-118.18054199,Operator,N,
+Grissom,0423720751,A-263,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75951385,-118.18051147,Operator,Y,
+Grissom,0423722680,A-264 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75950241,-118.18053436,Operator,Y,01/11/1983
+Grissom,0423720588,A-265,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7594986,-118.18050385,Operator,N,
+Grissom,0423720020,A-266,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75948334,-118.18052673,Operator,N,
+Grissom,0423720528,A-267,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75947952,-118.18050385,Operator,Y,
+Grissom,0423720112,A-268,LBTHUMS,Idle,DG,Wilmington,Fault Block VI,33.75946808,-118.18052673,Operator,Y,
+Grissom,0423720901,A-269 I,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75946045,-118.18050385,Operator,N,
+Grissom,0423726646,A-270,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75945282,-118.18052673,Operator,N,
+Grissom,0423722566,A-271,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75944519,-118.18049622,Operator,N,09/26/2014
+Grissom,0423720342,A-274,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75941849,-118.18052673,Operator,N,
+Grissom,0423720343,A-301,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.759395,-118.179597,Well Summary,Y,04/18/2017
+Grissom,0423700794,A-302,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75940323,-118.18052673,Operator,N,
+Grissom,0423700606,A-303,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75939178,-118.18049622,Operator,N,
+Grissom,0423720529,A-304 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75938797,-118.18052673,Well Summary,Y,05/25/1968
+Grissom,0423720808,A-305 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75937653,-118.18050385,Operator,N,
+Grissom,0423720303,A-306 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.7593689,-118.18052673,Operator,N,
+Grissom,0423720809,A-307,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75935745,-118.18050385,Well Summary,N,03/10/2020
+Grissom,0423720324,A-308,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75935364,-118.18053436,Operator,N,
+Grissom,0423723079,A-309 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75934219,-118.18050385,Operator,Y,06/06/1984
+Grissom,0423720470,A-310,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75933838,-118.18053436,Operator,N,
+Grissom,0423720774,A-311 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75932693,-118.18051147,Operator,Y,
+Grissom,0423723059,A-312,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75931931,-118.18053436,Operator,Y,
+Grissom,0423722390,A-313,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75930786,-118.18051147,Operator,N,
+Grissom,0423720258,A-314,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75930786,-118.18054199,Well Summary,Y,04/15/2019
+Grissom,0423721511,A-315,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.7592926,-118.1805191,Operator,N,
+Grissom,0423720471,A-315 I,LBTHUMS,Canceled,OG,Old Wilmington (ABD),Fault Block II Offshore,33.76029205,-118.22964478,Operator,N,
+Grissom,0423720051,A-316,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75928879,-118.18054962,Operator,Y,
+Grissom,0423720694,A-317,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75927353,-118.18052673,Operator,N,
+Grissom,0423720003,A-318,LBTHUMS,Canceled,OG,Old Wilmington (ABD),Fault Block II Offshore,33.7592659,-118.18062592,Operator,N,
+Grissom,0423723103,A-318,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75927353,-118.18055725,Operator,Y,
+Grissom,0423700607,A-319 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75925827,-118.18053436,Operator,N,
+Grissom,0423720651,A-351 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75901413,-118.18067932,Operator,N,
+Grissom,0423720197,A-352 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75902557,-118.18070221,Operator,Y,
+Grissom,0423720472,A-353,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.7590065,-118.18069458,Operator,N,
+Grissom,0423720522,A-354 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75901413,-118.18071747,Operator,N,10/30/2013
+Grissom,0423720530,A-355,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75899124,-118.18070984,Operator,N,
+Grissom,0423722991,A-356,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75900269,-118.18073273,Operator,N,
+Grissom,0423720532,A-357,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75898361,-118.18071747,Operator,N,
+Grissom,0423722290,A-358,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75899124,-118.18074799,Operator,N,
+Grissom,0423720344,A-359 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75896835,-118.18073273,Operator,N,
+Grissom,0423720153,A-360,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7589798,-118.18076324,Well Summary,Y,02/17/2019
+Grissom,0423720316,A-361,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75895691,-118.18075562,Operator,N,
+Grissom,0423720345,A-362,LBTHUMS,Active,OG,Wilmington,Fault Block V,33.75897217,-118.1807785,Operator,N,
+Grissom,0423720427,A-363,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75894928,-118.18077087,Operator,N,
+Grissom,0423722567,A-364,LBTHUMS,Canceled,OG,Old Wilmington (ABD),Fault Block VI Onshore,33.75895309,-118.18086243,Operator,N,
+Grissom,0423722591,A-364,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75896454,-118.18079376,Operator,N,
+Grissom,0423720473,A-365,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75894165,-118.18078613,Operator,Y,
+Grissom,0423722851,A-366 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75895309,-118.18080902,Operator,Y,
+Grissom,0423720304,A-367,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75893021,-118.18080139,Operator,N,
+Grissom,0423723015,A-368,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75894547,-118.18082428,Operator,N,
+Grissom,0423720411,A-369 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75892258,-118.18082428,Operator,N,
+Grissom,0423720412,A-370 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75893784,-118.18084717,Operator,N,
+Grissom,0423720223,A-371,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75891113,-118.18084717,Operator,Y,
+Grissom,0423723028,A-372,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75893021,-118.18086243,Operator,Y,
+Grissom,0423722897,A-373,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75890732,-118.18086243,Operator,N,
+Grissom,0423720177,A-374,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75892639,-118.18087769,Operator,N,
+Grissom,0423720092,A-401 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75889969,-118.18087769,Operator,N,
+Grissom,0423720259,A-402,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75891876,-118.18090057,Well Summary,Y,03/05/2019
+Grissom,0423721318,A-403,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75889587,-118.18090057,Operator,N,
+Grissom,0423720260,A-404,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75891113,-118.18091583,Operator,Y,09/11/1967
+Grissom,0423723682,A-405,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75888824,-118.18092346,Operator,Y,
+Grissom,0423723060,A-406,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75890732,-118.18093872,Operator,Y,
+Grissom,0423723097,A-407 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75888443,-118.18093872,Operator,Y,
+Grissom,0423723138,A-408,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.7589035,-118.18095398,Operator,N,
+Grissom,0423723734,A-409 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75888062,-118.18096161,Operator,N,12/02/1992
+Grissom,0423723191,A-410,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75889969,-118.18097687,Operator,N,
+Grissom,0423723806,A-411,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7588768,-118.18097687,Operator,Y,
+Grissom,0423723171,A-412,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75889587,-118.18099213,Operator,N,
+Grissom,0423725002,A-413,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75887299,-118.18099976,Operator,Y,
+Grissom,0423725012,A-414,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75889206,-118.18101501,Well Summary,Y,01/27/1997
+Grissom,0423725224,A-415,LBTHUMS,Active,OG,Wilmington,Fault Block 98,33.75886917,-118.18101501,Operator,N,
+Grissom,0423723322,A-530,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.758834,-118.181892,Well Summary,N,10/28/1996
+Grissom,0423723804,A-531,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75881577,-118.18190765,Operator,N,
+Grissom,0423723335,A-532,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75883865,-118.18190765,Operator,N,
+Grissom,0423723985,A-533,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75881958,-118.18192291,Operator,Y,
+Grissom,0423725014,A-534,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75884247,-118.18193054,Operator,Y,
+Grissom,0423725013,A-535,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75882339,-118.1819458,Operator,Y,
+Grissom,0423725226,A-536,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75884628,-118.1819458,Operator,N,
+Grissom,0423725249,A-537,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75882721,-118.18196106,Operator,N,
+Grissom,0423725237,A-538,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.7588501,-118.18196869,Operator,Y,
+Grissom,0423725046,A-539,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75883102,-118.18198395,Operator,Y,
+Grissom,0423723119,A-540,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75885391,-118.18198395,Operator,N,
+Grissom,0423726414,A-541,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75883484,-118.18199921,Operator,N,
+Grissom,0423726278,A-542,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75885773,-118.18200684,Operator,N,
+Grissom,0423726301,A-543 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75883865,-118.18202209,Operator,Y,
+Grissom,0423723748,A-544,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75886154,-118.18202209,Operator,Y,
+Grissom,0423730176,A-545,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75884247,-118.18203735,Well Summary,Y,12/06/2013
+Grissom,0423726631,A-546,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75886536,-118.18204498,Operator,Y,03/27/2014
+Grissom,0423723574,A-547,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75884628,-118.18206024,Operator,N,06/22/1988
+Grissom,0423723564,A-548,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75886917,-118.18206024,Operator,N,
+Grissom,0423726715,A-549 I,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7588501,-118.1820755,Operator,Y,
+Grissom,0423726418,A-550,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75887299,-118.18208313,Operator,N,
+Grissom,0423726833,A-551,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75885391,-118.18209839,Well Summary,Y,08/06/2019
+Grissom,0423723685,A-552,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7588768,-118.18209839,Operator,N,
+Grissom,0423723768,A-553 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75885773,-118.18211365,Operator,Y,
+Grissom,0423723683,A-554,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75888062,-118.18212128,Operator,Y,
+Grissom,0423730168,A-555,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75886154,-118.18213654,Operator,Y,11/23/2013
+Grissom,0423726666,A-556 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75888443,-118.18213654,Operator,Y,
+Grissom,0423723718,A-557 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75886536,-118.18215179,Operator,N,
+Grissom,0423726679,A-558,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75888824,-118.18215942,Operator,Y,
+Grissom,0423726809,A-559 I,LBTHUMS,Active,WF,Wilmington,Fault Block 98,33.75886917,-118.18217468,Operator,Y,01/14/2007
+Grissom,0423726716,A-560,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75889587,-118.18217468,Operator,N,
+Grissom,0423726868,A-561,LBTHUMS,Active,OG,Wilmington,Fault Block V,33.75887299,-118.18218994,Operator,N,
+Grissom,0423726304,A-562 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75889969,-118.18219757,Operator,N,
+Grissom,0423730139,A-563,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7588768,-118.18221283,Operator,Y,09/23/2013
+Grissom,0423723653,A-564 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.7589035,-118.18221283,Operator,Y,
+Grissom,0423730246,A-565,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75888062,-118.18222809,Well Summary,Y,03/02/2014
+Grissom,0423723654,A-566 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75890732,-118.18223572,Operator,Y,
+Grissom,0423723805,A-567,LBTHUMS,Active,OG,Wilmington,Fault Block V,33.75888824,-118.18225098,Well Summary,Y,05/17/2019
+Grissom,0423725231,A-568,LBTHUMS,Canceled,OG,Wilmington,Fault Block VI,33.75889969,-118.18231964,hud,N,
+Grissom,0423726835,A-568,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75891113,-118.18225098,Well Summary,Y,02/25/2007
+Grissom,0423723784,A-569 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75889206,-118.18227386,Operator,Y,
+Grissom,0423723741,A-570 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75891876,-118.18227386,Operator,Y,01/17/1993
+Grissom,0423730257,A-571 I,LBTHUMS,Canceled,INJ,Wilmington,Fault Block IV,33.75889969,-118.18228912,Notice of Intent to Drill,Y,
+Grissom,0423723757,A-629,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75905228,-118.18253326,Operator,Y,
+Grissom,0423725232,A-630,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75907135,-118.18251801,Operator,N,
+Grissom,0423725393,A-631,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75906372,-118.18254852,Operator,N,
+Grissom,0423726758,A-632 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75908279,-118.18253326,Operator,N,
+Grissom,0423730247,A-633,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75907898,-118.18256378,Well Summary,Y,02/14/2014
+Grissom,0423730302,A-634 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75909805,-118.18254089,Notice of Intent to Drill,Y,08/23/2014
+Grissom,0423723803,A-635,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75909424,-118.18257141,Well Summary,Y,07/01/1994
+Grissom,0423725247,A-636,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75911331,-118.18255615,Operator,N,
+Grissom,0423730283,A-637,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7591095,-118.18257904,Well Summary,Y,08/11/2014
+Grissom,0423730407,A-638,LBTHUMS,Canceled,OG,Wilmington,Fault Block VI,33.75912857,-118.18256378,Notice of Intent to Drill,Y,
+Grissom,0423730382,A-639,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75912476,-118.18258667,Well Summary,Y,10/20/2014
+Grissom,0423723212,A-640,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75914383,-118.18257141,Well Summary,Y,04/26/1985
+Grissom,0423730467,A-641,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75914001,-118.1825943,Well Summary,Y,12/06/2016
+Grissom,0423730309,A-642,LBTHUMS,Active,OG,Wilmington,Fault Block V,33.75915909,-118.18257904,Operator,Y,07/17/2014
+Grissom,0423723992,A-643,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75915527,-118.18260193,Operator,Y,
+Grissom,0423730266,A-644 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75917053,-118.18258667,Well Summary,Y,09/02/2014
+Grissom,0423730426,A-645,LBTHUMS,Canceled,OG,Wilmington,Fault Block VI,33.75917435,-118.18261719,Notice of Intent to Drill,Y,
+Grissom,0423723746,A-646 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75918961,-118.1825943,Operator,Y,
+Grissom,0423730523,A-647,Unspecified,Active,OG,Wilmington,Fault Block VI,33.759188,-118.18262044,Well Summary,Y,08/06/2019
+Grissom,0423730511,A-648,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75920486,-118.18260193,Well Summary,Y,01/03/2018
+Grissom,0423730524,A-649,Unspecified,Active,OG,Wilmington,Fault Block VI,33.759204,-118.18262693,Well Summary,Y,09/21/2023
+Grissom,0423725233,A-650,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75922012,-118.18260193,Operator,N,
+Grissom,0423730525,A-652,Unspecified,Active,OG,Wilmington,Fault Block VI,33.759234,-118.18261181,Well Summary,Y,09/08/2023
+Grissom,0423725015,A-654,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75925064,-118.18261719,Operator,Y,
+Grissom,0423730530,A-655,Unspecified,Active,OG,Wilmington,Fault Block VI,33.75925,-118.182646,Well Summary,Y,05/22/2023
+Grissom,0423723736,A-656,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.7592659,-118.18262482,Operator,Y,
+Grissom,0423722214,A-661,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75930786,-118.18267059,Well Summary,Y,05/31/2018
+Grissom,0423722203,A-662 I,LBTHUMS,Plugged,WF,Wilmington,Fault Block V,33.75932312,-118.18264771,Operator,Y,
+Grissom,0423700343,A-663 I,LBTHUMS,Plugged,INJ,Wilmington,Fault Block VI,33.75933075,-118.18267059,Operator,N,
+Grissom,0423720237,A-664,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75933838,-118.18264771,Operator,Y,
+Grissom,0423723769,A-665,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75934601,-118.18267822,Operator,Y,
+Grissom,0423720113,A-666 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75935745,-118.18265533,Well Summary,N,06/03/1999
+Grissom,0423722215,A-667,LBTHUMS,Idle,OG,Wilmington,Fault Block V,33.75936127,-118.18267822,Operator,Y,
+Grissom,0423720198,A-668 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75937271,-118.18265533,Operator,Y,
+Grissom,0423700608,A-669,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75937653,-118.18267822,Well Summary,Y,01/04/1967
+Grissom,0423720082,A-670,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75938797,-118.18265533,Operator,N,
+Grissom,0423723778,A-671 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.7593956,-118.18268585,Operator,Y,
+Grissom,0423720154,A-672,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75940704,-118.18266296,Operator,N,
+Grissom,0423723760,A-673 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75941467,-118.18268585,Operator,Y,
+Grissom,0423720261,A-703,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75944901,-118.18268585,Operator,N,
+Grissom,0423720004,A-704,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75945663,-118.18265533,Operator,N,
+Grissom,0423721930,A-705,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75946426,-118.18267822,Operator,N,01/12/2014
+Grissom,0423720224,A-706,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75947189,-118.18265533,Operator,Y,
+Grissom,0403720021,A-707,LBTHUMS,Canceled,OG,Old Wilmington (ABD),Any Block,33.75947189,-118.18275452,Operator,N,
+Grissom,0423720021,A-707,LBTHUMS,Plugged,OG,Wilmington,Fault Block V,33.75947952,-118.18267822,Operator,N,
+Grissom,0423720005,A-708 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75948715,-118.18265533,Operator,N,
+Grissom,0423720052,A-709,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75950241,-118.18267822,Operator,Y,03/08/1967
+Grissom,0423720134,A-710,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75950241,-118.18264771,Operator,Y,
+Grissom,0423721971,A-711,LBTHUMS,Active,OG,Wilmington,Fault Block V,33.759517,-118.18267,Well Summary,Y,03/05/1979
+Grissom,0423700272,A-712 I,LBTHUMS,Plugged,WF,Wilmington,Fault Block VI,33.75952148,-118.18264008,Operator,Y,
+Grissom,0423720317,A-713 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75953293,-118.18266296,Operator,N,
+Grissom,0423720269,A-714 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75953674,-118.18264008,Operator,Y,
+Grissom,0423722679,A-715,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.75954819,-118.18266296,Operator,Y,
+Grissom,0423720325,A-716 I,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.759552,-118.18263245,Well Summary,Y,11/22/1967
+Grissom,0423700609,A-717,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.75956345,-118.18265533,Operator,N,
+Grissom,0423722834,A-718 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75956726,-118.18262482,Well Summary,Y,05/05/1983
+Grissom,0423700610,A-719 I,LBTHUMS,Plugged,INJ,Wilmington,Fault Block VI,33.75958252,-118.18264771,Operator,N,
+Grissom,0423722835,A-720 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75958252,-118.18262482,Operator,Y,
+Grissom,0423720413,A-721 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75959778,-118.18264008,Operator,Y,
+Grissom,0423720307,A-722,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.75959778,-118.18261719,Operator,N,
+Grissom,0423720346,A-723,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75961304,-118.18264008,Well Summary,Y,12/16/1967
+Grissom,0423720056,A-724 I,LBTHUMS,Plugged,INJ,Wilmington,Fault Block VI,33.75961304,-118.18260956,Operator,N,
+Grissom,0423730533,A-735,Unspecified,Active,OG,Wilmington,Fault Block VI,33.759718,-118.182587,Well Summary,Y,12/04/2023
+Grissom,0423723234,A-736,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75971603,-118.18256378,Operator,Y,
+Grissom,0423725228,A-737,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75973129,-118.18257904,Operator,N,
+Grissom,0423730532,A-738,Unspecified,Active,OG,Wilmington,Fault Block VI,33.759731,-118.182551,Well Summary,Y,11/12/2023
+Grissom,0423723999,A-740,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75974655,-118.18254089,Well Summary,Y,11/20/2019
+Grissom,0423730472,A-741,LBTHUMS,Active,OG,Wilmington,Fault Block V,33.75976563,-118.18255615,Well Summary,Y,09/22/2016
+Grissom,0423730509,A-742,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.759758,-118.18253326,Well Summary,N,11/15/2017
+Grissom,0423730510,A-743,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75978088,-118.18254852,Well Summary,Y,12/14/2017
+Grissom,0423730541,A-744,Unspecified,Idle,OG,Wilmington,Fault Block VI,33.759776,-118.182525,Well Summary,N,10/05/1965
+Grissom,0423723067,A-745,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75979233,-118.18253326,Operator,Y,
+Grissom,0423730535,A-746,Unspecified,Idle,OG,Wilmington,Fault Block VI,33.759785,-118.182507,Well Summary,N,10/05/1965
+Grissom,0423730536,A-747,Unspecified,Active,OG,Wilmington,Fault Block VI,33.759805,-118.182522,Well Summary,Y,10/28/2023
+Grissom,0423730531,A-748,Unspecified,Active,OG,Wilmington,Fault Block VI,33.759799,-118.182495,Well Summary,Y,08/30/2023
+Grissom,0423730514,A-750,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7598114,-118.18248749,Well Summary,Y,04/05/2018
+Grissom,0423730534,A-751,Unspecified,Active,OG,Wilmington,Fault Block VI,33.759834,-118.182494,Well Summary,Y,10/03/2023
+Grissom,0423730505,A-752,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75982285,-118.18247223,Well Summary,Y,08/08/2017
+Grissom,0423730335,A-753,LBTHUMS,Active,OG,Wilmington,Fault Block V,33.75984573,-118.18247986,Well Summary,Y,09/09/2014
+Grissom,0423730493,A-754,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75983429,-118.18245697,Well Summary,Y,04/27/2017
+Grissom,0423730408,A-755,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75985718,-118.1824646,Well Summary,Y,10/05/1965
+Grissom,0423730469,A-756 I,LBTHUMS,Idle,INJ,Wilmington,Fault Block VI,33.75984573,-118.18244171,Well Summary,Y,10/05/1965
+Grissom,0423730282,A-757,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75986862,-118.18244934,Notice of Intent to Drill,Y,07/17/2014
+Grissom,0423730415,A-758,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75985718,-118.18242645,Well Summary,Y,10/04/2014
+Grissom,0423723068,A-759 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75987625,-118.18243408,Operator,Y,
+Grissom,0423730519,A-760,Unspecified,Active,OG,Wilmington,Fault Block VI,33.7598676,-118.18241047,Well Summary,Y,06/28/2023
+Grissom,0423722558,A-761,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.75989151,-118.18241119,Operator,N,
+Grissom,0423730520,A-762,Unspecified,Canceled,OG,Wilmington,Fault Block VI,33.759875,-118.18239358,Well Summary,Y,06/17/2023
+Grissom,0423722604,A-763 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75989914,-118.18239594,Operator,Y,
+Grissom,0423730521,A-764,Unspecified,Active,OG,Wilmington,Fault Block VII,33.759885,-118.182377,Well Summary,Y,11/01/2019
+Grissom,0423723069,A-765 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75990677,-118.18238068,Operator,N,
+Grissom,0423730491,A-766,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75989151,-118.18235779,Well Summary,Y,02/22/2017
+Grissom,0423730529,A-767,Unspecified,Active,OG,Wilmington,Fault Block VI,33.759915,-118.182364,Well Summary,Y,06/06/2023
+Grissom,0423722764,A-768,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75989914,-118.18234253,Operator,Y,
+Grissom,0423722559,A-769 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75992584,-118.18235016,Operator,N,
+Grissom,0423723559,A-770,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75991058,-118.18232727,Operator,Y,
+Grissom,0423723236,A-771 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75993347,-118.18232727,Operator,Y,07/07/1985
+Grissom,0423730518,A-772,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7599144,-118.18230438,Well Summary,Y,04/27/2018
+Grissom,0423730542,A-773,Unspecified,Idle,OG,Wilmington,Fault Block VI,33.759938,-118.182306,Well Summary,Y,10/05/1965
+Grissom,0423730506,A-774,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75992203,-118.18228912,Well Summary,Y,
+Grissom,0423723336,A-801,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75994492,-118.18228912,Operator,N,
+Grissom,0423730539,A-802,Unspecified,Active,OG,Wilmington,Fault Block VI,33.759925,-118.182269,Well Summary,Y,11/25/2023
+Grissom,0423730459,A-803,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.759931,-118.181368,Well Summary,Y,09/06/2017
+Grissom,0423730501,A-804,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75992966,-118.18225098,Well Summary,Y,06/06/2017
+Grissom,0423726755,A-805,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75995636,-118.18225098,Operator,N,
+Grissom,0423723737,A-806,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75993729,-118.18223572,Operator,Y,
+Grissom,0423726777,A-807,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75996017,-118.18222809,Operator,N,
+Grissom,0423730494,A-808,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7599411,-118.18221283,Well Summary,Y,09/22/2017
+Grissom,0423723029,A-809,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75996399,-118.18221283,Operator,Y,
+Grissom,0423730470,A-810,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75994492,-118.18219757,Notice of Intent to Drill,N,
+Grissom,0423722922,A-811,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7599678,-118.18218994,Operator,Y,
+Grissom,0423723120,A-812,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75994873,-118.18217468,Operator,Y,10/30/1984
+Grissom,0423722925,A-813 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75997162,-118.18217468,Operator,N,
+Grissom,0423730478,A-814,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75995255,-118.18215942,Well Summary,Y,12/16/2016
+Grissom,0423722899,A-815,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75997543,-118.18215179,Operator,Y,
+Grissom,0423730131,A-816,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75995636,-118.18213654,Well Summary,Y,08/20/2013
+Grissom,0423730477,A-817,LBTHUMS,Active,OG,Wilmington,Fault Block V,33.75997925,-118.18213654,Well Summary,Y,08/13/2023
+Grissom,0423730466,A-818,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75996017,-118.18211365,Well Summary,N,12/15/2015
+Grissom,0423730538,A-819,Unspecified,Active,OG,Wilmington,Fault Block VI,33.759983,-118.182113,Well Summary,Y,08/05/2023
+Grissom,0423730492,A-820,LBTHUMS,Active,OG,Wilmington,Any Block,33.75996399,-118.18209839,Well Summary,Y,04/15/2018
+Grissom,0423723121,A-821 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75998688,-118.18209839,Operator,N,
+Grissom,0423730513,A-822,LBTHUMS,Canceled,OG,Wilmington,Fault Block VI,33.7599678,-118.1820755,Well Summary,Y,08/22/2023
+Grissom,0423730526,A-822,Unspecified,Idle,OG,Wilmington,Fault Block VI,33.759967,-118.18207904,Notice of Intent to Drill,Y,
+Grissom,0423726806,A-823,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75999069,-118.1820755,Operator,N,
+Grissom,0423726775,A-824,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75997162,-118.18206024,Operator,Y,
+Grissom,0423723779,A-825,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75999451,-118.18205261,Operator,N,
+Grissom,0423730422,A-826 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75997543,-118.18203735,Well Summary,N,11/30/2017
+Grissom,0423723421,A-827,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75999832,-118.18203735,Operator,Y,
+Grissom,0423730458,A-828 I,LBTHUMS,Active,WF,Wilmington,Fault Block V,33.75997925,-118.18202209,Well Summary,Y,08/12/2015
+Grissom,0423723422,A-829 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.76000214,-118.18201447,Well Summary,Y,08/01/1986
+Grissom,0423726816,A-830,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75998306,-118.18199921,Operator,N,
+Grissom,0423723785,A-831 I,LBTHUMS,Idle,WF,Wilmington,Fault Block VI,33.76000595,-118.18199921,Operator,Y,
+Grissom,0423730540,A-832,Unspecified,Active,OG,Wilmington,Fault Block VI,33.759987,-118.181983,Well Summary,Y,11/04/2023
+Grissom,0423730537,A-833,Unspecified,Active,OG,Wilmington,Fault Block V,33.76001,-118.181979,Well Summary,Y,07/20/2023
+Grissom,0423723441,A-834 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75999069,-118.18196106,Operator,Y,
+Grissom,0423723213,A-835 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.76001358,-118.18196106,Operator,Y,
+Grissom,0423730153,A-836,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75999451,-118.1819458,Notice of Intent to Drill,Y,12/18/2013
+Grissom,0423720083,A-848,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.76001358,-118.18183899,Operator,N,
+Grissom,0423720225,A-849,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.76004028,-118.18183899,Operator,N,
+Grissom,0423720084,A-850 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.7600174,-118.18182373,Operator,N,
+Grissom,0423720745,A-851,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7600441,-118.18182373,Operator,N,
+Grissom,0423720428,A-852,LBTHUMS,Active,OG,Wilmington,Fault Block V,33.760021,-118.1818,Well Summary,Y,10/17/2015
+Grissom,0423720093,A-853,LBTHUMS,Active,OG,Wilmington,Fault Block V,33.7600441,-118.18180084,Operator,N,09/02/2015
+Grissom,0423720711,A-854,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.76002884,-118.18178558,Well Summary,Y,12/11/1969
+Grissom,0423720807,A-855 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.76005173,-118.18177795,Operator,Y,
+Grissom,0423730092,A-856,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.76003265,-118.1817627,Well Summary,Y,08/03/2013
+Grissom,0423723330,A-857,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.76005554,-118.1817627,Operator,Y,
+Grissom,0423720589,A-858 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.76003647,-118.18174744,Operator,N,
+Grissom,0423723188,A-859,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.76005936,-118.18173981,Operator,Y,
+Grissom,0423722221,A-860 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.76004028,-118.18172455,Operator,Y,
+Grissom,0423722549,A-861 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.76006317,-118.18172455,Well Summary,Y,
+Grissom,0423720326,A-862 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.76004028,-118.18170929,Operator,N,
+Grissom,0423723321,A-863,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.76006699,-118.18170166,Operator,N,
+Grissom,0423720576,A-864,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.7600441,-118.1816864,Operator,Y,
+Grissom,0423722503,A-865 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.7600708,-118.18167877,Operator,Y,09/21/1981
+Grissom,0423720178,A-866 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.76004791,-118.18167114,Well Summary,Y,07/07/1967
+Grissom,0423723725,A-867,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7600708,-118.18166351,Operator,N,
+Grissom,0423700611,A-868 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.76004791,-118.18164825,Operator,N,
+Grissom,0423720053,A-869 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.7600708,-118.18164063,Operator,N,01/16/2014
+Grissom,0423722518,A-870,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.76005173,-118.181633,Operator,N,
+Grissom,0423720581,A-874 I,LBTHUMS,Plugged,INJ,Wilmington,Fault Block VI,33.76005554,-118.18158722,Operator,N,
+Grissom,0423730528,A749,Unspecified,Active,OG,Wilmington,Fault Block VI,33.759818,-118.18251,Well Summary,Y,05/08/2023
+Other,0403730540,128,J,Active,OG,Wilmington,Fault Block VI,33.75245,-118.195519,Well Summary,Y,03/06/2023
+Other,0403730537,138,J,Active,OG,Wilmington,Fault Block VI,33.752344,-118.195044,Well Summary,Y,03/20/2023
+Other,0403730538,139,J,Active,OG,Wilmington,Fault Block VI,33.752333,-118.19503,Well Summary,Y,03/29/2023
+Other,0403730539,566,J,Idle,OG,Wilmington,Fault Block VI,33.742412,-118.1906,Notice of Intent to Drill,Y,
+Other,0423723993,SD-1,LBTHUMS,Plugged,OG,Old Wilmington (ABD),Fault Block II Offshore,33.74139404,-118.16251373,hud,Y,
+Other,0423723994,SD-2,LBTHUMS,Plugged,OG,Old Wilmington (ABD),Fault Block II Offshore,33.74139786,-118.16248322,hud,Y,
+Other,0403720067,THX 1-I,LBTHUMS,Plugged,WF,Wilmington,Fault Block VI,33.78551865,-118.20682526,Operator,N,
+Other,0403720068,THX 2-1,LBTHUMS,Plugged,WF,Wilmington,Fault Block VI,33.78550339,-118.20682526,Operator,N,
+Other,0403722852,THX 3-I,LBTHUMS,Plugged,WF,Wilmington,Fault Block VI,33.78600311,-118.2068634,Operator,N,
+Other,0403722864,THX 4-1,LBTHUMS,Plugged,WF,Wilmington,Fault Block VI,33.78597641,-118.2068634,Operator,N,
+Pier J,0403722601,J-110,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75257111,-118.1953125,Operator,Y,
+Pier J,0403722681,J-111 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75267792,-118.1954422,Operator,N,
+Pier J,0403726818,J-112,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75266647,-118.19542694,Operator,N,
+Pier J,0403726796,J-113,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75265503,-118.19541168,Operator,N,
+Pier J,0403722486,J-114 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75264359,-118.19539642,Well Summary,Y,08/29/1981
+Pier J,0403700612,J-115,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.75262833,-118.19538879,Operator,N,
+Pier J,0403700613,J-116 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.7526207,-118.19537354,Operator,Y,
+Pier J,0403726819,J-117,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75260544,-118.19535828,Notice of Intent to Drill,Y,03/29/2012
+Pier J,0403700614,J-118,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75259399,-118.19534302,Operator,N,
+Pier J,0403722684,J-119,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75258255,-118.19532776,Operator,N,02/02/2012
+Pier J,0403722105,J-120 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75242615,-118.19548798,Operator,N,
+Pier J,0403722596,J-121 I,LBTHUMS,Plugged,Multi,Old Wilmington (ABD),Fault Block VI Offshore,33.75253296,-118.19561768,Operator,Y,
+Pier J,0403700615,J-122 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75252151,-118.19560242,Operator,N,
+Pier J,0403722655,J-123,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75250626,-118.19558716,Operator,N,
+Pier J,0403700616,J-124 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75249481,-118.1955719,Operator,Y,11/24/1966
+Pier J,0403727293,J-125,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75248337,-118.19556427,Well Summary,Y,03/12/2012
+Pier J,0403730091,J-126,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75247192,-118.19554901,Notice of Intent to Drill,Y,
+Pier J,0403700117,J-127,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75246048,-118.19553375,Operator,N,
+Pier J,0403701001,J-129,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.75243759,-118.19550323,Operator,Y,
+Pier J,0403701002,J-130,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75231934,-118.19501495,Operator,Y,
+Pier J,0403722488,J-131,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75242615,-118.19514465,Operator,Y,
+Pier J,0403720007,J-132,LBTHUMS,Plugged,OG,Wilmington,Fault Block V,33.7524147,-118.19512939,Operator,Y,
+Pier J,0403726800,J-133,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75240326,-118.19511414,Operator,N,
+Pier J,0403730071,J-134,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75239182,-118.19509888,Notice of Intent to Drill,Y,08/21/2013
+Pier J,0403701003,J-136 I,LBTHUMS,Plugged,INJ,Wilmington,Fault Block VI,33.75236893,-118.19506836,Operator,N,
+Pier J,0403700617,J-137 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.752338,-118.194157,Well Summary,Y,02/17/2007
+Pier J,0403701004,J-140 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75217438,-118.19519043,Operator,Y,
+Pier J,0403700618,J-141,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75228119,-118.19532013,Operator,N,
+Pier J,0403701005,J-142,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.75226974,-118.19530487,Operator,N,
+Pier J,0403720222,J-143,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7522583,-118.19528961,Operator,Y,
+Pier J,0403723580,J-144,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75224686,-118.19527435,Well Summary,Y,07/30/1988
+Pier J,0403701006,J-145,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75223541,-118.19525909,Operator,Y,
+Pier J,0403701007,J-146,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75222015,-118.19524384,Operator,Y,
+Pier J,0403726665,J-147,LBTHUMS,Idle,OG,Wilmington,Fault Block 98,33.75220871,-118.19523621,Operator,Y,
+Pier J,0403701008,J-148,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75219727,-118.19522095,Operator,N,
+Pier J,0403727334,J-149,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.752169,-118.194304,Well Summary,Y,05/01/2012
+Pier J,0403700877,J-150 I,LBTHUMS,Plugged,INJ,Wilmington,Fault Block VI,33.75219727,-118.19487,Operator,N,
+Pier J,0403730152,J-152,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75229263,-118.19498444,Notice of Intent to Drill,Y,10/04/2013
+Pier J,0403727342,J-153 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75228119,-118.19496918,Well Summary,Y,03/04/2012
+Pier J,0403701009,J-154,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.75226974,-118.19495392,Operator,N,
+Pier J,0403727322,J-155,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7522583,-118.19493866,Operator,Y,02/13/2012
+Pier J,0403701010,J-156 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75224686,-118.1949234,Operator,N,
+Pier J,0403720008,J-157,LBTHUMS,Plugged,OG,Wilmington,Fault Block V,33.7522316,-118.19491577,Operator,Y,
+Pier J,0403722245,J-158 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75222015,-118.19490051,Operator,Y,
+Pier J,0403722171,J-159 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75220871,-118.19488525,Operator,N,
+Pier J,0403722244,J-160,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75205231,-118.19504547,Operator,N,
+Pier J,0403730072,J-162,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75214767,-118.19515228,Operator,Y,09/10/2013
+Pier J,0403700008,J-163,LBTHUMS,Plugged,Multi,Old Wilmington (ABD),Fault Block VI Offshore,33.75213623,-118.19514465,Operator,N,
+Pier J,0403727357,J-164,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75212479,-118.19512939,Operator,Y,
+Pier J,0403720266,J-165,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75210953,-118.19511414,Operator,Y,
+Pier J,0403727362,J-166,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7521019,-118.19509888,Operator,Y,06/04/2012
+Pier J,0403722643,J-167,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75208664,-118.19508362,Operator,N,
+Pier J,0403722602,J-168,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.7520752,-118.19507599,Operator,N,
+Pier J,0403722246,J-169 I,LBTHUMS,Plugged,WF,Wilmington,Fault Block VI,33.75206375,-118.19506073,Operator,Y,
+Pier J,0403701011,J-170 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.7519455,-118.19457245,Operator,Y,
+Pier J,0403720009,J-171,LBTHUMS,Idle,OG,Wilmington,Fault Block V,33.75205231,-118.19469452,Operator,Y,
+Pier J,0403722408,J-172,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75204086,-118.19467926,Operator,N,
+Pier J,0403723214,J-173,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75202942,-118.19467163,Operator,Y,
+Pier J,0403701012,J-174,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.75201797,-118.19465637,Operator,Y,
+Pier J,0403701013,J-175 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75200653,-118.19464111,Operator,N,10/24/2013
+Pier J,0403726776,J-176,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75199509,-118.19462585,Well Summary,Y,10/20/2013
+Pier J,0403700879,J-177 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75198364,-118.1946106,Operator,N,09/04/1966
+Pier J,0403722685,J-178,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7519722,-118.19459534,Operator,Y,
+Pier J,0403700880,J-179,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75196075,-118.19458771,Operator,Y,
+Pier J,0403727290,J-180,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75180054,-118.19474792,Operator,Y,01/11/2012
+Pier J,0403700344,J-181,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75190735,-118.19487,Operator,N,
+Pier J,0403723699,J-182,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7518959,-118.19485474,Operator,Y,
+Pier J,0403701014,J-183,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75188446,-118.19483948,Operator,N,10/29/2013
+Pier J,0403727361,J-184,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75187302,-118.19483185,Operator,Y,04/02/2012
+Pier J,0403727317,J-185,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75186157,-118.19481659,Operator,N,10/14/2013
+Pier J,0403726810,J-186,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75185013,-118.19480133,Operator,N,
+Pier J,0403726797,J-187,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75183868,-118.19478607,Operator,N,
+Pier J,0403722409,J-188ST1,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.75182343,-118.19477081,Operator,N,
+Pier J,0403722224,J-189,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.7518158,-118.19475555,Operator,Y,
+Pier J,0403701015,J-310 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74954224,-118.19169617,Well Summary,Y,04/22/1971
+Pier J,0403722551,J-311,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74964523,-118.19182587,Operator,N,
+Pier J,0403701016,J-312 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.7496376,-118.19181061,Operator,N,02/22/1966
+Pier J,0403721907,J-313,LBTHUMS,Active,OG,Wilmington,Fault Block V,33.74962234,-118.19179535,Operator,Y,
+Pier J,0403700881,J-314,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7496109,-118.19178009,Operator,N,
+Pier J,0403701017,J-315,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74959946,-118.19177246,Operator,N,
+Pier J,0403723175,J-316,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74958801,-118.1917572,Operator,Y,
+Pier J,0403701018,J-317,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74957657,-118.19174194,Operator,Y,
+Pier J,0403722520,J-318,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74956512,-118.19172668,Operator,Y,
+Pier J,0403701019,J-319,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74955368,-118.19171143,Operator,N,
+Pier J,0403700882,J-320,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74937439,-118.1918869,Operator,N,
+Pier J,0403700883,J-321,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74948883,-118.19200134,Operator,N,
+Pier J,0403701020,J-322,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74947739,-118.19198608,Operator,Y,
+Pier J,0403720267,J-323,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74946213,-118.19197083,Operator,N,
+Pier J,0403701021,J-324,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74945068,-118.1919632,Operator,N,
+Pier J,0403700884,J-325,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74943542,-118.19194794,Operator,N,
+Pier J,0403701022,J-326,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74942398,-118.19193268,Operator,N,
+Pier J,0403701023,J-327,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74941254,-118.19192505,Operator,Y,
+Pier J,0403701024,J-328,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74939728,-118.19190979,Operator,Y,
+Pier J,0403700885,J-329,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74938583,-118.19190216,Operator,N,
+Pier J,0403722420,J-330 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74929047,-118.19139862,Well Summary,Y,04/29/1990
+Pier J,0403701025,J-331,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74939728,-118.19152832,Operator,Y,
+Pier J,0403700886,J-332 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74938583,-118.19151306,Operator,N,
+Pier J,0403722299,J-333,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74937439,-118.1914978,Operator,N,
+Pier J,0403701026,J-334,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74935913,-118.19148254,Operator,N,
+Pier J,0403723495,J-335 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.7493515,-118.19146729,Operator,N,
+Pier J,0403721782,J-336,LBTHUMS,Canceled,OG,Old Wilmington (ABD),Fault Block VI Offshore,33.74935532,-118.19235229,Operator,N,
+Pier J,0403722489,J-336,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74933624,-118.19145203,Operator,N,
+Pier J,0403721798,J-337,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.7493248,-118.1914444,Operator,N,
+Pier J,0403700887,J-338,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74931335,-118.19142914,Operator,Y,
+Pier J,0403720010,J-339 I,LBTHUMS,Active,WF,Wilmington,Fault Block V,33.74930191,-118.19141388,Operator,Y,
+Pier J,0403700888,J-340 I,LBTHUMS,Plugged,Multi,Old Wilmington (ABD),Fault Block VI Offshore,33.74909973,-118.19161987,Operator,N,
+Pier J,0403700889,J-341,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74921417,-118.19173431,Operator,N,
+Pier J,0403723816,J-342,LBTHUMS,Idle,OG,Wilmington,Fault Block V,33.74919891,-118.19171906,Operator,Y,
+Pier J,0403701027,J-343,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74918747,-118.1917038,Operator,Y,
+Pier J,0403700118,J-344,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74917221,-118.19169617,Operator,Y,
+Pier J,0403722548,J-345,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74916077,-118.19168091,Operator,N,
+Pier J,0403701028,J-346 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74914932,-118.19166565,Operator,N,
+Pier J,0403722396,J-347,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74913788,-118.19165802,Operator,Y,
+Pier J,0403722294,J-348 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74912262,-118.19164276,Operator,N,
+Pier J,0403701049,J-349 I,LBTHUMS,Plugged,WF,Wilmington,Fault Block VI,33.74911118,-118.19163513,Operator,Y,
+Pier J,0403701029,J-410 I,LBTHUMS,Plugged,WF,Wilmington,Fault Block VI,33.74464035,-118.19029999,Operator,Y,
+Pier J,0403701030,J-411 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74478912,-118.19029999,Operator,Y,
+Pier J,0403722411,J-412,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74477386,-118.19029999,Operator,N,
+Pier J,0403701031,J-413,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74475861,-118.19029999,Operator,Y,
+Pier J,0403723061,J-414,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74473953,-118.19029999,Operator,N,
+Pier J,0403701032,J-415 I,LBTHUMS,Plugged,WF,Wilmington,Fault Block VI,33.74472427,-118.19029999,Operator,Y,
+Pier J,0403722174,J-416 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74470901,-118.19029999,Operator,N,04/06/1980
+Pier J,0403700890,J-417 I,LBTHUMS,Plugged,INJ,Wilmington,Fault Block VI,33.74469376,-118.19029999,Operator,N,
+Pier J,0403723136,J-418 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74467468,-118.19029999,Operator,Y,
+Pier J,0403722098,J-419 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74465942,-118.19029999,Operator,N,
+Pier J,0403727375,J-420,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74464417,-118.19054413,Well Summary,Y,09/09/2012
+Pier J,0403722412,J-421I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74478912,-118.19054413,Operator,N,
+Pier J,0403722413,J-422,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74477386,-118.19054413,Operator,N,
+Pier J,0403722575,J-423 I,LBTHUMS,Plugged,WF,Wilmington,Fault Block VI,33.74475861,-118.19054413,Operator,N,
+Pier J,0403726744,J-424,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74474335,-118.19054413,Operator,N,
+Pier J,0403723062,J-425 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74472427,-118.19054413,Operator,N,
+Pier J,0403727373,J-426,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74469,-118.189646,Well Summary,Y,09/26/2012
+Pier J,0403723024,J-427 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74469376,-118.19054413,Operator,N,
+Pier J,0403701033,J-428 I,LBTHUMS,Plugged,INJ,Wilmington,Fault Block VI,33.74467468,-118.19054413,Operator,N,
+Pier J,0403700891,J-429,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74465942,-118.19054413,Operator,N,
+Pier J,0403722277,J-430 I,LBTHUMS,Plugged,WF,Wilmington,Fault Block VI,33.7442894,-118.19029999,Operator,Y,
+Pier J,0403722079,J-431 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74443436,-118.19029999,Operator,Y,
+Pier J,0403722209,J-432 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.7444191,-118.19029999,Well Summary,Y,05/04/1980
+Pier J,0403700892,J-433,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74440384,-118.19029999,Operator,N,
+Pier J,0403722397,J-434,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74438858,-118.19029999,Operator,Y,
+Pier J,0403700893,J-435 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74436951,-118.19029999,Well Summary,Y,03/17/1966
+Pier J,0403722534,J-436,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74435425,-118.19029999,Operator,N,
+Pier J,0403701034,J-437,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74433517,-118.19029999,Operator,Y,
+Pier J,0403721647,J-438,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74431992,-118.19029999,Operator,N,
+Pier J,0403722418,J-439,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74430466,-118.19029999,Operator,N,
+Pier J,0403720210,J-440 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.7442894,-118.19055176,Operator,N,
+Pier J,0403701035,J-441 I,LBTHUMS,Idle,INJ,Wilmington,Fault Block VI,33.74443817,-118.19055176,Operator,Y,
+Pier J,0403723162,J-442 I,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7444191,-118.19055176,Well Summary,Y,09/04/2005
+Pier J,0403701036,J-443 I,LBTHUMS,Plugged,WF,Wilmington,Fault Block VI,33.74440384,-118.19055176,Operator,Y,
+Pier J,0403726577,J-444 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74438858,-118.19055176,Operator,Y,
+Pier J,0403701037,J-445 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74436951,-118.19055176,Operator,N,
+Pier J,0403727360,J-446,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74435425,-118.19055176,Operator,Y,
+Pier J,0403727363,J-447,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74433899,-118.19055176,Well Summary,Y,08/21/2012
+Pier J,0403725250,J-448,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74431992,-118.19055176,Operator,N,
+Pier J,0403700119,J-449,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74430466,-118.19055176,Operator,Y,
+Pier J,0403725248,J-460,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74411392,-118.19055176,Operator,Y,
+Pier J,0403727459,J-461,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7442627,-118.19055176,Well Summary,Y,10/16/2012
+Pier J,0403700894,J-462,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74424744,-118.19055176,Operator,N,
+Pier J,0403700895,J-463,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74422836,-118.19055176,Well Summary,Y,07/18/1966
+Pier J,0403701039,J-464 I,LBTHUMS,Idle,WF,Wilmington,Fault Block II,33.7442131,-118.19055176,Operator,Y,
+Pier J,0403700896,J-465 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74419785,-118.19055176,Operator,Y,
+Pier J,0403700897,J-466,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74418259,-118.19055176,Operator,N,
+Pier J,0403700898,J-467,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74416351,-118.19055176,Operator,N,
+Pier J,0403722618,J-468,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74414825,-118.19055176,Operator,N,11/20/2013
+Pier J,0403700899,J-469,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.744133,-118.19055176,Well Summary,Y,06/23/1966
+Pier J,0403701040,J-510 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74287033,-118.19029999,Operator,N,
+Pier J,0403700900,J-511,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.7430191,-118.19029999,Operator,N,
+Pier J,0403722619,J-512,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74300385,-118.19029999,Well Summary,Y,06/30/2018
+Pier J,0403700926,J-513,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74298542,-118.1903033,Well Summary,Y,11/27/2012
+Pier J,0403722907,J-514,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74296951,-118.19029999,Operator,Y,
+Pier J,0403700927,J-515 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74295044,-118.19029999,Operator,N,
+Pier J,0403722297,J-516 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74293518,-118.19029999,Operator,Y,
+Pier J,0403701041,J-517,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74291992,-118.19029999,Operator,N,
+Pier J,0403700120,J-518,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74290466,-118.19029999,Well Summary,Y,10/27/1966
+Pier J,0403700928,J-519 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74288559,-118.19029999,Operator,Y,
+Pier J,0403726714,J-520,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74287033,-118.19055176,Operator,Y,
+Pier J,0403700929,J-521,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.7430191,-118.19055176,Operator,N,
+Pier J,0403721577,J-522,LBTHUMS,Plugged,OG,Wilmington,Fault Block VI,33.74300385,-118.19055176,Operator,N,
+Pier J,0403701042,J-523 I,LBTHUMS,Plugged,WF,Wilmington,Fault Block VI,33.74298477,-118.19055176,Operator,Y,
+Pier J,0403722876,J-524,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74296951,-118.19055176,Operator,Y,
+Pier J,0403726651,J-525,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74295425,-118.19055176,Operator,N,07/18/2013
+Pier J,0403701043,J-526,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74293518,-118.19055176,Operator,N,
+Pier J,0403726649,J-527,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74291992,-118.19055176,Well Summary,N,03/29/2006
+Pier J,0403727347,J-528,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74290466,-118.19055176,Operator,Y,06/18/2012
+Pier J,0403722778,J-529,LBTHUMS,Plugged,INJ,Wilmington,Fault Block VI,33.74288559,-118.19055176,Operator,N,
+Pier J,0403729984,J-540,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74251556,-118.19058228,Operator,Y,01/31/2013
+Pier J,0403701044,J-541 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74266434,-118.19055176,Operator,N,
+Pier J,0403701045,J-542 I,LBTHUMS,Plugged,WF,Wilmington,Fault Block VI,33.74264908,-118.19055939,Operator,Y,
+Pier J,0403722278,J-543 I,LBTHUMS,Plugged,WF,Wilmington,Fault Block VI,33.74263382,-118.19055939,Operator,Y,
+Pier J,0403700143,J-544,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74261475,-118.19055939,Operator,N,
+Pier J,0403729985,J-545,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74259949,-118.19056702,Well Summary,Y,06/02/2013
+Pier J,0403701046,J-546 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74258423,-118.19056702,Operator,N,
+Pier J,0403700930,J-547,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.742548,-118.18967,Well Summary,N,03/10/2006
+Pier J,0403701047,J-548,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7425499,-118.19057465,Operator,Y,
+Pier J,0423726947,J-549,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74253464,-118.19057465,Operator,Y,12/27/2012
+Pier J,0403723027,J-550 I,LBTHUMS,Plugged,Multi,Old Wilmington (ABD),Fault Block VI Offshore,33.74231339,-118.19036865,Operator,Y,
+Pier J,0403722279,J-551 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.74246216,-118.19033813,Operator,N,
+Pier J,0403701048,J-552,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.7424469,-118.19034576,Operator,N,08/29/2012
+Pier J,0403701050,J-553,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74242783,-118.19034576,Well Summary,Y,07/21/1979
+Pier J,0403721341,J-554,LBTHUMS,Canceled,OG,Old Wilmington (ABD),Fault Block II Offshore,33.7424202,-118.19035339,Operator,N,
+Pier J,0403723104,J-554,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74241257,-118.19035339,Operator,N,
+Pier J,0403701038,J-555,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74239731,-118.19035339,Operator,N,
+Pier J,0403727364,J-556 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74237823,-118.19035339,Operator,Y,07/10/2012
+Pier J,0403727383,J-557 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74236298,-118.19036102,Operator,Y,07/21/2012
+Pier J,0403721332,J-558,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74234772,-118.19036102,Well Summary,Y,09/10/1983
+Pier J,0403701076,J-559 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74233246,-118.19036865,Operator,N,
+Pier J,0403722280,J-560 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74234772,-118.19061279,Operator,Y,
+Pier J,0403723035,J-561,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74249268,-118.19058228,Well Summary,Y,06/12/1984
+Pier J,0403701077,J-562,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74247742,-118.1905899,Operator,N,
+Pier J,0403729975,J-563,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74245834,-118.1905899,Operator,Y,12/03/2012
+Pier J,0403701078,J-564,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.74244308,-118.19059753,Operator,Y,
+Pier J,0403729976,J-565,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.742409,-118.189695,Well Summary,Y,01/16/2013
+Pier J,0403730009,J-566,LBTHUMS,Canceled,OG,Wilmington,Fault Block VI,33.74241257,-118.19059753,Notice of Intent to Drill,Y,
+Pier J,0403722882,J-567 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74239349,-118.19060516,Operator,Y,
+Pier J,0403730010,J-568 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.74237823,-118.19060516,Operator,Y,05/25/2013
+Pier J,0403722883,J-569 I,LBTHUMS,Plugged,Multi,Old Wilmington (ABD),Fault Block VI Offshore,33.74236298,-118.19061279,Operator,Y,
+White,0423723987,B-1,Water Source Well,Plugged,OG,Old Wilmington (ABD),Fault Block II Offshore,33.75287247,-118.15944672,hud,Y,
+White,0423721159,B-101 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75350189,-118.15946198,Well Summary,N,07/24/1971
+White,0423720395,B-102 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75350189,-118.15943909,Operator,Y,
+White,0423720239,B-103 I,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75349808,-118.15942383,Well Summary,N,09/24/2012
+White,0423720022,B-104 I,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75349808,-118.15940094,Operator,N,
+White,0423721283,B-105,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75349426,-118.15938568,Operator,N,
+White,0423721632,B-106 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75349426,-118.15936279,Well Summary,N,09/26/1975
+White,0423720629,B-107 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75349045,-118.15934753,Operator,N,09/21/1968
+White,0423720817,B-108,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75348663,-118.15932465,Operator,Y,
+White,0423720289,B-109 I,LBTHUMS,Plugged,WF,Wilmington,Fault Block VII,33.75348282,-118.15930939,Operator,Y,
+White,0423720414,B-110 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.753479,-118.1592865,Operator,Y,
+White,0423720725,B-111,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75347519,-118.15927124,Operator,N,
+White,0423720704,B-112,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75347137,-118.15924835,Well Summary,Y,03/15/2011
+White,0423721434,B-113 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.75346756,-118.15922546,Operator,Y,
+White,0423720912,B-114,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75346375,-118.15921021,Operator,N,
+White,0423722570,B-115 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75345993,-118.15918732,Operator,N,
+White,0423720445,B-116 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75345612,-118.15917206,Well Summary,N,03/27/1968
+White,0423720670,B-117,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.7534523,-118.15914917,Operator,N,
+White,0423720818,B-118,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75344849,-118.15913391,Operator,N,
+White,0423720622,B-119 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.75344467,-118.15911102,Operator,Y,
+White,0423720746,B-120,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75344086,-118.15909576,Operator,Y,
+White,0423720641,B-121,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.75343323,-118.15907288,Well Summary,N,
+White,0423720775,B-122,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75342941,-118.15905762,Operator,N,
+White,0423720597,B-123 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.7534256,-118.15903473,Operator,N,
+White,0423721337,B-124,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.7534256,-118.15901947,Operator,Y,
+White,0423721391,B-125,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.75342178,-118.15899658,Operator,N,
+White,0423720962,B-126 I,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75341415,-118.15898132,Operator,N,
+White,0423721432,B-127 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75341034,-118.15895844,Operator,Y,
+White,0423722391,B-128,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75340652,-118.15894318,Operator,N,
+White,0423720566,B-129 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75340271,-118.15892029,Operator,N,
+White,0423720490,B-130 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.7533989,-118.15890503,Operator,N,01/26/2012
+White,0423720675,B-131,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75339508,-118.15888214,Operator,N,
+White,0423721252,B-132 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75339127,-118.15886688,Operator,N,
+White,0423721649,B-133,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75338745,-118.15884399,Operator,N,
+White,0423727065,B-134,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.753383,-118.158828,Well Summary,Y,01/27/2010
+White,0423722232,B-135,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75337982,-118.15880585,Operator,Y,
+White,0423720819,B-136,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75337219,-118.15879059,Operator,N,
+White,0423722826,B-137,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75336838,-118.1587677,Operator,N,02/16/1983
+White,0423720626,B-138,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75336456,-118.15875244,Operator,N,
+White,0423726970,B-139,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75335312,-118.15873718,Operator,N,
+White,0423720656,B-140 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75334549,-118.15871429,Operator,N,
+White,0423720644,B-201,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.75333786,-118.15869904,Operator,Y,
+White,0423720691,B-202,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75333,-118.158683,Well Summary,Y,09/13/2011
+White,0423723758,B-204 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75327301,-118.15861511,Well Summary,N,
+White,0423722614,B-205 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75328445,-118.15859222,Operator,Y,
+White,0423723825,B-206,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75326157,-118.15859985,Operator,N,
+White,0423722683,B-207,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.7532692,-118.15857697,Operator,Y,
+White,0423723122,B-208,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75325012,-118.15858459,Operator,Y,
+White,0423726968,B-209 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75325775,-118.15856171,Operator,N,
+White,0423722661,B-210 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75323868,-118.15857697,Operator,N,05/27/1982
+White,0423726551,B-211,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.753246,-118.158546,Well Summary,Y,03/09/2004
+White,0423722813,B-212 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75322342,-118.15856171,Operator,Y,
+White,0423722699,B-213 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.75323105,-118.15853119,Operator,Y,03/15/2015
+White,0423722662,B-214 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75321198,-118.15855408,Well Summary,Y,07/05/1982
+White,0423722751,B-215 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75321579,-118.15852356,Operator,Y,
+White,0423723669,B-216 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.75319672,-118.15853882,Operator,N,
+White,0423722688,B-217,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75320053,-118.15851593,Operator,Y,
+White,0423723707,B-218 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.75318146,-118.15853119,Operator,Y,03/02/1992
+White,0423722700,B-219,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75318909,-118.15850067,Operator,N,06/02/2011
+White,0423725020,B-220,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75317001,-118.15852356,Operator,N,
+White,0423723671,B-221 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.75317383,-118.15849304,Operator,N,12/10/1990
+White,0423720340,B-225 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.753021,-118.158439,Well Summary,Y,06/11/2011
+White,0423720214,B-226 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75300598,-118.15843201,Operator,N,
+White,0423720121,B-227,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75299072,-118.15842438,Operator,N,11/20/2012
+White,0423720087,B-228,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75297546,-118.15842438,Operator,Y,
+White,0423720767,B-229 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.75296021,-118.15841675,Operator,Y,02/05/1969
+White,0423720311,B-230 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.75294495,-118.15840912,Operator,N,
+White,0423720563,B-231,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75292969,-118.15840149,Operator,N,
+White,0423721535,B-232 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75291061,-118.15840149,Operator,N,
+White,0423720094,B-233 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75289536,-118.15839386,Operator,Y,04/08/1967
+White,0423721552,B-234,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.7528801,-118.15838623,Operator,Y,
+White,0423720592,B-235,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75286484,-118.15838623,Operator,N,
+White,0423721847,B-236 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75284958,-118.1583786,Operator,N,01/17/1981
+White,0423720446,B-237,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75283051,-118.1583786,Operator,N,
+White,0423720298,B-238,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.752798,-118.157476,Well Summary,Y,10/22/1967
+White,0423720396,B-239,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.75279999,-118.1583786,Well Summary,Y,01/12/2020
+White,0403720396,B-239 I,LBTHUMS,Idle,WF,Wilmington,Fault Block VIII,33.75279999,-118.1583786,Operator,N,
+White,0423722184,B-240,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75278473,-118.1583786,Operator,N,
+White,0423720023,B-301 I,LBTHUMS,Idle,WF,Wilmington,Fault Block VIII,33.75276566,-118.15837097,Well Summary,Y,11/04/1980
+White,0423720270,B-302 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.7527504,-118.15837097,Operator,N,
+White,0423720929,B-303,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75273132,-118.1583786,Operator,Y,
+White,0423720181,B-304,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75271606,-118.1583786,Operator,Y,
+White,0423720457,B-305,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75270081,-118.15838623,Operator,N,
+White,0423721781,B-306,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75268555,-118.15838623,Operator,N,
+White,0423720319,B-306 I,LBTHUMS,Canceled,OG,Old Wilmington (ABD),Fault Block II Offshore,33.75268173,-118.15838623,Operator,N,
+White,0423720415,B-307 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75266647,-118.15838623,Operator,N,
+White,0423722085,B-308 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.75265121,-118.15839386,Operator,N,03/14/2013
+White,0423720347,B-309 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75263596,-118.15840149,Operator,N,11/09/1967
+White,0423720024,B-310,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.7526207,-118.15840912,Operator,N,
+White,0423722103,B-311,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75260544,-118.15840912,Operator,N,
+White,0423721783,B-312,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.752571,-118.157518,Well Summary,Y,01/02/1978
+White,0423720242,B-313 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75257492,-118.15842438,Operator,N,02/28/2010
+White,0423721585,B-314 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75255966,-118.15843201,Well Summary,Y,03/26/2013
+White,0423722572,B-315 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75254059,-118.15843201,Well Summary,Y,01/13/1982
+White,0423720544,B-316,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.752508,-118.157541,Well Summary,N,03/27/2011
+White,0423722675,B-317 I,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75251007,-118.15844727,Operator,N,07/31/2012
+White,0423720573,B-318,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75249481,-118.1584549,Operator,N,02/13/2010
+White,0423720108,B-319 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75247955,-118.15846252,Operator,N,04/27/1967
+White,0423722407,B-320,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75246429,-118.15846252,Well Summary,Y,08/03/1981
+White,0423722568,B-321 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.75244904,-118.15847015,Operator,N,02/25/1982
+White,0423722654,B-322 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75243378,-118.15847778,Operator,N,
+White,0423720506,B-323,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75241852,-118.15848541,Operator,Y,
+White,0423720541,B-324,LBTHUMS,Canceled,OG,Old Wilmington (ABD),Fault Block II Offshore,33.75239944,-118.15849304,Operator,N,
+White,0423722788,B-324,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75240326,-118.15849304,Operator,Y,
+White,0423722677,B-325 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.752388,-118.15850067,Operator,Y,
+White,0423720240,B-326,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75237274,-118.1585083,Operator,N,
+White,0423720939,B-327 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75235748,-118.15852356,Operator,Y,
+White,0423722663,B-328 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75234604,-118.15853119,Operator,N,
+White,0423722888,B-329 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75233078,-118.15854645,Well Summary,Y,09/22/1990
+White,0423722875,B-330,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75231552,-118.15855408,Operator,N,
+White,0423721951,B-332 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.752292,-118.158576,Well Summary,Y,10/04/2007
+White,0423720796,B-333,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.75228119,-118.15859222,Well Summary,N,12/28/2019
+White,0423723338,B-334,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.752269,-118.158607,Well Summary,Y,05/18/1986
+White,0423720540,B-335,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.7522583,-118.15862274,Operator,N,
+White,0423722392,B-336 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.75224686,-118.158638,Operator,N,04/13/1981
+White,0423721576,B-337 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75223923,-118.15865326,Operator,Y,
+White,0423720299,B-338,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75222778,-118.15866852,Operator,Y,
+White,0423720182,B-339,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75222015,-118.15868378,Operator,N,
+White,0423721497,B-340 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.7522049,-118.15869904,Well Summary,Y,03/25/1975
+White,0423720155,B-401 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.7522049,-118.15872192,Operator,Y,06/08/1967
+White,0423722909,B-402 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75219727,-118.15873718,Operator,N,10/08/1983
+White,0423720397,B-403,LBTHUMS,Idle,DG,Wilmington,Fault Block VIII,33.75218964,-118.15875244,Operator,Y,12/31/1967
+White,0423721910,B-404,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75218201,-118.15877533,Operator,N,
+White,0423721926,B-405,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75217438,-118.15879059,Operator,N,
+White,0423720348,B-406 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75217056,-118.15881348,Operator,N,11/22/1967
+White,0423720621,B-407,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75216675,-118.15882874,Operator,N,
+White,0423720327,B-408 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.75216293,-118.15885162,Operator,Y,
+White,0423720025,B-409,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75215912,-118.15886688,Operator,N,
+White,0423720598,B-410,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.7521553,-118.15888977,Operator,N,05/15/2012
+White,0423720145,B-411 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.752133,-118.158006,Well Summary,Y,01/26/1992
+White,0423722574,B-412 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75214767,-118.15892792,Operator,N,04/06/1982
+White,0423720057,B-413,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75214386,-118.15894318,Operator,N,
+White,0423720162,B-414 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.75214005,-118.15896606,Operator,N,01/31/2013
+White,0423722569,B-424,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.7521019,-118.1591568,Operator,N,
+White,0423723334,B-425,LBTHUMS,Canceled,OG,Wilmington,Fault Block VIII,33.75209045,-118.15917969,Operator,N,
+White,0423723619,B-425 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.75209427,-118.15917206,Operator,N,
+White,0423723180,B-426 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.75209427,-118.15919495,Operator,Y,
+White,0423720513,B-427,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75209045,-118.15921021,Operator,N,04/04/2012
+White,0423722425,B-428 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75208664,-118.15923309,Operator,Y,
+White,0423722430,B-429 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75208282,-118.15924835,Well Summary,Y,11/05/1981
+White,0423721967,B-430,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.7520752,-118.15927124,Operator,Y,
+White,0423720450,B-431,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75207138,-118.1592865,Operator,N,
+White,0423720500,B-432,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75206757,-118.15930939,Operator,Y,
+White,0423723172,B-433,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75206757,-118.15932465,Operator,Y,
+White,0423720448,B-434,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75206375,-118.15934753,Operator,N,
+White,0423720484,B-435 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.75205994,-118.15937042,Operator,Y,
+White,0423723677,B-436 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75205612,-118.15938568,Well Summary,Y,03/16/1991
+White,0423720416,B-437,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75204849,-118.15940857,Operator,Y,
+White,0423720545,B-438 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75205231,-118.15942383,Operator,N,
+White,0423720820,B-439,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75205231,-118.15944672,Operator,N,08/21/2012
+White,0423721165,B-440,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75205231,-118.15946198,Well Summary,Y,10/16/1971
+White,0423720839,B-501 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.75205231,-118.15948486,Operator,Y,07/04/1969
+White,0423723742,B-517 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.75209808,-118.15981293,Operator,N,01/28/1993
+White,0423723824,B-518,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75212097,-118.15981293,Operator,N,
+White,0423723179,B-519,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.7521019,-118.15982819,Operator,N,
+White,0423723626,B-520 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75212479,-118.15983582,Operator,N,
+White,0423726428,B-521 I,LBTHUMS,Active,WF,Wilmington,Fault Block 90,33.75210571,-118.15985107,Well Summary,Y,
+White,0423726629,B-522,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.7521286,-118.15985107,Well Summary,N,
+White,0423726475,B-523,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75210953,-118.15986633,Operator,N,
+White,0423726897,B-524,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75213242,-118.15987396,Operator,N,
+White,0423723615,B-525,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75211334,-118.15988922,Operator,N,
+White,0423726969,B-526 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.75213623,-118.15988922,Operator,N,
+White,0423726594,B-527,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75211716,-118.15990448,Well Summary,N,
+White,0423727421,B-528,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75214005,-118.15991211,Well Summary,Y,09/13/2012
+White,0423727018,B-529,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75212097,-118.15992737,Operator,Y,
+White,0423727460,B-530,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75214386,-118.15992737,Well Summary,Y,10/10/2012
+White,0423727163,B-531,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.75212479,-118.15994263,Well Summary,Y,02/17/2011
+White,0423727461,B-532,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75214767,-118.15995026,Well Summary,Y,12/27/2012
+White,0423727406,B-533,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7521286,-118.15996552,Operator,Y,07/17/2012
+White,0423730243,B-534,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75215149,-118.15996552,Well Summary,Y,02/12/2014
+White,0423727220,B-535,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75213242,-118.15998077,Operator,N,08/17/2011
+White,0423730420,B-536,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.7521553,-118.1599884,Well Summary,Y,
+White,0423727250,B-537,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75213623,-118.16000366,Operator,Y,08/29/2011
+White,0423729973,B-538 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75215912,-118.16000366,Operator,Y,
+White,0423730296,B-539,LBTHUMS,Active,OG,Wilmington,Fault Block 90,33.75214005,-118.16001892,Operator,Y,08/04/2014
+White,0423727286,B-540,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75216293,-118.16002655,Operator,Y,10/20/2011
+White,0423726924,B-541,LBTHUMS,Canceled,OG,Wilmington,Fault Block VIII,33.75214386,-118.16004181,Operator,N,
+White,0423727306,B-541,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75214386,-118.16004181,Operator,Y,01/08/2012
+White,0423726866,B-542 I,LBTHUMS,Active,WF,Wilmington,Fault Block 98,33.75216675,-118.16004181,Operator,N,
+White,0423727246,B-543,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75214767,-118.1600647,Operator,Y,07/31/2011
+White,0423723634,B-544 I,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75217056,-118.1600647,Operator,Y,
+White,0423723706,B-552,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75219345,-118.16014862,Operator,N,
+White,0423727247,B-553,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75217438,-118.16016388,Operator,Y,09/20/2011
+White,0423727004,B-554,LBTHUMS,Active,OG,Wilmington,Fault Block 98,33.75219727,-118.16016388,Operator,N,
+White,0423727275,B-555,LBTHUMS,Canceled,OG,Wilmington,Fault Block VI,33.75217819,-118.16017914,Operator,N,
+White,0423727321,B-555,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75218201,-118.16017914,Operator,Y,02/24/2012
+White,0423727147,B-556,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.7522049,-118.16017914,Well Summary,Y,11/24/2010
+White,0423727216,B-557,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75218964,-118.16020203,Operator,N,06/24/2011
+White,0423727209,B-558,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75221252,-118.16020203,Operator,Y,05/12/2011
+White,0423727129,B-559,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75219727,-118.16022491,Operator,Y,
+White,0423727122,B-560,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75222015,-118.16021729,Operator,N,
+White,0423727108,B-561,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75220871,-118.16024017,Operator,Y,03/16/2010
+White,0423727109,B-562,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7522316,-118.16023254,Operator,N,
+White,0423727039,B-563,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75221634,-118.16025543,Operator,N,
+White,0423726916,B-564 I,LBTHUMS,Active,WF,Wilmington,Fault Block 98,33.75223923,-118.1602478,Operator,Y,
+White,0423722915,B-565 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75222397,-118.16027069,Operator,Y,
+White,0423722839,B-566,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75224686,-118.16027069,Operator,Y,
+White,0423723714,B-567,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75223541,-118.16029358,Operator,N,
+White,0423727038,B-568,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7522583,-118.16027832,Operator,N,
+White,0423726489,B-569,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75224686,-118.16030884,Well Summary,Y,06/17/2005
+White,0423726873,B-570,LBTHUMS,Active,OG,Wilmington,Fault Block 98,33.75226974,-118.16029358,Operator,N,
+White,0423726923,B-571,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7522583,-118.1603241,Operator,N,
+White,0423726571,B-572,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75228119,-118.16030884,Operator,N,
+White,0423723672,B-601,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75226974,-118.16033936,Operator,N,
+White,0423726820,B-602,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.752273,-118.159425,Well Summary,Y,05/23/2007
+White,0423726419,B-603 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75228119,-118.16035461,Operator,Y,
+White,0423723054,B-604,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75230408,-118.16033936,Operator,Y,
+White,0423723822,B-605,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75229645,-118.16036987,Operator,N,
+White,0423723726,B-606 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75231552,-118.16035461,Operator,N,12/29/1992
+White,0423723123,B-607 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75230789,-118.1603775,Well Summary,Y,05/17/1985
+White,0423723031,B-608,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75233078,-118.16036224,Well Summary,Y,09/16/2018
+White,0423723333,B-609,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75232315,-118.16039276,Operator,N,
+White,0423722869,B-610 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75234222,-118.1603775,Well Summary,N,
+White,0423722898,B-611,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75233459,-118.16040039,Operator,Y,
+White,0423723056,B-612,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75235367,-118.16038513,Operator,N,
+White,0423722906,B-613,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75234985,-118.16041565,Operator,N,
+White,0423723332,B-614,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75236893,-118.16040039,Operator,N,
+White,0423720328,B-620,LBTHUMS,Active,OG,Wilmington,Fault Block 98,33.75246429,-118.16046143,Operator,N,
+White,0423720271,B-621 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.752464,-118.159569,Well Summary,Y,05/31/1995
+White,0423720398,B-622 I,LBTHUMS,Idle,WF,Wilmington,Fault Block VII,33.75249863,-118.16047668,Operator,Y,
+White,0423720110,B-623,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75251389,-118.16048431,Operator,N,
+White,0423720305,B-624,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75252914,-118.16048431,Operator,N,01/13/2011
+White,0423720514,B-625,LBTHUMS,Idle,OG,Wilmington,Fault Block 98,33.7525444,-118.16049194,Operator,Y,
+White,0423720321,B-626,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75255966,-118.16049957,Operator,N,
+White,0423720417,B-627,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75257874,-118.1605072,Operator,N,
+White,0423720449,B-628,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75259018,-118.1605072,Operator,N,
+White,0423720816,B-629,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75260925,-118.16051483,Operator,N,
+White,0423720349,B-630,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75262451,-118.16052246,Operator,N,
+White,0423720135,B-631,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75263977,-118.16053009,Operator,N,
+White,0423720026,B-632,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75265503,-118.16053009,Operator,N,
+White,0423723016,B-633,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75267029,-118.16053772,Operator,N,
+White,0423720821,B-634,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75268936,-118.16053772,Operator,N,
+White,0423720492,B-635 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75270462,-118.16054535,Operator,N,04/01/1968
+White,0423720058,B-636 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75271988,-118.16054535,Operator,N,
+White,0423720542,B-637,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75273514,-118.16055298,Operator,N,
+White,0423721186,B-638,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75275421,-118.16055298,Operator,N,
+White,0423721594,B-639 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75276947,-118.16055298,Operator,N,
+White,0423720401,B-701 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VIII,33.75278473,-118.16055298,Operator,N,
+White,0423721208,B-702,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.7528038,-118.16055298,Operator,N,
+White,0423720156,B-703 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75281906,-118.16055298,Operator,N,
+White,0423721201,B-704,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75283432,-118.16054535,Operator,N,
+White,0423720243,B-705,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75284958,-118.16054535,Operator,N,
+White,0423721195,B-706,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75286865,-118.16053772,Operator,N,
+White,0423721103,B-707,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75288391,-118.16053772,Operator,N,
+White,0423720780,B-708,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75289917,-118.16053009,Operator,Y,
+White,0423720689,B-709,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75291443,-118.16053009,Operator,N,
+White,0423721330,B-710,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75292969,-118.16052246,Operator,N,
+White,0423720215,B-711 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75294876,-118.16051483,Operator,N,
+White,0423720927,B-712,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75296402,-118.1605072,Well Summary,Y,03/11/2018
+White,0423723497,B-716,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75303268,-118.16046906,Operator,Y,
+White,0423723621,B-717 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.75304794,-118.16049194,Operator,Y,
+White,0423726630,B-718,LBTHUMS,Idle,OG,Wilmington,Fault Block 98,33.75304794,-118.16046143,Operator,Y,
+White,0423726981,B-719,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7530632,-118.16048431,Operator,N,
+White,0423723715,B-720 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.7530632,-118.16046143,Operator,Y,
+White,0423723830,B-721 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75307846,-118.16047668,Operator,Y,
+White,0423725045,B-722,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75308228,-118.1604538,Operator,Y,
+White,0423726510,B-723 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75309372,-118.16047668,Operator,N,
+White,0423726430,B-724,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75309753,-118.16044617,Operator,N,
+White,0423726991,B-725 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.753112,-118.160469,Well Summary,Y,06/18/2008
+White,0423727118,B-726,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75311279,-118.16043854,Operator,N,
+White,0423723670,B-727,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.753111,-118.159559,Well Summary,Y,11/02/1990
+White,0423727134,B-728,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75312805,-118.16043091,Operator,Y,08/13/2010
+White,0423727141,B-729,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75314331,-118.1604538,Operator,Y,09/23/2010
+White,0423727142,B-730,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75314331,-118.16042328,Operator,Y,
+White,0423727144,B-731,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75315857,-118.16043854,Operator,N,10/31/2010
+White,0423727143,B-732,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75315857,-118.16041565,Operator,N,
+White,0423727123,B-733 I,LBTHUMS,Active,WF,Wilmington,Fault Block VI,33.75317383,-118.16043091,Operator,Y,
+White,0423722997,B-734,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75317383,-118.16040802,Operator,Y,
+White,0423726527,B-735 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75318909,-118.16042328,Operator,Y,
+White,0423727164,B-736,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75318527,-118.16040039,Well Summary,Y,04/05/2011
+White,0423726431,B-737,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75320435,-118.16041565,Operator,N,
+White,0423727062,B-738,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75320053,-118.16038513,Well Summary,Y,12/28/2009
+White,0423726484,B-739,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7532196,-118.16040039,Operator,N,
+White,0423723124,B-740 I,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75321198,-118.1603775,Operator,N,
+White,0423726444,B-741,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75323486,-118.16038513,Operator,N,
+White,0423723331,B-742,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.753227,-118.160362,Well Summary,Y,03/31/1986
+White,0423723711,B-743,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.75324631,-118.1603775,Operator,N,
+White,0423727191,B-744,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75323868,-118.16034698,Operator,N,04/19/2011
+White,0423727145,B-745,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.75325775,-118.16036224,Operator,N,12/08/2010
+White,0423723202,B-746 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75325394,-118.16033936,Operator,Y,
+White,0423726992,B-747,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.753276,-118.160346,Well Summary,Y,05/25/2008
+White,0423727165,B-748,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75326538,-118.1603241,Operator,N,02/03/2011
+White,0423723636,B-749,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75328445,-118.16033173,Operator,Y,
+White,0423727212,B-750,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75327682,-118.16030884,Operator,N,05/24/2011
+White,0423726945,B-751,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.7532959,-118.16031647,Operator,N,
+White,0423727277,B-752,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.75328445,-118.16029358,Operator,Y,11/10/2011
+White,0423727060,B-753,LBTHUMS,Canceled,OG,Wilmington,Fault Block VI,33.75330734,-118.16030121,Operator,N,
+White,0423727190,B-753,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75330734,-118.16030121,Operator,N,04/29/2011
+White,0423727305,B-754,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.7532959,-118.16027832,Operator,Y,01/20/2012
+White,0423723044,B-755,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.75331879,-118.16029358,Operator,Y,
+White,0423723323,B-756 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75330734,-118.16026306,Operator,N,
+White,0423723732,B-757 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75333,-118.16027,Well Summary,Y,05/12/2010
+White,0423727287,B-758,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75331497,-118.1602478,Operator,N,
+White,0423722781,B-759,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75333786,-118.16025543,Operator,Y,
+White,0423727139,B-760,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75332642,-118.16023254,Well Summary,Y,09/24/2010
+White,0423722910,B-761,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.7533493,-118.16023254,Operator,N,
+White,0423727349,B-762,LBTHUMS,Active,OG,Wilmington,Fault Block VI,33.75333405,-118.16021729,Well Summary,Y,07/03/2012
+White,0423722908,B-763,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75335693,-118.16021729,Operator,Y,
+White,0423722857,B-764,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75334167,-118.1601944,Operator,N,
+White,0423722777,B-765 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75336456,-118.16020203,Operator,N,
+White,0423727464,B-766,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.7533493,-118.16017914,Well Summary,Y,11/06/2012
+White,0423722837,B-767 I,LBTHUMS,Idle,WF,Wilmington,Fault Block VII,33.75337219,-118.16017914,Well Summary,Y,04/06/1983
+White,0423723181,B-768 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75335312,-118.16016388,Operator,Y,
+White,0423722794,B-769 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.753361,-118.159261,Well Summary,Y,10/30/1997
+White,0423730410,B-770,LBTHUMS,Active,WF,Wilmington,Fault Block VIII,33.75336075,-118.16014099,Well Summary,Y,09/03/2014
+White,0423722858,B-771 ,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.753366,-118.159242,Well Summary,N,11/03/2005
+White,0423730284,B-772,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75336456,-118.16012573,Notice of Intent to Drill,Y,07/03/2014
+White,0423722859,B-773,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75339127,-118.16012573,Operator,Y,
+White,0423730400,B-774 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75337219,-118.16010284,Well Summary,Y,09/22/2014
+White,0423722838,B-775 I,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.75339508,-118.16010284,Operator,N,
+White,0423730417,B-776,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75337601,-118.16008759,Well Summary,Y,10/10/2014
+White,0423723246,B-777 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.7533989,-118.16008759,Operator,N,
+White,0423730267,B-778,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75337982,-118.1600647,Notice of Intent to Drill,N,04/12/2014
+White,0423730442,B-801,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75340271,-118.1600647,Operator,N,03/15/2015
+White,0423722762,B-802,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75338364,-118.16004944,Operator,N,
+White,0423730527,B-803,Unspecified,Canceled,OG,Wilmington,Fault Block VII,33.753408,-118.16004516,Notice of Intent to Drill,Y,
+White,0423730455,B-804 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75338745,-118.16002655,Operator,Y,05/21/2015
+White,0423723749,B-805 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75341034,-118.16002655,Operator,Y,
+White,0423730281,B-806,LBTHUMS,Active,OG,Wilmington,Fault Block VIII,33.75339127,-118.16001129,Operator,Y,06/08/2014
+White,0423722911,B-807 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75341415,-118.16000366,Operator,N,
+White,0423730419,B-808,LBTHUMS,Active,OG,Wilmington,Fault Block 98,33.75339508,-118.1599884,Well Summary,Y,10/21/2014
+White,0423723125,B-809,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75342178,-118.1599884,Operator,Y,
+White,0423722993,B-810,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.7533989,-118.15997314,Operator,N,
+White,0423722916,B-812 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75340271,-118.15995026,Operator,Y,
+White,0423727232,B-813,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.7534256,-118.15995026,Notice of Intent to Drill,Y,07/14/2011
+White,0423723735,B-815,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75342941,-118.15992737,Operator,N,
+White,0423726974,B-816,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75341,-118.159912,Well Summary,Y,04/22/2008
+White,0423723625,B-817 I,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75343323,-118.15991211,Operator,N,
+White,0423722860,B-818 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75341415,-118.15989685,Operator,N,05/28/2012
+White,0423720329,B-825,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75345612,-118.15975189,Operator,N,
+White,0423720186,B-826 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75345993,-118.15973663,Operator,N,
+White,0423720136,B-827 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75346375,-118.15971375,Operator,N,
+White,0423720596,B-828,LBTHUMS,Idle,OG,Wilmington,Fault Block VI,33.75346756,-118.15969086,Operator,N,
+White,0423720322,B-829 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75347137,-118.1596756,Operator,N,
+White,0423721104,B-830 I,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75347519,-118.15965271,Operator,N,
+White,0423720758,B-831 I,LBTHUMS,Plugged,INJ,Wilmington,Fault Block VII,33.753479,-118.15963745,Operator,N,
+White,0423720216,B-832,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75348282,-118.15961456,Operator,Y,
+White,0423720111,B-833,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75348663,-118.1595993,Operator,N,
+White,0423720770,B-834,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75349045,-118.15957642,Operator,N,
+White,0423720059,B-835,LBTHUMS,Idle,OG,Wilmington,Fault Block VII,33.75349426,-118.15956116,Operator,Y,
+White,0423720027,B-836 I,LBTHUMS,Active,WF,Wilmington,Fault Block VII,33.75349426,-118.15953827,Operator,N,
+White,0423720712,B-837,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75349808,-118.15952301,Operator,Y,
+White,0423720451,B-838,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75349808,-118.15950012,Operator,N,03/24/2015
+White,0423720731,B-839 I,LBTHUMS,Active,OG,Wilmington,Fault Block VII,33.75350189,-118.15947723,Operator,N,

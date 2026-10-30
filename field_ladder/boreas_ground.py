@@ -43,6 +43,12 @@ FT = 0.3048
 # tighter than nominal. The idealised rungs (disc, double row) are built at
 # the MEASURED value so that the step from them to the real slot positions
 # isolates the LAYOUT and is not contaminated by a spacing change.
+# Above this many unknowns the direct sparse solve is replaced by CG; see
+# Ground.profiles. 6000 is below the smallest size at which the direct
+# factorisation has been seen to exhaust memory, and the two agree to 1e-12
+# wherever both run.
+_DIRECT_MAX = 6000
+
 B0_NOMINAL, W_DEF = 1.83, 3.66
 B0_MEASURED = 1.65
 B0_DEF = B0_MEASURED
@@ -162,8 +168,15 @@ class Ground:
         owner = np.repeat(np.arange(N), n); idx = np.tile(np.arange(n), N)
         tree = cKDTree(pts)
         rows, cols, dist = [], [], []
-        for t0 in range(0, len(T), 400):
-            lists = tree.query_ball_point(T[t0:t0 + 400], self.cutoff + 6.0)
+        # Chunked, and the chunk is small on purpose. query_ball_point
+        # returns a Python list per target, and near the surface an S-curve
+        # puts every one of the 363 wells' ~250 samples inside the cutoff --
+        # tens of thousands of indices per target. At a chunk of 400 that
+        # intermediate is hundreds of megabytes, and four of these running
+        # in parallel is what exhausts the machine. Smaller chunks cost a
+        # few per cent in Python overhead and bound the peak.
+        for t0 in range(0, len(T), 50):
+            lists = tree.query_ball_point(T[t0:t0 + 50], self.cutoff + 6.0)
             for tt, L in enumerate(lists):
                 t_id = t0 + tt
                 L = np.asarray(L)
@@ -226,7 +239,27 @@ class Ground:
         flux = (self_t + np.asarray(G.sum(1)).ravel()).reshape(N, nst).mean(0)
         # equal temperature: (R_near + self + G) q = 1
         A = (G + G.T) * 0.5 + sp.identity(M) * (R_near + self_t)
-        q = spla.spsolve(A.tocsc(), np.ones(M)).reshape(N, nst)
+        # A is symmetric and strongly diagonally dominant: the diagonal is
+        # R_near + G_ii, about 0.48 m K/W, against off-diagonals that are
+        # E1 of a squared distance and fall off fast. A direct factorisation
+        # is exact but its fill-in is not bounded by the sparsity -- near the
+        # surface an S-curve puts all 363 wells inside the 80 m cutoff, and
+        # at 50 stations SuperLU exhausts 4 GB and the process is killed
+        # outright, with no MemoryError to catch. Above a size where that
+        # starts to bite, solve it iteratively instead: same matrix, same
+        # answer to the tolerance below, memory bounded by the nonzeros.
+        b = np.ones(M)
+        if M <= _DIRECT_MAX:
+            q = spla.spsolve(A.tocsc(), b)
+        else:
+            Ac = A.tocsr()
+            Mp = spla.LinearOperator(
+                (M, M), matvec=lambda x, d=Ac.diagonal(): x / d)
+            q, info = spla.cg(Ac, b, rtol=1e-12, atol=0.0, maxiter=5000, M=Mp)
+            if info != 0:
+                raise RuntimeError(f'CG did not converge (info={info}) at '
+                                   f'M={M}')
+        q = q.reshape(N, nst)
         # V11: every solved strength must be positive. All wells sit at the
         # same temperature and all are hotter than the far field, so every
         # one of them rejects heat; a negative q is the discretisation
@@ -339,10 +372,25 @@ def reference_field(B, case, csv, island='Grissom', trajectory='s_curve',
                    reverse=True)
     pr = nst = None
     for cand in cands:
-        pr = gr.profiles(md, X, R_near, nst=cand)
+        # The largest candidates can exhaust memory before they can be
+        # rejected on their physics: at nst = 50 the S-curve assembles a
+        # 363 x 50 = 18150-unknown system whose near-surface block is
+        # effectively dense. That is a resource failure, not a result, so
+        # it steps down rather than aborting -- but it is never swallowed
+        # silently, because a run that quietly used fewer stations than it
+        # reported would be worse than one that stopped.
+        try:
+            pr = gr.profiles(md, X, R_near, nst=cand)
+        except MemoryError:
+            if verbose:
+                print(f'  nst = {cand}: out of memory, stepping down')
+            continue
         if getattr(gr, 'n_negative', 0) == 0:
             nst = cand
             break
+        if verbose:
+            print(f'  nst = {cand}: {gr.n_negative} negative strengths, '
+                  f'stepping down')
     if nst is None:
         raise RuntimeError(f'no clean station count among {cands} at L={L}')
     info = dict(N=len(P), L_md=L, n_stations=nst, R_near=R_near,
@@ -358,6 +406,86 @@ def reference_field(B, case, csv, island='Grissom', trajectory='s_curve',
               f"{info['Rg_bottom']:.2f} (bottom), mean {info['Rg_mean']:.2f} "
               f"m K/W over {nst} stations")
     return pr['md'], pr['temp'], pr['tvd'], info
+
+
+# The superposition solve is the expensive step in the whole model: 363
+# wells x 50 stations is an 18150-unknown sparse system, about 85 s, and
+# reference_field tries several station counts before one solves cleanly.
+# That is fine in a batch runner and absurd in the first cell of a
+# notebook, so the result is cached by the SPECIFICATION it came from.
+_REF_URL = ('https://raw.githubusercontent.com/JaderBarbosaLSU/'
+            'wellbore-thermal-storage/notebook-model/field_ladder/')
+
+
+def _ref_key(case, island, trajectory, kop_rule, theta_max, kop_ft, L):
+    """Everything the profile depends on, and nothing else.
+
+    The case enters only through r_bore (the kernel's inner radius), the
+    rock properties and the field age; the PCM, the plant and the fin
+    geometry do not touch the ground solve, so changing them must not
+    invalidate the cache.
+    """
+    bits = [island, trajectory, kop_rule, f'{theta_max:.4g}',
+            f'{kop_ft:.4g}', f'{L:.6g}', f'{case.r_bore:.6g}',
+            f'{case.k_rock:.6g}', f'{case.rho_cp_rock:.6g}',
+            f'{case.t_operation_yr:.6g}']
+    return 'fieldref_' + '_'.join(bits).replace('.', 'p').replace('+', '')
+
+
+def cached_reference_field(B, case, csv, cache_dir='.', fetch=True,
+                           verbose=True, **kw):
+    """`reference_field`, read from disk or from the repo when possible.
+
+    Returns the same (md, Rg, tvd, info). `info` carries 'cached', which is
+    the provenance: True means nothing was solved here. A cache miss is not
+    an error -- it recomputes and writes the file -- but it costs minutes,
+    so it says so first.
+    """
+    import os
+    import urllib.request
+    import numpy as _np
+    L = float(kw.get('L_md') or case.L_well)
+    key = _ref_key(case, kw.get('island', 'Grissom'),
+                   kw.get('trajectory', 's_curve'),
+                   kw.get('kop_rule', 'staggered'),
+                   float(kw.get('theta_max', 55.0)),
+                   float(kw.get('kop_ft', 300.0)), L)
+    path = os.path.join(cache_dir, key + '.npz')
+    if not os.path.exists(path) and fetch:
+        try:
+            urllib.request.urlretrieve(_REF_URL + key + '.npz', path)
+        except Exception:
+            pass
+    if os.path.exists(path):
+        try:
+            d = _np.load(path, allow_pickle=True)
+            md, Rg, tvd = d['md'], d['Rg'], d['tvd']
+            info = dict(d['info'].item())
+            info['cached'] = True
+            if verbose:
+                print(f"field: {info['N']} {info['island']} slots, "
+                      f"{info['trajectory']}, L = {L:.0f} m MD -> TVD "
+                      f"{info['tvd_bottom']:.0f} m   [cached]")
+                print(f"  R_g,eff {info['Rg_top']:.2f} (top) to "
+                      f"{info['Rg_bottom']:.2f} (bottom), mean "
+                      f"{info['Rg_mean']:.2f} m K/W over "
+                      f"{info['n_stations']} stations")
+            return md, Rg, tvd, info
+        except Exception:
+            pass
+    if verbose:
+        print('no cached field for this specification -- solving the '
+              'superposition.\n  363 wells, several station counts: '
+              'expect 5-15 minutes. The result is written to\n  '
+              f'{path} and reused from then on.', flush=True)
+    md, Rg, tvd, info = reference_field(B, case, csv, verbose=verbose, **kw)
+    info['cached'] = False
+    try:
+        store = {k: v for k, v in info.items() if k not in ('positions', 'kop')}
+        _np.savez(path, md=md, Rg=Rg, tvd=tvd, info=_np.array(store, dtype=object))
+    except Exception:
+        pass
+    return md, Rg, tvd, info
 
 
 @_ctx

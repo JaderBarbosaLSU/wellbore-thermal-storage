@@ -127,18 +127,33 @@ def run_one(spec):
         # solves with no negatives at all. Any of them gives the same
         # answer; this one is also clean, and V11 then holds by
         # construction rather than by tolerance.
-        # Memoised by GEOMETRY: the accepted count depends on the well
-        # positions and the trajectory, not on t_op or the ground model, so
-        # the t_op and theta sensitivities reuse it instead of repeating
-        # the search. (R_near does enter the solve, but it shifts the
-        # diagonal uniformly and has never changed which count is clean.)
+        # Memoised by geometry AND FIELD AGE. The first version of this
+        # key left t_op out, on the argument that the age enters only
+        # through R_near, which shifts the diagonal uniformly. That was
+        # wrong: t_op is inside the kernel, E1(d^2/4 a t), so it changes
+        # which neighbours are coupled at all and therefore which station
+        # count solves cleanly. The t_op = 30 yr sweep failed outright at
+        # two lengths because it was handed the 10 yr count as its only
+        # candidate -- which is also why the memo is now a STARTING POINT
+        # and never the whole candidate list.
         memo_key = tuple(str(x) for x in
                          (spec['positions'], spec['trajectory'], L,
-                          spec['theta_max'], spec['kop_rule']))
+                          spec['theta_max'], spec['kop_rule'], t_op))
         nst0 = _NST_MEMO.get(memo_key) or G.Ground.stations_for(L)
+        # GEOMETRIC stride, not one at a time. Stepping down singly from 50
+        # costs up to 47 sparse solves -- over an hour for one ladder point,
+        # and the clean counts are scattered anyway, so the fine search buys
+        # nothing. The same stride reference_field uses, so the notebook and
+        # the pack can land on the same count.
+        cands = sorted({max(3, int(round(nst0 * f)))
+                        for f in (1.0, .85, .7, .6, .5, .4, .3, .2, .1)},
+                       reverse=True)
         pr, nst, n_neg = None, None, None
-        for cand in range(nst0, 2, -1):
-            pr = gr.profiles(md, X, R_near, nst=cand)
+        for cand in cands:
+            try:
+                pr = gr.profiles(md, X, R_near, nst=cand)
+            except MemoryError:
+                continue          # a resource failure, not a result
             n_neg = getattr(gr, 'n_negative', 0)
             if n_neg == 0:
                 nst = cand
@@ -147,7 +162,7 @@ def run_one(spec):
             _NST_MEMO[memo_key] = nst
         if nst is None:
             raise RuntimeError(
-                f'no station count in 3..{nst0} solves cleanly at L={L}')
+                f'no clean station count among {cands} at L={L}')
         key = {'superposition': 'temp', 'flux': 'flux'}[spec['ground']]
         md, Rg, tvd = pr['md'], pr[key], pr['tvd']
         q_spread = float(np.mean(pr['q_spread']))
