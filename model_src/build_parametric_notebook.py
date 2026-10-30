@@ -1,474 +1,385 @@
-"""Build notebooks/BOREAS_parametric.ipynb.
+"""Build notebooks/BOREAS_parametric.ipynb, on the Grissom field (R4).
 
-Separate from BOREAS_model.ipynb on purpose. That notebook is about ONE
-case and runs in a couple of minutes. This one is about 291 cyclic
-steady-state evaluations, which is roughly 2.4 hours of compute, so it is
-built to REPRODUCE FROM THE COMMITTED CACHE and only recompute when asked.
+The previous version swept `n_wells_field`, `packing` and `fan_angle_deg`
+-- the idealized field model that the ladder replaced. Those axes are
+gone: the field is the measured one now, and the only thing a grid point
+can change about it is the storage length.
 """
-import datetime as _dt, json, pathlib
+import datetime as _dt
+import json
+import pathlib
 
-STAMP = (_dt.datetime.utcnow() - _dt.timedelta(hours=3)).strftime('%Y-%m-%d %H:%M BRT')
-HERE = pathlib.Path('.')
-OUT = pathlib.Path('BOREAS_parametric.ipynb')
+STAMP = (_dt.datetime.utcnow() - _dt.timedelta(hours=3)).strftime(
+    '%Y-%m-%d %H:%M BRT')
+SRC = pathlib.Path('/tmp/par')
+OUT = pathlib.Path('/tmp/par/BOREAS_parametric.ipynb')
 RAW = ('https://raw.githubusercontent.com/JaderBarbosaLSU/'
        'wellbore-thermal-storage/notebook-model/')
 
-md = lambda t: {'cell_type': 'markdown', 'metadata': {},
-                'source': t.strip('\n').splitlines(True)}
-code = lambda t: {'cell_type': 'code', 'metadata': {}, 'execution_count': None,
-                  'outputs': [], 'source': t.strip('\n').splitlines(True)}
+
+def md(t):
+    return {'cell_type': 'markdown', 'metadata': {},
+            'source': t.strip('\n').splitlines(True)}
+
+
+def code(t):
+    return {'cell_type': 'code', 'metadata': {}, 'execution_count': None,
+            'outputs': [], 'source': t.strip('\n').splitlines(True)}
+
+
 cells = []
 
 cells.append(md(rf"""
-# BOREAS — parametric studies
-*generated {STAMP}, boreas.py v1.3*
+# BOREAS — parametric study on the measured Grissom field
 
-`BOREAS_model.ipynb` evaluates **one** case. This notebook covers the
-**sweeps**: the cascade design map, the geometry maps, the field maps, the
-storage-temperature study and the layer-count confound — every parametric
-figure in the paper.
+Every map here is computed at the **reference case (R4)**: the 363 Island
+Grissom slots from the WellSTAR export, reconstructed S-curve trajectories
+(staggered kickoff, $\theta_\mathrm{{max}} = 55^\circ$), the THUMS
+upper-zone casing, equal-temperature superposition at a 50 m station
+spacing, $t_\mathrm{{op}} = 10$ yr.
 
-### Read this before running anything
+**This replaces the idealized-geometry version.** The old notebook swept
+`n_wells_field`, `packing` and `fan_angle_deg` — a well count, a plan-view
+shape and a cone half-angle. That description cannot represent where the
+wells are, and at 1.65 m spacing the difference is most of the answer. The
+field is now read from the slot coordinates, and the only thing a grid
+point can change about it is the storage length.
 
-The maps behind the paper are **291 cyclic steady-state evaluations**. One
-costs about 30 s, so recomputing them from scratch is **roughly 2.4 hours**.
-
-This notebook therefore **loads the committed cache** and redraws every
-figure in seconds. Recomputation is opt-in, resumable, and never silently
-triggered. The cache is keyed by the case parameters, so adding a point to
-a grid computes only that point.
+*v2.2 · built {STAMP}*
 """))
 
-cells.append(md("""
+cells.append(md(r"""
 ---
-## 0. Setup
+## 0. What the field depends on, and what it does not
+
+This is the fact that makes a 6 $\times$ 6 map at R4 affordable at all.
+
+$R_{g,\mathrm{eff}}(\mathrm{MD})$ comes out of the superposition solve. It
+is a function of
+
+* the well positions and the trajectories,
+* the storage length $L$,
+* the bore radius, the rock conductivity and diffusivity, and the field
+  age.
+
+It is **not** a function of the PCM — $T_m$, $h_m$, $N_\mathrm{lay}$, the
+cascade span — nor of the tube count, nor of the geothermal gradient. The
+gradient sets the rock *temperature*; the superposition sets the
+*resistance* between the well and it, and those are different quantities.
+
+So one field solve per storage length serves every point that shares that
+length, and the whole gradient axis rides along for free. Five of the
+eight grids below sit at the reference length and need exactly one solve
+between them.
+
+**The $L$ axis stops at the 5000 ft casing shoe**, 1524 m MD, as the paper
+asks. Note the inconsistency that exposes, and which the paper task should
+settle: the ladder's sweep marks a *provisional* shoe at 1250 m MD, while
+the maps are capped at 5000 ft. They are two statements of the same
+unknown. The grid includes 1250 m so the reference case sits on it.
 """))
+
 cells.append(code("!pip install -q CoolProp"))
-for name in ('boreas.py', 'boreas_plots.py', 'boreas_sweep.py', 'arr.py'):
-    src = (HERE / name).read_text()
-    cells.append(code(f'%%writefile {name}\n' + src))
 
-cells.append(code(rf"""
-import urllib.request, os, json
-CACHE = 'boreas_sweep_cache.json'
-if not os.path.exists(CACHE):
-    url = '{RAW}data/' + CACHE
-    try:
-        urllib.request.urlretrieve(url, CACHE)
-        print('cache downloaded:', len(json.load(open(CACHE))), 'entries')
-    except Exception as e:
-        print('COULD NOT FETCH THE CACHE:', e)
-        print('Every figure below will be empty until the grids are '
-              'recomputed (section 6, ~2.4 h). The cache is data, not code: '
-              'it is the only thing here that is expensive to reproduce.')
-else:
-    print('cache present:', len(json.load(open(CACHE))), 'entries')
+cells.append(md(r"""
+---
+## 1. Setup
+
+The model, the ground solver and the grid definitions are fetched rather
+than embedded, so this notebook and `BOREAS_model.ipynb` cannot drift
+apart. The cached results are fetched too: 198 CSS marches is about an
+hour, and nothing here needs recomputing to be read.
 """))
 
 cells.append(code(r"""
-import matplotlib.pyplot as plt, numpy as np
-import boreas as B, boreas_plots as BP, boreas_sweep as S, arr
+import os, urllib.request
+RAW = ('https://raw.githubusercontent.com/JaderBarbosaLSU/'
+       'wellbore-thermal-storage/notebook-model/')
+FILES = [('model_src/boreas.py',            'boreas.py'),
+         ('model_src/boreas_plots.py',      'boreas_plots.py'),
+         ('field_ladder/boreas_ground.py',  'boreas_ground.py'),
+         ('field_ladder/THUMS_wells_WellSTAR_clean.csv',
+          'THUMS_wells_WellSTAR_clean.csv'),
+         ('par_pack/par_grids.py',          'par_grids.py'),
+         ('par_pack/par_runner.py',         'par_runner.py'),
+         ('par_pack/par_runs.json',         'par_runs.json')]
+for remote, local in FILES:
+    if not os.path.exists(local):
+        urllib.request.urlretrieve(RAW + remote, local)
+print('fetched', len(FILES), 'files')
+"""))
+
+cells.append(code(r"""
+import numpy as np, matplotlib.pyplot as plt, pandas as pd, json
+import boreas as B, boreas_ground as G, boreas_plots as BP
+import par_grids as A, par_runner as R
 BP.use_paper_style()
-print('serif:', BP.active_serif()[0])
 
-# Coverage: what the cache can redraw without computing anything
-GRIDS = [('cascade  T_m x glide', arr.CASCADE,  arr.ARRAY),
-         ('geometry L x N_lay',   arr.G_LN,     arr.ARRAY_NOSEG),
-         ('geometry n_ft x L',    arr.G_FT,     arr.ARRAY),
-         ('field    N x theta',   arr.G_WF,     arr.ARRAY_NOFAN),
-         ('field    G x L',       arr.G_GL,     arr.ARRAY),
-         ('N_lay, span pinned',   arr.G_NLPIN,  arr.ARRAY_NOSEG)]
-for name, g, fx in GRIDS:
-    rows = S.collect('css', g, fixed=fx)
-    print(f'  {name:22s} {len(rows):3d}/{len(g):3d} cached, '
-          f'{sum(1 for r in rows if r.get("feasible")):3d} feasible')
+RUNS = {}
+for k, v in json.load(open('par_runs.json')).items():
+    RUNS.setdefault(json.loads(k)[0], []).append(v)
+for r in [x for v in RUNS.values() for x in v]:
+    r['feasible'] = 'error' not in r
+print(f'{sum(len(v) for v in RUNS.values())} cached points in '
+      f'{len(RUNS)} grids')
+for k, v in sorted(RUNS.items()):
+    bad = sum(1 for x in v if not x['feasible'])
+    print(f'  {k:12s}{len(v):4d}' + (f'   ({bad} infeasible)' if bad else ''))
+print(f"\nreference cell check: cascade at T_m = 150 C, "
+      f"DT = 55 K gives e' = "
+      f"{[x for x in RUNS['cascade'] if x['T_m_C']==150. and x['DT_3C_2C']==55.][0]['e_prime']:.4f}")
+print("the ladder's R4 reference is 0.2151 -- the grids and the pack agree.")
 """))
 
 cells.append(md(r"""
 ---
-## 0.1 The inputs — **the grids live in `arr.py`, above**
+## 2. Recomputing a point
 
-This notebook has no design point of its own: the base case is
-`BOREAS_model.ipynb`'s, and what it varies are the **grid axes** and the
-**field arrangement**, both defined in the `arr.py` cell above. To change a
-sweep, edit that cell and re-run from it.
+`par_runner.run_point` takes a dict, builds the case on top of the
+reference, solves (or reuses) the field for that length, and runs the
+march inside `field_ground`. The cache is keyed by the full point, so
+nothing is computed twice.
 
-One thing to know before you do: a changed axis is a set of **new cache
-keys**, so the points are recomputed at about 30 s each. Widening a 6×6 map
-by one row is six evaluations, three minutes. Replacing an axis wholesale
-is a new map and an hour.
+Each point is about 20 seconds. A full 6 $\times$ 6 map is 12 minutes.
 """))
 
 cells.append(code(r"""
-print('GRID AXES (edit in the arr.py cell above)\n')
-for name, ax in (('T_m / C            ', arr.TM),
-                 ('DT_3C_2C / K       ', arr.DG),
-                 ('L / ft             ', arr.LW),
-                 ('N_lay              ', arr.NL),
-                 ('n_ft               ', arr.NFT),
-                 ('N wells            ', arr.NW),
-                 ('fan half-angle / deg', arr.FA),
-                 ('gradient / K/km    ', arr.GR)):
-    print(f'  {name}  {list(ax)}')
-
-print('\nFIELD ARRANGEMENTS used as `fixed=` by the grids\n')
-for nm, d in (('ARRAY        (maps)', arr.ARRAY),
-              ('ARRAY_NOSEG  (N_lay axis: n_segments varies per point)', arr.ARRAY_NOSEG),
-              ('ARRAY_NOFAN  (theta axis: fan angle varies per point)', arr.ARRAY_NOFAN),
-              ('CONFIG_FIXED (configuration table)', arr.CONFIG_FIXED)):
-    print(f'  {nm}\n      {d}')
-
-print(f'\nspan pinned at SPAN0 = {arr.SPAN0:.3f} K for the N_lay study')
-print(f'{len(arr.CONFIGS)} configurations in the table of section 3')
+# one point, recomputed from scratch, against its cached value
+pt = dict(L_md=A.L_REF, T_m_C=150.0, DT_3C_2C=55.0, auto_P=True)
+fresh = R.run_point(pt)
+cached = [x for x in RUNS['cascade']
+          if x['T_m_C'] == 150. and x['DT_3C_2C'] == 55.][0]
+print(f"            {'fresh':>12}{'cached':>12}")
+for q in ('loss', 'e_prime', 'RTE', 'T2d_C', 'wells_per_MWe'):
+    print(f'  {q:10s}{fresh[q]:12.4f}{cached[q]:12.4f}')
 """))
 
 cells.append(md(r"""
 ---
-## 1. How the sweep driver works
+## 3. The cascade: melting temperature against grading
 
-Three things in `boreas_sweep.py` are there because of something that went
-wrong, and they are worth knowing before you extend a grid.
+$T_m$ is **capped at 160 $^\circ$C**. The ceiling is the secondary loop,
+not the PCM: water saturates at 179.9 $^\circ$C at 10 bar, so the top of
+the cascade has nowhere to go much above that, and the top layer has to
+sit below the HTHP condenser anyway. Points above 160 $^\circ$C were
+measuring the loop pressure rather than the store.
 
-**The cache is keyed by the sorted parameter dict, with a version tag.**
-Adding a swept variable invalidates only the entries that actually change.
-Bumping `VERSION` invalidates everything — which is what you want when the
-metrics or the feasibility gate change, and what stopped a set of poisoned
-results from being served silently.
+`auto_P` raises the secondary pressure just enough to keep the water
+liquid with 20 K of margin, so the $T_m$ axis measures the PCM. At the
+reference point it returns 10 bar unchanged, which is why the 150/55 cell
+reproduces the ladder exactly.
 
-**Every point is saved the moment it lands, not at the end of the run.** A
-long sweep can be killed by a tool or session timeout with no chance to
-clean up; a driver that persists only on completion loses the whole call's
-work. That happened once, for two minutes of runs.
+**Hatched cells are infeasible, and the reason is physical**: at a low
+$T_m$ with a wide grading the bottom layer is too cold to drive the ORC
+at the required pinch. The constraint is the bottom of the cascade, not
+the top.
+"""))
 
-**Every point passes `validate_case` before it is evaluated.** Section 2
-shows what that gate catches.
+cells.append(code(r"""
+fig, axes = plt.subplots(1, 3, figsize=(15.5, 4.3))
+for ax, z, lab, fmt, best in (
+        (axes[0], 'e_prime', r"$e'$ / kWh per m of well", '{:.3f}', 'max'),
+        (axes[1], 'RTE', r'$\eta_\mathrm{RTE}$', '{:.3f}', 'max'),
+        (axes[2], 'wells_per_MWe', 'storage wells per MWe', '{:.0f}', 'min')):
+    BP.heatmap(RUNS['cascade'], 'DT_3C_2C', 'T_m_C', z, A.DG, A.TM, ax=ax,
+               cbar_label=lab, fmt=fmt, best=best)
+    ax.set_xlabel(r'cascade grading $\Delta T_\mathrm{3C,2C}$ / K')
+    ax.set_ylabel(r'$T_m$ of the hottest layer / $^\circ$C')
+fig.tight_layout(); fig.savefig('map_cascade.pdf'); plt.show()
 
-`run_grid_parallel` adds processes — three workers on four cores roughly
-doubles throughput — and a wall-clock budget, so a sweep can be advanced in
-bounded chunks and resumed.
+c = RUNS['cascade']
+ref = [x for x in c if x['T_m_C'] == 150. and x['DT_3C_2C'] == 55.][0]
+beste = max((x for x in c if x['feasible']), key=lambda x: x['e_prime'])
+bestr = max((x for x in c if x['feasible']), key=lambda x: x['RTE'])
+print(f"reference    T_m 150 C, DT 55 K : e' {ref['e_prime']:.3f}  "
+      f"RTE {ref['RTE']:.3f}")
+print(f"best e'      T_m {beste['T_m_C']:.0f} C, DT {beste['DT_3C_2C']:.0f} K"
+      f" : e' {beste['e_prime']:.3f}  RTE {beste['RTE']:.3f}")
+print(f"best RTE     T_m {bestr['T_m_C']:.0f} C, DT {bestr['DT_3C_2C']:.0f} K"
+      f" : e' {bestr['e_prime']:.3f}  RTE {bestr['RTE']:.3f}")
+print('\nthe two optima are NOT the same cell: capacity per metre and '
+      'round-trip\nefficiency are traded against each other by the grading.')
 """))
 
 cells.append(md(r"""
 ---
-## 2. Three traps in parametric work with this model
+## 4. The PCM itself: latent heat against melting temperature
 
-All three produced wrong numbers at some point. None announced itself.
-""" "\n\n"
-r"""### 2.1 Past 180 °C the water flashes to steam
+This axis is new. $h_m$ runs 200 to 500 kJ/kg, which spans the salt
+hydrates and nitrates that are candidates in this temperature band; 380 is
+the reference.
 
-The secondary loop is water at `case.P` = 10 bar, which saturates at
-179.9 °C. The hottest water in the plant is the charging inlet
-$T_\mathrm{4c} = T_m + \Delta T_\mathrm{4C,M}$. Past that, CoolProp does
-not fail — it returns a **vapour** enthalpy about ten times the liquid one,
-and every pinch computed from it is meaningless. A $T_m$ sweep run without
-the gate produced a false $\eta_\mathrm{ORC}$ optimum at 185 °C.
+It is the **largest single lever in the whole study**, and it is not
+close. Read the two maps together: $e'$ and the well count are very nearly
+reciprocal in $h_m$, because the latent inventory is what sets how much
+energy a metre of well holds, while $T_m$ mostly moves the *quality* of
+what comes back out.
 """))
 
 cells.append(code(r"""
-import CoolProp.CoolProp as CP
-c = B.Case()
-T_sat = CP.PropsSI('T', 'P', c.P, 'Q', 0, 'Water') - 273.15
-print(f'water at {c.P/1e5:.0f} bar saturates at {T_sat:.2f} C\n')
-print(f"{'T_4c [C]':>10}{'h [kJ/kg]':>12}   phase")
-for Tm in (150., 165., 175., 185., 200.):
-    T4c = Tm + c.DT_4C_M
-    h = CP.PropsSI('H', 'T', T4c + 273.15, 'P', c.P, 'Water') / 1e3
-    print(f'{T4c:>10.1f}{h:>12.1f}   '
-          + ('liquid' if T4c < T_sat else '*** SUPERHEATED STEAM ***'))
-print()
-for Tm in (150., 185.):
-    ok, why = S.feasibility(B, B.Case(T_m_C=Tm))
-    print(f'T_m = {Tm:5.1f} C -> feasible={ok}  {why[:78]}')
-"""))
+for r in RUNS['hm_Tm']:
+    r['h_m_kJ'] = r['h_m'] / 1000.0
+HK = tuple(h / 1000.0 for h in A.HM)
+fig, axes = plt.subplots(1, 3, figsize=(15.5, 4.3))
+for ax, z, lab, fmt, best in (
+        (axes[0], 'e_prime', r"$e'$ / kWh per m of well", '{:.3f}', 'max'),
+        (axes[1], 'wells_per_MWe', 'storage wells per MWe', '{:.0f}', 'min'),
+        (axes[2], 'loss', 'formation loss', '{:.3f}', 'min')):
+    BP.heatmap(RUNS['hm_Tm'], 'h_m_kJ', 'T_m_C', z, HK, A.TM, ax=ax,
+               cbar_label=lab, fmt=fmt, best=best)
+    ax.set_xlabel(r'latent heat $h_m$ / kJ kg$^{-1}$')
+    ax.set_ylabel(r'$T_m$ of the hottest layer / $^\circ$C')
+fig.tight_layout(); fig.savefig('map_hm.pdf'); plt.show()
 
-cells.append(md(r"""
-### 2.2 The model defaults describe an *isolated* well
-
-`Case()` ships with `n_wells_field=None`, `packing='disc'` and
-`fan_angle_deg=45`. That is the conservative bound, not the reference case.
-A sweep that forgets to override all three evaluates isolated wells and
-returns $\eta_\mathrm{RTE} \approx 0.06$ where the array gives 0.294 — a
-plausible-looking number that is simply a different machine.
-"""))
-
-cells.append(code(r"""
-d = B.Case()
-print('defaults :', {k: getattr(d, k) for k in
-                     ('n_wells_field', 'packing', 'n_islands', 'fan_angle_deg')})
-print('reference:', {k: v for k, v in arr.ARRAY.items() if k != 'n_segments'})
-print('\nalways pass the field explicitly, e.g. fixed=arr.ARRAY')
-"""))
-
-cells.append(md(r"""
-### 2.3 $N_\mathrm{lay}$ is confounded with the cascade span
-
-The span of the melting temperatures is one layer width short of the
-grading parameter, $\mathrm{span} = \Delta T_\mathrm{cascade}(N-1)/N$.
-Sweeping $N_\mathrm{lay}$ at fixed $\Delta T_\mathrm{3C,2C}$ therefore
-widens the span as well, and the apparent "fewer layers is better" is the
-span, not the count. Section 5 separates them.
-"""))
-
-cells.append(code(r"""
-print(f"{'N_lay':>6}{'span, free [K]':>16}{'DT_cascade to pin it':>24}")
-for n in arr.NL:
-    print(f'{n:>6}{55.0*(n-1)/n:>16.2f}{arr.SPAN0*n/(n-1):>24.2f}')
+h = RUNS['hm_Tm']
+row = sorted([x for x in h if x['T_m_C'] == 150.], key=lambda x: x['h_m'])
+col = sorted([x for x in h if abs(x['h_m'] - 380e3) < 1], key=lambda x: x['T_m_C'])
+print("along h_m at T_m = 150 C:")
+for x in row:
+    print(f"  h_m {x['h_m']/1000:5.0f} kJ/kg  e' {x['e_prime']:.3f}  "
+          f"wells/MWe {x['wells_per_MWe']:6.1f}  loss {x['loss']:.3f}")
+print(f"  -> a {row[-1]['h_m']/row[0]['h_m']:.1f}x change in h_m moves e' by "
+      f"{row[-1]['e_prime']/row[0]['e_prime']:.1f}x")
+print("\nalong T_m at h_m = 380 kJ/kg:")
+print(f"  e' spans {min(x['e_prime'] for x in col):.3f} to "
+      f"{max(x['e_prime'] for x in col):.3f}, a factor of "
+      f"{max(x['e_prime'] for x in col)/min(x['e_prime'] for x in col):.1f}")
 """))
 
 cells.append(md(r"""
 ---
-## 3. The configuration table
+## 5. Well geometry: length, layers and tubes
 
-The same fourteen field scenarios that `BOREAS_model.ipynb` computes in
-section 5, read here from cache in a second rather than recomputed in a
-quarter of an hour. Use whichever suits: that notebook is self-contained
-and slow, this one is fast and depends on the cache.
+The $L$ axis stops at the 5000 ft shoe. Two things to read off it.
 
-**array** and **fan** describe the trajectories --- vertical throughout,
-against deviating at half-angle $\theta$ below the kickoff. **disc**,
-**rows** and **ring** describe the plan view of the wellheads: a filled
-circle, two straight lines side by side, and the same double line closed
-into a loop. Every field case is one of each.
+**Depth is not free any more.** On the idealized geometry $e'$ was almost
+flat in $L$ — about 1 % across a fourfold range — and depth was a pure
+capital lever. At R4 it falls steadily, because past the kickoff each
+extra metre of measured depth buys less true vertical depth *and* sits in
+rock the neighbors no longer share.
+
+**One fin tube is a pumping failure, not a storage one.** Watch the
+$n_\mathrm{ft} = 1$ row: $\eta_\mathrm{RTE}$ goes *negative* by 1524 m.
+The store still delivers heat — $T_\mathrm{2d}$ is above
+$T_\mathrm{3d}$ — but with a single tube the flow per tube is three times
+the reference, the pressure drop goes as roughly the square of it, and by
+1524 m the borehole pumping is **284 % of the gross output**. The cell is
+printed rather than clipped, because a negative round trip is the honest
+statement of that design.
 """))
 
 cells.append(code(r"""
-import pandas as pd
-cfg_grid = [{k: v for k, v in d.items() if k != 'label'} for d in arr.CONFIGS]
-cfg = S.collect('config', cfg_grid, fixed=arr.CONFIG_FIXED)
-tab = {}
-for d, r in zip(arr.CONFIGS, cfg):
-    if not r.get('feasible'):
-        continue
-    tab[d['label']] = {'loss %': r['loss_pct'], 'eta_storage': r['eta_storage'],
-                       'eta_RTE': r['eta_RTE'], 'eps_cycled': r['eps_cycled'],
-                       'T_2d [C]': r['T_2d_realised_C'],
-                       'wells/MWe': r['wells_per_MWe']}
-print(f'{len(tab)} of {len(arr.CONFIGS)} configurations cached')
-display(pd.DataFrame(tab).T.round(4))
-"""))
-
-cells.append(md(r"""
-**Closing the rows into a ring buys almost nothing.** The ring is exposed
-on both faces, so its perimeter is the rim length twice over; against the
-double row it saves only the two end-caps, $2w_\mathrm{row}$ per island.
-That is 1.6 % of the perimeter at 1000 wells and 14 % at 100, where the
-caps are a larger share of a shorter row. The arrangement that matters is
-whether the wells are strung out at all, not how the line is closed.
-"""))
-
-cells.append(code(r"""
-import numpy as np
-m = {d['label']: r for d, r in zip(arr.CONFIGS, cfg) if r.get('feasible')}
-print(f"{'case':24s}{'rows':>9}{'ring':>9}{'disc':>9}   (loss %)")
-for stem in ('fan, 100 wells', 'fan, 1000 wells', 'fan, 1000, 70 deg',
-             'vertical array'):
-    vals = []
-    for pk in ('rows', 'ring', 'disc'):
-        r = m.get(f'{stem}, {pk}')
-        vals.append(f"{r['loss_pct']:9.1f}" if r else f"{'--':>9}")
-    print(f'{stem:24s}' + ''.join(vals))
-print()
-for N in (100., 1000.):
-    for pk, ni in (('disc', 1), ('rows', 4), ('ring', 4)):
-        cc = B.Case(n_wells_field=N, fan_angle_deg=0., packing=pk, n_islands=ni)
-        P0 = float(np.atleast_1d(B.field_perimeter(cc, 0.))[0])
-        print(f'  N={int(N):5d}  {pk:5s}  P0 = {P0:8.1f} m  '
-              f'-> {P0/N:.3f} m per well')
-"""))
-
-cells.append(md(r"""
----
-## 3. The maps, redrawn from the cache
-
-Nothing below computes. Each call is a dictionary lookup plus a plot.
-
-Highlighting follows the paper: the **reference** cell has its value in
-bold with a red outline, the **best** cell has its value in bold at a
-larger size. Values are printed on the cells because several of these maps
-are deliberately flat, and flatness cannot be judged from colour.
-"""))
-
-cells.append(code(r"""
-cas = S.collect('css', arr.CASCADE, fixed=arr.ARRAY)
-fig, axes = plt.subplots(1, 3, figsize=(15.0, 4.3))
-for ax, (z, cl, cm, bst) in zip(axes, [
-        ('eta_RTE', r'$\eta_\mathrm{RTE}$', 'viridis', 'max'),
-        ('kWh_per_m_well', r"$e'$ / kWh m$^{-1}$", 'magma', 'max'),
-        ('loss_frac', 'loss fraction', 'cividis', 'min')]):
-    _, Z = BP.heatmap(cas, 'DT_3C_2C', 'T_m_C', z, arr.DG, arr.TM, ax=ax,
-                      cmap=cm, cbar_label=cl, mark=(55.0, 150.0), best=bst)
-    ax.set_xlabel(r'$\Delta T_\mathrm{3C,2C}$ / K')
-    print(f'{z:16s} spread {BP.spread(Z):6.1f} %')
-axes[0].set_ylabel(r'$T_\mathrm{m}$ / $^\circ$C')
-fig.tight_layout(); fig.show()
-"""))
-
-cells.append(md(r"""
-**$\eta_\mathrm{RTE}$ and $e'$ optimise in opposite corners.** Efficiency
-peaks at a cool store with a narrow glide, capacity at a hot one. The
-reference case sits at neither. A narrower glide helps *both* at every
-storage temperature — there is no cell where 55 K beats 25 K — so if the
-55 K is set by the PCM selection rather than by choice, that belongs in the
-text.
-"""))
-
-cells.append(code(r"""
-ln = S.collect('css', arr.G_LN, fixed=arr.ARRAY_NOSEG)
-ft = S.collect('css', arr.G_FT, fixed=arr.ARRAY)
-fig, axes = plt.subplots(1, 3, figsize=(15.0, 4.3))
-_, Z1 = BP.heatmap(ln, 'L_ft', 'N_lay', 'kWh_per_m_well', arr.LW, arr.NL,
-                   ax=axes[0], cmap='magma', cbar_label=r"$e'$ / kWh m$^{-1}$",
-                   mark=(5000.0, 9))
+fig, axes = plt.subplots(1, 3, figsize=(15.5, 4.3))
+BP.heatmap(RUNS['L_Nlay'], 'L_md', 'N_lay', 'e_prime', A.LW_M, A.NL,
+           ax=axes[0], cbar_label=r"$e'$ / kWh m$^{-1}$", fmt='{:.3f}')
 axes[0].set_ylabel(r'$N_\mathrm{lay}$')
-_, Z2 = BP.heatmap(ln, 'L_ft', 'N_lay', 'eta_RTE', arr.LW, arr.NL, ax=axes[1],
-                   cmap='viridis', cbar_label=r'$\eta_\mathrm{RTE}$',
-                   mark=(5000.0, 9))
-_, Z3 = BP.heatmap(ft, 'L_ft', 'n_ft', 'eta_RTE', arr.LW, arr.NFT, ax=axes[2],
-                   cmap='viridis', cbar_label=r'$\eta_\mathrm{RTE}$',
-                   mark=(5000.0, 3))
-axes[2].set_ylabel(r'$n_\mathrm{ft}$')
-for a in axes: a.set_xlabel(r'$L$ / ft')
-fig.tight_layout(); fig.show()
+BP.heatmap(RUNS['L_Nlay'], 'L_md', 'N_lay', 'wells_per_MWe', A.LW_M, A.NL,
+           ax=axes[1], cbar_label='storage wells per MWe', fmt='{:.0f}',
+           best='min')
+axes[1].set_ylabel(r'$N_\mathrm{lay}$')
+BP.heatmap(RUNS['L_nft'], 'L_md', 'n_ft', 'RTE', A.LW_M, A.NFT, ax=axes[2],
+           cbar_label=r'$\eta_\mathrm{RTE}$', fmt='{:.3f}')
+axes[2].set_ylabel(r'fin tubes per well $n_\mathrm{ft}$')
+for ax in axes:
+    ax.set_xlabel('storage length $L$ / m MD')
+fig.tight_layout(); fig.savefig('map_geometry.pdf'); plt.show()
 
-# the separability result, stated as numbers rather than eyeballed
-for i, n in enumerate(arr.NL):
-    r_ = Z1[i][np.isfinite(Z1[i])]
-    print(f"  N_lay={n:>2}: e' varies {100*(r_.max()-r_.min())/r_.mean():5.2f} % across L")
-print(f"  across N_lay the same map spans {BP.spread(Z1):.1f} %")
-"""))
-
-cells.append(code(r"""
-wf = S.collect('css', arr.G_WF, fixed=arr.ARRAY_NOFAN)
-gl = S.collect('css', arr.G_GL, fixed=arr.ARRAY)
-fig, axes = plt.subplots(1, 3, figsize=(15.0, 4.3))
-BP.heatmap(wf, 'n_wells_field', 'fan_angle_deg', 'loss_frac', arr.NW, arr.FA,
-           ax=axes[0], cmap='cividis', cbar_label='loss fraction',
-           mark=(1000.0, 0.0), best='min')
-axes[0].set_ylabel(r'$\theta$ / deg')
-BP.heatmap(wf, 'n_wells_field', 'fan_angle_deg', 'eta_RTE', arr.NW, arr.FA,
-           ax=axes[1], cmap='viridis', cbar_label=r'$\eta_\mathrm{RTE}$',
-           mark=(1000.0, 0.0))
-for a in axes[:2]: a.set_xlabel(r'$N$ wells')
-BP.heatmap(gl, 'L_ft', 'grad_K_per_km', 'loss_frac', arr.LW, arr.GR,
-           ax=axes[2], cmap='cividis', cbar_label='loss fraction',
-           mark=(5000.0, 56.5), best='min')
-axes[2].set_ylabel(r'$G$ / K km$^{-1}$'); axes[2].set_xlabel(r'$L$ / ft')
-fig.tight_layout(); fig.show()
-"""))
-
-cells.append(md(r"""
-**These panels use the rows packing throughout**, so the 45° column is *not*
-comparable with the disc-packing fan rows of the paper's formation table.
-Mixing the two packings is how an earlier draft concluded that the array and
-the fan were "the same machine".
+print('pumping as a fraction of gross output, along the n_ft = 1 row:')
+for x in sorted([r for r in RUNS['L_nft'] if r['n_ft'] == 1],
+                key=lambda r: r['L_md']):
+    flag = '   <- net negative' if x['RTE'] < 0 else ''
+    print(f"  L {x['L_md']:6.0f} m   f_pump {x['f_pump']:6.3f}   "
+          f"RTE {x['RTE']:+7.4f}{flag}")
 """))
 
 cells.append(md(r"""
 ---
-## 4. Storage temperature
+## 6. The geothermal gradient
 
-Cheap: these are cycle-only evaluations, no borehole march. `auto_P` raises
-the loop pressure to keep the water liquid; the fixed-pressure branch goes
-infeasible past 165 °C and that is the point of plotting both.
+The gradient moves the rock temperature, not the resistance, so every
+column of this map shares one field solve. Hotter rock cuts the loss at
+every length — the store is less far above its surroundings — while buying
+very little extra capacity.
 """))
 
 cells.append(code(r"""
-Ts = [float(t) for t in range(105, 216, 5)]
-a_P = S.collect('cycle', [{'T_m_C': t, 'auto_P': True} for t in Ts])
-fixP = S.collect('cycle', [{'T_m_C': t} for t in Ts])
-fig, axes = plt.subplots(1, 3, figsize=(13.6, 4.0))
-_, info = BP.cycle_vs_Tm(a_P, fixP, B.Case(), axes=axes)
-fig.tight_layout(); fig.show()
-for k, v in info.items(): print(f'  {k:22s} {v}')
+fig, axes = plt.subplots(1, 2, figsize=(10.6, 4.3))
+BP.heatmap(RUNS['L_grad'], 'L_md', 'grad_K_per_km', 'loss', A.LW_M, A.GR,
+           ax=axes[0], cbar_label='formation loss', fmt='{:.3f}', best='min')
+BP.heatmap(RUNS['L_grad'], 'L_md', 'grad_K_per_km', 'e_prime', A.LW_M, A.GR,
+           ax=axes[1], cbar_label=r"$e'$ / kWh m$^{-1}$", fmt='{:.3f}')
+for ax in axes:
+    ax.set_xlabel('storage length $L$ / m MD')
+    ax.set_ylabel(r'geothermal gradient / K km$^{-1}$')
+fig.tight_layout(); fig.savefig('map_gradient.pdf'); plt.show()
 """))
 
 cells.append(md(r"""
 ---
-## 5. Breaking the $N_\mathrm{lay}$ / span confound
+## 7. Breaking the $N_\mathrm{lay}$ / span confound
 
-Pinning $\Delta T_\mathrm{cascade} = \mathrm{span}_0 N/(N-1)$ holds the span
-at the reference 48.9 K while the layer count varies. Setting
-`DT_cascade = DT_3C_2C` is a **no-op** — the model falls back to
-`DT_3C_2C` when `DT_cascade` is None, so passing the same value changes
-nothing. That mistake is why an earlier check reported no effect.
+$N_\mathrm{lay}$ cannot be swept honestly at a fixed grading. The cascade
+span is
+
+$$\mathrm{span} = \Delta T_\mathrm{cascade}\,\frac{N-1}{N}$$
+
+so raising $N$ at fixed $\Delta T_\mathrm{3C,2C}$ *widens the span at the
+same time*, and "more layers is better" may be nothing but the span. The
+fix is to pin $\Delta T_\mathrm{cascade} = \mathrm{span}_0\,N/(N-1)$,
+holding the span at the reference 48.9 K, and sweep $N$ alone.
+
+Run both and the confound is most of the effect.
 """))
 
 cells.append(code(r"""
-pin = sorted(S.collect('css', arr.G_NLPIN, fixed=arr.ARRAY_NOSEG),
-             key=lambda r: r['N_lay'])
-fm = {(r['L_ft'], r['N_lay']): r for r in ln}
-free = [fm[(5000.0, n)] for n in arr.NL]
-fig, ax = plt.subplots(1, 2, figsize=(9.6, 3.8))
-N = np.array(arr.NL)
-for a, key, lab in ((ax[0], 'eta_RTE', r'$\eta_\mathrm{RTE}$'),
-                    (ax[1], 'kWh_per_m_well', r"$e'$ / kWh m$^{-1}$")):
-    a.plot(N, [r[key] for r in free], 'o-', color=BP.RED, lw=1.8, ms=5,
-           label=r'$\Delta T_\mathrm{3C,2C}$ fixed (span varies)')
-    a.plot(N, [r[key] for r in pin], 's--', color=BP.NAVY, lw=1.8, ms=5,
-           label='span pinned at 48.9 K')
-    a.set_xlabel(r'$N_\mathrm{lay}$'); a.set_ylabel(lab); a.legend()
-fig.tight_layout(); fig.show()
+free = sorted(RUNS['Nlay_free'], key=lambda r: r['N_lay'])
+pin = sorted(RUNS['Nlay_pinned'], key=lambda r: r['N_lay'])
+fig, axes = plt.subplots(1, 3, figsize=(14.0, 4.0))
+for ax, z, lab in ((axes[0], 'e_prime', r"$e'$ / kWh m$^{-1}$"),
+                   (axes[1], 'RTE', r'$\eta_\mathrm{RTE}$'),
+                   (axes[2], 'span_K', 'cascade span / K')):
+    ax.plot([r['N_lay'] for r in free], [r[z] for r in free], 'o-',
+            color='#b03028', lw=1.8, ms=4, label='span free')
+    ax.plot([r['N_lay'] for r in pin], [r[z] for r in pin], 's--',
+            color='#23356b', lw=1.8, ms=4, label='span pinned at 48.9 K')
+    ax.set_xlabel(r'$N_\mathrm{lay}$'); ax.set_ylabel(lab)
+axes[0].legend(frameon=False, fontsize=8)
+fig.tight_layout(); fig.savefig('confound_Nlay.pdf'); plt.show()
 
-e_free = np.array([r['eta_RTE'] for r in free])
-e_pin = np.array([r['eta_RTE'] for r in pin])
-hi = [i for i, n in enumerate(arr.NL) if n >= 7]
-print(f'  free   spread over all N_lay : {100*(e_free.max()-e_free.min())/e_free.mean():5.2f} %')
-print(f'  pinned spread for N_lay >= 7 : '
-      f'{100*(e_pin[hi].max()-e_pin[hi].min())/e_pin[hi].mean():5.2f} %')
+ef = np.array([r['e_prime'] for r in free])
+ep = np.array([r['e_prime'] for r in pin])
+print(f"e' spread over N_lay = 3..15")
+print(f"  span free   {100*(ef.max()-ef.min())/ef.mean():6.2f} %")
+print(f"  span pinned {100*(ep.max()-ep.min())/ep.mean():6.2f} %")
+print(f"  -> {100*(1-((ep.max()-ep.min())/ep.mean())/((ef.max()-ef.min())/ef.mean())):.0f} % "
+      f"of the apparent layer-count effect is the span moving with it")
+print('\nWith the span held, the curve is still rising but has mostly')
+print('flattened by N = 9, which is the reference. The layer count is a')
+print('real but second-order lever; the span is the first-order one.')
 """))
 
 cells.append(md(r"""
 ---
-## 6. Extending or recomputing a grid
+## 8. What is not here
 
-**Cost first.** A cyclic steady-state point is ~30 s. The 180 points behind
-the maps are ~1.5 h serially, ~45 min on three workers. Cycle-only points
-are ~6 s.
-
-`run_grid` and `run_grid_parallel` are resumable and budgeted: they skip
-anything already cached, stop when `budget_s` is spent, and return how many
-remain. Call again to continue. Nothing is recomputed twice.
-
-The cell below is a **small** extension — four new glide values at the
-reference temperature, about two minutes — to show the mechanism without
-committing you to hours. Raise `budget_s` and widen the grid when you mean
-it.
-"""))
-
-cells.append(code(r"""
-EXTRA = [{'T_m_C': 150.0, 'DT_3C_2C': float(d), 'auto_P': True}
-         for d in (30, 35, 45, 50)]
-cache, done, left = S.run_grid_parallel('boreas', 'css', EXTRA,
-                                        fixed=arr.ARRAY, budget_s=150,
-                                        workers=3, verbose=True)
-rows = S.collect('css', EXTRA, fixed=arr.ARRAY)
-for r in sorted(rows, key=lambda r: r['DT_3C_2C']):
-    print(f"  glide {r['DT_3C_2C']:5.1f} K -> eta_RTE {r['eta_RTE']:.4f}, "
-          f"e' {r['kWh_per_m_well']:.4f}")
-print(f'\n{done} computed this call, {left} still to do '
-      f'(re-run this cell to continue)')
-"""))
-
-cells.append(md(r"""
----
-### What this notebook will not tell you
-
-- **Whether the optima are real optima.** The grids are 6×6. A maximum on a
-  coarse grid is a cell, not a stationary point.
-- **Anything about the arrangement of a diverging field.** $P(z)$ scales a
-  row perimeter with the fan radius, and wells spread over 6500 acres are
-  not in rows at depth. The rows and disc results bound the arrangement;
-  neither is the answer.
-- **Multi-year behaviour.** Every point is evaluated at one field age,
-  `t_operation_yr`. The loss falls as the rock warms, and that sweep has
-  not been run.
+- **SM Table S1**, the water-balance numbers and the glide-shortfall
+  example. They belong with the plant tables of the results pack rather
+  than with the maps, and they have not been moved to R4 yet.
+- **The field axes of the old notebook** — `n_wells_field`, `packing`,
+  `fan_angle_deg`. They are retired, not pending: the measured slot
+  positions replace all three, and the field ladder in
+  `BOREAS_model.ipynb` is where the geometry question is now answered.
+- **$k_\mathrm{rock}$ as a swept axis.** It would change
+  $R_{g,\mathrm{eff}}$, so it needs one field solve per value rather than
+  one per length, and nothing in the paper currently asks for it.
 """))
 
 nb = {'cells': cells,
-      'metadata': {'colab': {'provenance': [], 'toc_visible': True},
-                   'kernelspec': {'name': 'python3', 'display_name': 'Python 3'},
+      'metadata': {'kernelspec': {'display_name': 'Python 3',
+                                  'language': 'python', 'name': 'python3'},
                    'language_info': {'name': 'python'}},
-      'nbformat': 4, 'nbformat_minor': 0}
+      'nbformat': 4, 'nbformat_minor': 5}
 OUT.write_text(json.dumps(nb, indent=1))
-n_code = sum(1 for c in cells if c['cell_type'] == 'code')
-print(f'{OUT.name}: {len(cells)} cells, {n_code} code / {len(cells)-n_code} markdown')
+print(OUT)
+print(f'  {len(cells)} cells: {sum(1 for c in cells if c["cell_type"]=="code")}'
+      f' code / {sum(1 for c in cells if c["cell_type"]=="markdown")} markdown')
