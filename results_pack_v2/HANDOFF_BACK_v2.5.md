@@ -6,6 +6,11 @@
 §8 is closed. **Nothing in the supplementary material is still owed.**
 18 checks pass.
 
+**This note is not cumulative — read `HANDOFF_BACK_v2.4.md` first.** It
+answers §1–§7 and §10 of your review and is in the same zip; this one
+covers §8 and one correction. The *pack* is cumulative: v2.5 is a strict
+superset of v2.4, so the v2.4 zip can be discarded.
+
 ---
 
 ## Table S1 — `tab_states.tex`, label `tab:states`
