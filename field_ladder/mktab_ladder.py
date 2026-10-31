@@ -37,7 +37,8 @@ t = [packstamp.stamp().rstrip(),
      r'\emph{measured} slot spacing, \SI{1.65}{\meter}, so that the step '
      r'from them to the real positions isolates the layout.}',
      r'\label{tab:ladder}', r'\small',
-     r'\begin{tabular}{@{}l l r r r r r@{}}', r'\toprule',
+     r'\begin{tabular}{@{}l p{0.24\linewidth} r r r r r@{}}',
+     r'\toprule',
      r'step & configuration & loss [\si{\percent}] & $\eta_\mathrm{storage}$ '
      r'& $\eta_\mathrm{RTE}$ & $e^{\prime}$ [\si{\kilo\watt\hour\per\meter}] '
      r'& field [\si{\mega\watt\hour}] \\', r'\midrule']

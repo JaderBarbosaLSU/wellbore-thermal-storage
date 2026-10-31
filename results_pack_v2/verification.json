@@ -75,7 +75,7 @@
   "id": "V12",
   "check": "wells per MWe = t_dc / (e' L)",
   "pass_": true,
-  "detail": "47.243 vs 47.243, rel 1.11e-16"
+  "detail": "47.237 vs 47.237, rel 2.22e-16"
  },
  {
   "id": "V13",
@@ -96,9 +96,15 @@
   "detail": "diagonal 0.567 against a largest off-diagonal row sum of 3.73 m K/W"
  },
  {
+  "id": "V17",
+  "check": "n_ft x the per-tube integral equals dE per well",
+  "pass_": true,
+  "detail": "charge 3x1.4503 vs 4.3509 MWh (2.2e-16); discharge 3x0.6901 vs 2.0704 MWh (2.2e-16)"
+ },
+ {
   "id": "V16",
   "check": "every generated .tex was built from the current cache",
   "pass_": true,
-  "detail": "8 current  [cache fb413c5ce257fb51]"
+  "detail": "11 current  [cache fb413c5ce257fb51]"
  }
 ]

@@ -457,7 +457,8 @@ def well_profiles(r, case, field="T_fluid", axes=None, n_times=9,
                   figsize=None, cmap="viridis", ylabel=None,
                   title=None, staircase=False, scale=1.0, offset=0.0,
                   logy=False, vertical=True, depth_seg=None, depth_node=None,
-                  overlay=None, overlay_label=None, overlay_ls=(0, (2, 1.6))):
+                  overlay=None, overlay_label=None, overlay_ls=(0, (2, 1.6)),
+                  colorbar=False, depth_label=r"TVD / m"):
     """One field along the well at several times, charge and discharge.
 
     `r` must come from simulate_css_corrected(..., record=True).
@@ -474,7 +475,7 @@ def well_profiles(r, case, field="T_fluid", axes=None, n_times=9,
                               sharex=vertical, sharey=not vertical)
     cm = plt.get_cmap(cmap)
     qlabel = ylabel or field
-    dlabel = r"depth / m"
+    dlabel = depth_label
     for ax, half, lab in ((axes[0], "charge", "(a) charging"),
                           (axes[1], "discharge", "(b) discharging")):
         H, th = r[half]["history"], r[half]["t_hist"]
@@ -510,7 +511,12 @@ def well_profiles(r, case, field="T_fluid", axes=None, n_times=9,
             if logy:
                 ax.set_yscale("log")
     if vertical:
-        axes[0].set_ylabel(dlabel)
+        # Label BOTH panels when they are going to separate files: in
+        # per-panel mode there is no shared left-hand axis to carry it,
+        # and an unlabelled depth axis invites the reader to take TVD
+        # for the storage length.
+        for ax in (axes if colorbar else axes[:1]):
+            ax.set_ylabel(dlabel)
         zs = depth_seg if depth_seg is not None else r["charge"]["z"]
         for ax in axes:
             ax.set_ylim(max(zs) * 1.02, -0.02 * max(zs))   # 0 at the top
@@ -522,10 +528,26 @@ def well_profiles(r, case, field="T_fluid", axes=None, n_times=9,
     if staircase:
         axes[1].plot([], [], color="#1a1a1a", lw=1.1, ls=(0, (4, 2)),
                      label=r"$T_{m,k}$")
-    leg = axes[1].legend(title="time / min", ncol=2, fontsize=7.4,
-                         title_fontsize=7.8, loc="best", handlelength=1.6,
-                         labelspacing=0.25, columnspacing=1.0)
-    leg._legend_box.align = "left"
+    if colorbar:
+        # One key for both panels, on the right of (b): a nine-entry
+        # legend inside the axes covered the curves it was labeling.
+        import matplotlib as _mpl
+        th_all = r["charge"]["t_hist"]
+        sm = _mpl.cm.ScalarMappable(
+            cmap=cm, norm=_mpl.colors.Normalize(0.0, max(th_all) / 3600.0))
+        cb = axes[1].figure.colorbar(sm, ax=axes[1], pad=0.02)
+        cb.set_label("time from the start of the half-cycle / h",
+                     fontsize=8)
+        cb.ax.tick_params(labelsize=7.5)
+        if overlay or staircase:
+            axes[1].legend(fontsize=7.4, loc="best", handlelength=1.6,
+                           frameon=False)
+    else:
+        leg = axes[1].legend(title="time / min", ncol=2, fontsize=7.4,
+                             title_fontsize=7.8, loc="best",
+                             handlelength=1.6, labelspacing=0.25,
+                             columnspacing=1.0)
+        leg._legend_box.align = "left"
     if title:
         axes[0].figure.suptitle(title, y=0.99)
     return axes
@@ -546,14 +568,15 @@ def well_integrals(r, case, axes=None, figsize=(11.6, 4.2),
                           (axes[1], "discharge", "(b) discharging")):
         H, th, z = r[half]["history"], r[half]["t_hist"], r[half]["z"]
         dz = z[1] - z[0]
-        q = np.asarray(H["q_prime"], float).sum(axis=1) * dz / 1e3   # kW/well
-        # Per FIN TUBE when asked: q_prime is the heat per unit length
-        # of the whole well, so the per-tube rate is this over n_ft.
-        # The paper reports per tube because that is the unit the flow
-        # is pinned in, and the only one that transfers to a well with
-        # a different tube count.
-        if per_tube:
-            q = q / case.n_ft
+        # q_prime is ALREADY per unit length of FIN TUBE -- Eq. (ode) is
+        # written per tube and K_j is per tube length -- so the per-tube
+        # rate is the bare sum and the PER WELL rate is n_ft times it.
+        # v2.3 divided by n_ft here, which made the plotted rates a
+        # factor of three low. Checked against the budget: n_ft times
+        # Q_cum_J reproduces dE_ch and dE_dc per well exactly.
+        q = np.asarray(H["q_prime"], float).sum(axis=1) * dz / 1e3  # kW/tube
+        if not per_tube:
+            q = q * case.n_ft
         eps = np.asarray(H["A_melt"], float).mean(axis=1) / A_avail
         ax.plot(th / 60.0, q, color=RED, lw=1.8)
         ax.set_xlabel("time / min")

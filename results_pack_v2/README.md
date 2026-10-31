@@ -1,4 +1,4 @@
-# BOREAS results pack v2.3
+# BOREAS results pack v2.4
 
 Generated from `pack_runs.json` by `pack_writer.py`, `cutoffs.py`,
 `mktab_ladder.py`, `mknumbers.py` and `verify.py`. Nothing in this pack is
@@ -271,10 +271,44 @@ one: the round trip more than halves.
 2e-16, identical per-MWe quantities to 1.2e-11, and N_wells scaling
 10.000000×. The 1 MW runs in this pack are valid at any plant size.
 
-## 7. Still owed
+## 7. What is here, and what is still owed
 
-`BOREAS_parametric.ipynb` — the maps, the T_m study (to be capped at
-160 °C), the h_m study and the N_lay confound — is still on the idealized
-geometry, as are SM Table S1, the water-balance numbers and the
-glide-shortfall example. The T–s figure, the profiles and the animation are
-already at R4.
+**Delivered in v2.4:** the T–s figure at R4
+(`BOREAS_Ts_combined_water.pdf`, drawn at the *realised* outlet, 116.54 °C
+against the provisional 146.11 °C); the four section 4.3 profile figures
+at R4, one PDF per panel, with the rates **per fin tube** and the depth
+axis labelled TVD; the section 3.4 water balance and glide shortfall
+(`boreas_water_numbers.tex`); and the section 10 checks
+(`boreas_orange_numbers.tex`).
+
+`BOREAS_parametric.ipynb` is at R4 — that moved in the parametric pack
+and this README said otherwise until now.
+
+**Still owed:** SM Table S1, and Video S1 at R4. The animation helper
+exists in `boreas_plots` but no animation is shipped in this pack.
+
+### A correction worth reading before the rates are used
+
+v2.3 divided the per-tube heat rate by `n_ft` on top of `q_prime`, which
+is **already per unit length of fin tube**. The plotted rates were a
+factor of three low and the half-cycle means were arithmetic means over a
+logarithmic grid, which weights the first minute as heavily as the last
+two hours. Both are fixed, and **V17** gives the rates the independent
+reference they lacked: `n_ft` times the exact per-tube integral must equal
+ΔE per well, and it does to 2×10⁻¹⁶.
+
+### On the integrator
+
+`advance_segment` solves dE/dt = K(T₀ − T_pcm(E)) **in closed form inside
+each enthalpy branch**, so there is no explicit-stability limit and
+Δt/τ = 61.6 at the last step is not a stability number. The error lives
+at branch crossings only; measured against 2×10⁵ substeps of itself, the
+worst relative enthalpy error is 5×10⁻¹¹.
+
+### On the grid
+
+Doubling the segment count moves the loss by 0.17 points and e′ by
+−0.7 %; doubling the time levels moves them by 0.18 points and −1.0 %. The
+shipped grid is therefore good to a few tenths of a point of loss and
+about 1 % of e′ — not better, and the pack says so rather than implying
+convergence it does not have.

@@ -1,5 +1,5 @@
 """V1-V13. Every one an assertion, and every one printed with its margin."""
-import json, math
+import json, math, os
 import numpy as np
 import boreas as B, boreas_ground as G
 
@@ -212,6 +212,29 @@ check('V15', 'the diagonal is NOT dominant, so CG would be invalid',
 # Stale LaTeX is still valid LaTeX, so nothing caught it until the paper
 # printed 97.7 MWh beside a CSV that said 97.592. Each generator now
 # stamps the SHA-256 of the cache it read, and this compares them.
+# ---- V17: the plotted rates integrate to the budget ------------------
+# v2.3 divided the per-tube rate by n_ft on top of q_prime, which is
+# ALREADY per fin tube, and the figures came out a factor of three low.
+# Nothing caught it because a rate curve has no independent reference.
+# This gives it one: n_ft times the exact cumulative must be the energy
+# the budget reports per well.
+import pickle as _pk
+if os.path.exists('rec_field.pkl'):
+    _rec = _pk.load(open('rec_field.pkl', 'rb'))['rec']
+    _c = case(1250.0)
+    _worst = 0.0
+    _det = []
+    for _half, _key in (('charge', 'Q_charge_kJ'),
+                        ('discharge', 'Q_discharge_kJ')):
+        _tube = abs(_rec[_half]['Q_cum_J']) / 3.6e9          # MWh per tube
+        _well = abs(_rec[_key]) / 3.6e6 / _rec['N_wells']    # MWh per well
+        _rel = abs(_c.n_ft * _tube / _well - 1.0)
+        _worst = max(_worst, _rel)
+        _det.append(f'{_half} {_c.n_ft}x{_tube:.4f} vs {_well:.4f} MWh '
+                    f'({_rel:.1e})')
+    check('V17', 'n_ft x the per-tube integral equals dE per well',
+          _worst < 1e-9, '; '.join(_det))
+
 import packstamp
 stale, unstamped, fresh = packstamp.check('results_pack_v2')
 detail = f'{len(fresh)} current'

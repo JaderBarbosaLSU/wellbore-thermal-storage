@@ -594,7 +594,8 @@ def compute_U_i(h_i, r_i, r_e, k_w, Rf_i_prime, k_m, delta, L_tube, fin_t, fin_L
 # ==========================================================================
 
 
-def calculate_pressure_drop(geom_par_vector, m_dot_well_tube, fluid, T_inlet, T_outlet, P_inlet):
+def calculate_pressure_drop(geom_par_vector, m_dot_well_tube, fluid, T_inlet,
+                            T_outlet, P_inlet, n_bends=2):
     """
     Calculates the pressure drop and pumping power in a single tube of the hairpin heat exchanger.
 
@@ -716,7 +717,14 @@ def calculate_pressure_drop(geom_par_vector, m_dot_well_tube, fluid, T_inlet, T_
     K_bend_180 = 2.2 # 180 degree standard elbow/bend
     K_exit = 1.0 # Exit into a large reservoir/pipe
 
-    K_total = K_entrance + 2 * K_bend_180 + K_exit # For one hairpin (two tubes and two bends)
+    # For one HAIRPIN: two tubes and two bends. BOREAS is not a hairpin --
+    # its fin tube and its downcomer are two legs sharing ONE bottom
+    # manifold -- so borehole_pumping asks for the bend allowance on the
+    # fin-tube leg only and passes n_bends = 0 for the downcomer.
+    # Measured at the reference case: the duplicate was worth 0.06 points
+    # of f_pump and nothing on eta_RTE or e' to four decimals, friction
+    # over L/D ~ 3e4 being three orders larger than any minor loss.
+    K_total = K_entrance + n_bends * K_bend_180 + K_exit
 
     delta_P_minor = K_total * 0.5 * rho * u**2
 
@@ -2829,12 +2837,16 @@ def borehole_pumping(case, r):
     gv_id[3] = case.r_id_bore                    # r_i
     gv_id[5] = 2.0 * case.r_id_bore              # D_i_tube, what the drop uses
     gv_id[8], gv_id[9] = 0.0, 0                  # no fins inside the downcomer
+    # n_bends = 0: the 180 deg turn at the bottom is ONE fitting shared by
+    # the fin tube and the downcomer, and it is already counted on the
+    # fin-tube leg above. Counting it on both legs charged the well four
+    # bends where it has two.
     _, pid_ch = calculate_pressure_drop(gv_id, r["m1_ch"] * case.n_ft,
                                         case.fluid2, T["T_4c"],
-                                        T["T_4c"], case.P)
+                                        T["T_4c"], case.P, n_bends=0)
     _, pid_dc = calculate_pressure_drop(gv_id, r["m1_dc"] * case.n_ft,
                                         case.fluid2, T["T_3d"],
-                                        T["T_3d"], case.P)
+                                        T["T_3d"], case.P, n_bends=0)
     f_id = N / 1000.0                            # ONE downcomer per well
     return pp_ch * f + pid_ch * f_id, pp_dc * f + pid_dc * f_id
 

@@ -1,0 +1,26 @@
+{
+ "adiabatic": {
+  "T_lim_C": 98.9073275211457,
+  "T_out_end_C": 131.64231818097454,
+  "T2d_mean_C": 139.53819924809443,
+  "energy_share_pct": 0.0,
+  "time_share_pct": 0.0,
+  "rate_at_crossing_kW": 0.0
+ },
+ "R4": {
+  "T_lim_C": 95.01514921553041,
+  "T_out_end_C": 92.03054123393366,
+  "T2d_mean_C": 116.54400258952484,
+  "energy_share_pct": 0.014478645173199793,
+  "time_share_pct": 11.793105859473833,
+  "rate_at_crossing_kW": 0.07550929318785299
+ },
+ "R3": {
+  "T_lim_C": 98.15300595319928,
+  "T_out_end_C": 118.85776000819425,
+  "T2d_mean_C": 135.25360118759198,
+  "energy_share_pct": 0.0,
+  "time_share_pct": 0.0,
+  "rate_at_crossing_kW": 0.0
+ }
+}

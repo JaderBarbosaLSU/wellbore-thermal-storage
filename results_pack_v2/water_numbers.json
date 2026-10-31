@@ -1,0 +1,12 @@
+{
+ "WaterChVelocity": "0.811",
+ "WaterChTransit": "25.7",
+ "WaterDcVelocity": "0.816",
+ "WaterDcTransit": "25.5",
+ "WaterTransitOverHalfCycle": "0.0428",
+ "WaterCapacityRatio": "0.76",
+ "GlideShortfallEnergy": "0.4758",
+ "GlideShortfallTemp": "0.5202",
+ "GlideSpan": "48.89",
+ "GlideDeltaT": "25.43"
+}

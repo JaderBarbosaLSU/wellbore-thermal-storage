@@ -141,11 +141,16 @@ def fig_Rg(profiles):
         ax.legend(frameon=False, fontsize=8)
 
     def b(ax):
-        for step, col in (('R4_kop300', '#0a9396'), ('R4_th45', GREEN),
-                          ('R4_th70', RED)):
+        # Readable labels, not run names, and the reference curve for
+        # comparison -- the sensitivities mean nothing without it.
+        SENS = (('R4', '#1a1a1a', 'reference (R4)', 2.0),
+                ('R4_kop300', '#0a9396', r'KOP 300 ft (all wells)', 1.6),
+                ('R4_th45', GREEN, r'hold 45$^\circ$', 1.6),
+                ('R4_th70', RED, r'hold 70$^\circ$', 1.6))
+        for step, col, lab, lw in SENS:
             if step in profiles:
                 md, rg = profiles[step]
-                ax.plot(rg, md, color=col, lw=1.6, label=step)
+                ax.plot(rg, md, color=col, lw=lw, label=lab)
         ax.invert_yaxis(); ax.set_xscale('log')
         ax.set_xlabel(r'$R_{g,\mathrm{eff}}$  /  m K W$^{-1}$')
         ax.set_ylabel('MD / m')

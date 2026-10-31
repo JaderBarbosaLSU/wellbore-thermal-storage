@@ -91,19 +91,23 @@ def main():
     dseg, dnode = depth_axes()
     print(f'depth runs {dseg[0]:.0f} m (bottom) -> {dseg[-1]:.0f} m (top)')
 
+    # Temperatures in DEGREES CELSIUS, depth labelled TVD (it reaches
+    # 891 m at 1250 m MD, so a reader must not take it for the storage
+    # length), and the time key as a colorbar on panel (b) only.
     two_panel('BOREAS_prof_Tfluid', lambda ax: BP.well_profiles(
         rec, CASE, field='T_fluid', axes=ax, vertical=True,
         depth_seg=dseg, depth_node=dnode, overlay='T_pcm',
-        overlay_label=r'$T_\mathrm{pcm}$'))
+        overlay_label=r'$T_\mathrm{pcm}$', offset=-273.15,
+        ylabel=r'temperature / $^\circ$C', colorbar=True))
     two_panel('BOREAS_prof_melt', lambda ax: BP.well_profiles(
         rec, CASE, field='A_melt', axes=ax, vertical=True,
         depth_seg=dseg, depth_node=dnode,
         scale=1.0 / BP.pcm_capacities_A(CASE),
-        ylabel='melted fraction'))
+        ylabel='melted fraction of the PCM', colorbar=True))
     two_panel('BOREAS_prof_Ui', lambda ax: BP.well_profiles(
         rec, CASE, field='U_i', axes=ax, vertical=True,
         depth_seg=dseg, depth_node=dnode,
-        ylabel=r'$U_i$ / W m$^{-2}$ K$^{-1}$'))
+        ylabel=r'$U_i$ / W m$^{-2}$ K$^{-1}$', colorbar=True))
     two_panel('BOREAS_prof_integrals', lambda ax: BP.well_integrals(
         rec, CASE, axes=ax, per_tube=True, titles=False), size=(4.9, 3.9))
 
@@ -127,9 +131,17 @@ def main():
         'largest subcooling at the end of discharge, K')
     add('SubcoolMean', float(sub.mean()), '{:.1f}', '')
 
-    add('EpsCh', float(rec['charge']['eps_local'].mean()), '{:.4f}',
-        'mean cycled fraction, charge')
-    add('EpsDc', float(rec['discharge']['eps_local'].mean()), '{:.4f}', '')
+    # NOT the cycled fraction. eps is the RESIDUAL melted fraction at the
+    # end of each half-cycle; the fraction actually cycled is the
+    # difference, about 0.58 here. A small eps_dc means the store refroze
+    # almost completely, which is the intended behaviour, not a failure.
+    e_ch = float(rec['charge']['eps_local'].mean())
+    e_dc = float(rec['discharge']['eps_local'].mean())
+    add('EpsCh', e_ch, '{:.4f}', 'melted fraction at the END OF CHARGE')
+    add('EpsDc', e_dc, '{:.4f}',
+        'residual melted fraction at the END OF DISCHARGE')
+    add('EpsCycled', e_ch - e_dc, '{:.4f}',
+        'the fraction actually cycled, eps_ch - eps_dc')
 
     U = {h: np.asarray(rec[h]['history']['U_i'], float) for h in
          ('charge', 'discharge')}
@@ -143,16 +155,57 @@ def main():
     add('UiMeanToSurface', float(allU.mean() / U['charge'][-1, -1]),
         '{:.2f}', 'mean over surface-end value')
 
+    # RATES PER FIN TUBE. q_prime is already per unit length of fin tube
+    # (Eq. ode is written per tube, K_j is per tube length), so the
+    # per-tube rate is the bare sum -- v2.3 divided by n_ft on top of
+    # that and came out a factor of three low.
+    #
+    # The MEAN is step-weighted. The record grid is logarithmic, 41
+    # points whose steps run from 0.3 s to 8491 s, so an arithmetic mean
+    # over it weights the first minute as heavily as the last two hours.
+    # For the discharge, which collapses to near zero in the last
+    # quarter, that is the difference between -125 and -62 kW.
+    trapz = getattr(np, 'trapezoid', None) or np.trapz
     for half, tag in (('charge', 'Ch'), ('discharge', 'Dc')):
         H = rec[half]['history']
         z = rec[half]['z']
         dz = z[1] - z[0]
-        q = np.asarray(H['q_prime'], float).sum(axis=1) * dz / 1e3 / CASE.n_ft
+        th = np.asarray(rec[half]['t_hist'], float)
+        q = np.asarray(H['q_prime'], float).sum(axis=1) * dz / 1e3
         add(f'Rate{tag}Start', float(q[0]), '{:.1f}',
             f'{half} rate per fin tube at the start, kW')
         add(f'Rate{tag}End', float(q[-1]), '{:.1f}', 'at the end')
-        add(f'Rate{tag}Mean', float(q.mean()), '{:.1f}',
-            'half-cycle average')
+        add(f'Rate{tag}Mean', float(trapz(q, th) / (th[-1] - th[0])),
+            '{:.1f}', 'half-cycle average, STEP-WEIGHTED')
+        add(f'Rate{tag}MeanPerWell',
+            float(CASE.n_ft * trapz(q, th) / (th[-1] - th[0])), '{:.0f}',
+            'the same per well')
+
+    # ---- how much of the discharge arrives below the ORC's reach ------
+    # The plant model evaluates the ORC at the flow-averaged T_2d with a
+    # fixed evaporating temperature. Late in the discharge the outlet
+    # falls below T_3e + DT_pinch, and an evaporator at that pressure
+    # cannot take the heat. This is the share of dE_dc delivered there.
+    rank = rec['rank']
+    T_lim = rank['T_3e'] - 273.15 + CASE.DT_pinch_ORC
+    add('TlimORC', T_lim, '{:.1f}',
+        'T_3e + DT_pinch_ORC, the lowest outlet the ORC can use, C')
+    H = rec['discharge']['history']
+    z = rec['discharge']['z']
+    th = np.asarray(rec['discharge']['t_hist'], float)
+    q = np.abs(np.asarray(H['q_prime'], float).sum(axis=1) * (z[1] - z[0]))
+    # T_out is recorded once per step, so it is one shorter than t_hist;
+    # pad with the initial outlet so the mask lines up with the rate.
+    Tout = np.asarray(rec['discharge']['T_out'], float) - 273.15
+    if len(Tout) == len(th) - 1:
+        Tout = np.r_[Tout[0], Tout]
+    below = Tout < T_lim
+    tot = trapz(q, th)
+    share = trapz(np.where(below, q, 0.0), th) / tot if tot else float('nan')
+    add('BelowPinchShare', 100 * share, '{:.1f}',
+        'share of dE_dc delivered with T_2d(t) below that limit, %')
+    add('ToutDcEnd', float(Tout[-1]), '{:.1f}',
+        'discharge outlet at the end, C')
 
     bad = [n for n, (v, _) in M.items() if v.strip().lower()
            in ('nan', 'inf', '-inf', '')]
