@@ -505,8 +505,16 @@ def reference_field(B, case, csv, island='Grissom', trajectory='s_curve',
 # reference_field tries several station counts before one solves cleanly.
 # That is fine in a batch runner and absurd in the first cell of a
 # notebook, so the result is cached by the SPECIFICATION it came from.
-_REF_URL = ('https://raw.githubusercontent.com/JaderBarbosaLSU/'
-            'wellbore-thermal-storage/notebook-model/field_ladder/')
+# WHICH COMMIT the cached field is fetched from. A branch tracks the live
+# line; a TAG freezes it. A notebook pinned to a tag sets GITREF here too,
+# otherwise it would download a field solve from a moving branch while
+# believing itself frozen.
+GITREF = 'notebook-model'
+
+
+def _ref_url():
+    return ('https://raw.githubusercontent.com/JaderBarbosaLSU/'
+            f'wellbore-thermal-storage/{GITREF}/field_ladder/')
 
 
 def _ref_key(case, island, trajectory, kop_rule, theta_max, kop_ft, L,
@@ -547,7 +555,7 @@ def cached_reference_field(B, case, csv, cache_dir='.', fetch=True,
     path = os.path.join(cache_dir, key + '.npz')
     if not os.path.exists(path) and fetch:
         try:
-            urllib.request.urlretrieve(_REF_URL + key + '.npz', path)
+            urllib.request.urlretrieve(_ref_url() + key + '.npz', path)
         except Exception:
             pass
     if os.path.exists(path):

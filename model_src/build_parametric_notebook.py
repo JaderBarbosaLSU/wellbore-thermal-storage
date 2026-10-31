@@ -7,14 +7,18 @@ can change about it is the storage length.
 """
 import datetime as _dt
 import json
+import os
 import pathlib
+
+# See the note in build_boreas_notebook.py: a branch tracks, a tag freezes.
+GITREF = os.environ.get('BOREAS_GITREF', 'notebook-model')
 
 STAMP = (_dt.datetime.utcnow() - _dt.timedelta(hours=3)).strftime(
     '%Y-%m-%d %H:%M BRT')
 SRC = pathlib.Path('/tmp/par')
 OUT = pathlib.Path('/tmp/par/BOREAS_parametric.ipynb')
 RAW = ('https://raw.githubusercontent.com/JaderBarbosaLSU/'
-       'wellbore-thermal-storage/notebook-model/')
+       'wellbore-thermal-storage/' + GITREF + '/')
 
 
 def md(t):
@@ -93,8 +97,14 @@ hour, and nothing here needs recomputing to be read.
 
 cells.append(code(r"""
 import os, urllib.request
+
+# WHICH COMMIT THIS NOTEBOOK DOWNLOADS FROM.
+#   a BRANCH name tracks the live line and changes under you;
+#   a TAG is frozen for ever.
+# Your copy was built pinned to the value below.
+GITREF = '@@GITREF@@'
 RAW = ('https://raw.githubusercontent.com/JaderBarbosaLSU/'
-       'wellbore-thermal-storage/notebook-model/')
+       'wellbore-thermal-storage/' + GITREF + '/')
 FILES = [('model_src/boreas.py',            'boreas.py'),
          ('model_src/boreas_plots.py',      'boreas_plots.py'),
          ('field_ladder/boreas_ground.py',  'boreas_ground.py'),
@@ -106,7 +116,9 @@ FILES = [('model_src/boreas.py',            'boreas.py'),
 for remote, local in FILES:
     if not os.path.exists(local):
         urllib.request.urlretrieve(RAW + remote, local)
-print('fetched', len(FILES), 'files')
+import boreas_ground as _G0
+_G0.GITREF = GITREF        # the cached field solve, from the same ref
+print(f'fetched {len(FILES)} files from {GITREF}')
 """))
 
 cells.append(code(r"""
@@ -379,6 +391,9 @@ nb = {'cells': cells,
                                   'language': 'python', 'name': 'python3'},
                    'language_info': {'name': 'python'}},
       'nbformat': 4, 'nbformat_minor': 5}
+for _c in cells:
+    _c['source'] = [l.replace('@@GITREF@@', GITREF)
+                    for l in _c['source']]
 OUT.write_text(json.dumps(nb, indent=1))
 print(OUT)
 print(f'  {len(cells)} cells: {sum(1 for c in cells if c["cell_type"]=="code")}'

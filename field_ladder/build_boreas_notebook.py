@@ -7,7 +7,15 @@ that the hairpin model stays runnable.
 """
 import datetime as _dt
 import json
+import os
 import pathlib
+
+# WHICH COMMIT THE NOTEBOOK FETCHES FROM. A branch name tracks the live
+# line; a TAG freezes it. The student's copy is built with a tag so that
+# nothing we push afterwards can change what his notebook downloads --
+# without this the fetch URLs point at a moving branch and a "frozen"
+# snapshot is not frozen at all.
+GITREF = os.environ.get('BOREAS_GITREF', 'notebook-model')
 
 STAMP = (_dt.datetime.utcnow() - _dt.timedelta(hours=3)).strftime(
     '%Y-%m-%d %H:%M BRT')
@@ -113,13 +121,22 @@ notebook is a copy that goes stale.
 """))
 cells.append(code(r"""
 import os, urllib.request
+
+# WHICH COMMIT THIS NOTEBOOK DOWNLOADS FROM.
+#   a BRANCH name tracks the live line and changes under you;
+#   a TAG is frozen for ever.
+# Your copy was built pinned to the value below. Changing it repoints
+# every download in this notebook at once.
+GITREF = '@@GITREF@@'
+RAW = ('https://raw.githubusercontent.com/JaderBarbosaLSU/'
+       'wellbore-thermal-storage/' + GITREF + '/')
+
 CSV = 'THUMS_wells_WellSTAR_clean.csv'
 if not os.path.exists(CSV):
-    urllib.request.urlretrieve(
-        'https://raw.githubusercontent.com/JaderBarbosaLSU/'
-        'wellbore-thermal-storage/notebook-model/field_ladder/' + CSV, CSV)
+    urllib.request.urlretrieve(RAW + 'field_ladder/' + CSV, CSV)
 import boreas_ground as G
-print('slot data ready')
+G.GITREF = GITREF          # the cached field solve comes from the same ref
+print(f'slot data ready  (fetched from {GITREF})')
 """))
 
 cells.append(code(r"""
@@ -767,7 +784,7 @@ PACK = 'pack_runs.json'
 if not os.path.exists(PACK):
     urllib.request.urlretrieve(
         'https://raw.githubusercontent.com/JaderBarbosaLSU/'
-        'wellbore-thermal-storage/notebook-model/field_ladder/' + PACK, PACK)
+        RAW + 'field_ladder/' + PACK, PACK)
 RUNS = [r for r in json.load(open(PACK)).values() if 'error' not in r]
 print(f'{len(RUNS)} runs in the cache')
 
@@ -1598,6 +1615,9 @@ nb = {'cells': cells,
       'nbformat': 4, 'nbformat_minor': 0}
 
 OUT.parent.mkdir(parents=True, exist_ok=True)
+for _c in cells:
+    _c['source'] = [l.replace('@@GITREF@@', GITREF)
+                    for l in _c['source']]
 OUT.write_text(json.dumps(nb, indent=1))
 n_code = sum(1 for c in cells if c['cell_type'] == 'code')
 print(f'{OUT.name}')
