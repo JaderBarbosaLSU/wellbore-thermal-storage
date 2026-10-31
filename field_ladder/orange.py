@@ -49,7 +49,17 @@ if not have('RefTfTop'):
     Tf = Tf - 273.15
     add('RefTfBottom', float(Tf[0]), '{:.1f}', 'formation T, bottom, C')
     add('RefTfTop', float(Tf[-1]), '{:.1f}', 'formation T, top, C')
-    add('RefTvdBottom', float(tvd[-1]), '{:.0f}', 'TVD at the bottom, m')
+    # the trajectory at md = L, not the last station centre
+    import boreas_ground as _G
+    _P = _G.grissom_positions(CSV)
+    _k, _ = _G.staggered_kop(_P)
+    _md, _X = _G.trajectories(_P, L_MD, kind='s_curve', kop=_k,
+                              theta_max=55.0)
+    add('RefTvdBottom', float(_X[:, -1, 2].mean()), '{:.0f}',
+        'TVD at the bottom of the store, md = L, m')
+    add('RefTvdLastStation', float(tvd[-1]), '{:.0f}',
+        'TVD at the last station centre -- what v2.3 and earlier called '
+        'tvd_bottom')
     print(f'formation {Tf[-1]:.1f} (top) to {Tf[0]:.1f} C (bottom)',
           flush=True)
 

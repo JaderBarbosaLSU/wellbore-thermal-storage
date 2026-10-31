@@ -1,4 +1,4 @@
-# BOREAS results pack v2.4
+# BOREAS results pack v2.5
 
 Generated from `pack_runs.json` by `pack_writer.py`, `cutoffs.py`,
 `mktab_ladder.py`, `mknumbers.py` and `verify.py`. Nothing in this pack is
@@ -284,8 +284,25 @@ axis labelled TVD; the section 3.4 water balance and glide shortfall
 `BOREAS_parametric.ipynb` is at R4 — that moved in the parametric pack
 and this README said otherwise until now.
 
-**Still owed:** SM Table S1, and Video S1 at R4. The animation helper
-exists in `boreas_plots` but no animation is shipped in this pack.
+**Delivered in v2.5:** **Table S1** (`tab_states.tex`, label
+`tab:states`) — the 13 state points of both cycles at R4, at the realised
+outlet — and **Video S1** (`BOREAS_cycle.mp4`, `.gif`), the full cycle
+rendered inside `field_ground` so its ordinate is true vertical depth.
+
+Nothing in the supplementary material is still owed.
+
+### One correction in v2.5: `tvd_bottom` meant the wrong depth
+
+It was `pr['tvd'][-1]`, the TVD at the last **station centre**. At
+Δs = 50 m that is MD = 1225 m, so the reference case was reported 18 m too
+shallow: **909 m, not 891 m**, at the bottom of the store. The vertical
+rungs were reported at 1225 m where they reach 1250 m. Corrected at the
+source and throughout; the old value is kept as `tvd_last_station`.
+
+It is a reporting quantity only — the solver places each station at its
+own depth and never used this number — so no run was recomputed. Five
+macros moved: `\RefTvd`, `\LadderTvdRFour` (891 → 909) and
+`\LadderTvdR{One,Two,Three}` (1225 → 1250).
 
 ### A correction worth reading before the rates are used
 

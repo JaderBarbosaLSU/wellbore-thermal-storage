@@ -478,12 +478,17 @@ def reference_field(B, case, csv, island='Grissom', trajectory='s_curve',
             f'negative at L = {L:.0f} m with ds = {ds or DS_STATION:.0f} m '
             f'({nst} stations). This is a geometry or kernel problem; do '
             f'not work around it by changing the station count.')
+    # tvd_bottom is the TVD at the BOTTOM OF THE STORE, md = L, taken
+    # from the trajectory. It used to be pr['tvd'][-1], the TVD at the
+    # last STATION CENTRE -- at ds = 50 m that is md = 1225 m, so the
+    # reference case was reported 18 m too shallow, 891 against 909.
     info = dict(N=len(P), L_md=L, n_stations=nst,
                 ds_station=float(ds or DS_STATION),
+                tvd_last_station=float(pr['tvd'][-1]),
                 off_station_weight=gr.off_station_weight, R_near=R_near,
                 Rg_mean=float(_np.mean(pr['temp'])),
                 Rg_top=float(pr['temp'][0]), Rg_bottom=float(pr['temp'][-1]),
-                tvd_bottom=float(pr['tvd'][-1]), island=island,
+                tvd_bottom=float(X[:, -1, 2].mean()), island=island,
                 trajectory=trajectory, kop_rule=kop_rule,
                 theta_max=theta_max, positions=P, kop=kop)
     if verbose:
@@ -609,6 +614,14 @@ def field_ground(B, md, Rg, tvd):
             return T[::-1].copy(), mdv[::-1].copy()
         return T, mdv
 
+    # A TVD mapping for the PLOTTING layer. formation_profile's second
+    # return value has to stay MEASURED depth, because fres interpolates
+    # R_g,eff against it -- but a figure drawn on that axis shows a
+    # 1250 m well where the S-curve reaches 891 m. depth_axis picks this
+    # up when present, so every figure and the animation get TVD without
+    # the solver's own lookup changing at all.
+    B._boreas_tvd_of = _tvd
+
     def fres(c, depth=None):
         if depth is None:
             return fr0(c)
@@ -621,3 +634,5 @@ def field_ground(B, md, Rg, tvd):
         yield
     finally:
         B.formation_profile, B.formation_resistance = fp0, fr0
+        if hasattr(B, '_boreas_tvd_of'):
+            del B._boreas_tvd_of

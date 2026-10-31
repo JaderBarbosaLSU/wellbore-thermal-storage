@@ -105,6 +105,6 @@
   "id": "V16",
   "check": "every generated .tex was built from the current cache",
   "pass_": true,
-  "detail": "11 current  [cache fb413c5ce257fb51]"
+  "detail": "13 current  [cache 8465e977acdc316c]"
  }
 ]

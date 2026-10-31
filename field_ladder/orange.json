@@ -1,7 +1,8 @@
 {
  "RefTfBottom": "58.7",
  "RefTfTop": "18.3",
- "RefTvdBottom": "891",
+ "RefTvdBottom": "909",
+ "RefTvdLastStation": "891",
  "RefFourCorrPassDT": "0.0e+00",
  "RefThreeCorrPassDT": "0.0e+00",
  "AdiabaticCorrPassDT": "0.0e+00",

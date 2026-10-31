@@ -450,7 +450,17 @@ def depth_axis(model, case, n=None):
     depth_seg = np.asarray(model.formation_profile(case, n,
                                                    discharge=False)[1], float)
     L = case.L_well
-    return depth_seg, L - np.linspace(0.0, L, n + 1)
+    depth_node = L - np.linspace(0.0, L, n + 1)
+    # Inside boreas_ground.field_ground the model's depth is MEASURED
+    # depth, because that is what the resistance lookup is indexed on.
+    # For a FIGURE it has to be true vertical depth: at the reference
+    # case 1250 m of hole reaches 891 m. The context manager leaves the
+    # mapping on the model for exactly this.
+    tvd_of = getattr(model, "_boreas_tvd_of", None)
+    if tvd_of is not None:
+        depth_seg = np.asarray(tvd_of(depth_seg), float)
+        depth_node = np.asarray(tvd_of(depth_node), float)
+    return depth_seg, depth_node
 
 
 def well_profiles(r, case, field="T_fluid", axes=None, n_times=9,
@@ -657,7 +667,10 @@ def animate_well(r, case, path, fps=12, frames_per_half=60, dpi=110,
     axes[0].plot([], [], color="#1a1a1a", lw=1.1, ls=(0, (4, 2)),
                  label=r"$T_{m,k}$")
     axes[0].legend(loc="lower left", fontsize=8.2, handlelength=1.8)
-    axes[0].set_ylabel(r"depth / m")
+    # TVD, like the still figures: depth_axis returns true vertical
+    # depth whenever the field patch is active, and on the S-curve
+    # that is 909 m for 1250 m of hole.
+    axes[0].set_ylabel(r"TVD / m")
     # Depth increases downward: setting the limits in descending order IS
     # the inversion -- invert_yaxis() on top of this would undo it.
     top = float(np.max(zs))

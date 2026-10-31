@@ -28,7 +28,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 2.4657936536498117,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 100.0
 },
 "{\"L_md\": 200.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"isolated\", \"step\": \"R0v\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R0v",
@@ -59,7 +60,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 5.903840176349573,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 200.0
 },
 "{\"L_md\": 300.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"isolated\", \"step\": \"R0v\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R0v",
@@ -90,7 +92,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 9.938597541376884,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 300.0
 },
 "{\"L_md\": 400.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"isolated\", \"step\": \"R0v\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R0v",
@@ -121,7 +124,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 14.653756455581945,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 400.0
 },
 "{\"L_md\": 500.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"isolated\", \"step\": \"R0v\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R0v",
@@ -152,7 +156,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 19.821509854013758,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 500.0
 },
 "{\"L_md\": 600.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"isolated\", \"step\": \"R0v\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R0v",
@@ -183,7 +188,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 25.618535526788648,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 600.0
 },
 "{\"L_md\": 800.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"isolated\", \"step\": \"R0v\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R0v",
@@ -214,7 +220,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 38.923731376100825,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 800.0
 },
 "{\"L_md\": 1000.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"isolated\", \"step\": \"R0v\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R0v",
@@ -245,7 +252,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 54.56133057400842,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 1000.0
 },
 "{\"L_md\": 1250.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"isolated\", \"step\": \"R0v\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R0v",
@@ -276,7 +284,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 76.83657930155628,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 1250.0
 },
 "{\"L_md\": 100.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"fixed\", \"positions\": \"isolated\", \"step\": \"R0i\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R0i",
@@ -307,7 +316,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 2.465793546589939,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 99.99947680432531
 },
 "{\"L_md\": 200.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"fixed\", \"positions\": \"isolated\", \"step\": \"R0i\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R0i",
@@ -330,7 +340,7 @@
 "T2d_C": 100.72425600001247,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 198.88534606157066,
+"tvd_bottom": 198.88534606157071,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.32946828296864306,
 "q_spread": 0.0,
@@ -338,7 +348,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 5.901945638370285,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 198.88534606157066
 },
 "{\"L_md\": 300.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"fixed\", \"positions\": \"isolated\", \"step\": \"R0i\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R0i",
@@ -361,7 +372,7 @@
 "T2d_C": 101.8733245880776,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 292.1590171849879,
+"tvd_bottom": 292.159017184988,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.32946828296864317,
 "q_spread": 0.0,
@@ -369,7 +380,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 9.917372653309096,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 292.1590171849879
 },
 "{\"L_md\": 400.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"fixed\", \"positions\": \"isolated\", \"step\": \"R0i\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R0i",
@@ -392,7 +404,7 @@
 "T2d_C": 102.93764878549786,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 374.94852282408505,
+"tvd_bottom": 374.9485228240851,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.32946828296864306,
 "q_spread": 0.0,
@@ -400,7 +412,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 14.534792368285034,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 374.94852282408505
 },
 "{\"L_md\": 500.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"fixed\", \"positions\": \"isolated\", \"step\": \"R0i\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R0i",
@@ -431,7 +444,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 19.402589869543974,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 442.9295154585062
 },
 "{\"L_md\": 600.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"fixed\", \"positions\": \"isolated\", \"step\": \"R0i\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R0i",
@@ -454,7 +468,7 @@
 "T2d_C": 104.57124168320962,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 500.3930745198934,
+"tvd_bottom": 500.39307451989305,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.32946828296864294,
 "q_spread": 0.0,
@@ -462,7 +476,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 24.773597754094432,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 500.3930745198934
 },
 "{\"L_md\": 800.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"fixed\", \"positions\": \"isolated\", \"step\": \"R0i\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R0i",
@@ -485,7 +500,7 @@
 "T2d_C": 105.94141533198433,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 615.1083617901033,
+"tvd_bottom": 615.1083617901023,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.3294682829686431,
 "q_spread": 0.0,
@@ -493,7 +508,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 36.237843737167964,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 615.1083617901033
 },
 "{\"L_md\": 1000.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"fixed\", \"positions\": \"isolated\", \"step\": \"R0i\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R0i",
@@ -516,7 +532,7 @@
 "T2d_C": 107.14913192502792,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 733.9933526744923,
+"tvd_bottom": 733.9933526744909,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.32946828296864306,
 "q_spread": 0.0,
@@ -524,7 +540,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 48.64087063833276,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 733.9933526744923
 },
 "{\"L_md\": 1250.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"fixed\", \"positions\": \"isolated\", \"step\": \"R0i\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R0i",
@@ -547,7 +564,7 @@
 "T2d_C": 108.77764265794701,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 910.0885702197102,
+"tvd_bottom": 910.0885702197074,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.329468282968643,
 "q_spread": 0.0,
@@ -555,7 +572,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 66.15730647592244,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 910.0885702197102
 },
 "{\"L_md\": 1600.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"fixed\", \"positions\": \"isolated\", \"step\": \"R0i\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R0i",
@@ -578,7 +596,7 @@
 "T2d_C": 111.13186927254105,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 1157.5759436349995,
+"tvd_bottom": 1157.575943634999,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.32946828296864306,
 "q_spread": 0.0,
@@ -586,7 +604,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 93.71061229069299,
-"beyond_shoe": true
+"beyond_shoe": true,
+"tvd_last_station": 1157.5759436349995
 },
 "{\"L_md\": 2000.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"fixed\", \"positions\": \"isolated\", \"step\": \"R0i\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R0i",
@@ -609,7 +628,7 @@
 "T2d_C": 113.76951265993154,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 1440.4186561096117,
+"tvd_bottom": 1440.418656109618,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.329468282968643,
 "q_spread": 0.0,
@@ -617,7 +636,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 127.48283240812195,
-"beyond_shoe": true
+"beyond_shoe": true,
+"tvd_last_station": 1440.4186561096117
 },
 "{\"L_md\": 100.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"disc\", \"step\": \"R1\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R1",
@@ -640,7 +660,7 @@
 "T2d_C": 136.58291836475865,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 85.0,
+"tvd_bottom": 100.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 15.783483762865357,
 "q_spread": 1.2202809202417524,
@@ -648,7 +668,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 14.86732052593842,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 85.0
 },
 "{\"L_md\": 200.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"disc\", \"step\": \"R1\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R1",
@@ -671,7 +692,7 @@
 "T2d_C": 137.49432366565304,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 175.0,
+"tvd_bottom": 200.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 15.783483762865357,
 "q_spread": 1.2202809202417524,
@@ -679,7 +700,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 30.385372345231747,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 175.0
 },
 "{\"L_md\": 300.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"disc\", \"step\": \"R1\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R1",
@@ -702,7 +724,7 @@
 "T2d_C": 137.84405772993676,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 275.0,
+"tvd_bottom": 300.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 15.783483762865357,
 "q_spread": 1.2202809202417522,
@@ -710,7 +732,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 45.946906429929854,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 275.0
 },
 "{\"L_md\": 400.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"disc\", \"step\": \"R1\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R1",
@@ -733,7 +756,7 @@
 "T2d_C": 138.04485945112748,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 375.0,
+"tvd_bottom": 400.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 15.783483762865357,
 "q_spread": 1.2202809202417524,
@@ -741,7 +764,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 61.53247943105727,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 375.0
 },
 "{\"L_md\": 500.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"disc\", \"step\": \"R1\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R1",
@@ -764,7 +788,7 @@
 "T2d_C": 138.18666564617183,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 475.0,
+"tvd_bottom": 500.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 15.783483762865355,
 "q_spread": 1.2202809202417524,
@@ -772,7 +796,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 77.13448367723139,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 475.0
 },
 "{\"L_md\": 600.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"disc\", \"step\": \"R1\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R1",
@@ -795,7 +820,7 @@
 "T2d_C": 138.29285363311345,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 575.0,
+"tvd_bottom": 600.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 15.783483762865357,
 "q_spread": 1.2202809202417522,
@@ -803,7 +828,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 92.72907006655494,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 575.0
 },
 "{\"L_md\": 800.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"disc\", \"step\": \"R1\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R1",
@@ -826,7 +852,7 @@
 "T2d_C": 138.45479327168522,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 775.0,
+"tvd_bottom": 800.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 15.783483762865357,
 "q_spread": 1.2202809202417524,
@@ -834,7 +860,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 123.85508420660078,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 775.0
 },
 "{\"L_md\": 1000.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"disc\", \"step\": \"R1\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R1",
@@ -857,7 +884,7 @@
 "T2d_C": 138.58481957051248,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 975.0,
+"tvd_bottom": 1000.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 15.783483762865353,
 "q_spread": 1.2202809202417524,
@@ -865,7 +892,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 154.80474534856629,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 975.0
 },
 "{\"L_md\": 1250.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"disc\", \"step\": \"R1\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R1",
@@ -888,7 +916,7 @@
 "T2d_C": 138.71565088468816,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 1225.0,
+"tvd_bottom": 1250.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 15.783483762865355,
 "q_spread": 1.2202809202417524,
@@ -896,7 +924,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 192.98263982753915,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 1225.0
 },
 "{\"L_md\": 100.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"rows\", \"step\": \"R2\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R2",
@@ -919,7 +948,7 @@
 "T2d_C": 133.35703707551852,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 85.0,
+"tvd_bottom": 100.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 4.387008514889738,
 "q_spread": 0.24078706988996745,
@@ -927,7 +956,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 13.724716959605212,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 85.0
 },
 "{\"L_md\": 200.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"rows\", \"step\": \"R2\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R2",
@@ -950,7 +980,7 @@
 "T2d_C": 134.31087435622442,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 175.0,
+"tvd_bottom": 200.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 4.387008514889738,
 "q_spread": 0.24078706988996745,
@@ -958,7 +988,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 28.121882378421347,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 175.0
 },
 "{\"L_md\": 300.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"rows\", \"step\": \"R2\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R2",
@@ -981,7 +1012,7 @@
 "T2d_C": 134.73053312624273,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 275.0,
+"tvd_bottom": 300.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 4.387008514889737,
 "q_spread": 0.24078706988996745,
@@ -989,7 +1020,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 42.621150156562045,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 275.0
 },
 "{\"L_md\": 400.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"rows\", \"step\": \"R2\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R2",
@@ -1012,7 +1044,7 @@
 "T2d_C": 135.0105651906248,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 375.0,
+"tvd_bottom": 400.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 4.387008514889738,
 "q_spread": 0.24078706988996745,
@@ -1020,7 +1052,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 57.20674669414103,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 375.0
 },
 "{\"L_md\": 500.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"rows\", \"step\": \"R2\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R2",
@@ -1043,7 +1076,7 @@
 "T2d_C": 135.2329986313033,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 475.0,
+"tvd_bottom": 500.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 4.387008514889738,
 "q_spread": 0.2407870698899675,
@@ -1051,7 +1084,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 71.86699652065987,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 475.0
 },
 "{\"L_md\": 600.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"rows\", \"step\": \"R2\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R2",
@@ -1074,7 +1108,7 @@
 "T2d_C": 135.4240197720884,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 575.0,
+"tvd_bottom": 600.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 4.387008514889737,
 "q_spread": 0.24078706988996754,
@@ -1082,7 +1116,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 86.58596653638236,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 575.0
 },
 "{\"L_md\": 800.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"rows\", \"step\": \"R2\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R2",
@@ -1105,7 +1140,7 @@
 "T2d_C": 135.76354715392495,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 775.0,
+"tvd_bottom": 800.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 4.387008514889738,
 "q_spread": 0.24078706988996745,
@@ -1113,7 +1148,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 116.16308672035572,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 775.0
 },
 "{\"L_md\": 1000.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"rows\", \"step\": \"R2\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R2",
@@ -1136,7 +1172,7 @@
 "T2d_C": 136.06599249984458,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 975.0,
+"tvd_bottom": 1000.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 4.387008514889739,
 "q_spread": 0.2407870698899675,
@@ -1144,7 +1180,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 145.79717781887197,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 975.0
 },
 "{\"L_md\": 1250.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"rows\", \"step\": \"R2\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R2",
@@ -1167,7 +1204,7 @@
 "T2d_C": 136.41891055566327,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 1225.0,
+"tvd_bottom": 1250.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 4.387008514889738,
 "q_spread": 0.24078706988996745,
@@ -1175,7 +1212,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 182.7057045398305,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 1225.0
 },
 "{\"L_md\": 100.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R3\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R3",
@@ -1198,7 +1236,7 @@
 "T2d_C": 131.7447093379513,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 85.0,
+"tvd_bottom": 100.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 3.2303766201784843,
 "q_spread": 0.2973360676758337,
@@ -1206,7 +1244,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 13.159500422397949,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 85.0
 },
 "{\"L_md\": 200.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R3\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R3",
@@ -1229,7 +1268,7 @@
 "T2d_C": 132.7086035202928,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 175.0,
+"tvd_bottom": 200.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 3.2303766201784843,
 "q_spread": 0.2973360676758337,
@@ -1237,7 +1276,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 26.994314279462923,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 175.0
 },
 "{\"L_md\": 300.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R3\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R3",
@@ -1260,7 +1300,7 @@
 "T2d_C": 133.17140027061396,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 275.0,
+"tvd_bottom": 300.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 3.230376620178484,
 "q_spread": 0.2973360676758337,
@@ -1268,7 +1308,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 40.97248814402154,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 275.0
 },
 "{\"L_md\": 400.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R3\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R3",
@@ -1291,7 +1332,7 @@
 "T2d_C": 133.4956986636695,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 375.0,
+"tvd_bottom": 400.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 3.2303766201784843,
 "q_spread": 0.2973360676758337,
@@ -1299,7 +1340,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 55.068484524525246,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 375.0
 },
 "{\"L_md\": 500.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R3\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R3",
@@ -1322,7 +1364,7 @@
 "T2d_C": 133.7586295873706,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 475.0,
+"tvd_bottom": 500.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 3.230376620178484,
 "q_spread": 0.29733606767583376,
@@ -1330,7 +1372,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 69.26313709321761,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 475.0
 },
 "{\"L_md\": 600.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R3\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R3",
@@ -1353,7 +1396,7 @@
 "T2d_C": 133.9937702789694,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 575.0,
+"tvd_bottom": 600.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 3.230376620178484,
 "q_spread": 0.29733606767583376,
@@ -1361,7 +1404,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 83.55212382177764,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 575.0
 },
 "{\"L_md\": 800.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R3\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R3",
@@ -1384,7 +1428,7 @@
 "T2d_C": 134.4159866250771,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 775.0,
+"tvd_bottom": 800.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 3.2303766201784843,
 "q_spread": 0.2973360676758337,
@@ -1392,7 +1436,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 112.34595306591946,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 775.0
 },
 "{\"L_md\": 1000.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R3\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R3",
@@ -1415,7 +1460,7 @@
 "T2d_C": 134.80394935853934,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 975.0,
+"tvd_bottom": 1000.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 3.230376620178484,
 "q_spread": 0.29733606767583365,
@@ -1423,7 +1468,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 141.32201484223694,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 975.0
 },
 "{\"L_md\": 1250.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R3\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R3",
@@ -1446,7 +1492,7 @@
 "T2d_C": 135.25358826513798,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 1225.0,
+"tvd_bottom": 1250.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 3.2303766201784843,
 "q_spread": 0.2973360676758337,
@@ -1454,7 +1500,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 177.53206923676387,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 1225.0
 },
 "{\"L_md\": 100.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4",
@@ -1477,7 +1524,7 @@
 "T2d_C": 131.56094185440816,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 84.97199330460424,
+"tvd_bottom": 99.93494294406051,
 "R_near": 0.23801015638131306,
 "Rg_mean": 3.1639841773850024,
 "q_spread": 0.3144623096782437,
@@ -1485,7 +1532,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 13.09524522181322,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 84.97199330460424
 },
 "{\"L_md\": 200.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4",
@@ -1508,7 +1556,7 @@
 "T2d_C": 130.97837201388512,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 174.06002878255282,
+"tvd_bottom": 198.30377461983696,
 "R_near": 0.23801015638131306,
 "Rg_mean": 2.740540900126974,
 "q_spread": 0.35038689911592147,
@@ -1516,7 +1564,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 25.783402716644478,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 174.06002878255282
 },
 "{\"L_md\": 300.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4",
@@ -1539,7 +1588,7 @@
 "T2d_C": 128.66218711203675,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 268.55299664867346,
+"tvd_bottom": 290.8861758871103,
 "R_near": 0.23801015638131306,
 "Rg_mean": 2.2717038944694217,
 "q_spread": 0.3336723654179908,
@@ -1547,7 +1596,8 @@
 "n_negative": 0,
 "off_station_weight": 0.00017694136012799764,
 "field_MWh_per_cycle": 36.25597438630424,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 268.55299664867346
 },
 "{\"L_md\": 400.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4",
@@ -1570,7 +1620,7 @@
 "T2d_C": 125.86271265618899,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 353.6128006826275,
+"tvd_bottom": 372.86888348832235,
 "R_near": 0.23801015638131306,
 "Rg_mean": 1.916737264636537,
 "q_spread": 0.2986354593000677,
@@ -1578,7 +1628,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0064032209270091425,
 "field_MWh_per_cycle": 44.47494782634207,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 353.6128006826275
 },
 "{\"L_md\": 500.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4",
@@ -1601,7 +1652,7 @@
 "T2d_C": 123.25292207710578,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 424.9003060389075,
+"tvd_bottom": 440.4983513285265,
 "R_near": 0.23801015638131306,
 "Rg_mean": 1.6572528619009206,
 "q_spread": 0.26511605510482084,
@@ -1609,7 +1660,8 @@
 "n_negative": 0,
 "off_station_weight": 0.017696809802843886,
 "field_MWh_per_cycle": 51.12183193420395,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 424.9003060389075
 },
 "{\"L_md\": 600.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4",
@@ -1632,7 +1684,7 @@
 "T2d_C": 121.16269202126415,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 484.56881200491284,
+"tvd_bottom": 498.90822291368914,
 "R_near": 0.23801015638131306,
 "Rg_mean": 1.4659125281913619,
 "q_spread": 0.23679283414351895,
@@ -1640,7 +1692,8 @@
 "n_negative": 0,
 "off_station_weight": 0.026467612851236066,
 "field_MWh_per_cycle": 57.061271122129384,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 484.56881200491284
 },
 "{\"L_md\": 800.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4",
@@ -1663,7 +1716,7 @@
 "T2d_C": 118.51323545411918,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 599.2840992751227,
+"tvd_bottom": 613.623510183899,
 "R_near": 0.23801015638131306,
 "Rg_mean": 1.2107736188356317,
 "q_spread": 0.19547462531488616,
@@ -1671,7 +1724,8 @@
 "n_negative": 0,
 "off_station_weight": 0.03815380652379895,
 "field_MWh_per_cycle": 68.76392849160561,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 599.2840992751227
 },
 "{\"L_md\": 1000.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4",
@@ -1694,7 +1748,7 @@
 "T2d_C": 117.15986164448884,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 716.1092701046022,
+"tvd_bottom": 732.5085010682881,
 "R_near": 0.23801015638131306,
 "Rg_mean": 1.0491738504709518,
 "q_spread": 0.16682633532593005,
@@ -1702,7 +1756,8 @@
 "n_negative": 0,
 "off_station_weight": 0.046164701910342935,
 "field_MWh_per_cycle": 80.99921189381081,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 716.1092701046022
 },
 "{\"L_md\": 1250.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4",
@@ -1725,7 +1780,7 @@
 "T2d_C": 116.54402992975378,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 890.926049083842,
+"tvd_bottom": 908.6037186135056,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.9146133412143652,
 "q_spread": 0.14105500064836085,
@@ -1733,7 +1788,8 @@
 "n_negative": 0,
 "off_station_weight": 0.05241208068929672,
 "field_MWh_per_cycle": 97.59211168533047,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 890.926049083842
 },
 "{\"L_md\": 1600.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4",
@@ -1756,7 +1812,7 @@
 "T2d_C": 116.95084679307831,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 1138.413422499132,
+"tvd_bottom": 1156.0910920287952,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.7937773529357742,
 "q_spread": 0.1168254135759539,
@@ -1764,7 +1820,8 @@
 "n_negative": 0,
 "off_station_weight": 0.05858678872117607,
 "field_MWh_per_cycle": 124.00900268871345,
-"beyond_shoe": true
+"beyond_shoe": true,
+"tvd_last_station": 1138.413422499132
 },
 "{\"L_md\": 2000.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4",
@@ -1787,7 +1844,7 @@
 "T2d_C": 118.25294408250187,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 1421.256134973744,
+"tvd_bottom": 1438.9338045034074,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.7054573767411264,
 "q_spread": 0.09846475048743807,
@@ -1795,7 +1852,8 @@
 "n_negative": 0,
 "off_station_weight": 0.06354192207913377,
 "field_MWh_per_cycle": 156.88395649259766,
-"beyond_shoe": true
+"beyond_shoe": true,
+"tvd_last_station": 1421.256134973744
 },
 "{\"L_md\": 1250.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"flux\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"disc\", \"step\": \"R1\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R1",
@@ -1818,7 +1876,7 @@
 "T2d_C": 138.83753698108325,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 1225.0,
+"tvd_bottom": 1250.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 18.454627422050393,
 "q_spread": 1.2202809202417524,
@@ -1826,7 +1884,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 193.53122971628278,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 1225.0
 },
 "{\"L_md\": 1250.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"flux\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"rows\", \"step\": \"R2\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R2",
@@ -1849,7 +1908,7 @@
 "T2d_C": 136.479928084871,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 1225.0,
+"tvd_bottom": 1250.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 4.46745647201408,
 "q_spread": 0.24078706988996745,
@@ -1857,7 +1916,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 182.97739879679946,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 1225.0
 },
 "{\"L_md\": 1250.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"flux\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R3\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R3",
@@ -1880,7 +1940,7 @@
 "T2d_C": 135.39881246692357,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 1225.0,
+"tvd_bottom": 1250.0,
 "R_near": 0.23801015638131306,
 "Rg_mean": 3.3424915141796294,
 "q_spread": 0.2973360676758337,
@@ -1888,7 +1948,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 178.1752803961012,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 1225.0
 },
 "{\"L_md\": 1250.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"flux\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4",
@@ -1911,7 +1972,7 @@
 "T2d_C": 116.69267974212818,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 890.926049083842,
+"tvd_bottom": 908.6037186135056,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.9440206180377442,
 "q_spread": 0.14105500064836085,
@@ -1919,7 +1980,8 @@
 "n_negative": 0,
 "off_station_weight": 0.05241208068929672,
 "field_MWh_per_cycle": 98.2041786243705,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 890.926049083842
 },
 "{\"L_md\": 100.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"fixed\", \"positions\": \"slots\", \"step\": \"R4_kop300\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_kop300",
@@ -1942,7 +2004,7 @@
 "T2d_C": 131.74472484384592,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 85.0,
+"tvd_bottom": 99.99947680432533,
 "R_near": 0.23801015638131306,
 "Rg_mean": 3.2303766201784843,
 "q_spread": 0.2973360676758337,
@@ -1950,7 +2012,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 13.159504739270863,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 85.0
 },
 "{\"L_md\": 200.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"fixed\", \"positions\": \"slots\", \"step\": \"R4_kop300\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_kop300",
@@ -1973,7 +2036,7 @@
 "T2d_C": 132.5249676639291,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 174.49122644929687,
+"tvd_bottom": 198.8853460615706,
 "R_near": 0.23801015638131306,
 "Rg_mean": 3.165494906391969,
 "q_spread": 0.294317874898391,
@@ -1981,7 +2044,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 26.86538484444612,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 174.49122644929687
 },
 "{\"L_md\": 300.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"fixed\", \"positions\": \"slots\", \"step\": \"R4_kop300\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_kop300",
@@ -2004,7 +2068,7 @@
 "T2d_C": 132.34462184942765,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 269.6406603632246,
+"tvd_bottom": 292.159017184988,
 "R_near": 0.23801015638131306,
 "Rg_mean": 2.96539583614652,
 "q_spread": 0.28590608899061737,
@@ -2012,7 +2076,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 40.10132718855214,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 269.6406603632246
 },
 "{\"L_md\": 400.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"fixed\", \"positions\": \"slots\", \"step\": \"R4_kop300\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_kop300",
@@ -2035,7 +2100,7 @@
 "T2d_C": 131.66011652026458,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 355.4821310147562,
+"tvd_bottom": 374.94852282408516,
 "R_near": 0.23801015638131306,
 "Rg_mean": 2.7143279794910793,
 "q_spread": 0.27590303882117045,
@@ -2043,7 +2108,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0004222049939227266,
 "field_MWh_per_cycle": 52.49163803704881,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 355.4821310147562
 },
 "{\"L_md\": 500.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"fixed\", \"positions\": \"slots\", \"step\": \"R4_kop300\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_kop300",
@@ -2066,7 +2132,7 @@
 "T2d_C": 130.71063348602917,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 427.5318774744101,
+"tvd_bottom": 442.92951545850616,
 "R_near": 0.23801015638131306,
 "Rg_mean": 2.471929951009135,
 "q_spread": 0.265496645316273,
@@ -2074,7 +2140,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0009468738859495418,
 "field_MWh_per_cycle": 63.92191419897838,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 427.5318774744101
 },
 "{\"L_md\": 600.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"fixed\", \"positions\": \"slots\", \"step\": \"R4_kop300\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_kop300",
@@ -2097,7 +2164,7 @@
 "T2d_C": 129.6583582480755,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 486.0536636111173,
+"tvd_bottom": 500.39307451989333,
 "R_near": 0.23801015638131306,
 "Rg_mean": 2.2585747422440208,
 "q_spread": 0.2548457326112811,
@@ -2105,7 +2172,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0012741086476139901,
 "field_MWh_per_cycle": 74.45055576144917,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 486.0536636111173
 },
 "{\"L_md\": 800.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"fixed\", \"positions\": \"slots\", \"step\": \"R4_kop300\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_kop300",
@@ -2128,7 +2196,7 @@
 "T2d_C": 127.67243085112892,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 600.7689508813272,
+"tvd_bottom": 615.1083617901031,
 "R_near": 0.23801015638131306,
 "Rg_mean": 1.9264918311126134,
 "q_spread": 0.2343559576010914,
@@ -2136,7 +2204,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0013388448675010715,
 "field_MWh_per_cycle": 93.52912621623864,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 600.7689508813272
 },
 "{\"L_md\": 1000.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"fixed\", \"positions\": \"slots\", \"step\": \"R4_kop300\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_kop300",
@@ -2159,7 +2228,7 @@
 "T2d_C": 126.0912266063736,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 717.5941217108066,
+"tvd_bottom": 733.9933526744924,
 "R_near": 0.23801015638131306,
 "Rg_mean": 1.6896443627275044,
 "q_spread": 0.21664038508557856,
@@ -2167,7 +2236,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0012696916319619093,
 "field_MWh_per_cycle": 111.00602008435895,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 717.5941217108066
 },
 "{\"L_md\": 1250.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"fixed\", \"positions\": \"slots\", \"step\": \"R4_kop300\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_kop300",
@@ -2190,7 +2260,7 @@
 "T2d_C": 124.86768179563478,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 892.4109006900463,
+"tvd_bottom": 910.0885702197103,
 "R_near": 0.23801015638131306,
 "Rg_mean": 1.478368130568892,
 "q_spread": 0.19829417604291996,
@@ -2198,7 +2268,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0012027605364172496,
 "field_MWh_per_cycle": 132.4191977123261,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 892.4109006900463
 },
 "{\"L_md\": 1600.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"fixed\", \"positions\": \"slots\", \"step\": \"R4_kop300\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_kop300",
@@ -2221,7 +2292,7 @@
 "T2d_C": 124.16849229720145,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 1139.8982741053362,
+"tvd_bottom": 1157.575943635,
 "R_near": 0.23801015638131306,
 "Rg_mean": 1.2763001701636365,
 "q_spread": 0.1786768440802686,
@@ -2229,7 +2300,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0011404636200885714,
 "field_MWh_per_cycle": 162.62457563999712,
-"beyond_shoe": true
+"beyond_shoe": true,
+"tvd_last_station": 1139.8982741053362
 },
 "{\"L_md\": 2000.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"fixed\", \"positions\": \"slots\", \"step\": \"R4_kop300\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_kop300",
@@ -2252,7 +2324,7 @@
 "T2d_C": 124.32980801252108,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 1422.7409865799489,
+"tvd_bottom": 1440.418656109612,
 "R_near": 0.23801015638131306,
 "Rg_mean": 1.1201571624313555,
 "q_spread": 0.1619411618977053,
@@ -2260,7 +2332,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0010927479315790834,
 "field_MWh_per_cycle": 197.633682445619,
-"beyond_shoe": true
+"beyond_shoe": true,
+"tvd_last_station": 1422.7409865799489
 },
 "{\"L_md\": 100.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_th45\", \"t_op_yr\": 10.0, \"theta_max\": 45.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_th45",
@@ -2283,7 +2356,7 @@
 "T2d_C": 131.56095381967754,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 84.97199330460424,
+"tvd_bottom": 99.93494294406051,
 "R_near": 0.23801015638131306,
 "Rg_mean": 3.1639841773850024,
 "q_spread": 0.3144623096782437,
@@ -2291,7 +2364,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 13.095251496167643,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 84.97199330460424
 },
 "{\"L_md\": 200.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_th45\", \"t_op_yr\": 10.0, \"theta_max\": 45.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_th45",
@@ -2314,7 +2388,7 @@
 "T2d_C": 130.97837703290872,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 174.06002878255282,
+"tvd_bottom": 198.30377461983696,
 "R_near": 0.23801015638131306,
 "Rg_mean": 2.740540900126974,
 "q_spread": 0.35038689911592147,
@@ -2322,7 +2396,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 25.783408787237267,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 174.06002878255282
 },
 "{\"L_md\": 300.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_th45\", \"t_op_yr\": 10.0, \"theta_max\": 45.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_th45",
@@ -2345,7 +2420,7 @@
 "T2d_C": 128.66218272928944,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 268.55299664867346,
+"tvd_bottom": 290.8861758871103,
 "R_near": 0.23801015638131306,
 "Rg_mean": 2.2717038944694217,
 "q_spread": 0.3336723654179908,
@@ -2353,7 +2428,8 @@
 "n_negative": 0,
 "off_station_weight": 0.00017694136012799764,
 "field_MWh_per_cycle": 36.25596592092541,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 268.55299664867346
 },
 "{\"L_md\": 400.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_th45\", \"t_op_yr\": 10.0, \"theta_max\": 45.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_th45",
@@ -2376,7 +2452,7 @@
 "T2d_C": 125.8627933258498,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 353.6138816808572,
+"tvd_bottom": 372.9688637450122,
 "R_near": 0.23801015638131306,
 "Rg_mean": 1.9167398075572564,
 "q_spread": 0.29863149263153405,
@@ -2384,7 +2460,8 @@
 "n_negative": 0,
 "off_station_weight": 0.006403212533170667,
 "field_MWh_per_cycle": 44.47505785581778,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 353.6138816808572
 },
 "{\"L_md\": 500.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_th45\", \"t_op_yr\": 10.0, \"theta_max\": 45.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_th45",
@@ -2407,7 +2484,7 @@
 "T2d_C": 123.36976790592217,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 427.83760782593004,
+"tvd_bottom": 445.5706813613444,
 "R_near": 0.23801015638131306,
 "Rg_mean": 1.6601056353546688,
 "q_spread": 0.26556711778191877,
@@ -2415,7 +2492,8 @@
 "n_negative": 0,
 "off_station_weight": 0.01786889807554716,
 "field_MWh_per_cycle": 51.31969132474737,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 427.83760782593004
 },
 "{\"L_md\": 600.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_th45\", \"t_op_yr\": 10.0, \"theta_max\": 45.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_th45",
@@ -2438,7 +2516,7 @@
 "T2d_C": 121.51705090697186,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 498.6036899503359,
+"tvd_bottom": 516.2813594799998,
 "R_near": 0.23801015638131306,
 "Rg_mean": 1.4738715058353735,
 "q_spread": 0.23941784659255183,
@@ -2446,7 +2524,8 @@
 "n_negative": 0,
 "off_station_weight": 0.02772210604061072,
 "field_MWh_per_cycle": 57.776566551800634,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 498.6036899503359
 },
 "{\"L_md\": 800.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_th45\", \"t_op_yr\": 10.0, \"theta_max\": 45.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_th45",
@@ -2469,7 +2548,7 @@
 "T2d_C": 119.27822594344133,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 640.0250461876465,
+"tvd_bottom": 657.7027157173104,
 "R_near": 0.23801015638131306,
 "Rg_mean": 1.2245991804057543,
 "q_spread": 0.20094741730514423,
@@ -2477,7 +2556,8 @@
 "n_negative": 0,
 "off_station_weight": 0.04193088370371768,
 "field_MWh_per_cycle": 70.80232415715705,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 640.0250461876465
 },
 "{\"L_md\": 1000.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_th45\", \"t_op_yr\": 10.0, \"theta_max\": 45.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_th45",
@@ -2500,7 +2580,7 @@
 "T2d_C": 118.19910194494759,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 781.446402424957,
+"tvd_bottom": 799.124071954621,
 "R_near": 0.23801015638131306,
 "Rg_mean": 1.065492886137919,
 "q_spread": 0.1738667760172639,
@@ -2508,7 +2588,8 @@
 "n_negative": 0,
 "off_station_weight": 0.05200126209052608,
 "field_MWh_per_cycle": 84.44176544295061,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 781.446402424957
 },
 "{\"L_md\": 1250.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_th45\", \"t_op_yr\": 10.0, \"theta_max\": 45.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_th45",
@@ -2531,7 +2612,7 @@
 "T2d_C": 117.79503831465541,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 958.2230977215955,
+"tvd_bottom": 975.9007672512594,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.9324416173195356,
 "q_spread": 0.14944612257066073,
@@ -2539,7 +2620,8 @@
 "n_negative": 0,
 "off_station_weight": 0.06123714781364275,
 "field_MWh_per_cycle": 102.76191125028217,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 958.2230977215955
 },
 "{\"L_md\": 100.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_th70\", \"t_op_yr\": 10.0, \"theta_max\": 70.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_th70",
@@ -2562,7 +2644,7 @@
 "T2d_C": 131.5609551166392,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 84.97199330460424,
+"tvd_bottom": 99.93494294406051,
 "R_near": 0.23801015638131306,
 "Rg_mean": 3.1639841773850024,
 "q_spread": 0.3144623096782437,
@@ -2570,7 +2652,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 13.095258142556345,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 84.97199330460424
 },
 "{\"L_md\": 200.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_th70\", \"t_op_yr\": 10.0, \"theta_max\": 70.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_th70",
@@ -2593,7 +2676,7 @@
 "T2d_C": 130.9783511126579,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 174.06002878255282,
+"tvd_bottom": 198.30377461983696,
 "R_near": 0.23801015638131306,
 "Rg_mean": 2.740540900126974,
 "q_spread": 0.35038689911592147,
@@ -2601,7 +2684,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 25.783404016170476,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 174.06002878255282
 },
 "{\"L_md\": 300.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_th70\", \"t_op_yr\": 10.0, \"theta_max\": 70.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_th70",
@@ -2624,7 +2708,7 @@
 "T2d_C": 128.66220034309197,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 268.55299664867346,
+"tvd_bottom": 290.8861758871103,
 "R_near": 0.23801015638131306,
 "Rg_mean": 2.2717038944694217,
 "q_spread": 0.3336723654179908,
@@ -2632,7 +2716,8 @@
 "n_negative": 0,
 "off_station_weight": 0.00017694136012799764,
 "field_MWh_per_cycle": 36.255999708875656,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 268.55299664867346
 },
 "{\"L_md\": 400.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_th70\", \"t_op_yr\": 10.0, \"theta_max\": 70.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_th70",
@@ -2655,7 +2740,7 @@
 "T2d_C": 125.86272263848173,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 353.6128006826275,
+"tvd_bottom": 372.86888348832235,
 "R_near": 0.23801015638131306,
 "Rg_mean": 1.916737264636537,
 "q_spread": 0.2986354593000677,
@@ -2663,7 +2748,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0064032209270091425,
 "field_MWh_per_cycle": 44.474948869101745,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 353.6128006826275
 },
 "{\"L_md\": 500.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_th70\", \"t_op_yr\": 10.0, \"theta_max\": 70.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_th70",
@@ -2686,7 +2772,7 @@
 "T2d_C": 123.24886984998159,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 424.7965087782652,
+"tvd_bottom": 439.969691416919,
 "R_near": 0.23801015638131306,
 "Rg_mean": 1.6571586731378987,
 "q_spread": 0.26521440688630626,
@@ -2694,7 +2780,8 @@
 "n_negative": 0,
 "off_station_weight": 0.017697936196634574,
 "field_MWh_per_cycle": 51.114945169963235,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 424.7965087782652
 },
 "{\"L_md\": 600.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_th70\", \"t_op_yr\": 10.0, \"theta_max\": 70.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_th70",
@@ -2717,7 +2804,7 @@
 "T2d_C": 121.04319103186532,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 478.4088102643315,
+"tvd_bottom": 488.9511413358532,
 "R_near": 0.23801015638131306,
 "Rg_mean": 1.4639690348054308,
 "q_spread": 0.23628187719698926,
@@ -2725,7 +2812,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0261965912535832,
 "field_MWh_per_cycle": 56.81974479936012,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 478.4088102643315
 },
 "{\"L_md\": 800.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_th70\", \"t_op_yr\": 10.0, \"theta_max\": 70.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_th70",
@@ -2748,7 +2836,7 @@
 "T2d_C": 118.02763720819848,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 550.7742843172254,
+"tvd_bottom": 559.3247879003668,
 "R_near": 0.23801015638131306,
 "Rg_mean": 1.2040650252590783,
 "q_spread": 0.19256864987366723,
@@ -2756,7 +2844,8 @@
 "n_negative": 0,
 "off_station_weight": 0.03568099003243477,
 "field_MWh_per_cycle": 67.47339925446634,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 550.7742843172254
 },
 "{\"L_md\": 1000.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_th70\", \"t_op_yr\": 10.0, \"theta_max\": 70.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_th70",
@@ -2779,7 +2868,7 @@
 "T2d_C": 116.31018909041575,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 621.6226387756454,
+"tvd_bottom": 632.5796833851498,
 "R_near": 0.23801015638131306,
 "Rg_mean": 1.04025076300585,
 "q_spread": 0.1625986750070184,
@@ -2787,7 +2876,8 @@
 "n_negative": 0,
 "off_station_weight": 0.041834899570179745,
 "field_MWh_per_cycle": 78.19354942016888,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 621.6226387756454
 },
 "{\"L_md\": 1250.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_th70\", \"t_op_yr\": 10.0, \"theta_max\": 70.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_th70",
@@ -2810,7 +2900,7 @@
 "T2d_C": 115.24821234549864,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 765.0264002654757,
+"tvd_bottom": 782.7040697951396,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.9040687610349133,
 "q_spread": 0.13552947058523437,
@@ -2818,7 +2908,8 @@
 "n_negative": 0,
 "off_station_weight": 0.04613372050304379,
 "field_MWh_per_cycle": 92.26254883396581,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 765.0264002654757
 },
 "{\"L_md\": 100.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_top1\", \"t_op_yr\": 1.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_top1",
@@ -2841,7 +2932,7 @@
 "T2d_C": 119.49609754640801,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 84.97199330460424,
+"tvd_bottom": 99.93494294406051,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.9983269273882943,
 "q_spread": 0.18561632134016104,
@@ -2849,7 +2940,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 8.981759741331526,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 84.97199330460424
 },
 "{\"L_md\": 200.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_top1\", \"t_op_yr\": 1.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_top1",
@@ -2872,7 +2964,7 @@
 "T2d_C": 115.082699015645,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 174.06002878255282,
+"tvd_bottom": 198.30377461983696,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.7967775264550402,
 "q_spread": 0.17927670337942392,
@@ -2880,7 +2972,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 15.043136869463448,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 174.06002878255282
 },
 "{\"L_md\": 300.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_top1\", \"t_op_yr\": 1.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_top1",
@@ -2903,7 +2996,7 @@
 "T2d_C": 110.37938589303508,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 268.55299664867346,
+"tvd_bottom": 290.8861758871103,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.6477698866140722,
 "q_spread": 0.14146313138062364,
@@ -2911,7 +3004,8 @@
 "n_negative": 0,
 "off_station_weight": 9.138748081275792e-08,
 "field_MWh_per_cycle": 17.974405741704285,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 268.55299664867346
 },
 "{\"L_md\": 400.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_top1\", \"t_op_yr\": 1.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_top1",
@@ -2934,7 +3028,7 @@
 "T2d_C": 107.72923440810757,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 353.6128006826275,
+"tvd_bottom": 372.86888348832235,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.5573264590826464,
 "q_spread": 0.11329435505244174,
@@ -2942,7 +3036,8 @@
 "n_negative": 0,
 "off_station_weight": 8.630857107420573e-05,
 "field_MWh_per_cycle": 20.55525023040528,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 353.6128006826275
 },
 "{\"L_md\": 500.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_top1\", \"t_op_yr\": 1.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_top1",
@@ -2965,7 +3060,7 @@
 "T2d_C": 106.35525422781348,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 424.9003060389075,
+"tvd_bottom": 440.4983513285265,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.4990166224156944,
 "q_spread": 0.09347305602331032,
@@ -2973,7 +3068,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0010671014653358198,
 "field_MWh_per_cycle": 23.48155601333073,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 424.9003060389075
 },
 "{\"L_md\": 600.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_top1\", \"t_op_yr\": 1.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_top1",
@@ -2996,7 +3092,7 @@
 "T2d_C": 105.64196095005224,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 484.56881200491284,
+"tvd_bottom": 498.90822291368914,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.45910096044326215,
 "q_spread": 0.07912198873097433,
@@ -3004,7 +3100,8 @@
 "n_negative": 0,
 "off_station_weight": 0.001722328933302834,
 "field_MWh_per_cycle": 26.764921797886306,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 484.56881200491284
 },
 "{\"L_md\": 800.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_top1\", \"t_op_yr\": 1.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_top1",
@@ -3027,7 +3124,7 @@
 "T2d_C": 105.40439175307347,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 599.2840992751227,
+"tvd_bottom": 613.623510183899,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.4086996537183461,
 "q_spread": 0.06034809277900664,
@@ -3035,7 +3132,8 @@
 "n_negative": 0,
 "off_station_weight": 0.002533281656351771,
 "field_MWh_per_cycle": 34.845334148877306,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 599.2840992751227
 },
 "{\"L_md\": 1000.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_top1\", \"t_op_yr\": 1.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_top1",
@@ -3058,7 +3156,7 @@
 "T2d_C": 105.93181091665855,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 716.1092701046022,
+"tvd_bottom": 732.5085010682881,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.3783289388211758,
 "q_spread": 0.04875282151887071,
@@ -3066,7 +3164,8 @@
 "n_negative": 0,
 "off_station_weight": 0.003056103004540952,
 "field_MWh_per_cycle": 44.74876512905801,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 716.1092701046022
 },
 "{\"L_md\": 1250.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_top1\", \"t_op_yr\": 1.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_top1",
@@ -3089,7 +3188,7 @@
 "T2d_C": 106.9406085968281,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 890.926049083842,
+"tvd_bottom": 908.6037186135056,
 "R_near": 0.23801015638131306,
 "Rg_mean": 0.3539660713515795,
 "q_spread": 0.03928338726916757,
@@ -3097,7 +3196,8 @@
 "n_negative": 0,
 "off_station_weight": 0.003375262802373321,
 "field_MWh_per_cycle": 58.80645702803583,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 890.926049083842
 },
 "{\"L_md\": 100.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_top30\", \"t_op_yr\": 30.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_top30",
@@ -3120,7 +3220,7 @@
 "T2d_C": 134.0995961509488,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 84.97199330460424,
+"tvd_bottom": 99.93494294406051,
 "R_near": 0.23801015638131306,
 "Rg_mean": 5.292177748838548,
 "q_spread": 0.3684850528065298,
@@ -3128,7 +3228,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 13.986319935763053,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 84.97199330460424
 },
 "{\"L_md\": 200.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_top30\", \"t_op_yr\": 30.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_top30",
@@ -3151,7 +3252,7 @@
 "T2d_C": 134.3454843363669,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 174.06002878255282,
+"tvd_bottom": 198.30377461983696,
 "R_near": 0.23801015638131306,
 "Rg_mean": 4.747903722423063,
 "q_spread": 0.4258503473703991,
@@ -3159,7 +3260,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 28.145885428966032,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 174.06002878255282
 },
 "{\"L_md\": 300.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_top30\", \"t_op_yr\": 30.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_top30",
@@ -3182,7 +3284,7 @@
 "T2d_C": 133.3554252419941,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 268.55299664867346,
+"tvd_bottom": 290.8861758871103,
 "R_near": 0.23801015638131306,
 "Rg_mean": 4.0489803078821485,
 "q_spread": 0.43071923530572204,
@@ -3190,7 +3292,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0004834330664251263,
 "field_MWh_per_cycle": 41.16415607911758,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 268.55299664867346
 },
 "{\"L_md\": 400.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_top30\", \"t_op_yr\": 30.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_top30",
@@ -3213,7 +3316,7 @@
 "T2d_C": 131.79741275857702,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 353.6128006826275,
+"tvd_bottom": 372.86888348832235,
 "R_near": 0.23801015638131306,
 "Rg_mean": 3.463027560621872,
 "q_spread": 0.40476639460697333,
@@ -3221,7 +3324,8 @@
 "n_negative": 0,
 "off_station_weight": 0.012356326633016062,
 "field_MWh_per_cycle": 52.68027312561846,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 353.6128006826275
 },
 "{\"L_md\": 500.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_top30\", \"t_op_yr\": 30.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_top30",
@@ -3244,7 +3348,7 @@
 "T2d_C": 130.00644083156686,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 424.9003060389075,
+"tvd_bottom": 440.4983513285265,
 "R_near": 0.23801015638131306,
 "Rg_mean": 3.0068547092460496,
 "q_spread": 0.3755656128978185,
@@ -3252,7 +3356,8 @@
 "n_negative": 0,
 "off_station_weight": 0.03001610112489976,
 "field_MWh_per_cycle": 62.69286915169091,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 424.9003060389075
 },
 "{\"L_md\": 600.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_top30\", \"t_op_yr\": 30.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_top30",
@@ -3275,7 +3380,7 @@
 "T2d_C": 128.28768184036193,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 484.56881200491284,
+"tvd_bottom": 498.90822291368914,
 "R_near": 0.23801015638131306,
 "Rg_mean": 2.656873098181484,
 "q_spread": 0.3475593690892393,
@@ -3283,7 +3388,8 @@
 "n_negative": 0,
 "off_station_weight": 0.04352214637475364,
 "field_MWh_per_cycle": 71.60057445968135,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 484.56881200491284
 },
 "{\"L_md\": 800.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_top30\", \"t_op_yr\": 30.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_top30",
@@ -3306,7 +3412,7 @@
 "T2d_C": 125.70462281653977,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 599.2840992751227,
+"tvd_bottom": 613.623510183899,
 "R_near": 0.23801015638131306,
 "Rg_mean": 2.177353628932951,
 "q_spread": 0.3022783942291207,
@@ -3314,7 +3420,8 @@
 "n_negative": 0,
 "off_station_weight": 0.06162644805216732,
 "field_MWh_per_cycle": 88.12921153739472,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 599.2840992751227
 },
 "{\"L_md\": 1000.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_top30\", \"t_op_yr\": 30.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_top30",
@@ -3337,7 +3444,7 @@
 "T2d_C": 124.05279389340092,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 716.1092701046022,
+"tvd_bottom": 732.5085010682881,
 "R_near": 0.23801015638131306,
 "Rg_mean": 1.8660621707150735,
 "q_spread": 0.2679400190265995,
@@ -3345,7 +3452,8 @@
 "n_negative": 0,
 "off_station_weight": 0.07393484385726797,
 "field_MWh_per_cycle": 104.06196698200294,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 716.1092701046022
 },
 "{\"L_md\": 1250.0, \"casing\": \"thums\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_top30\", \"t_op_yr\": 30.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_top30",
@@ -3368,7 +3476,7 @@
 "T2d_C": 122.85060115220239,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 890.926049083842,
+"tvd_bottom": 908.6037186135056,
 "R_near": 0.23801015638131306,
 "Rg_mean": 1.6015167811165996,
 "q_spread": 0.23461241642434227,
@@ -3376,7 +3484,8 @@
 "n_negative": 0,
 "off_station_weight": 0.08374825421383485,
 "field_MWh_per_cycle": 123.87238364858015,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 890.926049083842
 },
 "{\"L_md\": 1250.0, \"casing\": \"legacy\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R3_legacy\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"vertical\"}": {
 "step": "R3_legacy",
@@ -3399,7 +3508,7 @@
 "T2d_C": 138.04209279062434,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 1225.0,
+"tvd_bottom": 1250.0,
 "R_near": 0.16416010360602606,
 "Rg_mean": 3.247580315416296,
 "q_spread": 0.31685093845541246,
@@ -3407,7 +3516,8 @@
 "n_negative": 0,
 "off_station_weight": 0.0,
 "field_MWh_per_cycle": 130.61156202169892,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 1225.0
 },
 "{\"L_md\": 1250.0, \"casing\": \"legacy\", \"ds_station\": 50.0, \"ground\": \"superposition\", \"kop_ft\": 300.0, \"kop_rule\": \"staggered\", \"positions\": \"slots\", \"step\": \"R4_legacy\", \"t_op_yr\": 10.0, \"theta_max\": 55.0, \"trajectory\": \"s_curve\"}": {
 "step": "R4_legacy",
@@ -3430,7 +3540,7 @@
 "T2d_C": 108.33274363163298,
 "delivers": true,
 "N_field": 363,
-"tvd_bottom": 890.926049083842,
+"tvd_bottom": 908.6037186135056,
 "R_near": 0.16416010360602606,
 "Rg_mean": 0.9349504266616069,
 "q_spread": 0.1520075275354845,
@@ -3438,6 +3548,7 @@
 "n_negative": 0,
 "off_station_weight": 0.05241208068929672,
 "field_MWh_per_cycle": 44.80736332768424,
-"beyond_shoe": false
+"beyond_shoe": false,
+"tvd_last_station": 890.926049083842
 }
 }
