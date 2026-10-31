@@ -235,6 +235,29 @@ if os.path.exists('rec_field.pkl'):
     check('V17', 'n_ft x the per-tube integral equals dE per well',
           _worst < 1e-9, '; '.join(_det))
 
+# ---- V18: the notebook carries the code the pack was built from ------
+# BOREAS_model.ipynb embeds the three modules in %%writefile cells so
+# Colab needs nothing from the repository. A copy goes stale the moment
+# a module is edited without rebuilding, and this has happened four
+# times here: the notebook still runs, still draws plausible figures,
+# and still disagrees with the pack. A stale copy is valid Python
+# exactly as a stale table is valid LaTeX, so only a comparison finds
+# it.
+import nbcheck
+if os.path.exists(nbcheck.NB):
+    _st, _ms, _ok = nbcheck.check()
+    _d = f'{len(_ok)} current'
+    if _st:
+        _d += '; STALE: ' + ', '.join(f'{f} (nb {a}, live {b})'
+                                      for f, a, b in _st)
+    if _ms:
+        _d += '; not embedded: ' + ', '.join(_ms)
+    check('V18', 'the notebook embeds the current modules',
+          not _st and not _ms, _d)
+else:
+    check('V18', 'the notebook embeds the current modules', False,
+          f'{nbcheck.NB} not found next to the pack')
+
 import packstamp
 stale, unstamped, fresh = packstamp.check('results_pack_v2')
 detail = f'{len(fresh)} current'

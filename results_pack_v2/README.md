@@ -1,4 +1,4 @@
-# BOREAS results pack v2.5
+# BOREAS results pack v2.6
 
 Generated from `pack_runs.json` by `pack_writer.py`, `cutoffs.py`,
 `mktab_ladder.py`, `mknumbers.py` and `verify.py`. Nothing in this pack is
@@ -271,7 +271,49 @@ one: the round trip more than halves.
 2e-16, identical per-MWe quantities to 1.2e-11, and N_wells scaling
 10.000000×. The 1 MW runs in this pack are valid at any plant size.
 
-## 7. What is here, and what is still owed
+## 7. Reproducing this pack
+
+`BOREAS_model.ipynb` and `BOREAS_parametric.ipynb` both reproduce it. The
+model notebook was re-executed end to end against this pack and its
+ladder agrees to every printed digit:
+
+| step | notebook loss % | CSV loss % | notebook TVD | CSV TVD |
+|---|---|---|---|---|
+| R0v | 64.111888 | 64.111888 | 1250.000 | 1250.000 |
+| R4 | 52.415174 | 52.415174 | 908.604 | 908.604 |
+
+**V18 is the guard that makes this a check rather than a claim.** The
+model notebook embeds the three modules in `%%writefile` cells so Colab
+needs nothing from the repository, and the cost of that is a second copy
+that goes stale the moment a module is edited. That had happened four
+times before this check existed: the notebook still ran, still drew
+plausible figures, and still disagreed with the pack, because a stale
+copy is valid Python exactly as a stale table is valid LaTeX. V18
+compares the embedded code with the live modules by hash.
+
+`BOREAS_parametric.ipynb` takes the other route and **fetches** the
+modules and the cache from the repository at run time, so it cannot
+carry a stale copy at all.
+
+### One input cell, and no silent overrides
+
+Every parameter is in cell 2.1, in `CASE` (the well, the material, the
+plant) and `FIELD` (the island, the trajectory, the storage length, the
+station spacing). Three things enforce it:
+
+- the storage length exists **once**, as `FIELD['L_md']`. `L_ft` is not in
+  the `CASE(...)` call, and setting it there as well **raises**, naming
+  both values;
+- the audit cell prints every field in which `REF` differs from `CASE`
+  and **raises** if it is anything but `L_ft`. On the shipped notebook it
+  prints exactly one line;
+- every `.with_(...)` below section 2 is a visible, commented sensitivity,
+  never a correction of an input.
+
+Re-executed, the audit cell reports: *"REF differs from CASE in 1
+field(s) (should be L_ft alone, set from FIELD["L_md"])"*.
+
+## 8. What is here, and what is still owed
 
 **Delivered in v2.4:** the T–s figure at R4
 (`BOREAS_Ts_combined_water.pdf`, drawn at the *realised* outlet, 116.54 °C

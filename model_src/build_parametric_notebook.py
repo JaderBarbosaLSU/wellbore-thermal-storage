@@ -263,7 +263,7 @@ $n_\mathrm{ft} = 1$ row: $\eta_\mathrm{RTE}$ goes *negative* by 1524 m.
 The store still delivers heat — $T_\mathrm{2d}$ is above
 $T_\mathrm{3d}$ — but with a single tube the flow per tube is three times
 the reference, the pressure drop goes as roughly the square of it, and by
-1524 m the borehole pumping is **284 % of the gross output**. The cell is
+1524 m the borehole pumping is **283 % of the gross output**. The cell is
 printed rather than clipped, because a negative round trip is the honest
 statement of that design.
 """))

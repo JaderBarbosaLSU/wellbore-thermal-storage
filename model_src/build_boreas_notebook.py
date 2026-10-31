@@ -1499,19 +1499,21 @@ cells.append(code(r"""
 # profile below is on the measured Grissom field, with the superposition
 # resistance R_g,eff(MD) and the rock temperature on TRUE VERTICAL DEPTH.
 # Run it outside and the rock at the bottom of the store comes out 15 K too
-# hot, because the S-curve reaches only 891 m TVD at 1250 m MD.
+# hot, because the S-curve reaches only 909 m TVD at 1250 m MD.
 rec = REC
 ref_well = REF
 A_av = BP.pcm_capacities_A(ref_well)
-# Depth from the TRAJECTORY, not from the solver coordinate. On an S-curve
-# the two differ by a third: 1250 m of hole reaches 891 m of depth.
+# Depth from the TRAJECTORY, not from the solver coordinate: on an
+# S-curve 1250 m of hole reaches about 909 m of depth. ONE definition --
+# `depth_axis` returns true vertical depth whenever the field patch is
+# active, so the figures, the animation and this cell cannot disagree.
+# An earlier version interpolated it here by hand and clamped at the
+# last station, reporting 891 m.
 import numpy as _np
-_xi = (_np.arange(99) + 0.5) / 99
-_mdv = REF.L_well * (1.0 - _xi)                  # charge frame: 0 = bottom
-dseg = _np.interp(_mdv, _np.r_[0.0, MD], _np.r_[0.0, TVD])
-dnode = _np.interp(REF.L_well * (1.0 - _np.linspace(0, 1, 100)),
-                   _np.r_[0.0, MD], _np.r_[0.0, TVD])
-print(f'depth runs {dseg[0]:.0f} m (index 0, bottom) -> {dseg[-1]:.0f} m (top)')
+with G.field_ground(B, MD, RG, TVD):
+    dseg, dnode = BP.depth_axis(B, REF)
+print(f'depth runs {dseg[0]:.0f} m (index 0, bottom) -> '
+      f'{dseg[-1]:.0f} m (top), against {REF.L_well:.0f} m of hole')
 
 # the orientation check, printed rather than trusted
 Tm = rec['T_m_seg'] - 273.15
