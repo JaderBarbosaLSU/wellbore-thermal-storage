@@ -531,7 +531,8 @@ def well_profiles(r, case, field="T_fluid", axes=None, n_times=9,
     return axes
 
 
-def well_integrals(r, case, axes=None, figsize=(11.6, 4.2)):
+def well_integrals(r, case, axes=None, figsize=(11.6, 4.2),
+                   per_tube=False, titles=True):
     """Heat rate integrated along the well, and the melted fraction, vs time.
 
     The melted fraction is the volume-weighted mean of the local melted
@@ -546,17 +547,26 @@ def well_integrals(r, case, axes=None, figsize=(11.6, 4.2)):
         H, th, z = r[half]["history"], r[half]["t_hist"], r[half]["z"]
         dz = z[1] - z[0]
         q = np.asarray(H["q_prime"], float).sum(axis=1) * dz / 1e3   # kW/well
+        # Per FIN TUBE when asked: q_prime is the heat per unit length
+        # of the whole well, so the per-tube rate is this over n_ft.
+        # The paper reports per tube because that is the unit the flow
+        # is pinned in, and the only one that transfers to a well with
+        # a different tube count.
+        if per_tube:
+            q = q / case.n_ft
         eps = np.asarray(H["A_melt"], float).mean(axis=1) / A_avail
         ax.plot(th / 60.0, q, color=RED, lw=1.8)
         ax.set_xlabel("time / min")
-        ax.set_ylabel(r"$\dot{Q}$ per well / kW", color=RED)
+        ax.set_ylabel(r"$\dot{Q}$ per fin tube / kW" if per_tube
+                      else r"$\dot{Q}$ per well / kW", color=RED)
         ax.tick_params(axis="y", colors=RED)
         axb = ax.twinx()
         axb.plot(th / 60.0, eps, color="#2f6f4f", lw=1.8, ls=(0, (5, 2)))
         axb.set_ylabel("melted fraction of the PCM", color="#2f6f4f")
         axb.tick_params(axis="y", colors="#2f6f4f")
         axb.spines["right"].set_visible(True)
-        ax.set_title(lab, pad=7)
+        if titles:
+            ax.set_title(lab, pad=7)
     return axes
 
 

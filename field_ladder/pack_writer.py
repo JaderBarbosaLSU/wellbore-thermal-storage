@@ -67,128 +67,162 @@ def pick(rows, step, L=None, ground='superposition'):
     return sorted(c, key=lambda r: r['L_md'])
 
 
-# ------------------------------------------------------------- figure 1
+# ---------------------------------------------------- one panel per file
+# Handoff 6.7: the paper sets each panel as its own subfigure and supplies
+# the (a), (b) labels itself. So nothing below draws a panel letter or a
+# suptitle into the image, panels that sit side by side are the same size,
+# and only the first of a row carries a legend.
+PANEL = (4.9, 3.9)
+
+
+def panel(name, draw, size=PANEL):
+    fig, ax = plt.subplots(figsize=size)
+    draw(ax)
+    fig.tight_layout()
+    fig.savefig(f'{OUT}/{name}')
+    plt.close(fig)
+    print(f'  wrote {OUT}/{name}')
+
+
+# ------------------------------------------------------------- geometry
 def fig_geometry():
     P = G.grissom_positions(CSV_IN)
     kop, is_out = G.staggered_kop(P)
-    fig, ax = plt.subplots(1, 3, figsize=(10.6, 3.5))
-
-    for grp, col, lab in ((is_out, RED, 'outer row'), (~is_out, NAVY, 'inner row')):
-        ax[0].plot(P[grp, 0], P[grp, 1], 'o', ms=1.8, color=col, label=lab)
-    ax[0].set_aspect('equal')
-    ax[0].set_xlabel('east / m'); ax[0].set_ylabel('north / m')
-    ax[0].set_title(f'(a) {len(P)} Grissom slots', pad=6)
-    ax[0].legend(frameon=False, fontsize=7.5, markerscale=3)
-
     md, X = G.trajectories(P, 2000.0, kind='s_curve', kop=kop)
-    rad = np.hypot(X[:, :, 0], X[:, :, 1])
-    for i in range(0, len(P), 7):
-        ax[1].plot(rad[i], X[i, :, 2], lw=0.4, color=GREY, alpha=0.7)
-    ax[1].invert_yaxis()
-    ax[1].set_xlabel('radius from centroid / m'); ax[1].set_ylabel('TVD / m')
-    ax[1].set_title('(b) S-curve trajectories', pad=6)
 
-    from scipy.spatial import cKDTree
-    for kind, col, lab in (('vertical', NAVY, 'vertical'),
-                           ('s_curve', RED, 'S-curve')):
-        m2, X2 = G.trajectories(P, 2000.0, kind=kind, kop=kop)
-        nn = []
-        for j in range(0, len(m2), 8):
-            d, _ = cKDTree(X2[:, j, :2]).query(X2[:, j, :2], k=2)
-            nn.append(np.median(d[:, 1]))
-        ax[2].plot(m2[::8], nn, color=col, lw=1.6, label=lab)
-    ax[2].set_yscale('log')
-    ax[2].set_xlabel('MD / m'); ax[2].set_ylabel('median spacing / m')
-    ax[2].set_title('(c) nearest-neighbor spacing', pad=6)
-    ax[2].legend(frameon=False, fontsize=8)
-    fig.tight_layout()
-    fig.savefig(f'{OUT}/grissom_geometry.pdf')
-    plt.close(fig)
+    def a(ax):
+        for grp, col, lab in ((is_out, RED, 'outer row'),
+                              (~is_out, NAVY, 'inner row')):
+            ax.plot(P[grp, 0], P[grp, 1], 'o', ms=1.8, color=col, label=lab)
+        ax.set_aspect('equal')
+        ax.set_xlabel('east / m'); ax.set_ylabel('north / m')
+        ax.legend(frameon=False, fontsize=7.5, markerscale=3)
+
+    def b(ax):
+        rad = np.hypot(X[:, :, 0], X[:, :, 1])
+        for i in range(0, len(P), 7):
+            ax.plot(rad[i], X[i, :, 2], lw=0.4, color=GREY, alpha=0.7)
+        ax.invert_yaxis()
+        ax.set_xlabel('radius from centroid / m'); ax.set_ylabel('TVD / m')
+
+    def c(ax):
+        from scipy.spatial import cKDTree
+        for kind, col, lab in (('vertical', NAVY, 'vertical'),
+                               ('s_curve', RED, 'S-curve')):
+            m2, X2 = G.trajectories(P, 2000.0, kind=kind, kop=kop)
+            nn = [np.median(cKDTree(X2[:, j, :2]).query(X2[:, j, :2], k=2)[0][:, 1])
+                  for j in range(0, len(m2), 8)]
+            ax.plot(m2[::8], nn, color=col, lw=1.6, label=lab)
+        ax.set_yscale('log')
+        ax.set_xlabel('MD / m'); ax.set_ylabel('median spacing / m')
+        ax.legend(frameon=False, fontsize=8)
+
+    def d(ax):
+        r = np.hypot(P[:, 0] - P[:, 0].mean(), P[:, 1] - P[:, 1].mean())
+        ax.hist(r / r.max(), bins=20, color=NAVY, alpha=0.85)
+        ax.set_xlabel(r'radius / $R_\mathrm{max}$')
+        ax.set_ylabel('slots')
+
+    for tag, fn in (('a', a), ('b', b), ('c', c), ('d', d)):
+        panel(f'BOREAS_grissom_geometry_{tag}.pdf', fn)
 
 
-# ------------------------------------------------------------- figure 2
+# ------------------------------------------------------------- shielding
 def fig_Rg(profiles):
-    fig, ax = plt.subplots(figsize=(5.4, 4.0))
-    for step, col in (('R3', NAVY), ('R4', RED)):
-        if step not in profiles:
-            continue
-        md, rg = profiles[step]
-        ax.plot(rg, md, color=col, lw=1.8, label=f'{step}: ' +
-                LABEL[step].replace('\n', ' '))
-    ax.invert_yaxis()
-    ax.set_xscale('log')
-    ax.set_xlabel(r'$R_{g,\mathrm{eff}}$  /  m K W$^{-1}$')
-    ax.set_ylabel('MD / m')
-    ax.set_title('Shielding along the well, equal-temperature superposition',
-                 pad=7, fontsize=10)
-    ax.legend(frameon=False, fontsize=8)
-    fig.tight_layout()
-    fig.savefig(f'{OUT}/grissom_Rg.pdf')
-    plt.close(fig)
+    def a(ax):
+        for step, col in (('R3', NAVY), ('R4', RED)):
+            if step in profiles:
+                md, rg = profiles[step]
+                ax.plot(rg, md, color=col, lw=1.8,
+                        label=f'{step}: ' + LABEL[step].replace('\n', ' '))
+        ax.invert_yaxis(); ax.set_xscale('log')
+        ax.set_xlabel(r'$R_{g,\mathrm{eff}}$  /  m K W$^{-1}$')
+        ax.set_ylabel('MD / m')
+        ax.legend(frameon=False, fontsize=8)
+
+    def b(ax):
+        for step, col in (('R4_kop300', '#0a9396'), ('R4_th45', GREEN),
+                          ('R4_th70', RED)):
+            if step in profiles:
+                md, rg = profiles[step]
+                ax.plot(rg, md, color=col, lw=1.6, label=step)
+        ax.invert_yaxis(); ax.set_xscale('log')
+        ax.set_xlabel(r'$R_{g,\mathrm{eff}}$  /  m K W$^{-1}$')
+        ax.set_ylabel('MD / m')
+        ax.legend(frameon=False, fontsize=8)
+
+    panel('BOREAS_grissom_Rg_a.pdf', a)
+    panel('BOREAS_grissom_Rg_b.pdf', b)
 
 
-# ------------------------------------------------------------- figure 3
+# ---------------------------------------------------------------- ladder
 def fig_ladder(rows, L=1250.0):
-    steps, loss, ep = [], [], []
-    for s in LADDER:
-        r = pick(rows, s, L)
-        if not r:
-            continue
-        steps.append(s); loss.append(100 * r[0]['loss']); ep.append(r[0]['e_prime'])
-    fig, ax = plt.subplots(1, 2, figsize=(9.6, 3.6))
+    steps = [s for s in LADDER if pick(rows, s, L)]
+    loss = [100 * pick(rows, s, L)[0]['loss'] for s in steps]
+    ep = [pick(rows, s, L)[0]['e_prime'] for s in steps]
+    lab = [LABEL[s] for s in steps]
     x = np.arange(len(steps))
-    ax[0].bar(x, loss, color=[RED if v > 50 else NAVY for v in loss])
-    ax[0].set_xticks(x); ax[0].set_xticklabels([LABEL[s] for s in steps], fontsize=7.5)
-    ax[0].set_ylabel('formation loss / %')
-    for i, v in enumerate(loss):
-        ax[0].text(i, v + 1, f'{v:.1f}', ha='center', fontsize=7.5)
-    ax[1].bar(x, ep, color=GREEN)
-    ax[1].set_xticks(x); ax[1].set_xticklabels([LABEL[s] for s in steps], fontsize=7.5)
-    ax[1].set_ylabel(r"$e'$ / kWh per m of well")
-    for i, v in enumerate(ep):
-        ax[1].text(i, v + 0.005, f'{v:.3f}', ha='center', fontsize=7.5)
-    fig.suptitle(f'The field ladder at L = {L:.0f} m MD, '
-                 f'{len(steps)} rungs, Grissom (N = 363)', y=1.02, fontsize=10)
-    fig.tight_layout()
-    fig.savefig(f'{OUT}/grissom_ladder.pdf')
-    plt.close(fig)
+
+    def mk(vals, ylab, colors, fmt):
+        def draw(ax):
+            ax.bar(x, vals, color=colors)
+            ax.set_xticks(x); ax.set_xticklabels(lab, fontsize=7)
+            ax.set_ylabel(ylab)
+            for i, v in enumerate(vals):
+                ax.text(i, v + 0.02 * max(vals), fmt.format(v), ha='center',
+                        fontsize=7.5)
+        return draw
+
+    panel('BOREAS_grissom_ladder_a.pdf',
+          mk(loss, 'formation loss / %',
+             [RED if v > 50 else NAVY for v in loss], '{:.1f}'), (5.4, 4.0))
+    panel('BOREAS_grissom_ladder_b.pdf',
+          mk(ep, r"$e'$ / kWh per m of well", GREEN, '{:.3f}'), (5.4, 4.0))
 
 
-# ------------------------------------------------------------- figure 4
+# ----------------------------------------------------------------- sweep
 def fig_sweep(rows):
-    fig, ax = plt.subplots(1, 3, figsize=(12.0, 3.6))
     cols = dict(zip(LADDER, (GREY, '#9c27a0', NAVY, '#0a9396', GREEN, RED)))
+    series = {}
     for s in LADDER:
         rr = pick(rows, s)
         if len(rr) < 2:
             continue
         L = np.array([r['L_md'] for r in rr])
-        ax[0].plot(L, [r['e_prime'] for r in rr], 'o-', ms=3, lw=1.4,
-                   color=cols[s], label=s)
-        ax[1].plot(L, [r['RTE'] for r in rr], 'o-', ms=3, lw=1.4, color=cols[s])
         Eo = np.array([r['E_out_kWh'] for r in rr])
         Ei = np.array([r['E_in_kWh'] for r in rr])
-        dE = np.diff(Ei)
-        marg = np.where(np.abs(dE) > 1e-12, np.diff(Eo) / np.where(dE == 0, 1, dE),
-                        np.nan)
-        ax[2].plot(0.5 * (L[1:] + L[:-1]), marg, 'o-', ms=3, lw=1.4, color=cols[s])
-    for a, lab in zip(ax, (r"$e'$ / kWh m$^{-1}$", r'$\eta_\mathrm{RTE}$',
-                           r'marginal $\Delta E_\mathrm{out}/\Delta E_\mathrm{in}$')):
-        a.set_xlabel('storage length $L$ / m MD'); a.set_ylabel(lab)
-        # measured depths past the provisional casing shoe. The runs are
-        # kept -- they are in the CSV with beyond_shoe = True -- but the
-        # band says they are an extrapolation of the geometry, not a
-        # design the field can offer.
-        a.axvspan(L_SHOE, 2000.0, color='#cccccc', alpha=0.35, lw=0, zorder=0)
-        a.axvline(L_SHOE, color=GREY, lw=0.9, ls=(0, (2, 2)))
-    ax[2].set_ylim(bottom=0)
-    ax[0].legend(frameon=False, fontsize=7.5, ncol=2)
-    ax[0].annotate('beyond the provisional shoe', (L_SHOE, ax[0].get_ylim()[1]),
-                   fontsize=7, color=GREY, ha='right', va='top', rotation=90,
-                   xytext=(-3, -2), textcoords='offset points')
-    fig.tight_layout()
-    fig.savefig(f'{OUT}/grissom_sweep.pdf')
-    plt.close(fig)
+        series[s] = (L, np.array([r['e_prime'] for r in rr]),
+                     np.array([r['RTE'] for r in rr]),
+                     0.5 * (L[1:] + L[:-1]), np.diff(Eo) / np.diff(Ei),
+                     Eo[0] / Ei[0] if abs(L[0] - 100.) < 1e-6 else np.nan)
+
+    def shade(ax):
+        ax.axvspan(L_SHOE, 2000.0, color='#cccccc', alpha=.35, lw=0, zorder=0)
+        ax.axvline(L_SHOE, color=GREY, lw=0.9, ls=(0, (2, 2)))
+        ax.set_xlabel('storage length $L$ / m MD')
+
+    def a(ax):
+        for s, v in series.items():
+            ax.plot(v[0], v[1], 'o-', ms=3, lw=1.4, color=cols[s],
+                    label=f'{s}: ' + LABEL[s].replace('\n', ' '))
+        shade(ax); ax.set_ylabel(r"$e'$ / kWh m$^{-1}$")
+        ax.legend(frameon=False, fontsize=6.6, ncol=1)
+
+    def b(ax):
+        for s, v in series.items():
+            ax.plot(v[0], v[2], 'o-', ms=3, lw=1.4, color=cols[s])
+        shade(ax); ax.set_ylabel(r'$\eta_\mathrm{RTE}$')
+
+    def c(ax):
+        for s, v in series.items():
+            ax.plot(v[3], v[4], 'o-', ms=3, lw=1.4, color=cols[s])
+            if np.isfinite(v[5]):
+                ax.plot([0.5 * v[0][0]], [v[5]], 'o', ms=3, color=cols[s])
+        shade(ax); ax.set_ylim(bottom=0)
+        ax.set_ylabel(r'marginal $\Delta E_\mathrm{out}/\Delta E_\mathrm{in}$')
+
+    for tag, fn in (('a', a), ('b', b), ('c', c)):
+        panel(f'BOREAS_grissom_sweep_{tag}.pdf', fn, (5.2, 4.0))
 
 
 def write_profiles(L=1250.0):
@@ -252,8 +286,10 @@ def main():
     rows = [r for r in load() if 'error' not in r]
     n = write_csv(rows)
     profiles = write_profiles()
-    fig_geometry(); fig_Rg(profiles); fig_ladder(rows); fig_sweep(rows)
-    print(f'pack written to {OUT}/  ({n} rows, 4 figures, profiles.npz)')
+    fig_geometry(); fig_Rg(profiles)
+    fig_ladder(rows); fig_sweep(rows)
+    print(f'pack written to {OUT}/  ({n} rows, 11 single-panel '
+      f'figures, profiles.npz)')
 
 
 if __name__ == '__main__':

@@ -1,0 +1,18 @@
+{
+ "toc": {
+  "max_d_loss_pt": 1.4879050078602796,
+  "max_d_eprime_pct": 3.195648644361637
+ },
+ "mud": {
+  "max_d_loss_pt": 2.708985159992461,
+  "max_d_eprime_pct": 5.806484954342372
+ },
+ "weight": {
+  "max_d_loss_pt": 1.062134940669801,
+  "max_d_eprime_pct": 4.335632800892897
+ },
+ "max": {
+  "max_d_loss_pt": 2.708985159992461,
+  "max_d_eprime_pct": 5.806484954342372
+ }
+}

@@ -1,4 +1,4 @@
-# BOREAS results pack v2.2
+# BOREAS results pack v2.3
 
 Generated from `pack_runs.json` by `pack_writer.py`, `cutoffs.py`,
 `mktab_ladder.py`, `mknumbers.py` and `verify.py`. Nothing in this pack is
@@ -85,8 +85,30 @@ Two structural results, both measured:
   K/W and R3 gives 3.230 everywhere. G is also symmetric there, which is
   why the symmetrization went unnoticed. The solver exploits this, which is
   what makes the disc rung computable at all.
-- **The S-curve is the only case where the grid does anything**, and there
-  5.2 % of the kernel weight sits off the diagonal block at 50 m.
+- **The S-curve is the only case where the grid does anything**, because
+  there a neighbor's nearest point can land in an adjacent station.
+
+### `off_station_weight`, defined — and not evidence of anything
+
+The quantity is: of the total kernel weight assembled at a given station
+spacing, Σ G_ik over all interaction entries, the fraction whose target
+and source sit at **different** station indices.
+
+**It is not monotone in the spacing and must not be read as a property of
+the field.** Measured, R4:
+
+| | 104 m | 50 m | 25 m | 12.5 m | 6.25 m |
+|---|---|---|---|---|---|
+| L = 1250 m | 25.9 % | 5.2 % | 25.8 % | 27.6 % | 32.7 % |
+| L = 400 m | 0.1 % | 0.6 % | 22.0 % | 22.7 % | 25.8 % |
+
+The low values at 50 m come from where the station grid happens to fall
+relative to the shortest-distance points, not from the field being nearly
+block diagonal there. The v2.2 README used the 5.2 % in that sense and
+that reading is **withdrawn**; Δs = 50 m is justified by convergence
+alone. The quantity is kept only for the one case where it is exact and
+structural: for parallel vertical wells it is **0.00 %** at every spacing,
+which is a proof and not a measurement.
 
 `q_spread` is the coefficient of variation of the solved well strengths at
 a station, `std(q)/mean(q)` over the field, averaged over stations. It
@@ -188,10 +210,22 @@ other run's, and the 1.28 % is that offset.
 | `station_convergence.csv` | the grid study of §1 |
 | `verification.json` | V1–V13 with margins |
 | `profiles.npz` | R_g,eff(MD), the flux variant, TVD and q_spread for **all eleven** steps and sensitivities, plus the spacing used |
-| `grissom_geometry.pdf` | slots by KOP group, trajectories, spacing vs MD |
-| `grissom_Rg.pdf` | the shielding profiles |
-| `grissom_ladder.pdf` | the bars |
-| `grissom_sweep.pdf` | e′, RTE and marginal RTE against L, with the beyond-shoe band shaded |
+| `tab_cycle_states.tex` | COP, bleed fraction, flash quality, IHX effectivenesses, six pressures |
+| `boreas_profile_numbers.tex` | 19 macros for section 4.3, at R4 |
+| `cutoff_robustness.csv` | the cutoff at three station spacings |
+| `casing_sensitivity.csv` | the three annulus unknowns at R3 and R4 |
+
+**Figures are one PDF per panel** (no panel letter or suptitle in the
+image, same size across a row, legend in the first only):
+`BOREAS_grissom_geometry_{a,b,c,d}`, `BOREAS_grissom_Rg_{a,b}`,
+`BOREAS_grissom_ladder_{a,b}`, `BOREAS_grissom_sweep_{a,b,c}`,
+`comp_{a,b,c}{1,2}`, `BOREAS_prof_{Tfluid,melt,Ui}_{a,b}` and
+`BOREAS_prof_integrals_{a,b}`. The integrals axis is **per fin tube**.
+
+Every generated `.tex` carries the SHA-256 of the `pack_runs.json` it was
+built from, and **V16** checks every stamp. v2.2 shipped a `tab_ladder.tex`
+that was the v2.1 file while the note claimed otherwise; stale LaTeX is
+still valid LaTeX, so only a hash catches it.
 
 The `field` column for R0v and R0i is **363 isolated wells** — the same
 count, with the shielding switched off. It is a bound, not an arrangement.

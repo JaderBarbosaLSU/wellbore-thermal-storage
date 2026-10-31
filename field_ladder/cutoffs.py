@@ -6,6 +6,7 @@ RTE(100). v2.0 used the 100 -> 200 interval instead, which is a different
 and larger number, and the error was compounded because B1 had inflated it.
 """
 import csv, json, sys
+import packstamp  # noqa: F401 -- CSV, but keep the import contract
 import numpy as np
 
 c = json.load(open('pack_runs.json'))
@@ -26,17 +27,29 @@ for s in steps:
     first = Eo[0] / Ei[0]                 # the 0 -> 100 m interval
     thr = 0.5 * first
     marg = np.diff(Eo) / np.diff(Ei)
+    # FIRST crossing only. A marginal that comes back above the threshold
+    # later does not undo the cutoff -- and at R4 it does come back, over
+    # 1250-1600 m, which is beyond the shoe and therefore an
+    # extrapolation of the geometry rather than a design. Reported in its
+    # own column so it cannot be read as a second cutoff.
     lo = hi = None
+    recross = ''
+    below = False
     for a, b, m in zip(L[:-1], L[1:], marg):
-        if m < thr:
-            lo, hi = a, b
-            break
+        if m < thr and not below:
+            lo, hi, below = a, b, True
+        elif m >= thr and below and not recross:
+            recross = f'{a:.0f}-{b:.0f}'
     out.append(dict(step=s, rte_first_100m=first, threshold=thr,
                     cutoff_lo=lo, cutoff_hi=hi,
+                    recrosses_at=recross,
+                    beyond_shoe=bool(recross and float(recross.split('-')[0])
+                                     >= 1250.0),
                     marginals=';'.join(f'{a:.0f}-{b:.0f}:{m:.3f}'
                                        for a, b, m in zip(L[:-1], L[1:], marg))))
     print(f"{s:12}{first:>10.3f}{thr:>11.3f}"
-          f"{(f'{lo:.0f}-{hi:.0f} m' if lo else 'none'):>14}")
+          f"{(f'{lo:.0f}-{hi:.0f} m' if lo else 'none'):>14}"
+          f"{('  re-crosses ' + recross if recross else ''):>22}")
 with open('results_pack_v2/cutoffs.csv', 'w', newline='') as f:
     w = csv.DictWriter(f, fieldnames=list(out[0].keys()))
     w.writeheader(); w.writerows(out)

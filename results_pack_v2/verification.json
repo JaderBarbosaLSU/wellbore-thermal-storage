@@ -94,5 +94,11 @@
   "check": "the diagonal is NOT dominant, so CG would be invalid",
   "pass_": true,
   "detail": "diagonal 0.567 against a largest off-diagonal row sum of 3.73 m K/W"
+ },
+ {
+  "id": "V16",
+  "check": "every generated .tex was built from the current cache",
+  "pass_": true,
+  "detail": "8 current  [cache fb413c5ce257fb51]"
  }
 ]

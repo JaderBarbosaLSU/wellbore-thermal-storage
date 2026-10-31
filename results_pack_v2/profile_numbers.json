@@ -1,0 +1,21 @@
+{
+ "TtwocLo": "94.1",
+ "TtwocHi": "111.4",
+ "TtwodLo": "92.0",
+ "TtwodHi": "141.6",
+ "SubcoolMax": "59.2",
+ "SubcoolMean": "32.2",
+ "EpsCh": "0.5885",
+ "EpsDc": "0.0072",
+ "UiLo": "64.3",
+ "UiHi": "798.8",
+ "UiMean": "138.4",
+ "UiSurface": "77.4",
+ "UiMeanToSurface": "1.79",
+ "RateChStart": "60.3",
+ "RateChEnd": "42.9",
+ "RateChMean": "57.3",
+ "RateDcStart": "-46.2",
+ "RateDcEnd": "0.0",
+ "RateDcMean": "-41.8"
+}

@@ -206,6 +206,23 @@ check('V15', 'the diagonal is NOT dominant, so CG would be invalid',
       f'diagonal {Rn + self_t:.3f} against a largest off-diagonal row sum '
       f'of {float(np.asarray(Graw.sum(1)).ravel().max()):.2f} m K/W')
 
+# ---- V16: every generated file was built from THIS cache -------------
+# v2.2 shipped a tab_ladder.tex that was byte-for-byte the v2.1 file,
+# while the return note claimed every derived table had been recomputed.
+# Stale LaTeX is still valid LaTeX, so nothing caught it until the paper
+# printed 97.7 MWh beside a CSV that said 97.592. Each generator now
+# stamps the SHA-256 of the cache it read, and this compares them.
+import packstamp
+stale, unstamped, fresh = packstamp.check('results_pack_v2')
+detail = f'{len(fresh)} current'
+if stale:
+    detail += '; STALE: ' + ', '.join(f'{f} ({h})' for f, h in stale)
+if unstamped:
+    detail += '; unstamped: ' + ', '.join(unstamped)
+check('V16', 'every generated .tex was built from the current cache',
+      not stale and not unstamped,
+      detail + f'  [cache {packstamp.pack_hash()}]')
+
 json.dump(RES, open('results_pack_v2/verification.json', 'w'), indent=1)
 print(f"\n{len(RES) - FAIL}/{len(RES)} pass")
 raise SystemExit(1 if FAIL else 0)

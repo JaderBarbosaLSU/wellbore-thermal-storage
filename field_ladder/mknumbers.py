@@ -6,6 +6,7 @@ macros, which is what this emits.
 """
 import csv, json
 import numpy as np
+import packstamp
 
 OUT = 'results_pack_v2'
 runs = [v for v in json.load(open('pack_runs.json')).values()
@@ -165,13 +166,62 @@ except FileNotFoundError:
 # No macro may expand to nan, inf or nothing. \RefHTHPInputPerMWe shipped
 # as 'nan' in v2.1 because the value it read was never written to
 # intensive.json, and nothing caught it: LaTeX sets 'nan' happily.
+# ---- 6.2: cycle indicators, deviation, casing sensitivities ----------
+for key, tag in (('adiabatic', 'Adiabatic'), ('R4', 'RefFour'),
+                 ('R3', 'RefThree'), ('R0v', 'RefZeroV')):
+    if key in I and I[key].get('deviation') is not None:
+        add(f'{tag}Deviation', I[key]['deviation'], '{:+.2f}',
+            f'{key}: deviation D, %')
+try:
+    CY = json.load(open(f'{OUT}/cycle_states.json'))
+    add('RefCOP', CY['hp_cop'], '{:.3f}', 'HTHP COP at R4')
+    add('RefBleedY', CY['y_frac'], '{:.4f}', 'ORC reheat bleed fraction')
+    add('RefFlashX', CY['x_8h'], '{:.4f}', 'flash vapor fraction x_8h')
+    add('RefEpsRone', CY['epsilon_IHX_1'], '{:.4f}', '')
+    add('RefEpsRtwo', CY['epsilon_IHX_2'], '{:.4f}', '')
+except FileNotFoundError:
+    pass
+try:
+    CS = json.load(open('casing_sens.json'))
+    for g, tag in (('toc', 'Toc'), ('mud', 'Mud'), ('weight', 'Weight')):
+        add(f'Sens{tag}Loss', CS[g]['max_d_loss_pt'], '{:.2f}',
+            f'{g}: largest |d loss| over R3 and R4, points')
+        add(f'Sens{tag}Ep', CS[g]['max_d_eprime_pct'], '{:.2f}',
+            f'{g}: largest |d e-prime|, %')
+    add('SensCasingMaxLoss', CS['max']['max_d_loss_pt'], '{:.2f}',
+        'largest over all three unknowns, points of loss')
+    add('SensCasingMaxEp', CS['max']['max_d_eprime_pct'], '{:.2f}',
+        'the same for e-prime, %')
+except FileNotFoundError:
+    pass
+try:
+    CR = json.load(open('cutoff_robust.json'))
+    add('CutoffRobust', CR['robust'], None,
+        '400-500 m at ds = 50, 25 and 12.5 m')
+except FileNotFoundError:
+    pass
+_rc = (cut['R4'].get('recrosses_at') or '')
+if _rc:
+    add('CutoffRecrossLo', float(_rc.split('-')[0]), '{:.0f}',
+        'R4 marginal returns above the threshold here, beyond the shoe')
+    add('CutoffRecrossHi', float(_rc.split('-')[1]), '{:.0f}', '')
+
 BAD = [n for n, (v, _) in M.items()
        if (not str(v).strip()) or str(v).strip().lower()
        in ('nan', 'inf', '-inf', 'none', '--')]
 if BAD:
     raise SystemExit('macros with no usable value: ' + ', '.join(sorted(BAD)))
+# A LaTeX control sequence is letters only. A digit in the name does not
+# fail here -- it fails in the paper's preamble, which is the worst place
+# for it to fail. (Handoff 6.8, found in par_numbers.)
+import re as _re
+NONALPHA = [n for n in M if not _re.fullmatch(r'[A-Za-z]+', n)]
+if NONALPHA:
+    raise SystemExit('macro names must be letters only: '
+                     + ', '.join(sorted(NONALPHA)))
 
 with open(f'{OUT}/boreas_numbers.tex', 'w') as f:
+    f.write(packstamp.stamp())
     f.write('% boreas_numbers.tex -- GENERATED. Do not edit, and do not\n'
             '% retype any of these into the text: \\input this file and use\n'
             '% the macros. Regenerate with mknumbers.py.\n')

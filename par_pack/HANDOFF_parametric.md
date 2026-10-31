@@ -47,12 +47,15 @@ At T_m = 150 °C, a **2.5× change in h_m moves e′ by 4.6×** and the well
 count by the same factor in reverse. Along T_m at fixed h_m, e′ spans only
 1.6×.
 
-The amplification is worth a sentence in the paper: e′ is *more* than
-proportional to h_m, because a bigger latent inventory does not just store
-more — it holds the store nearer its melting plateau for longer, so the
-driving difference to the rock is smaller and the loss falls with it,
-0.765 → 0.447. **Latent heat buys capacity and cuts losses at the same
-time**, which is not true of any other parameter here.
+**Correction to the mechanism I gave in the first version of this note.**
+I wrote that a bigger inventory lowers the driving difference to the rock.
+It does not. Q_loss per well *rises*, 2.04 → 2.34 MWh (+14 %), while
+ΔE_ch roughly doubles. The loss is close to a fixed charge per metre, set
+by the staircase and the rock; the loss **fraction** falls because the
+denominator grows, and e′ responds more than proportionally because it is
+a difference against that fixed charge. The rise of T_2d, 105.8 → 118.2 °C,
+is a secondary contribution. The numbers were right and the explanation
+was not.
 
 ---
 

@@ -1,12 +1,14 @@
+% boreas-pack-sha256: fb413c5ce257fb51
 % boreas_numbers.tex -- GENERATED. Do not edit, and do not
 % retype any of these into the text: \input this file and use
 % the macros. Regenerate with mknumbers.py.
-% 161 macros, from pack_runs.json
+% 181 macros, from pack_runs.json
 
 \newcommand{\AdiabaticAllWellsPerMWe}{27.9}           
 \newcommand{\AdiabaticCyclesToCSS}{80}              
 \newcommand{\AdiabaticDEch}{3.948}                     
 \newcommand{\AdiabaticDEdc}{3.948}                     
+\newcommand{\AdiabaticDeviation}{-12.07}                % adiabatic: deviation D, %
 \newcommand{\AdiabaticEnergyConv}{5.2e-16}               % relative spread of dE_dc over the last 5 cycles
 \newcommand{\AdiabaticEprime}{0.4335}                   
 \newcommand{\AdiabaticEtaORC}{0.1462}                   % adiabatic: eta_ORC
@@ -31,8 +33,11 @@
 \newcommand{\ConvNegAtTwoHundred}{0}               % negative strengths at 200 stations
 \newcommand{\CutoffFirstHundred}{0.262}                % marginal RTE over the first 100 m
 \newcommand{\CutoffKopThreeHundred}{none within the sweep}             % R4_kop300 has no cutoff
+\newcommand{\CutoffRecrossHi}{1600}                   
+\newcommand{\CutoffRecrossLo}{1250}                   % R4 marginal returns above the threshold here, beyond the shoe
 \newcommand{\CutoffRfourHi}{500}                     % cutoff upper bound, m MD
 \newcommand{\CutoffRfourLo}{400}                     % cutoff lower bound, m MD
+\newcommand{\CutoffRobust}{yes}                      % 400-500 m at ds = 50, 25 and 12.5 m
 \newcommand{\CutoffThFortyFiveHi}{500}               
 \newcommand{\CutoffThFortyFiveLo}{400}               
 \newcommand{\CutoffThSeventyHi}{500}                 
@@ -79,13 +84,19 @@
 \newcommand{\LegacyLossRfour}{70.6}                   
 \newcommand{\LegacyLossRthree}{17.4}                  
 \newcommand{\OffStationWeight}{5.2}                  % off-station kernel weight at the reference, %
+\newcommand{\RefBleedY}{0.8200}                         % ORC reheat bleed fraction
+\newcommand{\RefCOP}{2.473}                            % HTHP COP at R4
 \newcommand{\RefChargeElecRatio}{2.2}                % charged electricity per MWh delivered, R4 / adiabatic
+\newcommand{\RefEpsRone}{0.2053}                        
+\newcommand{\RefEpsRtwo}{0.1197}                        
 \newcommand{\RefFieldMWePlant}{9.8}                  % MWe from the 363 Grissom slots at the reference case
 \newcommand{\RefFieldMWh}{97.6}                       % field MWh per cycle
+\newcommand{\RefFlashX}{0.4365}                         % flash vapor fraction x_8h
 \newcommand{\RefFourAllWellsPerMWe}{56.2}             
 \newcommand{\RefFourCyclesToCSS}{20}                
 \newcommand{\RefFourDEch}{4.351}                       
 \newcommand{\RefFourDEdc}{2.070}                       
+\newcommand{\RefFourDeviation}{-53.89}                  % R4: deviation D, %
 \newcommand{\RefFourEnergyConv}{3.0e-15}                 % relative spread of dE_dc over the last 5 cycles
 \newcommand{\RefFourEprime}{0.2151}                     
 \newcommand{\RefFourEtaORC}{0.1401}                     % R4: eta_ORC
@@ -111,6 +122,7 @@
 \newcommand{\RefThreeCyclesToCSS}{80}               
 \newcommand{\RefThreeDEch}{4.152}                      
 \newcommand{\RefThreeDEdc}{3.597}                      
+\newcommand{\RefThreeDeviation}{-19.89}                 % R3: deviation D, %
 \newcommand{\RefThreeEnergyConv}{4.3e-16}                % relative spread of dE_dc over the last 5 cycles
 \newcommand{\RefThreeEprime}{0.3913}                    
 \newcommand{\RefThreeEtaORC}{0.1451}                    % R3: eta_ORC
@@ -133,6 +145,7 @@
 \newcommand{\RefZeroVCyclesToCSS}{8}               
 \newcommand{\RefZeroVDEch}{4.616}                      
 \newcommand{\RefZeroVDEdc}{1.656}                      
+\newcommand{\RefZeroVDeviation}{-63.11}                 % R0v: deviation D, %
 \newcommand{\RefZeroVEnergyConv}{1.5e-08}                % relative spread of dE_dc over the last 5 cycles
 \newcommand{\RefZeroVEprime}{0.1693}                    
 \newcommand{\RefZeroVEtaORC}{0.1388}                    % R0v: eta_ORC
@@ -147,16 +160,24 @@
 \newcommand{\RefZeroVTTwod}{111.4}                     % R0v: mean T_2d, C
 \newcommand{\RefZeroVUAPerMWe}{4132}                  % R0v: total UA, kW/K per MWe
 \newcommand{\RefZeroVWellsPerMWe}{47.2}               % R0v: STORAGE wells per MWe, realized net basis
+\newcommand{\SensCasingMaxEp}{5.81}                   % the same for e-prime, %
+\newcommand{\SensCasingMaxLoss}{2.71}                 % largest over all three unknowns, points of loss
 \newcommand{\SensKopThreeHundredEp}{0.292}             % R4_kop300 e'
 \newcommand{\SensKopThreeHundredLoss}{35.3}           % R4_kop300 loss, %
+\newcommand{\SensMudEp}{5.81}                         % mud: largest |d e-prime|, %
+\newcommand{\SensMudLoss}{2.71}                       % mud: largest |d loss| over R3 and R4, points
 \newcommand{\SensThFortyFiveEp}{0.226}                 % R4_th45 e'
 \newcommand{\SensThFortyFiveLoss}{50.0}               % R4_th45 loss, %
 \newcommand{\SensThSeventyEp}{0.203}                   % R4_th70 e'
 \newcommand{\SensThSeventyLoss}{54.9}                 % R4_th70 loss, %
+\newcommand{\SensTocEp}{3.20}                         % toc: largest |d e-prime|, %
+\newcommand{\SensTocLoss}{1.49}                       % toc: largest |d loss| over R3 and R4, points
 \newcommand{\SensTopOneEp}{0.130}                      % R4_top1 e'
 \newcommand{\SensTopOneLoss}{71.7}                    % R4_top1 loss, %
 \newcommand{\SensTopThirtyEp}{0.273}                   % R4_top30 e'
 \newcommand{\SensTopThirtyLoss}{39.2}                 % R4_top30 loss, %
+\newcommand{\SensWeightEp}{4.34}                      % weight: largest |d e-prime|, %
+\newcommand{\SensWeightLoss}{1.06}                    % weight: largest |d loss| over R3 and R4, points
 \newcommand{\SpacingMeasured}{1.65}                   % measured median spacing, m
 \newcommand{\SpacingNominal}{1.83}                    % nominal 6 ft, m
 \newcommand{\TopSpreadLoss}{32.6}                     % field-age spread, points of loss
