@@ -178,17 +178,47 @@ if not have('SensCasingMaxLossRthree'):
 # --- 2.5  what the pumping model does ----------------------------------
 add('PumpEta', 'none', None,
     'hydraulic power only; no pump or motor efficiency is applied')
-add('FrictionForm', 'Haaland', None,
-    'turbulent friction factor; laminar below the transition')
-add('BendAllowance', 'two per well', None,
-    'one 180 deg turn at the bottom manifold, counted on the fin-tube '
-    'leg only; the downcomer leg is called with n_bends = 0')
+
+# CORRECTION to the v2.4 answer. I reported 'Haaland' from a COMMENT in
+# calculate_pressure_drop; the code never calls it. What runs is a
+# piecewise SMOOTH-PIPE set, and at the reference both legs sit in the
+# third branch (fin tube Re = 1.21e5, downcomer Re = 2.09e5):
+#     Re < 2e3    f = 64/Re
+#     Re <= 1e5   f = 0.3164 Re^-0.25           (Blasius)
+#     Re <= 1e6   f = 0.0032 + 0.221 Re^-0.237  (Nikuradse-type fit)
+#     Re > 1e6    f = 0.018
+add('FrictionForm', 'piecewise smooth-pipe', None,
+    'laminar 64/Re; Blasius to Re = 1e5; f = 0.0032 + 0.221 Re^-0.237 to '
+    '1e6; 0.018 above. NOT Haaland -- that appears only in a comment')
+add('FrictionBranchRef', '0.0032 + 0.221 Re^-0.237', None,
+    'the branch both legs use at the reference case')
+add('WallRoughness', 'not a parameter', None,
+    'every branch is a SMOOTH-PIPE correlation, so the model is '
+    'effectively eps = 0; roughness cannot be set')
+
+add('BendAllowance', 'two return bends per leg, fin-tube leg only', None,
+    'calculate_pressure_drop applies K = K_in + 2*K_bend + K_exit, the '
+    'hairpin allowance; borehole_pumping applies it to the fin-tube leg '
+    'and calls the downcomer with n_bends = 0. So the well is charged '
+    'two bends, not four. Worth under 0.05 points of pumping')
 
 # --- 2.2  the surface casing above the storage -------------------------
 add('SurfaceCasing', 'not represented', None,
-    'the model carries ONE string over the whole storage length, with '
-    'the annulus fill k_cement; a second, shallower surface string is '
-    'not represented')
+    'the model carries ONE string over the whole storage length; a '
+    'second, shallower surface string is not represented')
+
+# THE REFERENCE ANNULUS IS MUD. k_cement is only the name of the field;
+# its reference VALUE is 0.7 W/m/K, which is mud, and the paper's
+# section 2.2 is right. The casing sensitivity's 'toc_surface' variant
+# sets 1.0 -- cement all the way to surface -- which is the opposite
+# bound, and is why that variant exists.
+add('AnnulusFill', 'mud', None,
+    'the reference annulus is MUD over the whole storage length')
+add('AnnulusK', CASE.k_cement, '{:.1f}',
+    'k of the reference annulus fill, W/m/K (the Case field is named '
+    'k_cement, but 0.7 is mud)')
+add('AnnulusKCementVariant', 1.0, '{:.1f}',
+    "the toc_surface sensitivity: cement to surface")
 
 with open('orange_notes.json', 'w') as f:
     json.dump(NOTE, f, indent=1)

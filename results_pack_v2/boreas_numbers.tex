@@ -2,17 +2,21 @@
 % boreas_numbers.tex -- GENERATED. Do not edit, and do not
 % retype any of these into the text: \input this file and use
 % the macros. Regenerate with mknumbers.py.
-% 181 macros, from pack_runs.json
+% 196 macros, from pack_runs.json
 
 \newcommand{\AdiabaticAllWellsPerMWe}{27.9}           
 \newcommand{\AdiabaticCyclesToCSS}{80}              
 \newcommand{\AdiabaticDEch}{3.948}                     
 \newcommand{\AdiabaticDEdc}{3.948}                     
 \newcommand{\AdiabaticDeviation}{-12.07}                % adiabatic: deviation D, %
+\newcommand{\AdiabaticEnergyBelowMean}{27.2}          % adiabatic: share of dE_dc delivered with T_2d(t) below the mean, %
 \newcommand{\AdiabaticEnergyConv}{5.2e-16}               % relative spread of dE_dc over the last 5 cycles
 \newcommand{\AdiabaticEprime}{0.4335}                   
 \newcommand{\AdiabaticEtaORC}{0.1462}                   % adiabatic: eta_ORC
+\newcommand{\AdiabaticEtaORCSliding}{0.1464}            % adiabatic: eta_ORC re-solved at each outlet, energy-weighted
+\newcommand{\AdiabaticEtaORCSlidingGain}{+0.1}        % sliding against fixed pressure, %
 \newcommand{\AdiabaticEtaRTE}{0.3212}                   % adiabatic: eta_RTE
+\newcommand{\AdiabaticEtaRTESliding}{0.3216}            % adiabatic: the eta_RTE that follows
 \newcommand{\AdiabaticEtaStorage}{1.0000}               
 \newcommand{\AdiabaticGeoPerMWe}{9.4}                
 \newcommand{\AdiabaticHTHPInputPerMWe}{3.101}          % the same with no formation at all
@@ -24,6 +28,7 @@
 \newcommand{\AdiabaticPumping}{2.42}                  % adiabatic: pumping, % of gross
 \newcommand{\AdiabaticTThreee}{93.9}                  % adiabatic: T_3e, C
 \newcommand{\AdiabaticTTwod}{139.5}                    % adiabatic: mean T_2d, C
+\newcommand{\AdiabaticTimeBelowMean}{32.6}            % the same as a share of the window, %
 \newcommand{\AdiabaticUAPerMWe}{2351}                 % adiabatic: total UA, kW/K per MWe
 \newcommand{\AdiabaticWellsPerMWe}{18.5}              % adiabatic: STORAGE wells per MWe, realized net basis
 \newcommand{\CasingGainEp}{118}                      % THUMS casing gain on e', %
@@ -97,10 +102,14 @@
 \newcommand{\RefFourDEch}{4.351}                       
 \newcommand{\RefFourDEdc}{2.070}                       
 \newcommand{\RefFourDeviation}{-53.89}                  % R4: deviation D, %
+\newcommand{\RefFourEnergyBelowMean}{7.6}            % R4: share of dE_dc delivered with T_2d(t) below the mean, %
 \newcommand{\RefFourEnergyConv}{3.0e-15}                 % relative spread of dE_dc over the last 5 cycles
 \newcommand{\RefFourEprime}{0.2151}                     
 \newcommand{\RefFourEtaORC}{0.1401}                     % R4: eta_ORC
+\newcommand{\RefFourEtaORCSliding}{0.1453}              % R4: eta_ORC re-solved at each outlet, energy-weighted
+\newcommand{\RefFourEtaORCSlidingGain}{+3.7}          % sliding against fixed pressure, %
 \newcommand{\RefFourEtaRTE}{0.1447}                     % R4: eta_RTE
+\newcommand{\RefFourEtaRTESliding}{0.1502}              % R4: the eta_RTE that follows
 \newcommand{\RefFourEtaStorage}{0.4758}                 
 \newcommand{\RefFourGeoPerMWe}{19.0}                  
 \newcommand{\RefFourLeakage}{0.89}                    
@@ -111,6 +120,7 @@
 \newcommand{\RefFourPumping}{4.84}                    % R4: pumping, % of gross
 \newcommand{\RefFourTThreee}{90.0}                    % R4: T_3e, C
 \newcommand{\RefFourTTwod}{116.5}                      % R4: mean T_2d, C
+\newcommand{\RefFourTimeBelowMean}{48.5}              % the same as a share of the window, %
 \newcommand{\RefFourUAPerMWe}{3480}                   % R4: total UA, kW/K per MWe
 \newcommand{\RefFourWellsPerMWe}{37.2}                % R4: STORAGE wells per MWe, realized net basis
 \newcommand{\RefHTHPInputPerMWe}{6.888}                % HTHP electrical input at R4, MW per MWe
@@ -123,10 +133,14 @@
 \newcommand{\RefThreeDEch}{4.152}                      
 \newcommand{\RefThreeDEdc}{3.597}                      
 \newcommand{\RefThreeDeviation}{-19.89}                 % R3: deviation D, %
+\newcommand{\RefThreeEnergyBelowMean}{6.9}           % R3: share of dE_dc delivered with T_2d(t) below the mean, %
 \newcommand{\RefThreeEnergyConv}{4.3e-16}                % relative spread of dE_dc over the last 5 cycles
 \newcommand{\RefThreeEprime}{0.3913}                    
 \newcommand{\RefThreeEtaORC}{0.1451}                    % R3: eta_ORC
+\newcommand{\RefThreeEtaORCSliding}{0.1461}             % R3: eta_ORC re-solved at each outlet, energy-weighted
+\newcommand{\RefThreeEtaORCSlidingGain}{+0.7}         % sliding against fixed pressure, %
 \newcommand{\RefThreeEtaRTE}{0.2757}                    % R3: eta_RTE
+\newcommand{\RefThreeEtaRTESliding}{0.2776}             % R3: the eta_RTE that follows
 \newcommand{\RefThreeEtaStorage}{0.8663}                
 \newcommand{\RefThreeGeoPerMWe}{10.5}                 
 \newcommand{\RefThreeLeakage}{1.59}                   
@@ -137,6 +151,7 @@
 \newcommand{\RefThreePumping}{2.68}                   % R3: pumping, % of gross
 \newcommand{\RefThreeTThreee}{93.2}                   % R3: T_3e, C
 \newcommand{\RefThreeTTwod}{135.3}                     % R3: mean T_2d, C
+\newcommand{\RefThreeTimeBelowMean}{11.8}             % the same as a share of the window, %
 \newcommand{\RefThreeUAPerMWe}{2504}                  % R3: total UA, kW/K per MWe
 \newcommand{\RefThreeWellsPerMWe}{20.4}               % R3: STORAGE wells per MWe, realized net basis
 \newcommand{\RefTtwod}{116.5}                          % realized T_2d, C

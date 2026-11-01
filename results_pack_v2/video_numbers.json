@@ -1,5 +1,6 @@
 {
  "VideoFrames": "120",
  "VideoFps": "12",
- "VideoDepthBottom": "904"
+ "VideoDepthBottom": "904",
+ "VideoDepthNote": "deepest segment centre; the store bottom is RefTvdBottom"
 }

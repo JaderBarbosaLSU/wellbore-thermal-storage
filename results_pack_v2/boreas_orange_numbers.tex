@@ -3,15 +3,19 @@
 % checks. Several are STRINGS, not numbers.
 
 \newcommand{\AdiabaticCorrPassDT}{0.0e+00}           
-\newcommand{\BendAllowance}{two per well}                 % one 180 deg turn at the bottom manifold, counted on the fin-tube leg only; the downcomer leg is called with n_bends = 0
-\newcommand{\ConvNsBaseEp}{0.2151}                  % e'
-\newcommand{\ConvNsBaseLoss}{52.415}                % loss, %
-\newcommand{\ConvNsFineEp}{0.2137}                  % e'
-\newcommand{\ConvNsFineLoss}{52.583}                % loss, %
+\newcommand{\AnnulusFill}{mud}                   % the reference annulus is MUD over the whole storage length
+\newcommand{\AnnulusK}{0.7}                      % k of the reference annulus fill, W/m/K (the Case field is named k_cement, but 0.7 is mud)
+\newcommand{\AnnulusKCementVariant}{1.0}         % the toc_surface sensitivity: cement to surface
+\newcommand{\BendAllowance}{two return bends per leg, fin-tube leg only}                 % calculate_pressure_drop applies K = K_in + 2*K_bend + K_exit, the hairpin allowance; borehole_pumping applies it to the fin-tube leg and calls the downcomer with n_bends = 0. So the well is charged two bends, not four. Worth under 0.05 points of pumping
+\newcommand{\ConvNsBaseEp}{0.2151}                  
+\newcommand{\ConvNsBaseLoss}{52.415}                
+\newcommand{\ConvNsFineEp}{0.2137}                  
+\newcommand{\ConvNsFineLoss}{52.583}                
 \newcommand{\ConvNtFineEp}{0.2130}                  % e'
 \newcommand{\ConvNtFineLoss}{52.596}                % loss, %
 \newcommand{\DtLast}{8491}                        
-\newcommand{\FrictionForm}{Haaland}                  % turbulent friction factor; laminar below the transition
+\newcommand{\FrictionBranchRef}{0.0032 + 0.221 Re^-0.237}             % the branch both legs use at the reference case
+\newcommand{\FrictionForm}{piecewise smooth-pipe}                  % laminar 64/Re; Blasius to Re = 1e5; f = 0.0032 + 0.221 Re^-0.237 to 1e6; 0.018 above. NOT Haaland -- that appears only in a comment
 \newcommand{\GrissomExtentLong}{202}             % extent along the long principal axis of the 363 slots, m
 \newcommand{\GrissomExtentShort}{139}            % the short one, m
 \newcommand{\GrissomNslots}{363}                 
@@ -27,6 +31,7 @@
 \newcommand{\RefTvdLastStation}{891}             
 \newcommand{\SensCasingMaxEpRthree}{2.20}         % and for e-prime, %
 \newcommand{\SensCasingMaxLossRthree}{0.27}       % largest |d loss| over the three unknowns at R3, points
-\newcommand{\SurfaceCasing}{not represented}                 % the model carries ONE string over the whole storage length, with the annulus fill k_cement; a second, shallower surface string is not represented
+\newcommand{\SurfaceCasing}{not represented}                 % the model carries ONE string over the whole storage length; a second, shallower surface string is not represented
 \newcommand{\TauLast}{138}                       
 \newcommand{\TauRatioLast}{61.6}                  
+\newcommand{\WallRoughness}{not a parameter}                 % every branch is a SMOOTH-PIPE correlation, so the model is effectively eps = 0; roughness cannot be set

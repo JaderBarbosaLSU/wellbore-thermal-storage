@@ -175,11 +175,22 @@ def main():
         add(f'Rate{tag}Start', float(q[0]), '{:.1f}',
             f'{half} rate per fin tube at the start, kW')
         add(f'Rate{tag}End', float(q[-1]), '{:.1f}', 'at the end')
-        add(f'Rate{tag}Mean', float(trapz(q, th) / (th[-1] - th[0])),
-            '{:.1f}', 'half-cycle average, STEP-WEIGHTED')
-        add(f'Rate{tag}MeanPerWell',
-            float(CASE.n_ft * trapz(q, th) / (th[-1] - th[0])), '{:.0f}',
+        # THE MEAN COMES FROM THE SOLVER'S CUMULATIVE, not from the record
+        # grid. Q_cum_J is the exact integral the budget is built from
+        # (V17), and it is per fin tube; the mean is simply it over the
+        # half-cycle. Integrating the 41-point logarithmic record grid
+        # instead is within 0.4 % on the charge but 11 % low on the
+        # discharge, whose rate collapses between the last few samples.
+        t_half = (CASE.t_ch if half == 'charge' else CASE.t_dc) * 3600.0
+        sgn = 1.0 if half == 'charge' else -1.0
+        mean_tube = sgn * abs(rec[half]['Q_cum_J']) / t_half / 1e3   # kW
+        add(f'Rate{tag}Mean', float(mean_tube), '{:.1f}',
+            'half-cycle average from the cumulative, per fin tube')
+        add(f'Rate{tag}MeanPerWell', float(CASE.n_ft * mean_tube), '{:.0f}',
             'the same per well')
+        add(f'Rate{tag}MeanRecordGrid',
+            float(trapz(q, th) / (th[-1] - th[0])), '{:.1f}',
+            'the record grid for comparison -- NOT for quoting')
 
     # ---- how much of the discharge arrives below the ORC's reach ------
     # The plant model evaluates the ORC at the flow-averaged T_2d with a

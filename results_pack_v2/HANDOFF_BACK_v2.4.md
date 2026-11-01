@@ -110,7 +110,7 @@ right for the loss and a factor of 2.6 for e′.
 
 | | |
 |---|---|
-| `\RefTfTop` / `\RefTfBottom` | **18.3** / **58.7 °C** (TVD 891 m) — your text is right |
+| `\RefTfTop` / `\RefTfBottom` | **18.3** / **58.7 °C** (at the bottom of the store, TVD **909 m** — corrected in v2.5, this note originally said 891) — your text is right |
 | `\RefFourCorrPassDT` | **0.0** — exactly zero in double precision, at all three cases, better than the claimed 1e-4 |
 | `\ConvNsBase/Fine`, `\ConvNtFine` | loss 52.415 → 52.583 → 52.596 %; e′ 0.2151 → 0.2137 → 0.2130 |
 | `\IntegratorCheck` | **5×10⁻¹¹** |

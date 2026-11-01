@@ -206,6 +206,28 @@ if _rc:
         'R4 marginal returns above the threshold here, beyond the shoe')
     add('CutoffRecrossHi', float(_rc.split('-')[1]), '{:.0f}', '')
 
+# ---- v2.6 item 2: the ORC along the discharge -------------------------
+try:
+    SL = json.load(open('sliding.json'))
+    for key, tag in (('adiabatic', 'Adiabatic'), ('R4', 'RefFour'),
+                     ('R3', 'RefThree')):
+        if key not in SL:
+            continue
+        v = SL[key]
+        add(f'{tag}EtaORCSliding', v['eta_ORC_sliding'], '{:.4f}',
+            f'{key}: eta_ORC re-solved at each outlet, energy-weighted')
+        add(f'{tag}EtaRTESliding', v['eta_RTE_sliding'], '{:.4f}',
+            f'{key}: the eta_RTE that follows')
+        add(f'{tag}EtaORCSlidingGain',
+            100 * (v['eta_ORC_sliding'] / v['eta_ORC_fixed'] - 1), '{:+.1f}',
+            'sliding against fixed pressure, %')
+        add(f'{tag}EnergyBelowMean', v['energy_below_mean_pct'], '{:.1f}',
+            f'{key}: share of dE_dc delivered with T_2d(t) below the mean, %')
+        add(f'{tag}TimeBelowMean', v['time_below_mean_pct'], '{:.1f}',
+            'the same as a share of the window, %')
+except FileNotFoundError:
+    pass
+
 BAD = [n for n, (v, _) in M.items()
        if (not str(v).strip()) or str(v).strip().lower()
        in ('nan', 'inf', '-inf', 'none', '--')]

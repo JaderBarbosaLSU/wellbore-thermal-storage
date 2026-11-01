@@ -24,7 +24,12 @@
  "SensCasingMaxLossRthree": "0.27",
  "SensCasingMaxEpRthree": "2.20",
  "PumpEta": "none",
- "FrictionForm": "Haaland",
- "BendAllowance": "two per well",
- "SurfaceCasing": "not represented"
+ "FrictionForm": "piecewise smooth-pipe",
+ "FrictionBranchRef": "0.0032 + 0.221 Re^-0.237",
+ "WallRoughness": "not a parameter",
+ "BendAllowance": "two return bends per leg, fin-tube leg only",
+ "SurfaceCasing": "not represented",
+ "AnnulusFill": "mud",
+ "AnnulusK": "0.7",
+ "AnnulusKCementVariant": "1.0"
 }

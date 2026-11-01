@@ -102,6 +102,12 @@
   "detail": "charge 3x1.4503 vs 4.3509 MWh (2.2e-16); discharge 3x0.6901 vs 2.0704 MWh (2.2e-16)"
  },
  {
+  "id": "V18",
+  "check": "the notebook embeds the current modules",
+  "pass_": true,
+  "detail": "3 current"
+ },
+ {
   "id": "V16",
   "check": "every generated .tex was built from the current cache",
   "pass_": true,

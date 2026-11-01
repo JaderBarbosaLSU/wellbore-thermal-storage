@@ -1,0 +1,44 @@
+{
+ "R4": {
+  "T2d_mean_C": 116.54403315242212,
+  "T2d_start_C": 141.59953425931815,
+  "T2d_end_C": 92.03056621619703,
+  "eta_ORC_fixed": 0.14013166558748985,
+  "eta_ORC_sliding": 0.14532109913377939,
+  "eta_ORC_ratio": 1.0370325545231571,
+  "eta_RTE_fixed": 0.14467545284742403,
+  "eta_RTE_sliding": 0.15016749678731134,
+  "energy_below_mean_pct": 7.644050819540002,
+  "time_below_mean_pct": 48.49540317707849,
+  "levels": 41,
+  "levels_feasible": 41
+ },
+ "R3": {
+  "T2d_mean_C": 135.2535876300218,
+  "T2d_start_C": 144.65996070174765,
+  "T2d_end_C": 118.85772246590773,
+  "eta_ORC_fixed": 0.1450759449572201,
+  "eta_ORC_sliding": 0.1460572612188651,
+  "eta_ORC_ratio": 1.0067641555733748,
+  "eta_RTE_fixed": 0.2757243761592853,
+  "eta_RTE_sliding": 0.27761486304677246,
+  "energy_below_mean_pct": 6.872164919994425,
+  "time_below_mean_pct": 11.793105859473833,
+  "levels": 41,
+  "levels_feasible": 41
+ },
+ "adiabatic": {
+  "T2d_mean_C": 139.53818602179098,
+  "T2d_start_C": 145.65505723148624,
+  "T2d_end_C": 131.64227700783482,
+  "eta_ORC_fixed": 0.14624411035851725,
+  "eta_ORC_sliding": 0.1464187444183805,
+  "eta_ORC_ratio": 1.0011941271305567,
+  "eta_RTE_fixed": 0.32118242664167496,
+  "eta_RTE_sliding": 0.3215706811486437,
+  "energy_below_mean_pct": 27.17731191708908,
+  "time_below_mean_pct": 32.59777066216638,
+  "levels": 41,
+  "levels_feasible": 41
+ }
+}

@@ -43,9 +43,30 @@ glide_ch = abs(T['T_3c'] - T['T_2c'])
 C_water = m_tot * cp * glide_ch / 1e6               # MJ per tube
 V_pcm = CASE.V_well / CASE.n_ft
 E_lat = CASE.h_m * 2000.0 * V_pcm / 1e6             # MJ per tube, rho ~ 2000
-add('WaterCapacityRatio', C_water / E_lat, '{:.2f}',
-    'water enthalpy swept per half-cycle over the latent inventory, '
-    'per fin tube')
+# TWO DIFFERENT RATIOS, and v2.5 shipped the wrong one for the paper's
+# purpose. They differ by a factor of about 100, so the numerical
+# near-match between 0.76 and 0.77 % is a coincidence of digits.
+#
+#   THROUGHPUT: everything the water carries through the tube in a
+#   half-cycle, over the latent inventory it is charging. A duty ratio.
+add('WaterThroughputRatio', C_water / E_lat, '{:.3f}',
+    'water enthalpy SWEPT per half-cycle over the latent inventory, per '
+    'fin tube -- a throughput ratio, dimensionless (0.76 = 76 %)')
+#
+#   QUASI-STEADY: the water standing IN the tube at any instant, for a
+#   given temperature swing, over the same inventory. This is the one
+#   the paper's criterion wants: small means the tube holds negligible
+#   thermal mass against the store, so the water field is quasi-steady
+#   and the march may hold the fluid at its instantaneous profile.
+DT_SWING = 10.0
+rho_w = rho
+A_flow = A_tube
+E_water_in_tube = rho_w * A_flow * CASE.L_well * cp * DT_SWING / 1e6  # MJ
+add('WaterQuasiSteadyRatio', 100.0 * E_water_in_tube / E_lat, '{:.2f}',
+    'water INVENTORY in one tube for a 10 K swing, as a PERCENT of the '
+    'latent inventory -- the quasi-steady criterion')
+add('WaterQuasiSteadySwing', DT_SWING, '{:.0f}',
+    'the swing it is quoted for, K')
 
 # ---- the glide shortfall ----------------------------------------------
 # What the store actually hands the ORC, against what the glide alone

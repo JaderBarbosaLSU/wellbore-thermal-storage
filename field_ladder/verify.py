@@ -7,6 +7,20 @@ CSV = 'THUMS_wells_WellSTAR_clean.csv'
 THUMS = dict(D_in=201.2/25.4, r_casing_o=0.21910/2, r_bore=0.31120/2,
              k_cement=0.7)
 LEGACY = dict(D_in=7.0, r_casing_o=0.098, r_bore=0.110, k_cement=1.0)
+# RESUMABLE. The full suite is several minutes -- V12 and V13 each run
+# a complete march, V14 and V15 assemble the interaction matrix -- which
+# is longer than some runners allow in one go. Results are written to
+# verification.json as they are produced and a check already recorded
+# there is skipped, so the suite can be finished across several calls.
+# FORCE=1 re-runs everything.
+_PRIOR = {}
+if not os.environ.get('FORCE') and os.path.exists(
+        'results_pack_v2/verification.json'):
+    try:
+        _PRIOR = {d['id']: d for d in
+                  json.load(open('results_pack_v2/verification.json'))}
+    except Exception:
+        _PRIOR = {}
 RES, FAIL = [], 0
 
 def check(tag, what, ok, detail):
@@ -15,6 +29,21 @@ def check(tag, what, ok, detail):
     FAIL += (not ok)
     print(f"  {tag:5s} {'PASS' if ok else 'FAIL'}  {what:<52s} {detail}",
           flush=True)
+    json.dump(RES + [v for k, v in _PRIOR.items()
+                     if k not in {r['id'] for r in RES}],
+              open('results_pack_v2/verification.json', 'w'), indent=1)
+
+
+def done(*tags):
+    """True when every tag is already recorded from an earlier call."""
+    if all(t in _PRIOR for t in tags):
+        for t in tags:
+            RES.append(_PRIOR[t])
+            print(f"  {t:5s} {'PASS' if _PRIOR[t]['pass_'] else 'FAIL'}  "
+                  f"{_PRIOR[t]['check']:<52s} (cached)", flush=True)
+            globals()['FAIL'] += (not _PRIOR[t]['pass_'])
+        return True
+    return False
 
 def case(L, casing=THUMS, **kw):
     return B.Case(n_segments=99, L_ft=L/0.3048, t_operation_yr=10.0,
@@ -157,117 +186,120 @@ check('V11', 'no negative well strengths in any cached run',
       not neg, f"{len(runs)} runs, {len(neg)} with negatives")
 
 # ---- V12/V13: the normalization basis ----------------------------------
-c = case(1250.0)
-r = B.simulate_css_corrected(c)
-k = B.performance_indices(c, r)
-check('V12', "wells per MWe = t_dc / (e' L)",
+if not done('V12', 'V13'):
+  c = case(1250.0)
+  r = B.simulate_css_corrected(c)
+  k = B.performance_indices(c, r)
+  check('V12', "wells per MWe = t_dc / (e' L)",
       k['V12_rel_error'] < 1e-9,
       f"{k['wells_per_MWe']:.3f} vs {k['wells_per_MWe_from_eprime']:.3f}, "
       f"rel {k['V12_rel_error']:.2e}")
 
-k10 = B.performance_indices(c.with_(W_dot_el_out=10000.0),
-                            B.simulate_css_corrected(
-                                c.with_(W_dot_el_out=10000.0)))
-keys = ['wells_per_MWe', 'N_geo_per_MWe', 'UA_per_MWe', 'kWh_per_m_well',
-        'eta_RTE', 'f_formation_loss', 'm_w_dc_per_MWe']
-worst = max((abs(k10[q]/k[q] - 1) if k[q] else 0.0) for q in keys)
-check('V13', 'per-MWe outputs identical at 1 MW and 10 MW',
-      worst < 1e-9, f"worst relative difference {worst:.2e} over {len(keys)} keys")
+  k10 = B.performance_indices(c.with_(W_dot_el_out=10000.0),
+                              B.simulate_css_corrected(
+                                  c.with_(W_dot_el_out=10000.0)))
+  keys = ['wells_per_MWe', 'N_geo_per_MWe', 'UA_per_MWe', 'kWh_per_m_well',
+          'eta_RTE', 'f_formation_loss', 'm_w_dc_per_MWe']
+  worst = max((abs(k10[q]/k[q] - 1) if k[q] else 0.0) for q in keys)
+  check('V13', 'per-MWe outputs identical at 1 MW and 10 MW',
+        worst < 1e-9,
+        f"worst relative difference {worst:.2e} over {len(keys)} keys")
 
 # ---- V14: the system is solved as assembled, not symmetrized ----------
 # This is a regression guard, not a physics check. Symmetrizing G was the
 # v2.1 defect: it is not a symmetric operator -- row (i,s) is about the
 # rise at a different point from row (j,s') -- and averaging produced
 # negative strengths that were then misread as a grid problem.
-import scipy.sparse as sp
-import scipy.sparse.linalg as spla
-c = case(1250.0)
-gr = G.Ground(k=c.k_rock, rhocp=c.rho_cp_rock, t_yr=10.0, rb=c.r_bore)
-Rn = float(np.atleast_1d(B.formation_resistance(c, np.array([0.0])))[0]
-           - B.ground_resistance(c))
-md, X = G.trajectories(P, 1250.0, kind='s_curve', kop=KOP, theta_max=55.0)
-nst = G.Ground.stations_for(1250.0)
-st, rr, cc, dd, Nn = gr.pairs(md, X, nst)
-g = gr.kern(dd)
-M = Nn * nst
-self_t = gr.kern(np.array([gr.rb]))[0]
-Graw = sp.csr_matrix((g, (rr, cc)), shape=(M, M))
-asym = spla.norm(Graw - Graw.T) / spla.norm(Graw)
-qs = spla.spsolve(((Graw + Graw.T) * 0.5
-                   + sp.identity(M) * (Rn + self_t)).tocsc(), np.ones(M))
-qr = spla.spsolve((Graw + sp.identity(M) * (Rn + self_t)).tocsc(), np.ones(M))
-check('V14', 'G is asymmetric and is NOT symmetrized before solving',
-      asym > 0.1 and (qr < 0).sum() == 0,
-      f'||G-G^T||/||G|| = {asym:.2f}; negatives {int((qr<0).sum())} as '
-      f'assembled against {int((qs<0).sum())} symmetrized')
+if not done('V14', 'V15'):
+  import scipy.sparse as sp
+  import scipy.sparse.linalg as spla
+  c = case(1250.0)
+  gr = G.Ground(k=c.k_rock, rhocp=c.rho_cp_rock, t_yr=10.0, rb=c.r_bore)
+  Rn = float(np.atleast_1d(B.formation_resistance(c, np.array([0.0])))[0]
+             - B.ground_resistance(c))
+  md, X = G.trajectories(P, 1250.0, kind='s_curve', kop=KOP, theta_max=55.0)
+  nst = G.Ground.stations_for(1250.0)
+  st, rr, cc, dd, Nn = gr.pairs(md, X, nst)
+  g = gr.kern(dd)
+  M = Nn * nst
+  self_t = gr.kern(np.array([gr.rb]))[0]
+  Graw = sp.csr_matrix((g, (rr, cc)), shape=(M, M))
+  asym = spla.norm(Graw - Graw.T) / spla.norm(Graw)
+  qs = spla.spsolve(((Graw + Graw.T) * 0.5
+                     + sp.identity(M) * (Rn + self_t)).tocsc(), np.ones(M))
+  qr = spla.spsolve((Graw + sp.identity(M) * (Rn + self_t)).tocsc(), np.ones(M))
+  check('V14', 'G is asymmetric and is NOT symmetrized before solving',
+        asym > 0.1 and (qr < 0).sum() == 0,
+        f'||G-G^T||/||G|| = {asym:.2f}; negatives {int((qr<0).sum())} as '
+        f'assembled against {int((qs<0).sum())} symmetrized')
 
-check('V15', 'the diagonal is NOT dominant, so CG would be invalid',
-      float(np.asarray(Graw.sum(1)).ravel().max()) > (Rn + self_t),
-      f'diagonal {Rn + self_t:.3f} against a largest off-diagonal row sum '
-      f'of {float(np.asarray(Graw.sum(1)).ravel().max()):.2f} m K/W')
+  check('V15', 'the diagonal is NOT dominant, so CG would be invalid',
+        float(np.asarray(Graw.sum(1)).ravel().max()) > (Rn + self_t),
+        f'diagonal {Rn + self_t:.3f} against a largest off-diagonal row sum '
+        f'of {float(np.asarray(Graw.sum(1)).ravel().max()):.2f} m K/W')
 
-# ---- V16: every generated file was built from THIS cache -------------
-# v2.2 shipped a tab_ladder.tex that was byte-for-byte the v2.1 file,
-# while the return note claimed every derived table had been recomputed.
-# Stale LaTeX is still valid LaTeX, so nothing caught it until the paper
-# printed 97.7 MWh beside a CSV that said 97.592. Each generator now
-# stamps the SHA-256 of the cache it read, and this compares them.
-# ---- V17: the plotted rates integrate to the budget ------------------
-# v2.3 divided the per-tube rate by n_ft on top of q_prime, which is
-# ALREADY per fin tube, and the figures came out a factor of three low.
-# Nothing caught it because a rate curve has no independent reference.
-# This gives it one: n_ft times the exact cumulative must be the energy
-# the budget reports per well.
-import pickle as _pk
-if os.path.exists('rec_field.pkl'):
-    _rec = _pk.load(open('rec_field.pkl', 'rb'))['rec']
-    _c = case(1250.0)
-    _worst = 0.0
-    _det = []
-    for _half, _key in (('charge', 'Q_charge_kJ'),
-                        ('discharge', 'Q_discharge_kJ')):
-        _tube = abs(_rec[_half]['Q_cum_J']) / 3.6e9          # MWh per tube
-        _well = abs(_rec[_key]) / 3.6e6 / _rec['N_wells']    # MWh per well
-        _rel = abs(_c.n_ft * _tube / _well - 1.0)
-        _worst = max(_worst, _rel)
-        _det.append(f'{_half} {_c.n_ft}x{_tube:.4f} vs {_well:.4f} MWh '
-                    f'({_rel:.1e})')
-    check('V17', 'n_ft x the per-tube integral equals dE per well',
-          _worst < 1e-9, '; '.join(_det))
+  # ---- V16: every generated file was built from THIS cache -------------
+  # v2.2 shipped a tab_ladder.tex that was byte-for-byte the v2.1 file,
+  # while the return note claimed every derived table had been recomputed.
+  # Stale LaTeX is still valid LaTeX, so nothing caught it until the paper
+  # printed 97.7 MWh beside a CSV that said 97.592. Each generator now
+  # stamps the SHA-256 of the cache it read, and this compares them.
+  # ---- V17: the plotted rates integrate to the budget ------------------
+  # v2.3 divided the per-tube rate by n_ft on top of q_prime, which is
+  # ALREADY per fin tube, and the figures came out a factor of three low.
+  # Nothing caught it because a rate curve has no independent reference.
+  # This gives it one: n_ft times the exact cumulative must be the energy
+  # the budget reports per well.
+  import pickle as _pk
+  if os.path.exists('rec_field.pkl'):
+      _rec = _pk.load(open('rec_field.pkl', 'rb'))['rec']
+      _c = case(1250.0)
+      _worst = 0.0
+      _det = []
+      for _half, _key in (('charge', 'Q_charge_kJ'),
+                          ('discharge', 'Q_discharge_kJ')):
+          _tube = abs(_rec[_half]['Q_cum_J']) / 3.6e9          # MWh per tube
+          _well = abs(_rec[_key]) / 3.6e6 / _rec['N_wells']    # MWh per well
+          _rel = abs(_c.n_ft * _tube / _well - 1.0)
+          _worst = max(_worst, _rel)
+          _det.append(f'{_half} {_c.n_ft}x{_tube:.4f} vs {_well:.4f} MWh '
+                      f'({_rel:.1e})')
+      check('V17', 'n_ft x the per-tube integral equals dE per well',
+            _worst < 1e-9, '; '.join(_det))
 
-# ---- V18: the notebook carries the code the pack was built from ------
-# BOREAS_model.ipynb embeds the three modules in %%writefile cells so
-# Colab needs nothing from the repository. A copy goes stale the moment
-# a module is edited without rebuilding, and this has happened four
-# times here: the notebook still runs, still draws plausible figures,
-# and still disagrees with the pack. A stale copy is valid Python
-# exactly as a stale table is valid LaTeX, so only a comparison finds
-# it.
-import nbcheck
-if os.path.exists(nbcheck.NB):
-    _st, _ms, _ok = nbcheck.check()
-    _d = f'{len(_ok)} current'
-    if _st:
-        _d += '; STALE: ' + ', '.join(f'{f} (nb {a}, live {b})'
-                                      for f, a, b in _st)
-    if _ms:
-        _d += '; not embedded: ' + ', '.join(_ms)
-    check('V18', 'the notebook embeds the current modules',
-          not _st and not _ms, _d)
-else:
-    check('V18', 'the notebook embeds the current modules', False,
-          f'{nbcheck.NB} not found next to the pack')
+  # ---- V18: the notebook carries the code the pack was built from ------
+  # BOREAS_model.ipynb embeds the three modules in %%writefile cells so
+  # Colab needs nothing from the repository. A copy goes stale the moment
+  # a module is edited without rebuilding, and this has happened four
+  # times here: the notebook still runs, still draws plausible figures,
+  # and still disagrees with the pack. A stale copy is valid Python
+  # exactly as a stale table is valid LaTeX, so only a comparison finds
+  # it.
+  import nbcheck
+  if os.path.exists(nbcheck.NB):
+      _st, _ms, _ok = nbcheck.check()
+      _d = f'{len(_ok)} current'
+      if _st:
+          _d += '; STALE: ' + ', '.join(f'{f} (nb {a}, live {b})'
+                                        for f, a, b in _st)
+      if _ms:
+          _d += '; not embedded: ' + ', '.join(_ms)
+      check('V18', 'the notebook embeds the current modules',
+            not _st and not _ms, _d)
+  else:
+      check('V18', 'the notebook embeds the current modules', False,
+            f'{nbcheck.NB} not found next to the pack')
 
-import packstamp
-stale, unstamped, fresh = packstamp.check('results_pack_v2')
-detail = f'{len(fresh)} current'
-if stale:
-    detail += '; STALE: ' + ', '.join(f'{f} ({h})' for f, h in stale)
-if unstamped:
-    detail += '; unstamped: ' + ', '.join(unstamped)
-check('V16', 'every generated .tex was built from the current cache',
-      not stale and not unstamped,
-      detail + f'  [cache {packstamp.pack_hash()}]')
+  import packstamp
+  stale, unstamped, fresh = packstamp.check('results_pack_v2')
+  detail = f'{len(fresh)} current'
+  if stale:
+      detail += '; STALE: ' + ', '.join(f'{f} ({h})' for f, h in stale)
+  if unstamped:
+      detail += '; unstamped: ' + ', '.join(unstamped)
+  check('V16', 'every generated .tex was built from the current cache',
+        not stale and not unstamped,
+        detail + f'  [cache {packstamp.pack_hash()}]')
 
 json.dump(RES, open('results_pack_v2/verification.json', 'w'), indent=1)
 print(f"\n{len(RES) - FAIL}/{len(RES)} pass")
