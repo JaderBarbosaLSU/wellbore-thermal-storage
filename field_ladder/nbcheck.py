@@ -52,6 +52,31 @@ def check(nb_path=NB, root='.'):
     return stale, missing, ok
 
 
+def syntax(nb_path=NB):
+    """Every code cell of the notebook must parse.
+
+    V18 hashes the EMBEDDED MODULES; it says nothing about the notebook's
+    own cells. A stray edit to the builder left a dangling string in the
+    fetch cell and the notebook was a SyntaxError for a whole round --
+    nbcheck passed, the pack was fine, and only running it found out.
+    This is the cheap half of running it.
+    """
+    import ast
+    nb = json.load(open(nb_path))
+    bad = []
+    for i, c in enumerate(nb['cells']):
+        if c['cell_type'] != 'code':
+            continue
+        src = ''.join(c['source'])
+        if src.startswith(('!', '%')):
+            continue
+        try:
+            ast.parse(src)
+        except SyntaxError as e:
+            bad.append((i, f'{e.msg} (line {e.lineno})'))
+    return bad
+
+
 if __name__ == '__main__':
     st, ms, okk = check()
     for fn, a, b in st:
@@ -60,4 +85,7 @@ if __name__ == '__main__':
         print(f'MISSING  {fn} is not embedded')
     for fn in okk:
         print(f'current  {fn}')
-    raise SystemExit(1 if (st or ms) else 0)
+    sx = syntax()
+    for i, m in sx:
+        print(f'SYNTAX   cell {i}: {m}')
+    raise SystemExit(1 if (st or ms or sx) else 0)

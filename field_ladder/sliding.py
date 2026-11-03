@@ -97,7 +97,17 @@ def one(key):
     rte_slide = ((W_out_slide - pump_dc) * CASE.t_dc
                  / ((W_in + pump_ch) * CASE.t_ch))
 
+    # THE LOWER BOUND. A plant held strictly at the design pressure cannot
+    # accept the energy delivered below the mean outlet without violating
+    # the 5 K pinch, while the averaged evaluation still credits it at the
+    # design eta_ORC. The crude bound of the review: that energy is not
+    # converted at all. The truth sits between this and the sliding case.
+    W_out_strict = W_out_fixed * (1.0 - share_below)
+    rte_strict = ((W_out_strict - pump_dc) * CASE.t_dc
+                  / ((W_in + pump_ch) * CASE.t_ch))
+
     out = dict(
+        eta_RTE_fixed_strict=float(rte_strict),
         T2d_mean_C=float(T_bar - 273.15),
         T2d_start_C=float(T[0] - 273.15), T2d_end_C=float(T[-1] - 273.15),
         eta_ORC_fixed=float(eta_fixed), eta_ORC_sliding=float(eta_slide),
@@ -107,6 +117,8 @@ def one(key):
         time_below_mean_pct=100.0 * float(
             trapz(below.astype(float), th) / (th[-1] - th[0])),
         levels=int(len(T)), levels_feasible=int(feasible))
+    print(f"{key:10s} bracket  strict {rte_strict:.4f} <= averaged "
+          f"{rte_fixed:.4f} <= sliding {rte_slide:.4f}", flush=True)
     print(f"{key:10s} eta_ORC {eta_fixed:.4f} fixed -> {eta_slide:.4f} "
           f"sliding ({100*(eta_slide/eta_fixed-1):+.1f} %)   "
           f"eta_RTE {rte_fixed:.4f} -> {rte_slide:.4f}   "

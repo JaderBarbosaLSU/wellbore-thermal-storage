@@ -221,6 +221,9 @@ try:
         add(f'{tag}EtaORCSlidingGain',
             100 * (v['eta_ORC_sliding'] / v['eta_ORC_fixed'] - 1), '{:+.1f}',
             'sliding against fixed pressure, %')
+        add(f'{tag}EtaRTEFixedStrict', v['eta_RTE_fixed_strict'], '{:.4f}',
+            f'{key}: LOWER bound -- the below-mean energy not converted '
+            f'at all, the design-pressure plant held strictly to its pinch')
         add(f'{tag}EnergyBelowMean', v['energy_below_mean_pct'], '{:.1f}',
             f'{key}: share of dE_dc delivered with T_2d(t) below the mean, %')
         add(f'{tag}TimeBelowMean', v['time_below_mean_pct'], '{:.1f}',

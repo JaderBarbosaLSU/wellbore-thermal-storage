@@ -108,9 +108,27 @@
   "detail": "3 current"
  },
  {
+  "id": "V19",
+  "check": "with zero line losses the water identities hold exactly",
+  "pass_": true,
+  "detail": "T_4c=T_3c at 160.0000 C; T_1c=T_2c at 105.0000 C; T_1d=T_2d at 146.1111 C; T_4d=T_3d at 91.1111 C"
+ },
+ {
+  "id": "V20",
+  "check": "a 1 K line loss moves 2d fully, 1d not at all, 3e by the pinch fraction",
+  "pass_": true,
+  "detail": "T_2d -1.0000 K, T_1d -0.0e+00 K, T_3e -0.1826 K against the pinch fraction 0.153"
+ },
+ {
+  "id": "V21",
+  "check": "every notebook code cell parses",
+  "pass_": true,
+  "detail": "all cells parse"
+ },
+ {
   "id": "V16",
   "check": "every generated .tex was built from the current cache",
   "pass_": true,
-  "detail": "13 current  [cache 8465e977acdc316c]"
+  "detail": "14 current  [cache 8465e977acdc316c]"
  }
 ]

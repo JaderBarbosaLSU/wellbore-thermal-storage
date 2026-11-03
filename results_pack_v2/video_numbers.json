@@ -1,4 +1,10 @@
 {
+ "LineLossCh": "not computed",
+ "LineLossDc": "not computed",
+ "LineLossChdT": "0.0",
+ "LineLossDcdT": "0.0",
+ "LineLossChdp": "0",
+ "LineLossDcdp": "0",
  "VideoFrames": "120",
  "VideoFps": "12",
  "VideoDepthBottom": "904",

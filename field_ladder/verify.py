@@ -238,68 +238,114 @@ if not done('V14', 'V15'):
         f'diagonal {Rn + self_t:.3f} against a largest off-diagonal row sum '
         f'of {float(np.asarray(Graw.sum(1)).ravel().max()):.2f} m K/W')
 
-  # ---- V16: every generated file was built from THIS cache -------------
-  # v2.2 shipped a tab_ladder.tex that was byte-for-byte the v2.1 file,
-  # while the return note claimed every derived table had been recomputed.
-  # Stale LaTeX is still valid LaTeX, so nothing caught it until the paper
-  # printed 97.7 MWh beside a CSV that said 97.592. Each generator now
-  # stamps the SHA-256 of the cache it read, and this compares them.
-  # ---- V17: the plotted rates integrate to the budget ------------------
-  # v2.3 divided the per-tube rate by n_ft on top of q_prime, which is
-  # ALREADY per fin tube, and the figures came out a factor of three low.
-  # Nothing caught it because a rate curve has no independent reference.
-  # This gives it one: n_ft times the exact cumulative must be the energy
-  # the budget reports per well.
-  import pickle as _pk
-  if os.path.exists('rec_field.pkl'):
-      _rec = _pk.load(open('rec_field.pkl', 'rb'))['rec']
-      _c = case(1250.0)
-      _worst = 0.0
-      _det = []
-      for _half, _key in (('charge', 'Q_charge_kJ'),
-                          ('discharge', 'Q_discharge_kJ')):
-          _tube = abs(_rec[_half]['Q_cum_J']) / 3.6e9          # MWh per tube
-          _well = abs(_rec[_key]) / 3.6e6 / _rec['N_wells']    # MWh per well
-          _rel = abs(_c.n_ft * _tube / _well - 1.0)
-          _worst = max(_worst, _rel)
-          _det.append(f'{_half} {_c.n_ft}x{_tube:.4f} vs {_well:.4f} MWh '
-                      f'({_rel:.1e})')
-      check('V17', 'n_ft x the per-tube integral equals dE per well',
-            _worst < 1e-9, '; '.join(_det))
+# ---- V16: every generated file was built from THIS cache -------------
+# v2.2 shipped a tab_ladder.tex that was byte-for-byte the v2.1 file,
+# while the return note claimed every derived table had been recomputed.
+# Stale LaTeX is still valid LaTeX, so nothing caught it until the paper
+# printed 97.7 MWh beside a CSV that said 97.592. Each generator now
+# stamps the SHA-256 of the cache it read, and this compares them.
+# ---- V17: the plotted rates integrate to the budget ------------------
+# v2.3 divided the per-tube rate by n_ft on top of q_prime, which is
+# ALREADY per fin tube, and the figures came out a factor of three low.
+# Nothing caught it because a rate curve has no independent reference.
+# This gives it one: n_ft times the exact cumulative must be the energy
+# the budget reports per well.
+import pickle as _pk
+if os.path.exists('rec_field.pkl'):
+    _rec = _pk.load(open('rec_field.pkl', 'rb'))['rec']
+    _c = case(1250.0)
+    _worst = 0.0
+    _det = []
+    for _half, _key in (('charge', 'Q_charge_kJ'),
+                        ('discharge', 'Q_discharge_kJ')):
+        _tube = abs(_rec[_half]['Q_cum_J']) / 3.6e9          # MWh per tube
+        _well = abs(_rec[_key]) / 3.6e6 / _rec['N_wells']    # MWh per well
+        _rel = abs(_c.n_ft * _tube / _well - 1.0)
+        _worst = max(_worst, _rel)
+        _det.append(f'{_half} {_c.n_ft}x{_tube:.4f} vs {_well:.4f} MWh '
+                    f'({_rel:.1e})')
+    check('V17', 'n_ft x the per-tube integral equals dE per well',
+          _worst < 1e-9, '; '.join(_det))
 
-  # ---- V18: the notebook carries the code the pack was built from ------
-  # BOREAS_model.ipynb embeds the three modules in %%writefile cells so
-  # Colab needs nothing from the repository. A copy goes stale the moment
-  # a module is edited without rebuilding, and this has happened four
-  # times here: the notebook still runs, still draws plausible figures,
-  # and still disagrees with the pack. A stale copy is valid Python
-  # exactly as a stale table is valid LaTeX, so only a comparison finds
-  # it.
-  import nbcheck
-  if os.path.exists(nbcheck.NB):
-      _st, _ms, _ok = nbcheck.check()
-      _d = f'{len(_ok)} current'
-      if _st:
-          _d += '; STALE: ' + ', '.join(f'{f} (nb {a}, live {b})'
-                                        for f, a, b in _st)
-      if _ms:
-          _d += '; not embedded: ' + ', '.join(_ms)
-      check('V18', 'the notebook embeds the current modules',
-            not _st and not _ms, _d)
-  else:
-      check('V18', 'the notebook embeds the current modules', False,
-            f'{nbcheck.NB} not found next to the pack')
+# ---- V18: the notebook carries the code the pack was built from ------
+# BOREAS_model.ipynb embeds the three modules in %%writefile cells so
+# Colab needs nothing from the repository. A copy goes stale the moment
+# a module is edited without rebuilding, and this has happened four
+# times here: the notebook still runs, still draws plausible figures,
+# and still disagrees with the pack. A stale copy is valid Python
+# exactly as a stale table is valid LaTeX, so only a comparison finds
+# it.
+import nbcheck
+if os.path.exists(nbcheck.NB):
+    _st, _ms, _ok = nbcheck.check()
+    _d = f'{len(_ok)} current'
+    if _st:
+        _d += '; STALE: ' + ', '.join(f'{f} (nb {a}, live {b})'
+                                      for f, a, b in _st)
+    if _ms:
+        _d += '; not embedded: ' + ', '.join(_ms)
+    check('V18', 'the notebook embeds the current modules',
+          not _st and not _ms, _d)
+else:
+    check('V18', 'the notebook embeds the current modules', False,
+          f'{nbcheck.NB} not found next to the pack')
 
-  import packstamp
-  stale, unstamped, fresh = packstamp.check('results_pack_v2')
-  detail = f'{len(fresh)} current'
-  if stale:
-      detail += '; STALE: ' + ', '.join(f'{f} ({h})' for f, h in stale)
-  if unstamped:
-      detail += '; unstamped: ' + ', '.join(unstamped)
-  check('V16', 'every generated .tex was built from the current cache',
-        not stale and not unstamped,
-        detail + f'  [cache {packstamp.pack_hash()}]')
+# ---- V19/V20: the renumbering is a no-op, and the placeholders work --
+# Round 25 split the water loop into 1 = field outlet, 4 = field inlet,
+# and added zero-default line-loss coils. V19 asserts the identities that
+# make that a no-op; V20 asserts the placeholders actually do something
+# when they are not zero -- the half a dormant feature usually gets wrong.
+if not done('V19', 'V20'):
+  _c = case(1250.0)
+  _T = B.cycle_state_points(_c)[2]
+  _id = [('T_4c', 'T_3c'), ('T_1c', 'T_2c'),
+         ('T_1d', 'T_2d'), ('T_4d', 'T_3d')]
+  _w = max(abs(_T[a] - _T[b]) for a, b in _id)
+  check('V19', 'with zero line losses the water identities hold exactly',
+        _w == 0.0,
+        '; '.join(f'{a}={b} at {_T[a]-273.15:.4f} C' for a, b in _id))
+
+  _T1 = B.cycle_state_points(_c.with_(line_dc_dT=1.0))[2]
+  d2d = _T['T_2d'] - _T1['T_2d']
+  d1d = _T['T_1d'] - _T1['T_1d']
+  d3e = _T['T_3e'] - _T1['T_3e']
+  # T_3e does NOT follow T_2d one for one: it is set by bisection on the
+  # pinch, which sits at the onset of boiling, about 15 % of the duty
+  # along. The water there is T_3d + x (T_2d - T_3d), so a 1 K drop at 2d
+  # moves the pinch location by x kelvin and T_3e with it. Measuring
+  # ~0.18 K against x = 0.153 is the evaporator geometry confirming
+  # itself, and it is a tighter check than 'T_3e moves at all'.
+  _x = 0.153
+  check('V20', 'a 1 K line loss moves 2d fully, 1d not at all, 3e by the '
+               'pinch fraction',
+        abs(d2d - 1.0) < 1e-9 and abs(d1d) < 1e-12
+        and 0.5 * _x < d3e < 2.0 * _x,
+        f'T_2d -{d2d:.4f} K, T_1d -{abs(d1d):.1e} K, T_3e -{d3e:.4f} K '
+        f'against the pinch fraction {_x:.3f}')
+
+
+# ---- V21: every notebook code cell parses ----------------------------
+# V18 compares the EMBEDDED MODULES with the live ones and says nothing
+# about the notebook's own cells. A dangling string left in the fetch
+# cell by a builder edit made the notebook a SyntaxError for a round;
+# V18 passed and the pack was fine. This is the cheap half of running it.
+if os.path.exists(nbcheck.NB):
+    _sx = nbcheck.syntax()
+    check('V21', 'every notebook code cell parses',
+          not _sx,
+          'all cells parse' if not _sx
+          else '; '.join(f'cell {i}: {m}' for i, m in _sx))
+
+import packstamp
+stale, unstamped, fresh = packstamp.check('results_pack_v2')
+detail = f'{len(fresh)} current'
+if stale:
+    detail += '; STALE: ' + ', '.join(f'{f} ({h})' for f, h in stale)
+if unstamped:
+    detail += '; unstamped: ' + ', '.join(unstamped)
+check('V16', 'every generated .tex was built from the current cache',
+      not stale and not unstamped,
+      detail + f'  [cache {packstamp.pack_hash()}]')
 
 json.dump(RES, open('results_pack_v2/verification.json', 'w'), indent=1)
 print(f"\n{len(RES) - FAIL}/{len(RES)} pass")

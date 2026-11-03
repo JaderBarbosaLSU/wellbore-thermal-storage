@@ -688,10 +688,24 @@ def calculate_pressure_drop(geom_par_vector, m_dot_well_tube, fluid, T_inlet,
              # For 10^5 < Re < 10^6, a common approximation is f = 0.0032 + 0.221 / Re^0.237.
              # For Re >= 10^6, f ~ 0.018 (fully turbulent smooth pipe).
              # Let's add a simple transition:
-             if Re <= 1e6:
+             # NIKURADSE (1932), f = 0.0032 + 0.221 Re^-0.237, quoted as
+             # valid to about 3e6 for smooth pipe. It used to hand over at
+             # 1e6 to a constant 0.018 -- a 55 % JUMP, since the formula
+             # gives 0.0116 there. Nothing in the packs reaches 1e6 (the
+             # reference legs are at 1.2e5 and 2.1e5, and the worst case
+             # in the study, one fin tube at the shoe, is still below it),
+             # but an n_ft = 1 point or a larger downcomer could cross it
+             # and the pumping would step. The formula is extended to its
+             # stated range instead, and beyond that the run FAILS rather
+             # than quietly using a constant.
+             if Re <= 3e6:
                   f = 0.0032 + 0.221 / Re**0.237
              else:
-                  f = 0.018 # Approximation for very high Re, smooth pipe
+                  raise ValueError(
+                      f'Re = {Re:.3g} is beyond the smooth-pipe '
+                      f'correlations in this model (valid to 3e6). The '
+                      f'friction factor would be an extrapolation; set a '
+                      f'larger flow area or add a rough-pipe form.')
 
 
     # Frictional pressure drop (Darcy-Weisbach equation)
@@ -956,11 +970,32 @@ class Case:
     # the water glides; see `orc_pinch`. Raise this and the ORC boils lower
     # and yields less; lower it and the exchanger grows. See DN-15.
     DT_pinch_ORC: float = 5.0
-    # Discharge-inlet subcooling below the COLDEST cascade layer, state 1d in
-    # the plant diagram; the symmetric partner of DT_4C_M. See DN-8.
-    DT_M_1D: float = 10.0
+    # Discharge-inlet subcooling below the COLDEST cascade layer, state 4D
+    # in the plant diagram; the symmetric partner of DT_4C_M. See DN-8.
+    #
+    # RENAMED from DT_M_1D at round 25. Figure 1 now numbers the water loop
+    # so that 1 is the FIELD OUTLET and 4 the FIELD INLET in both
+    # half-cycles, and this approach is at the discharge field inlet. The
+    # old name is still accepted (see __post_init__) and warns, so cached
+    # runs keep loading; it is NOT part of the cache key, which is built
+    # from the canonical name only.
+    DT_M_4D: float = 10.0
+    DT_M_1D: float = None       # deprecated alias for DT_M_4D
     T_source_C: float = 60.0
     DT_4C_M: float = 10.0
+
+    # ---- LINE LOSSES between the plant and the field --------------------
+    # Figure 1 draws a coil on the charge line 3c -> 4c and on the discharge
+    # line 1d -> 2d. Each stands for the heat loss and the pumping loss of
+    # the run between the plant and the wellhead.
+    #
+    # NOT COMPUTED YET. They are placeholders and default to ZERO, so that
+    # T_3c = T_4c and T_2d = T_1d exactly and every number in the packs is
+    # what it was before the renumbering. V19 asserts those identities.
+    line_ch_dT: float = 0.0       # 3c -> 4c temperature drop          [K]
+    line_ch_dp: float = 0.0       # 3c -> 4c pressure drop            [Pa]
+    line_dc_dT: float = 0.0       # 1d -> 2d temperature drop          [K]
+    line_dc_dp: float = 0.0       # 1d -> 2d pressure drop            [Pa]
     # How far the SOURCE stream is cooled in the heat-pump evaporator. This is
     # the specification: it sets the source flow needed for a given duty.
     DT_3A_4A: float = 10.0
@@ -1006,7 +1041,7 @@ class Case:
     # Prescribing it independently is legitimate, but it is bounded BELOW,
     # not above: the approach at the far end of the well is
     #     charging : span - (glide_ch - DT_4C_M)
-    #     discharge: span - (glide_dc - DT_M_1D)
+    #     discharge: span - (glide_dc - DT_M_4D)
     # so a span SMALLER than glide minus the approach inverts the driving
     # difference at that end. At the default the margin is only 3.889 K.
     DT_cascade: float = None      # cascade grading parameter      [K]
@@ -1208,6 +1243,21 @@ class Case:
     def stefan_number(self, dT):
         """Ste = cp dT / h_m. The quasi-steady melt layer degrades as this grows."""
         return self.cp_l * dT / self.h_m
+
+    def __post_init__(self):
+        # The deprecated DT_M_1D, if someone still sets it, wins over the
+        # default of DT_M_4D but never over an explicit DT_M_4D. It is
+        # cleared afterwards so it can never reach a cache key or a
+        # dataclasses.asdict() round trip as a second source of truth.
+        if self.DT_M_1D is not None:
+            import warnings as _w
+            _w.warn('DT_M_1D is renamed DT_M_4D (round 25: the water loop '
+                    'is numbered 1 = field outlet, 4 = field inlet). The '
+                    'old name still works for now.', DeprecationWarning,
+                    stacklevel=2)
+            if self.DT_M_4D == 10.0:        # untouched default
+                object.__setattr__(self, 'DT_M_4D', self.DT_M_1D)
+            object.__setattr__(self, 'DT_M_1D', None)
 
     def with_(self, **kw):
         return replace(self, **kw)
@@ -2112,7 +2162,7 @@ def T_m_bottom(case):
 
     For the default case that is 150 - 55*8/9 = 101.111 C against a 55 K glide.
     The discharge enters the exchanger at this end, which is why this is the
-    reference for DT_M_1D and not T_m,top.
+    reference for DT_M_4D and not T_m,top.
     """
     return case.T_m - case.cascade_span
 
@@ -2430,7 +2480,7 @@ def cycle_state_points(case, T_2d=None):
     The inlets are now prescribed symmetrically:
 
         charge:    T_4c = T_m,top    + DT_4C_M     (superheat, drives melting)
-        discharge: T_3d = T_m,bottom - DT_M_1D     (subcooling, drives freezing)
+        discharge: T_3d = T_m,bottom - DT_M_4D     (subcooling, drives freezing)
 
     and T_2d is DEMOTED to a provisional estimate, the value it would take if
     the water achieved the full glide. It is provisional because the ORC needs
@@ -2438,18 +2488,26 @@ def cycle_state_points(case, T_2d=None):
     to T_2d. Pass the realized outlet back in as `T_2d` for the correction pass
     (see `simulate_css`); the estimate is good enough that one pass suffices.
 
-    Setting DT_M_1D = DT_3C_2C / N_lay recovers the retired closure exactly,
+    Setting DT_M_4D = DT_3C_2C / N_lay recovers the retired closure exactly,
     which is how the change is verified to be a no-op.
     """
-    T_3d_C = T_m_bottom(case) - 273.15 - case.DT_M_1D
-    # provisional unless the caller supplies the realized value
-    T_2d_C = (T_3d_C + case.glide_dc_spec) if T_2d is None else (T_2d - 273.15)
+    T_3d_C = T_m_bottom(case) - 273.15 - case.DT_M_4D
+    # WATER-LOOP NUMBERING (round 25, Fig. 1): 1 is the FIELD OUTLET and 4
+    # the FIELD INLET, in both half-cycles.
+    #   charge     1c -> pump -> 2c -> condenser -> 3c -> line -> 4c
+    #   discharge  1d -> line -> 2d -> evaporator -> 3d -> pump -> 4d
+    # The argument named T_2d is the FIELD OUTLET, 1d: it is what the store
+    # hands over, provisional until the march returns the realized value.
+    # The evaporator inlet 2d is that less the line loss.
+    T_1d_C = (T_3d_C + case.glide_dc_spec) if T_2d is None else (T_2d - 273.15)
+    T_2d_C = T_1d_C - case.line_dc_dT
     T = dict(
         T_1e=case.T_sink_C + case.DT_sink_glide + case.DT_E_sink + 273.15,
         T_3e=T_2d_C - case.DT_2D_3E + 273.15,
-        T_2d=T_2d_C + 273.15,
-        T_3d=T_3d_C + 273.15,                     # the borehole inlet, state 1d
-        T_4c=case.T_m_C + case.DT_4C_M + 273.15,
+        T_1d=T_1d_C + 273.15,                     # FIELD OUTLET on discharge
+        T_2d=T_2d_C + 273.15,                     # evaporator inlet
+        T_3d=T_3d_C + 273.15,                     # evaporator outlet
+        T_4c=case.T_m_C + case.DT_4C_M + 273.15,  # FIELD INLET on charge
         # The source stream, and the evaporating temperature DERIVED from its
         # outlet. Until v0.9 these were two independent fields and the
         # approach between them was their difference, unchecked: the default
@@ -2459,9 +2517,17 @@ def cycle_state_points(case, T_2d=None):
         T_4a=case.T_source_C - case.DT_3A_4A + 273.15,
         T_13h=case.T_source_C - case.DT_3A_4A - case.DT_pinch_HPE + 273.15,
     )
-    T["T_3c"] = T["T_4c"]
+    # 3c is what the CONDENSER must deliver so that the field receives 4c:
+    # the line loses line_ch_dT on the way, so the condenser works that much
+    # harder. The causality runs 4c -> 3c because the field inlet is pinned
+    # by the top of the cascade, not by the plant.
+    T["T_3c"] = T["T_4c"] + case.line_ch_dT
     T["T_2c"] = T["T_3c"] - case.DT_3C_2C
     T["T_2h"] = T["T_3c"] + case.DT_2H_3C
+    # PUMP HEATING IS NEGLECTED, written out rather than left implicit so
+    # that it is one line to replace when it is not.
+    T["T_1c"] = T["T_2c"]        # field outlet on charge == pump inlet
+    T["T_4d"] = T["T_3d"]        # evaporator outlet == field inlet on dc
 
     # T["T_3e"] above is only the OLD hot-end rule, kept so the uncorrected
     # value stays visible. What the water can actually deliver is decided by
@@ -2712,9 +2778,14 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False, T_2d=None):
     deviation = Q_dc / req - 1.0
 
     # ---- the outlet temperatures, which are results and not inputs ---------
-    T_2d_realized = mixed_mean_outlet(dc)      # what the ORC evaporator sees
+    # THE MARCH RETURNS THE FIELD OUTLET, which is state 1d. What the
+    # evaporator sees is that less the discharge line loss, state 2d. The
+    # two are equal while line_dc_dT is zero, which is the shipped
+    # default, so nothing downstream moves.
+    T_1d_realized = mixed_mean_outlet(dc)      # FIELD OUTLET, state 1d
+    T_2d_realized = T_1d_realized - case.line_dc_dT   # evaporator inlet
     T_2c_realized = mixed_mean_outlet(ch)      # what returns to the HP condenser
-    glide_dc = T_2d_realized - T["T_3d"]
+    glide_dc = T_1d_realized - T["T_3d"]       # the STORE's glide
     glide_ch = T["T_4c"] - T_2c_realized
     return dict(
         N_wells=N, m1_ch=m1_ch, m1_dc=m1_dc, flow_ratio=m1_dc / m1_ch,
@@ -2723,7 +2794,7 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False, T_2d=None):
         Q_charge_kJ=Q_ch, Q_discharge_kJ=Q_dc, required_kJ=req,
         # Does the store actually give heat back? Both conditions, because
         # either alone can be satisfied by a store that does not.
-        delivers=bool(T_2d_realized > T["T_3d"] and Q_dc > 0.0),
+        delivers=bool(T_1d_realized > T["T_3d"] and Q_dc > 0.0),
         deviation=deviation,
         W_el_out_implied=case.W_dot_el_out * (1.0 + deviation),
         # ---- THE NUMBER THAT WAS 1.0000 BY CONSTRUCTION ------------------
@@ -2747,6 +2818,7 @@ def simulate_css(case, N=None, n_cycles=80, tol=1e-9, record=False, T_2d=None):
         R_ground=ground_resistance(case),
         eta_storage=Q_dc / Q_ch, lambda_overridden=lambda_overridden,
         T_2d_assumed=T["T_2d"], T_2d_realized=T_2d_realized,
+        T_1d_assumed=T["T_1d"], T_1d_realized=T_1d_realized,
         T_2c_assumed=T["T_2c"], T_2c_realized=T_2c_realized,
         glide_dc=glide_dc, glide_ch=glide_ch,
         glide_ratio_dc=glide_dc / case.glide_dc_spec,
@@ -2848,7 +2920,18 @@ def borehole_pumping(case, r):
                                         case.fluid2, T["T_3d"],
                                         T["T_3d"], case.P, n_bends=0)
     f_id = N / 1000.0                            # ONE downcomer per well
-    return pp_ch * f + pid_ch * f_id, pp_dc * f + pid_dc * f_id
+
+    # ---- the surface lines between the plant and the field -------------
+    # Fig. 1's coils. Zero by default, so this adds nothing today; when a
+    # line pressure drop is set it is a field-level duty, carried by the
+    # whole discharge or charge flow rather than per tube.
+    m_ch = r["m1_ch"] * case.n_ft * N
+    m_dc = r["m1_dc"] * case.n_ft * N
+    rho_w = 1000.0
+    p_line_ch = case.line_ch_dp * m_ch / rho_w / 1000.0     # kW
+    p_line_dc = case.line_dc_dp * m_dc / rho_w / 1000.0     # kW
+    return (pp_ch * f + pid_ch * f_id + p_line_ch,
+            pp_dc * f + pid_dc * f_id + p_line_dc)
 
 
 def downcomer_leak(case, r):
@@ -3511,7 +3594,7 @@ def simulate_css_corrected(case, N=None, record=False, **kw):
     """
     first = simulate_css(case, N=N, record=False, **kw)
     second = simulate_css(case, N=N, record=record,
-                          T_2d=first["T_2d_realized"], **kw)
+                          T_2d=first["T_1d_realized"], **kw)
     second["pass1"] = first
     second["dT_2d_pass"] = second["T_2d_realized"] - first["T_2d_realized"]
     second["corrected"] = True
@@ -3654,19 +3737,19 @@ def validate_case(case, verbose=True):
 
     # --- the two inlets --------------------------------------------------
     T_in_ch = case.T_m_C + case.DT_4C_M
-    T_in_dc = T_bot - case.DT_M_1D
+    T_in_dc = T_bot - case.DT_M_4D
     if case.DT_4C_M <= 0:
         err(f'DT_4C_M = {case.DT_4C_M} K; the charge inlet must be ABOVE the '
             f'hottest layer or nothing melts')
-    if case.DT_M_1D <= 0:
-        err(f'DT_M_1D = {case.DT_M_1D} K; the discharge inlet must be BELOW '
+    if case.DT_M_4D <= 0:
+        err(f'DT_M_4D = {case.DT_M_4D} K; the discharge inlet must be BELOW '
             f'the coldest layer or nothing freezes')
     if 0 < case.DT_4C_M < spacing:
         warn(f'DT_4C_M = {case.DT_4C_M:.3f} K is less than one layer width '
              f'({spacing:.3f} K), so the charging fluid drops below a layer\'s '
              f'melting point before leaving it')
-    if 0 < case.DT_M_1D < spacing:
-        warn(f'DT_M_1D = {case.DT_M_1D:.3f} K is less than one layer width '
+    if 0 < case.DT_M_4D < spacing:
+        warn(f'DT_M_4D = {case.DT_M_4D:.3f} K is less than one layer width '
              f'({spacing:.3f} K); the discharge pinches at each layer exit')
 
     # --- glide and the sink ----------------------------------------------
@@ -3775,14 +3858,14 @@ def validate_case(case, verbose=True):
     # the "wrong" side of T_m still exchanges heat, and `conduction_shell`
     # takes the direction from sign(T_j - T_pcm) segment by segment. The
     # model handles a negative margin correctly and reports the consequence
-    # through eps and the deviation. DT_M_1D = DT_3C_2C/N_lay -- the retired
+    # through eps and the deviation. DT_M_4D = DT_3C_2C/N_lay -- the retired
     # v0.5 closure, margin exactly zero -- runs and is one of the frozen
     # verification fixtures. See DN-20.
     span = case.cascade_span
     g_ch, g_dc = case.DT_3C_2C, case.glide_dc_spec
     for gl, appr, name, half, far in (
             (g_ch, case.DT_4C_M, 'DT_4C_M', 'charging', 'coldest'),
-            (g_dc, case.DT_M_1D, 'DT_M_1D', 'discharging', 'hottest')):
+            (g_dc, case.DT_M_4D, 'DT_M_4D', 'discharging', 'hottest')):
         margin = span - (gl - appr)
         if margin <= 0.0:
             warn(f'under a linear glide the {half} water would reach the '

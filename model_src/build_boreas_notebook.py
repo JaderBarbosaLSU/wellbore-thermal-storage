@@ -240,6 +240,17 @@ CASE = B.Case(
     DT_pinch_ORC = 5.0,      # ORC evaporator pinch                          [K]
     DT_2H_3C     = 10.0,     # HTHP condenser approach                       [K]
 
+    # --- line losses between the plant and the field -------------------------
+    #   Figure 1 draws a coil on the charge line 3c -> 4c and on the
+    #   discharge line 1d -> 2d. Each stands for the heat and pumping loss
+    #   of the run between the plant and the wellhead.
+    #   PLACEHOLDERS, NOT YET MODELED: at zero, T_4c = T_3c and
+    #   T_2d = T_1d exactly, and every number matches results pack v2.7.
+    line_ch_dT = 0.0,        # 3c -> 4c temperature drop                    [K]
+    line_ch_dp = 0.0,        # 3c -> 4c pressure drop                      [Pa]
+    line_dc_dT = 0.0,        # 1d -> 2d temperature drop                    [K]
+    line_dc_dp = 0.0,        # 1d -> 2d pressure drop                      [Pa]
+
     # --- numerics ------------------------------------------------------------
     n_segments = 99,         # a MULTIPLE of N_lay, or a layer boundary falls
                              #   inside a segment and validate_case warns
@@ -782,9 +793,7 @@ RECOMPUTE = False            # True -> run the ladder here instead of reading it
 
 PACK = 'pack_runs.json'
 if not os.path.exists(PACK):
-    urllib.request.urlretrieve(
-        'https://raw.githubusercontent.com/JaderBarbosaLSU/'
-        RAW + 'field_ladder/' + PACK, PACK)
+    urllib.request.urlretrieve(RAW + 'field_ladder/' + PACK, PACK)
 RUNS = [r for r in json.load(open(PACK)).values() if 'error' not in r]
 print(f'{len(RUNS)} runs in the cache')
 
@@ -1152,6 +1161,26 @@ Every parameter is a field of `Case`. The ones BOREAS adds:
 | `k_rock`, `rho_cp_rock`, `k_cement` | formation and annulus |
 | `t_operation_yr` | how old the field is when you evaluate it |
 | `D_in`, `r_casing_o`, `r_bore` | the casing string; `D_in` is what bounds the PCM |
+| `line_ch_dT`, `line_dc_dT`, and the two `_dp` | the line-loss placeholders |
+
+### The water loop is numbered 1 = field outlet, 4 = field inlet
+
+Figure 1 numbers both half-cycles the same way: **1 is the outlet of the
+borehole field and 4 is its inlet.**
+
+| half-cycle | 1 | 2 | 3 | 4 |
+|---|---|---|---|---|
+| charge | field outlet | condenser inlet | condenser outlet | **field inlet** |
+| discharge | **field outlet** | evaporator inlet | evaporator outlet | field inlet |
+
+The coils between 3c and 4c and between 1d and 2d stand for heat and
+pumping losses in the lines between plant and field. They are not
+computed yet, so $T_\mathrm{4c} = T_\mathrm{3c}$ and
+$T_\mathrm{2d} = T_\mathrm{1d}$. Pump heating is neglected, so
+$T_\mathrm{1c} = T_\mathrm{2c}$ and $T_\mathrm{4d} = T_\mathrm{3d}$.
+
+The discharge inlet approach was `DT_M_1D` until round 25 and is now
+**`DT_M_4D`**; the old name still works and warns.
 
 **Nothing below section 2 may correct an input.** Every `.with_(...)` in
 the sections above is a *sensitivity* --- a visible, commented variation
@@ -1244,6 +1273,20 @@ else:
 
 _prov = B.cycle_state_points(ref)[2]['T_2d'] - 273.15
 rank, hp, Tdict = B.cycle_state_points(ref, T_2d=REC['T_2d_realized'])
+# ALL EIGHT WATER STATES, in the Fig. 1 numbering: 1 is the FIELD OUTLET
+# and 4 the FIELD INLET in both half-cycles. The coils 3c -> 4c and
+# 1d -> 2d are placeholders at zero, so T_4c = T_3c and T_2d = T_1d; they
+# are printed anyway so the placeholders are visible in the bookkeeping
+# rather than taken on trust.
+print('water loop at the reference case, 1 = field outlet, '
+      '4 = field inlet:')
+for _half, _sts in (('charge   ', ('1c', '2c', '3c', '4c')),
+                    ('discharge', ('1d', '2d', '3d', '4d'))):
+    print('  ' + _half + '  ' + '  '.join(
+        f'{_s} {Tdict["T_" + _s] - 273.15:7.2f} C' for _s in _sts))
+print(f'  line losses: charge {REF.line_ch_dT:.1f} K, '
+      f'discharge {REF.line_dc_dT:.1f} K   (placeholders)\n')
+
 print(f'T_2d provisional (top layer fully molten)   {_prov:7.2f} C')
 print(f"T_2d realized on the Grissom field          "
       f"{REC['T_2d_realized'] - 273.15:7.2f} C"

@@ -192,6 +192,12 @@ add('FrictionForm', 'piecewise smooth-pipe', None,
     '1e6; 0.018 above. NOT Haaland -- that appears only in a comment')
 add('FrictionBranchRef', '0.0032 + 0.221 Re^-0.237', None,
     'the branch both legs use at the reference case')
+add('FrictionCiteBlasius', 'Blasius 1913', None,
+    'f = 0.3164 Re^-0.25, the 2e3 < Re <= 1e5 branch')
+add('FrictionCiteNikuradse', 'Nikuradse 1932', None,
+    'f = 0.0032 + 0.221 Re^-0.237, the 1e5 < Re <= 3e6 branch')
+add('FrictionReMax', 3.0e6, '{:.0e}',
+    'above this the run raises rather than extrapolating')
 add('WallRoughness', 'not a parameter', None,
     'every branch is a SMOOTH-PIPE correlation, so the model is '
     'effectively eps = 0; roughness cannot be set')

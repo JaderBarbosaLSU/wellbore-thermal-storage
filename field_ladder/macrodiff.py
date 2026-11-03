@@ -17,6 +17,7 @@ FILES = ['results_pack_v2/boreas_numbers.tex',
          'results_pack_v2/boreas_orange_numbers.tex',
          'results_pack_v2/boreas_water_numbers.tex',
          'results_pack_v2/boreas_ts_numbers.tex',
+         'results_pack_v2/boreas_video_numbers.tex',
          'par_pack/par_numbers.tex']
 REF = sys.argv[1] if len(sys.argv) > 1 else 'HEAD'
 REPO = sys.argv[2] if len(sys.argv) > 2 else '/tmp/w/repo'
